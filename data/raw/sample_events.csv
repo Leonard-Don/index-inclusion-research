@@ -1,0 +1,7 @@
+market,index_name,ticker,announce_date,effective_date,event_type,sector,source,note
+CN,CSI300,CN01,2024-02-03,2024-02-12,inclusion,Industrials,synthetic_sample,Synthetic event for pipeline testing
+CN,CSI300,CN02,2024-03-09,2024-03-18,inclusion,Technology,synthetic_sample,Synthetic event for pipeline testing
+CN,CSI300,CN03,2024-04-20,2024-04-29,inclusion,Consumer,synthetic_sample,Synthetic event for pipeline testing
+US,SP500,US01,2024-02-10,2024-02-20,inclusion,Industrials,synthetic_sample,Synthetic event for pipeline testing
+US,SP500,US02,2024-03-16,2024-03-25,inclusion,Technology,synthetic_sample,Synthetic event for pipeline testing
+US,SP500,US03,2024-04-06,2024-04-15,inclusion,Consumer,synthetic_sample,Synthetic event for pipeline testing

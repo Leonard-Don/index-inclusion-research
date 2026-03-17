@@ -1,0 +1,22 @@
+defaults:
+  event_window_pre: 20
+  event_window_post: 20
+  car_windows:
+    - [-1, 1]
+    - [-3, 3]
+    - [-5, 5]
+  matching:
+    lookback_days: 20
+    num_controls: 3
+    conflict_window_days: 30
+    reference_date_column: announce_date
+
+markets:
+  CN:
+    label: China A-shares
+    benchmark_name: CSI300
+    currency: CNY
+  US:
+    label: United States
+    benchmark_name: S&P500
+    currency: USD
