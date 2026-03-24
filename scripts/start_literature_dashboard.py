@@ -20,6 +20,55 @@ from start_hs300_rdd import run_analysis as run_hs300_rdd
 from start_hs300_style import run_analysis as run_hs300_style
 from start_shleifer import run_analysis as run_shleifer
 
+
+def run_hs300_paper(verbose: bool = False) -> dict[str, object]:
+    style_result = run_hs300_style(verbose=verbose)
+    rdd_result = run_hs300_rdd(verbose=verbose)
+    style_summary = ""
+    rdd_summary = ""
+    if isinstance(style_result.get("summary_path"), Path) and style_result["summary_path"].exists():
+        style_summary = style_result["summary_path"].read_text(encoding="utf-8").strip()
+    if isinstance(rdd_result.get("summary_path"), Path) and rdd_result["summary_path"].exists():
+        rdd_summary = rdd_result["summary_path"].read_text(encoding="utf-8").strip()
+
+    combined_tables: dict[str, object] = {}
+    for label, frame in style_result.get("tables", {}).items():
+        combined_tables[f"风格识别：{label}"] = frame
+    for label, frame in rdd_result.get("tables", {}).items():
+        combined_tables[f"断点回归：{label}"] = frame
+
+    combined_figures: list[dict[str, object]] = []
+    for path in style_result.get("figures", []):
+        combined_figures.append({"path": path, "prefix": "风格识别"})
+    for path in rdd_result.get("figures", []):
+        combined_figures.append({"path": path, "prefix": "断点回归"})
+
+    summary_text = "\n\n".join(
+        [
+            "# 第三篇论文结果包",
+            "",
+            "这个页面把第三篇中文论文相关结果合并到同一页中，便于直接比较两类识别策略。",
+            "",
+            "## 第一部分：风格识别",
+            style_summary or "暂无风格识别摘要。",
+            "",
+            "## 第二部分：断点回归",
+            rdd_summary or "暂无断点回归摘要。",
+        ]
+    ).strip()
+
+    return {
+        "id": "hs300_paper",
+        "title": "沪深300 论文复现",
+        "description": "第三篇中文论文的风格识别结果与断点回归结果",
+        "subtitle": "HS300 Paper",
+        "summary_text": summary_text,
+        "tables": combined_tables,
+        "figures": combined_figures,
+        "output_dir": ROOT / "results" / "literature",
+    }
+
+
 ANALYSES = {
     "harris_gurel": {
         "title": "短期价格压力",
@@ -33,17 +82,11 @@ ANALYSES = {
         "description_zh": "长窗口保留率与向下倾斜需求曲线",
         "runner": run_shleifer,
     },
-    "hs300_style": {
-        "title": "沪深300 风格识别",
-        "subtitle": "HS300 Style",
-        "description_zh": "中国样本匹配对照组与 DID 风格结果",
-        "runner": run_hs300_style,
-    },
-    "hs300_rdd": {
-        "title": "沪深300 断点回归",
-        "subtitle": "HS300 RDD",
-        "description_zh": "断点回归风格结果与分箱图",
-        "runner": run_hs300_rdd,
+    "hs300_paper": {
+        "title": "沪深300 论文复现",
+        "subtitle": "HS300 Paper",
+        "description_zh": "第三篇中文论文的风格识别结果与断点回归结果",
+        "runner": run_hs300_paper,
     },
 }
 
@@ -88,6 +131,7 @@ COLUMN_LABELS = {
     "n_treated": "处理组数量",
     "n_control": "对照组数量",
     "specification": "回归规格",
+    "dependent_variable": "被解释变量",
     "coefficient": "系数",
     "std_error": "标准误",
     "r_squared": "R²",
@@ -126,6 +170,34 @@ COLUMN_LABELS = {
     "effective": "生效日",
     "CN": "中国 A 股",
     "US": "美国",
+}
+
+VALUE_LABELS = {
+    "announce": "公告日",
+    "effective": "生效日",
+    "CN": "中国 A 股",
+    "US": "美国",
+    "abnormal_return": "异常收益",
+    "turnover": "换手率",
+    "log_volume": "对数成交量",
+    "main_car": "主回归 CAR",
+    "turnover_mechanism": "换手率机制",
+    "volume_mechanism": "成交量机制",
+    "volatility_mechanism": "波动率机制",
+    "const": "常数项",
+    "inclusion": "是否纳入",
+    "log_mkt_cap": "对数市值",
+    "pre_event_return": "事件前收益",
+    "car_m1_p1": "CAR[-1,+1]",
+    "car_m3_p3": "CAR[-3,+3]",
+    "car_m5_p5": "CAR[-5,+5]",
+    "car_p0_p5": "CAR[0,+5]",
+    "car_p0_p20": "CAR[0,+20]",
+    "car_p0_p60": "CAR[0,+60]",
+    "car_p0_p120": "CAR[0,+120]",
+    "turnover_change": "换手率变化",
+    "volume_change": "成交量变化",
+    "volatility_change": "波动率变化",
 }
 
 APP_TEMPLATE = """
@@ -347,7 +419,7 @@ APP_TEMPLATE = """
   <div class="page">
     <section class="hero">
       <h1>指数纳入文献分析面板</h1>
-      <p>这个界面把四类文献模式变成可点击的结果页面。你可以直接运行分析，然后在页面里查看图表、数据表和解释说明，不再依赖命令行输出。</p>
+      <p>这个界面把三篇核心文献整理成三个可点击入口。你可以直接运行分析，然后在页面里查看图表、数据表和解释说明，不再依赖命令行输出。</p>
     </section>
     <div class="grid">
       <aside class="sidebar">
@@ -431,9 +503,9 @@ def _render_table(frame) -> str:
     if len(display) > 120:
         display = display.head(120)
     display = display.rename(columns={column: COLUMN_LABELS.get(column, column) for column in display.columns})
-    for column in ["市场", "事件阶段", "结果变量"]:
-        if column in display.columns:
-            display[column] = display[column].replace(COLUMN_LABELS)
+    for column in display.columns:
+        if display[column].dtype == object:
+            display[column] = display[column].replace(VALUE_LABELS)
     return display.to_html(index=False, classes=["dataframe"], border=0, justify="left", float_format=lambda v: f"{v:0.4f}")
 
 
@@ -460,7 +532,7 @@ def _format_figure_caption(path: Path) -> str:
 
 def _normalize_result(raw: dict[str, object]) -> dict[str, object]:
     summary_path = raw.get("summary_path")
-    summary_text = ""
+    summary_text = raw.get("summary_text", "") if isinstance(raw.get("summary_text"), str) else ""
     if isinstance(summary_path, Path) and summary_path.exists():
         summary_text = summary_path.read_text(encoding="utf-8")
     tables = []
@@ -469,12 +541,20 @@ def _normalize_result(raw: dict[str, object]) -> dict[str, object]:
             continue
         tables.append((_translate_label(label), _render_table(frame)))
     figure_paths = []
-    for path in raw.get("figures", []):
-        if isinstance(path, Path):
+    for item in raw.get("figures", []):
+        if isinstance(item, Path):
             figure_paths.append(
                 {
-                    "path": _safe_relative(path),
-                    "caption": _format_figure_caption(path),
+                    "path": _safe_relative(item),
+                    "caption": _format_figure_caption(item),
+                }
+            )
+        elif isinstance(item, dict) and isinstance(item.get("path"), Path):
+            prefix = f"{item['prefix']}：" if item.get("prefix") else ""
+            figure_paths.append(
+                {
+                    "path": _safe_relative(item["path"]),
+                    "caption": f"{prefix}{_format_figure_caption(item['path'])}",
                 }
             )
     output_dir = raw.get("output_dir")
@@ -526,6 +606,53 @@ def _load_saved_tables(output_dir: Path) -> list[tuple[str, str]]:
     return tables
 
 
+def _load_hs300_paper_saved_result() -> dict[str, object]:
+    style_dir = ROOT / "results" / "literature" / "hs300_style"
+    rdd_dir = ROOT / "results" / "literature" / "hs300_rdd"
+
+    style_summary_path = style_dir / "summary.md"
+    rdd_summary_path = rdd_dir / "summary.md"
+    style_summary = style_summary_path.read_text(encoding="utf-8").strip() if style_summary_path.exists() else "暂无风格识别摘要。"
+    rdd_summary = rdd_summary_path.read_text(encoding="utf-8").strip() if rdd_summary_path.exists() else "暂无断点回归摘要。"
+
+    combined_tables: list[tuple[str, str]] = []
+    for label, html_table in _load_saved_tables(style_dir):
+        combined_tables.append((f"风格识别：{label}", html_table))
+    for label, html_table in _load_saved_tables(rdd_dir):
+        combined_tables.append((f"断点回归：{label}", html_table))
+
+    figure_paths = []
+    for path in sorted(style_dir.rglob("*.png")):
+        figure_paths.append({"path": _safe_relative(path), "caption": f"风格识别：{_format_figure_caption(path)}"})
+    for path in sorted(rdd_dir.rglob("*.png")):
+        figure_paths.append({"path": _safe_relative(path), "caption": f"断点回归：{_format_figure_caption(path)}"})
+
+    summary_text = "\n\n".join(
+        [
+            "# 第三篇论文结果包",
+            "",
+            "这个页面把第三篇中文论文相关结果合并到同一页中，便于直接比较两类识别策略。",
+            "",
+            "## 第一部分：风格识别",
+            style_summary,
+            "",
+            "## 第二部分：断点回归",
+            rdd_summary,
+        ]
+    ).strip()
+
+    return {
+        "id": "hs300_paper",
+        "title": ANALYSES["hs300_paper"]["title"],
+        "description": ANALYSES["hs300_paper"]["description_zh"],
+        "subtitle": ANALYSES["hs300_paper"]["subtitle"],
+        "summary_text": summary_text,
+        "rendered_tables": combined_tables,
+        "figure_paths": figure_paths,
+        "output_dir": _safe_relative(ROOT / "results" / "literature"),
+    }
+
+
 @app.route("/")
 def home():
     current = None
@@ -556,6 +683,9 @@ def show_analysis(analysis_id: str):
         abort(404)
     current = RUN_CACHE.get(analysis_id)
     if current is None:
+        if analysis_id == "hs300_paper":
+            current = _load_hs300_paper_saved_result()
+            return render_template_string(APP_TEMPLATE, analyses=ANALYSES, current=current)
         output_dir = ROOT / "results" / "literature" / analysis_id
         summary_path = output_dir / "summary.md"
         if summary_path.exists():

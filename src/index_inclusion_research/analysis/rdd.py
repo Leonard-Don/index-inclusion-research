@@ -10,6 +10,18 @@ import statsmodels.api as sm
 matplotlib.use("Agg")
 from matplotlib import pyplot as plt
 
+plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
+plt.rcParams["axes.unicode_minus"] = False
+
+OUTCOME_LABELS = {
+    "car_m1_p1": "CAR[-1,+1]",
+    "car_m3_p3": "CAR[-3,+3]",
+    "car_m5_p5": "CAR[-5,+5]",
+    "turnover_change": "换手率变化",
+    "volume_change": "成交量变化",
+    "volatility_change": "波动率变化",
+}
+
 
 def choose_bandwidth(centered_running: pd.Series) -> float:
     clean = centered_running.dropna().astype(float)
@@ -122,18 +134,19 @@ def plot_rdd_bins(
 
     left_bins = _bin_side(left)
     right_bins = _bin_side(right)
+    outcome_label = OUTCOME_LABELS.get(outcome_col, outcome_col)
 
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
-    fig, ax = plt.subplots(figsize=(7, 5))
+    fig, ax = plt.subplots(figsize=(8.5, 6))
     if not left_bins.empty:
-        ax.scatter(left_bins["bin_center"], left_bins["mean_outcome"], label="Below cutoff", color="#c44e52")
+        ax.scatter(left_bins["bin_center"], left_bins["mean_outcome"], label="断点左侧样本", color="#c44e52")
     if not right_bins.empty:
-        ax.scatter(right_bins["bin_center"], right_bins["mean_outcome"], label="Above cutoff", color="#4c72b0")
+        ax.scatter(right_bins["bin_center"], right_bins["mean_outcome"], label="断点右侧样本", color="#4c72b0")
     ax.axvline(0, color="black", linestyle="--", linewidth=1)
-    ax.set_title(f"RDD bins: {outcome_col}")
-    ax.set_xlabel("Distance to cutoff")
-    ax.set_ylabel(outcome_col)
+    ax.set_title(f"{outcome_label} 断点回归分箱图")
+    ax.set_xlabel("距断点距离")
+    ax.set_ylabel(outcome_label)
     ax.legend()
     ax.grid(alpha=0.3)
     fig.tight_layout()

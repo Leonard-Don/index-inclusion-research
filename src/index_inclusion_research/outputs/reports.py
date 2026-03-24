@@ -8,6 +8,24 @@ import pandas as pd
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
+plt.rcParams["axes.unicode_minus"] = False
+
+MARKET_LABELS = {
+    "CN": "中国 A 股",
+    "US": "美国",
+}
+
+PHASE_LABELS = {
+    "announce": "公告日",
+    "effective": "生效日",
+}
+
+INCLUSION_LABELS = {
+    1: "纳入样本",
+    0: "匹配对照组",
+}
+
 
 def _ensure_directory(path: str | Path) -> Path:
     target = Path(path)
@@ -21,9 +39,9 @@ def plot_average_paths(average_paths: pd.DataFrame, output_dir: str | Path) -> N
         return
 
     for (market, event_phase), group in average_paths.groupby(["market", "event_phase"], dropna=False):
-        fig, ax = plt.subplots(figsize=(8, 5))
+        fig, ax = plt.subplots(figsize=(9.5, 6))
         for inclusion, inclusion_group in group.groupby("inclusion", dropna=False):
-            label = "Included stocks" if int(inclusion) == 1 else "Matched controls"
+            label = INCLUSION_LABELS.get(int(inclusion), str(inclusion))
             ax.plot(
                 inclusion_group["relative_day"],
                 inclusion_group["mean_car"],
@@ -32,9 +50,11 @@ def plot_average_paths(average_paths: pd.DataFrame, output_dir: str | Path) -> N
                 label=label,
             )
         ax.axvline(0, color="black", linestyle="--", linewidth=1)
-        ax.set_title(f"{market} {event_phase.capitalize()} Mean CAR Path")
-        ax.set_xlabel("Relative trading day")
-        ax.set_ylabel("Mean cumulative abnormal return")
+        market_label = MARKET_LABELS.get(str(market), str(market))
+        phase_label = PHASE_LABELS.get(str(event_phase), str(event_phase))
+        ax.set_title(f"{market_label}{phase_label}平均累计异常收益路径")
+        ax.set_xlabel("相对交易日")
+        ax.set_ylabel("平均累计异常收益")
         ax.legend()
         ax.grid(alpha=0.3)
         fig.tight_layout()
