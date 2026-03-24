@@ -129,6 +129,14 @@ python3 scripts/make_figures_tables.py
 python3 scripts/generate_research_report.py
 ```
 
+7. 启动文献结果界面：
+
+```bash
+python3 scripts/start_literature_dashboard.py
+```
+
+然后打开 <http://127.0.0.1:5001>。
+
 ## 论文写作对应关系
 
 - `run_event_study.py`：验证公告日/生效日前后的超额收益路径
