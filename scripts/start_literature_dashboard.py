@@ -19,6 +19,16 @@ from start_harris_gurel import run_analysis as run_harris_gurel
 from start_hs300_rdd import run_analysis as run_hs300_rdd
 from start_hs300_style import run_analysis as run_hs300_style
 from start_shleifer import run_analysis as run_shleifer
+from index_inclusion_research.literature_catalog import (
+    build_grouped_literature_frame,
+    build_literature_dashboard_frame,
+    build_literature_review_markdown,
+    build_literature_summary_frame,
+    build_literature_summary_markdown,
+    build_project_track_frame,
+    build_project_track_markdown,
+    get_literature_paper,
+)
 
 
 def run_hs300_paper(verbose: bool = False) -> dict[str, object]:
@@ -45,9 +55,9 @@ def run_hs300_paper(verbose: bool = False) -> dict[str, object]:
 
     summary_text = "\n\n".join(
         [
-            "# 第三篇论文结果包",
+            "# 制度识别与中国市场证据结果包",
             "",
-            "这个页面把第三篇中文论文相关结果合并到同一页中，便于直接比较两类识别策略。",
+            "这条研究主线用中性文献与中国市场文献组织识别策略，在同一页里同时展示匹配对照组结果与断点回归扩展结果。",
             "",
             "## 第一部分：风格识别",
             style_summary or "暂无风格识别摘要。",
@@ -71,23 +81,38 @@ def run_hs300_paper(verbose: bool = False) -> dict[str, object]:
 
 ANALYSES = {
     "harris_gurel": {
-        "title": "短期价格压力",
-        "subtitle": "Harris-Gurel",
-        "description_zh": "短窗口事件研究与价格压力证据",
+        "title": "短期价格压力与效应减弱",
+        "subtitle": "Price Pressure & Disappearing Effect",
+        "description_zh": "以反方文献和早期事件研究证据为底，检验短窗口 CAR、成交量冲击和效应减弱问题",
+        "project_module": "短期价格压力",
         "runner": run_harris_gurel,
     },
     "shleifer": {
-        "title": "需求曲线效应",
-        "subtitle": "Shleifer",
-        "description_zh": "长窗口保留率与向下倾斜需求曲线",
+        "title": "需求曲线与长期保留",
+        "subtitle": "Demand Curves & Long-run Retention",
+        "description_zh": "以正方机制文献为底，检验价格是否只部分回吐以及需求曲线是否向下倾斜",
+        "project_module": "需求曲线效应",
         "runner": run_shleifer,
     },
     "hs300_paper": {
-        "title": "沪深300 论文复现",
-        "subtitle": "HS300 Paper",
-        "description_zh": "第三篇中文论文的风格识别结果与断点回归结果",
+        "title": "制度识别与中国市场证据",
+        "subtitle": "Identification & China Evidence",
+        "description_zh": "以中性文献和中国市场证据为底，整合匹配对照组、DID 风格分析和 RDD 扩展",
+        "project_module": "沪深300论文复现",
         "runner": run_hs300_paper,
     },
+}
+
+LIBRARY_CARD = {
+    "title": "16 篇文献库",
+    "subtitle": "Literature Library",
+    "description_zh": "反方、中性、正方三组文献与项目模块映射",
+}
+
+REVIEW_CARD = {
+    "title": "文献综述",
+    "subtitle": "Review Navigator",
+    "description_zh": "按反方、中性、正方三组查看 16 篇文献",
 }
 
 RUN_CACHE: dict[str, dict[str, object]] = {}
@@ -219,6 +244,10 @@ APP_TEMPLATE = """
       --shadow: 0 18px 40px rgba(42, 36, 26, 0.08);
     }
     * { box-sizing: border-box; }
+    html, body {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
     body {
       margin: 0;
       font-family: Georgia, "Times New Roman", serif;
@@ -230,8 +259,9 @@ APP_TEMPLATE = """
     }
     a { color: var(--accent); text-decoration: none; }
     .page {
-      width: min(1320px, calc(100vw - 32px));
+      width: min(1280px, 100%);
       margin: 24px auto 56px;
+      padding: 0 16px;
     }
     .hero, .panel, .analysis-card {
       background: var(--card);
@@ -256,17 +286,27 @@ APP_TEMPLATE = """
       font-size: 17px;
       line-height: 1.6;
     }
+    .sidebar-title {
+      margin: 2px 0 0;
+      color: #7a6d5a;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-weight: 700;
+    }
     .grid {
       display: grid;
-      grid-template-columns: 320px 1fr;
+      grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
       gap: 18px;
       align-items: start;
+      min-width: 0;
     }
     .sidebar {
       display: grid;
       gap: 16px;
       position: sticky;
       top: 18px;
+      min-width: 0;
     }
     .analysis-card {
       padding: 18px;
@@ -309,6 +349,8 @@ APP_TEMPLATE = """
     .panel {
       padding: 24px;
       min-height: 70vh;
+      min-width: 0;
+      overflow: hidden;
     }
     .panel h2 {
       margin: 0 0 8px;
@@ -350,12 +392,14 @@ APP_TEMPLATE = """
       padding: 16px 18px;
       line-height: 1.65;
       white-space: pre-wrap;
+      overflow-wrap: anywhere;
       font-size: 15px;
     }
     .figure-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 18px;
+      min-width: 0;
     }
     .figure-card {
       border: 1px solid var(--line);
@@ -378,13 +422,18 @@ APP_TEMPLATE = """
       word-break: break-all;
     }
     .table-wrap {
-      overflow: auto;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
       border: 1px solid var(--line);
       border-radius: 18px;
       background: white;
     }
     table.dataframe {
-      width: 100%;
+      width: max-content;
+      min-width: 100%;
       border-collapse: collapse;
       font-size: 15px;
     }
@@ -392,7 +441,11 @@ APP_TEMPLATE = """
       padding: 12px 14px;
       border-bottom: 1px solid #efe3d2;
       text-align: left;
-      white-space: nowrap;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      vertical-align: top;
+      min-width: 92px;
     }
     table.dataframe thead th {
       position: sticky;
@@ -408,10 +461,30 @@ APP_TEMPLATE = """
       margin-top: 18px;
       font-size: 13px;
       color: var(--muted);
+      overflow-wrap: anywhere;
     }
     @media (max-width: 980px) {
       .grid { grid-template-columns: 1fr; }
       .sidebar { position: static; }
+      .page {
+        margin: 16px auto 36px;
+        padding: 0 12px;
+      }
+      .hero, .panel, .analysis-card {
+        border-radius: 18px;
+      }
+      .hero {
+        padding: 22px 20px;
+      }
+      .panel {
+        padding: 18px;
+      }
+      .analysis-card {
+        padding: 16px;
+      }
+      .figure-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -419,10 +492,11 @@ APP_TEMPLATE = """
   <div class="page">
     <section class="hero">
       <h1>指数纳入文献分析面板</h1>
-      <p>这个界面把三篇核心文献整理成三个可点击入口。你可以直接运行分析，然后在页面里查看图表、数据表和解释说明，不再依赖命令行输出。</p>
+      <p>这个界面以 16 篇指数效应文献为底，抽出三条研究主线。你可以直接运行分析，并在同一页里同时看到支撑文献、结果表和图表解释。</p>
     </section>
     <div class="grid">
       <aside class="sidebar">
+        <div class="sidebar-title">分析入口</div>
         {% for key, item in analyses.items() %}
         <div class="analysis-card">
           <h3>{{ item.title }}</h3>
@@ -436,6 +510,23 @@ APP_TEMPLATE = """
           </div>
         </div>
         {% endfor %}
+        <div class="sidebar-title">参考文献</div>
+        <div class="analysis-card">
+          <h3>{{ library_card.title }}</h3>
+          <div class="subtle">{{ library_card.subtitle }}</div>
+          <p>{{ library_card.description_zh }}</p>
+          <div class="btn-row">
+            <a class="btn secondary" href="{{ url_for('show_library') }}">查看文献</a>
+          </div>
+        </div>
+        <div class="analysis-card">
+          <h3>{{ review_card.title }}</h3>
+          <div class="subtle">{{ review_card.subtitle }}</div>
+          <p>{{ review_card.description_zh }}</p>
+          <div class="btn-row">
+            <a class="btn secondary" href="{{ url_for('show_review') }}">查看综述</a>
+          </div>
+        </div>
       </aside>
       <main class="panel">
         {% if current %}
@@ -480,7 +571,7 @@ APP_TEMPLATE = """
           <div class="foot">输出目录：{{ current.output_dir }}</div>
         {% else %}
           <div class="notice">
-            先从左侧选择一个文献模式。点击“运行并刷新”后，界面会自动生成并展示对应的图表和数据表。
+            先从左侧选择一条研究主线。点击“运行并刷新”后，界面会自动展示这条主线对应的支撑文献、图表和数据表。
           </div>
         {% endif %}
       </main>
@@ -506,7 +597,14 @@ def _render_table(frame) -> str:
     for column in display.columns:
         if display[column].dtype == object:
             display[column] = display[column].replace(VALUE_LABELS)
-    return display.to_html(index=False, classes=["dataframe"], border=0, justify="left", float_format=lambda v: f"{v:0.4f}")
+    return display.to_html(
+        index=False,
+        classes=["dataframe"],
+        border=0,
+        justify="left",
+        escape=False,
+        float_format=lambda v: f"{v:0.4f}",
+    )
 
 
 def _translate_label(label: str) -> str:
@@ -568,6 +666,20 @@ def _normalize_result(raw: dict[str, object]) -> dict[str, object]:
         "figure_paths": figure_paths,
         "output_dir": _safe_relative(output_dir) if isinstance(output_dir, Path) else output_dir,
     }
+
+
+def _attach_project_track_context(current: dict[str, object], config: dict[str, object]) -> dict[str, object]:
+    project_module = config.get("project_module")
+    if not project_module:
+        return current
+    track_summary = build_project_track_markdown(project_module).strip()
+    if current.get("summary_text"):
+        current["summary_text"] = f"{track_summary}\n\n---\n\n{current['summary_text']}"
+    else:
+        current["summary_text"] = track_summary
+    support_table = ("支撑文献", _render_table(build_project_track_frame(project_module)))
+    current["rendered_tables"] = [support_table, *current.get("rendered_tables", [])]
+    return current
 
 
 def _load_saved_tables(output_dir: Path) -> list[tuple[str, str]]:
@@ -653,13 +765,52 @@ def _load_hs300_paper_saved_result() -> dict[str, object]:
     }
 
 
+def _load_literature_library_result() -> dict[str, object]:
+    return {
+        "id": "paper_library",
+        "title": LIBRARY_CARD["title"],
+        "description": LIBRARY_CARD["description_zh"],
+        "subtitle": LIBRARY_CARD["subtitle"],
+        "summary_text": build_literature_summary_markdown(),
+        "rendered_tables": [
+            ("文献分组统计", _render_table(build_literature_summary_frame())),
+            ("文献目录", _render_table(build_literature_dashboard_frame())),
+        ],
+        "figure_paths": [],
+        "output_dir": "docs",
+    }
+
+
+def _load_literature_review_result() -> dict[str, object]:
+    return {
+        "id": "paper_review",
+        "title": REVIEW_CARD["title"],
+        "description": REVIEW_CARD["description_zh"],
+        "subtitle": REVIEW_CARD["subtitle"],
+        "summary_text": build_literature_review_markdown(),
+        "rendered_tables": [
+            ("反方文献", _render_table(build_grouped_literature_frame("反方"))),
+            ("中性文献", _render_table(build_grouped_literature_frame("中性"))),
+            ("正方文献", _render_table(build_grouped_literature_frame("正方"))),
+        ],
+        "figure_paths": [],
+        "output_dir": "docs",
+    }
+
+
 @app.route("/")
 def home():
     current = None
     if RUN_CACHE:
         last_key = next(reversed(RUN_CACHE))
         current = RUN_CACHE[last_key]
-    return render_template_string(APP_TEMPLATE, analyses=ANALYSES, current=current)
+    return render_template_string(
+        APP_TEMPLATE,
+        analyses=ANALYSES,
+        library_card=LIBRARY_CARD,
+        review_card=REVIEW_CARD,
+        current=current,
+    )
 
 
 @app.post("/run/<analysis_id>")
@@ -669,11 +820,43 @@ def run_analysis(analysis_id: str):
         abort(404)
     raw = config["runner"](verbose=False)
     current = _normalize_result(raw)
+    current["id"] = config.get("project_module", analysis_id)
     current["title"] = config["title"]
     current["description"] = raw.get("description", config["description_zh"])
     current["subtitle"] = config["subtitle"]
+    current = _attach_project_track_context(current, config)
     RUN_CACHE[analysis_id] = current
     return redirect(url_for("show_analysis", analysis_id=analysis_id))
+
+
+@app.get("/library")
+def show_library():
+    current = RUN_CACHE.get("paper_library")
+    if current is None:
+        current = _load_literature_library_result()
+        RUN_CACHE["paper_library"] = current
+    return render_template_string(
+        APP_TEMPLATE,
+        analyses=ANALYSES,
+        library_card=LIBRARY_CARD,
+        review_card=REVIEW_CARD,
+        current=current,
+    )
+
+
+@app.get("/review")
+def show_review():
+    current = RUN_CACHE.get("paper_review")
+    if current is None:
+        current = _load_literature_review_result()
+        RUN_CACHE["paper_review"] = current
+    return render_template_string(
+        APP_TEMPLATE,
+        analyses=ANALYSES,
+        library_card=LIBRARY_CARD,
+        review_card=REVIEW_CARD,
+        current=current,
+    )
 
 
 @app.get("/analysis/<analysis_id>")
@@ -685,12 +868,19 @@ def show_analysis(analysis_id: str):
     if current is None:
         if analysis_id == "hs300_paper":
             current = _load_hs300_paper_saved_result()
-            return render_template_string(APP_TEMPLATE, analyses=ANALYSES, current=current)
+            current = _attach_project_track_context(current, config)
+            return render_template_string(
+                APP_TEMPLATE,
+                analyses=ANALYSES,
+                library_card=LIBRARY_CARD,
+                review_card=REVIEW_CARD,
+                current=current,
+            )
         output_dir = ROOT / "results" / "literature" / analysis_id
         summary_path = output_dir / "summary.md"
         if summary_path.exists():
             current = {
-                "id": analysis_id,
+                "id": config.get("project_module", analysis_id),
                 "title": config["title"],
                 "description": config["description_zh"],
                 "subtitle": config["subtitle"],
@@ -705,9 +895,16 @@ def show_analysis(analysis_id: str):
                 ],
                 "output_dir": _safe_relative(output_dir),
             }
+            current = _attach_project_track_context(current, config)
         else:
             current = None
-    return render_template_string(APP_TEMPLATE, analyses=ANALYSES, current=current)
+    return render_template_string(
+        APP_TEMPLATE,
+        analyses=ANALYSES,
+        library_card=LIBRARY_CARD,
+        review_card=REVIEW_CARD,
+        current=current,
+    )
 
 
 @app.get("/files/<path:subpath>")
@@ -719,6 +916,14 @@ def serve_result_file(subpath: str):
     if not full_path.exists() or not full_path.is_file():
         abort(404)
     return send_file(full_path)
+
+
+@app.get("/paper/<paper_id>")
+def serve_library_pdf(paper_id: str):
+    paper = get_literature_paper(paper_id)
+    if paper is None or not paper.exists:
+        abort(404)
+    return send_file(paper.pdf_path)
 
 
 def main() -> None:

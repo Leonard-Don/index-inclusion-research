@@ -27,9 +27,9 @@ def run_analysis(verbose: bool = True) -> dict[str, object]:
 
     report = "\n".join(
         [
-            "# Shleifer 文献结果包",
+            "# 需求曲线与长期保留结果包",
             "",
-            "这一页重点展示长窗口累计异常收益、保留效应和部分反转。",
+            "这条研究主线重点展示长窗口累计异常收益、保留效应和部分反转。",
             "",
             "关键输出文件：",
             f"- 事件研究汇总：`{output_dir / 'event_study_summary.csv'}`",
@@ -50,7 +50,7 @@ def run_analysis(verbose: bool = True) -> dict[str, object]:
     figure_paths = sorted((output_dir / "figures").glob("*.png"))
     result = {
         "id": "shleifer",
-        "title": "Shleifer",
+        "title": "需求曲线与长期保留",
         "output_dir": output_dir,
         "summary_path": output_dir / "summary.md",
         "tables": {
@@ -58,7 +58,7 @@ def run_analysis(verbose: bool = True) -> dict[str, object]:
             "保留率汇总": retention_summary,
         },
         "figures": figure_paths,
-        "description": "长窗口保留效应与部分反转证据。",
+        "description": "用长窗口 CAR 和 retention 检验需求曲线与不完全回吐。",
     }
     if verbose:
         print("\nShleifer startup script completed.")

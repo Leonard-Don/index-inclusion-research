@@ -32,9 +32,9 @@ def run_analysis(verbose: bool = True) -> dict[str, object]:
 
     report = "\n".join(
         [
-            "# Harris-Gurel 文献结果包",
+            "# 短期价格压力与效应减弱结果包",
             "",
-            "这一页重点展示短窗口事件研究结果，以及事件前后交易活跃度变化。",
+            "这条研究主线重点展示短窗口事件研究结果，以及事件前后交易活跃度变化。",
             "",
             "关键输出文件：",
             f"- 事件研究汇总：`{output_dir / 'event_study_summary.csv'}`",
@@ -52,7 +52,7 @@ def run_analysis(verbose: bool = True) -> dict[str, object]:
     figure_paths = sorted((output_dir / "figures").glob("*.png"))
     result = {
         "id": "harris_gurel",
-        "title": "Harris-Gurel",
+        "title": "短期价格压力与效应减弱",
         "output_dir": output_dir,
         "summary_path": output_dir / "summary.md",
         "tables": {
@@ -60,7 +60,7 @@ def run_analysis(verbose: bool = True) -> dict[str, object]:
             "机制变量汇总": mechanism_summary,
         },
         "figures": figure_paths,
-        "description": "短窗口事件研究与交易压力证据。",
+        "description": "用短窗口 CAR 和交易活跃度变化检验价格压力与效应减弱。",
     }
     if verbose:
         print("\nHarris-Gurel startup script completed.")

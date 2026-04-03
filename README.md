@@ -1,10 +1,10 @@
 # Index Inclusion Research Toolkit
 
-`index-inclusion-research` 是一个为“股票被纳入指数后为什么会上涨”这类论文准备的 Python 实证分析骨架。它默认支持 A 股和美股的跨市场比较，围绕三类机制组织代码：
+`index-inclusion-research` 是一个以 `16 篇指数效应文献库` 为理论底座、为“股票被纳入指数后为什么会上涨”这类论文准备的 Python 实证分析项目。它默认支持 A 股和美股的跨市场比较，并把整套项目统一组织成三条研究主线：
 
-- 被动资金需求冲击
-- 流动性 / 关注度提升
-- 信息背书效应
+- `短期价格压力与效应减弱`
+- `需求曲线与长期保留`
+- `制度识别与中国市场证据`
 
 项目从原始事件表和价格表出发，生成事件窗口面板、事件研究结果、匹配对照样本、回归结果以及论文可直接引用的图表和表格。
 
@@ -137,7 +137,21 @@ python3 scripts/start_literature_dashboard.py
 
 然后打开 <http://127.0.0.1:5001>。
 
-## 论文写作对应关系
+界面中现在的 3 个分析入口，不再对应“3 篇核心论文”，而是对应从 16 篇文献中抽出来的 3 条研究主线。
+同时还内置了：
+- `16 篇文献库` 页面：查看反方、中性、正方文献的项目映射，并从页面打开 PDF
+- `文献综述` 页面：按反方、中性、正方三组分别展示文献，方便直接写综述
+
+## 16 篇文献驱动的项目结构
+
+- `短期价格压力与效应减弱`
+  使用短窗口事件研究结果，重点对应 Harris and Gurel、Kasch and Sarkar、Greenwood and Sammon 等文献
+- `需求曲线与长期保留`
+  使用长窗口 CAR 和 retention 指标，重点对应 Shleifer、Kaul et al.、Wurgler and Zhuravskaya 等文献
+- `制度识别与中国市场证据`
+  使用匹配对照组、DID 风格分析和 RDD 扩展，重点对应 Ahn and Patatoukas、Chang et al.、姚东旻等、Chu et al. 等文献
+
+## 核心脚本对应关系
 
 - `run_event_study.py`：验证公告日/生效日前后的超额收益路径
 - `match_controls.py`：生成课程论文够用的 matched sample
@@ -145,7 +159,7 @@ python3 scripts/start_literature_dashboard.py
 - `make_figures_tables.py`：导出可直接嵌入论文的图和表
 - `generate_research_report.py`：把结果自动整理成中文 Markdown 摘要，便于写论文
 
-## 论文辅助写作
+## 文献与写作
 
 - 论文写作模板见 [docs/paper_outline.md](docs/paper_outline.md)
 - 自动生成的结果摘要默认输出到 `results/tables/research_summary.md`
@@ -156,6 +170,10 @@ python3 scripts/start_literature_dashboard.py
 - 再把其中的结论句式改成你的论文语言
 
 真实数据说明见 [docs/real_data_notes.md](docs/real_data_notes.md)。
+- 16 篇文献分类见 [docs/index_effect_literature_map.md](docs/index_effect_literature_map.md)
+- 16 篇文献到项目主线的使用说明见 [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)
+- 文献综述初稿见 [docs/literature_review_draft_cn.md](docs/literature_review_draft_cn.md)
+- 作者（年份）版综述见 [docs/literature_review_author_year_cn.md](docs/literature_review_author_year_cn.md)
 
 ## 扩展建议
 

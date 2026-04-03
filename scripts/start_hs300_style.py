@@ -40,9 +40,9 @@ def run_analysis(verbose: bool = True) -> dict[str, object]:
 
     report = "\n".join(
         [
-            "# 沪深300 论文风格结果包",
+            "# 制度识别与中国市场证据：匹配对照组结果包",
             "",
-            "这一页聚焦中国样本、匹配对照组和 DID 风格的前后变化比较。",
+            "这部分聚焦中国样本、匹配对照组和 DID 风格的前后变化比较。",
             "",
             "重要限制：",
             "- 这里是与文献风格一致的强化识别结果，不是完整的断点回归复现。",
@@ -62,7 +62,7 @@ def run_analysis(verbose: bool = True) -> dict[str, object]:
     figures = sorted((output_dir / "treated_only" / "figures").glob("*.png"))
     result = {
         "id": "hs300_style",
-        "title": "沪深300 风格",
+        "title": "制度识别与中国市场证据：匹配对照组",
         "output_dir": output_dir,
         "summary_path": output_dir / "summary.md",
         "tables": {
@@ -72,7 +72,7 @@ def run_analysis(verbose: bool = True) -> dict[str, object]:
             "模型统计量": model_stats,
         },
         "figures": figures,
-        "description": "中国样本的匹配对照组与 DID 风格证据。",
+        "description": "中国样本的匹配对照组与 DID 风格识别证据。",
     }
     if verbose:
         print("\nHS300-style startup script completed.")

@@ -138,7 +138,7 @@ def run_analysis(verbose: bool = True) -> dict[str, object]:
         output_dir / "summary.md",
         "\n".join(
             [
-                "# 沪深300 RDD 结果包",
+                "# 制度识别与中国市场证据：断点回归结果包",
                 "",
                 data_note,
                 "",
@@ -163,7 +163,7 @@ def run_analysis(verbose: bool = True) -> dict[str, object]:
     figures = sorted((output_dir / "figures").glob("*.png"))
     result = {
         "id": "hs300_rdd",
-        "title": "沪深300 RDD",
+        "title": "制度识别与中国市场证据：断点回归",
         "output_dir": output_dir,
         "summary_path": output_dir / "summary.md",
         "tables": {
