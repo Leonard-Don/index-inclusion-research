@@ -36,7 +36,7 @@
 
 对应脚本：
 
-- `scripts/start_harris_gurel.py`
+- `scripts/start_price_pressure_track.py`
 
 但要注意，这个脚本现在只是这条研究主线的底层实现之一，不再代表“项目本身只基于 Harris and Gurel”。
 
@@ -64,7 +64,7 @@
 
 对应脚本：
 
-- `scripts/start_shleifer.py`
+- `scripts/start_demand_curve_track.py`
 
 同样，这个脚本现在只是“长窗口需求曲线主线”的一个实现名，而不是整个项目仍然以 Shleifer 单篇为中心。
 
@@ -92,10 +92,9 @@
 
 对应脚本：
 
-- `scripts/start_hs300_style.py`
-- `scripts/start_hs300_rdd.py`
+- `scripts/start_identification_china_track.py`
 
-现在仪表盘会把它们合并成同一条研究主线，而不是把它理解成“第三篇论文的附加页面”。
+现在仪表盘会把它们合并成同一条研究主线，而不是继续沿用旧的论文级拼接结构。
 
 ## 二、你现在该怎样使用这个项目
 
@@ -123,10 +122,9 @@
 
 只有在你需要单独调试时，才需要直接运行：
 
-- `scripts/start_harris_gurel.py`
-- `scripts/start_shleifer.py`
-- `scripts/start_hs300_style.py`
-- `scripts/start_hs300_rdd.py`
+- `scripts/start_price_pressure_track.py`
+- `scripts/start_demand_curve_track.py`
+- `scripts/start_identification_china_track.py`
 
 平时更推荐直接从仪表盘进入，因为仪表盘已经把这些底层脚本重新组织成了 16 篇文献驱动的三条主线。
 
