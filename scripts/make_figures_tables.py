@@ -11,8 +11,18 @@ if str(SRC) not in sys.path:
 
 import pandas as pd
 
+from index_inclusion_research.analysis import compute_event_study
+from index_inclusion_research.literature import compute_retention_summary
 from index_inclusion_research.loaders import save_dataframe
-from index_inclusion_research.outputs import export_descriptive_tables, export_latex_tables, plot_average_paths
+from index_inclusion_research.outputs import (
+    build_data_source_table,
+    build_identification_scope_table,
+    build_sample_scope_table,
+    export_descriptive_tables,
+    export_latex_tables,
+    plot_average_paths,
+)
+from index_inclusion_research.pipeline import build_event_panel
 
 
 def _read_csv_if_exists(path: str | Path, parse_dates: list[str] | None = None) -> pd.DataFrame:
@@ -26,29 +36,65 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Create paper-ready figures and tables.")
     parser.add_argument("--events", default="data/processed/events_clean.csv", help="Events CSV.")
     parser.add_argument("--panel", default="data/processed/event_panel.csv", help="Event panel CSV.")
+    parser.add_argument("--prices", default="", help="Raw prices CSV.")
+    parser.add_argument("--benchmarks", default="", help="Raw benchmarks CSV.")
+    parser.add_argument("--metadata", default="", help="Security metadata CSV.")
+    parser.add_argument("--matched-panel", default="", help="Matched event panel CSV.")
     parser.add_argument("--average-paths", default="results/event_study/average_paths.csv", help="Average paths CSV.")
     parser.add_argument("--event-summary", default="results/event_study/event_study_summary.csv", help="Event-study summary CSV.")
     parser.add_argument("--regression-coefs", default="results/regressions/regression_coefficients.csv", help="Regression coefficients CSV.")
     parser.add_argument("--regression-models", default="results/regressions/regression_models.csv", help="Regression model stats CSV.")
+    parser.add_argument("--rdd-summary", default="", help="RDD summary CSV.")
+    parser.add_argument("--rdd-summary-note", default="", help="RDD summary markdown path.")
+    parser.add_argument(
+        "--long-window-output-dir",
+        default="",
+        help="Optional directory for long-window event-study outputs. Defaults to the event-summary directory.",
+    )
     parser.add_argument("--figures-dir", default="results/figures", help="Figure output directory.")
     parser.add_argument("--tables-dir", default="results/tables", help="Table output directory.")
     args = parser.parse_args()
 
     events = _read_csv_if_exists(args.events, parse_dates=["announce_date", "effective_date"])
     panel = _read_csv_if_exists(args.panel, parse_dates=["event_date_raw", "mapped_market_date", "event_date", "date"])
+    prices = _read_csv_if_exists(args.prices, parse_dates=["date"]) if args.prices else pd.DataFrame()
+    benchmarks = _read_csv_if_exists(args.benchmarks, parse_dates=["date"]) if args.benchmarks else pd.DataFrame()
+    metadata = _read_csv_if_exists(args.metadata) if args.metadata else pd.DataFrame()
+    matched_panel = (
+        _read_csv_if_exists(args.matched_panel, parse_dates=["event_date_raw", "mapped_market_date", "event_date", "date"])
+        if args.matched_panel
+        else pd.DataFrame()
+    )
     average_paths = _read_csv_if_exists(args.average_paths)
     event_summary = _read_csv_if_exists(args.event_summary)
     regression_coefs = _read_csv_if_exists(args.regression_coefs)
     regression_models = _read_csv_if_exists(args.regression_models)
+    rdd_summary = _read_csv_if_exists(args.rdd_summary) if args.rdd_summary else pd.DataFrame()
 
     if not average_paths.empty:
         plot_average_paths(average_paths, args.figures_dir)
 
     frames = {}
+    long_event_level = pd.DataFrame()
+    long_panel = pd.DataFrame()
     if not events.empty and not panel.empty:
         event_counts, panel_coverage = export_descriptive_tables(events, panel, args.tables_dir)
         frames["event_counts"] = event_counts
         frames["panel_coverage"] = panel_coverage
+
+        if not prices.empty and not benchmarks.empty:
+            long_windows = [(0, 5), (0, 20), (0, 60), (0, 120)]
+            long_panel = build_event_panel(events, prices, benchmarks, window_pre=20, window_post=120)
+            long_event_level, long_summary, _ = compute_event_study(long_panel, long_windows)
+            retention_summary = compute_retention_summary(long_event_level)
+            long_output_dir = Path(args.long_window_output_dir) if args.long_window_output_dir else Path(args.event_summary).parent
+            save_dataframe(long_event_level, long_output_dir / "long_window_event_level_metrics.csv")
+            save_dataframe(long_summary, Path(args.tables_dir) / "long_window_event_study_summary.csv")
+            frames["long_window_event_study_summary"] = long_summary
+            if not retention_summary.empty:
+                save_dataframe(retention_summary, Path(args.tables_dir) / "retention_summary.csv")
+                frames["retention_summary"] = retention_summary
+
     if not event_summary.empty:
         save_dataframe(event_summary, Path(args.tables_dir) / "event_study_summary.csv")
         frames["event_study_summary"] = event_summary
@@ -58,6 +104,58 @@ def main() -> None:
     if not regression_models.empty:
         save_dataframe(regression_models, Path(args.tables_dir) / "regression_models.csv")
         frames["regression_models"] = regression_models
+
+    if not events.empty:
+        data_sources = build_data_source_table(
+            events,
+            prices=prices,
+            benchmarks=benchmarks,
+            metadata=metadata,
+            panel=panel,
+            matched_panel=matched_panel,
+        )
+        if not data_sources.empty:
+            file_map = {
+                "事件样本": args.events,
+                "日频价格": args.prices,
+                "基准收益": args.benchmarks,
+                "证券元数据": args.metadata,
+                "事件窗口面板": args.panel,
+                "匹配回归面板": args.matched_panel,
+            }
+            data_sources.insert(1, "文件", data_sources["数据集"].map(file_map).fillna(""))
+            save_dataframe(data_sources, Path(args.tables_dir) / "data_sources.csv")
+            frames["data_sources"] = data_sources
+
+        sample_scope = build_sample_scope_table(
+            events,
+            panel=panel,
+            matched_panel=matched_panel,
+            long_panel=long_panel,
+            long_event_level=long_event_level,
+        )
+        if not sample_scope.empty:
+            save_dataframe(sample_scope, Path(args.tables_dir) / "sample_scope.csv")
+            frames["sample_scope"] = sample_scope
+
+        rdd_mode = "unavailable"
+        if args.rdd_summary_note:
+            note_path = Path(args.rdd_summary_note)
+            if note_path.exists():
+                note_text = note_path.read_text(encoding="utf-8")
+                if "demo 伪排名数据" in note_text:
+                    rdd_mode = "demo"
+                elif "真实候选排名文件" in note_text and "当前正在使用你提供的真实候选排名文件" in note_text:
+                    rdd_mode = "real"
+        identification_scope = build_identification_scope_table(
+            events,
+            panel=panel,
+            matched_panel=matched_panel,
+            rdd_summary=rdd_summary,
+            rdd_mode=rdd_mode,
+        )
+        save_dataframe(identification_scope, Path(args.tables_dir) / "identification_scope.csv")
+        frames["identification_scope"] = identification_scope
 
     export_latex_tables(frames, args.tables_dir)
     print(f"Saved figures to {args.figures_dir} and tables to {args.tables_dir}")

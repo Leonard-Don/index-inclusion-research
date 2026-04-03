@@ -106,6 +106,10 @@ TABLE_LABELS = {
     "match_diagnostics": "匹配诊断表",
     "rdd_summary": "RDD 汇总表",
     "event_level_with_running": "事件层运行变量样本表",
+    "sample_scope": "样本范围总表",
+    "data_sources": "数据来源与口径表",
+    "identification_scope": "识别范围说明表",
+    "long_window_event_study_summary": "长窗口事件研究汇总表",
 }
 
 COLUMN_LABELS = {
@@ -173,6 +177,25 @@ COLUMN_LABELS = {
     "effective": "生效日",
     "CN": "中国 A 股",
     "US": "美国",
+    "数据集": "数据集",
+    "文件": "文件",
+    "来源": "来源",
+    "市场范围": "市场范围",
+    "起始日期": "起始日期",
+    "结束日期": "结束日期",
+    "行数": "行数",
+    "股票数": "股票数",
+    "事件数": "事件数",
+    "备注": "备注",
+    "样本层": "样本层",
+    "事件相位窗口数": "事件相位窗口数",
+    "观测值": "观测值",
+    "说明": "说明",
+    "分析层": "分析层",
+    "样本基础": "样本基础",
+    "主要输出": "主要输出",
+    "证据状态": "证据状态",
+    "当前口径": "当前口径",
 }
 
 VALUE_LABELS = {
@@ -2009,6 +2032,9 @@ def _table_layout_for_label(label: str) -> str:
         "机制链",
         "A 股与美股并列总结",
         "样本窗口口径",
+        "样本范围总表",
+        "数据来源与口径",
+        "识别范围说明",
     }
     return "wide" if label in wide_labels else ""
 
@@ -2987,34 +3013,37 @@ def _create_sample_design_figures() -> list[dict[str, str]]:
 def _build_sample_design_cards() -> list[dict[str, str]]:
     import pandas as pd
 
-    event_counts = pd.read_csv(ROOT / "results" / "real_tables" / "event_counts.csv")
-    panel = pd.read_csv(ROOT / "results" / "real_tables" / "panel_coverage.csv")
+    sample_scope = pd.read_csv(ROOT / "results" / "real_tables" / "sample_scope.csv")
+    data_sources = pd.read_csv(ROOT / "results" / "real_tables" / "data_sources.csv")
     diagnostics = pd.read_csv(ROOT / "results" / "real_regressions" / "match_diagnostics.csv")
-    total_events = int(event_counts["n_events"].sum())
-    cn_events = int(event_counts.loc[event_counts["market"] == "CN", "n_events"].sum())
-    us_events = int(event_counts.loc[event_counts["market"] == "US", "n_events"].sum())
-    avg_obs = int(round(panel.loc[panel["inclusion"] == 1, "avg_window_obs"].mean()))
+
+    event_row = sample_scope.loc[sample_scope["样本层"] == "事件样本"].iloc[0]
+    short_row = sample_scope.loc[sample_scope["样本层"] == "事件研究面板"].iloc[0]
+    matched_row = sample_scope.loc[sample_scope["样本层"] == "匹配回归面板"].iloc[0]
+    source_row = data_sources.loc[data_sources["数据集"] == "事件样本"].iloc[0]
+    total_events = int(event_row["事件数"])
+    avg_obs = int(round(float(short_row["观测值"]) / float(short_row["事件相位窗口数"])))
     matched_rate = (diagnostics["status"] == "matched").mean()
     return [
         {
             "kicker": "真实样本",
             "title": f"{total_events} 个纳入事件",
-            "meta": f"中国 A 股 {cn_events} 个 · 美国 {us_events} 个",
-            "copy": "当前样本以真实指数纳入事件为基础，覆盖 A 股与美股两个市场，适合先做跨市场比较，再进入机制与识别讨论。",
-            "foot": "样本层的重点不是单纯扩大数量，而是同时覆盖不同市场、不同事件阶段与可比的短窗口口径。",
+            "meta": f'{source_row["市场范围"]} · {source_row["起始日期"]} 至 {source_row["结束日期"]}',
+            "copy": "当前样本以正式事件样本表为基础，统一覆盖真实纳入事件、事件相位窗口与跨市场比较所需的核心样本层。",
+            "foot": "样本层的重点不是单纯扩大数量，而是在同一口径下同时覆盖不同市场、不同事件阶段与可比事件窗口。",
         },
         {
             "kicker": "事件口径",
             "title": "公告日与生效日双时点",
             "meta": f"平均事件窗口观测数约 {avg_obs:,}",
-            "copy": "同一套页面同时保留公告日与生效日，使研究能够区分“预期形成”与“被动调仓执行”这两个阶段。",
-            "foot": "这一步有助于避免把所有指数效应都简化为同一天、同一方向的价格反应。",
+            "copy": f'短窗口事件研究面板共 {int(short_row["观测值"]):,} 条观测值，长窗口保留分析另行扩展到 {int(sample_scope.loc[sample_scope["样本层"] == "长窗口保留分析", "观测值"].iloc[0]):,} 条观测值。',
+            "foot": "这一步有助于把“预期形成”和“被动调仓执行”分开，并避免用短面板误读长窗口结论。",
         },
         {
             "kicker": "识别设计",
             "title": "事件研究、匹配回归与 RDD",
             "meta": f"匹配成功率 {_format_share(matched_rate)}",
-            "copy": "事件研究用于描述价格路径，匹配回归用于控制样本差异，中国市场主线再补充 RDD 作为更严格的识别工具。",
+            "copy": f'匹配回归面板目前包含 {int(matched_row["观测值"]):,} 条观测值，用于把事件研究结果与控制变量、对照组设计结合起来理解。',
             "foot": "这组设计并非相互替代，而是对应不同研究问题：先确认现象，再讨论机制，最后提升识别可信度。",
         },
     ]
@@ -3024,32 +3053,14 @@ def _build_sample_design_tables() -> list[dict[str, str]]:
     import pandas as pd
 
     event_counts = pd.read_csv(ROOT / "results" / "real_tables" / "event_counts.csv").copy()
-    event_counts["sample_share"] = event_counts["n_events"] / event_counts["n_events"].sum()
-    event_table = pd.DataFrame(
-        {
-            "市场": event_counts["market"].replace(VALUE_LABELS),
-            "指数": event_counts["index_name"],
-            "纳入事件数": event_counts["n_events"].map(lambda value: f"{int(value):,}"),
-            "涉及股票数": event_counts["n_tickers"].map(lambda value: f"{int(value):,}"),
-            "事件占比": event_counts["sample_share"].map(_format_share),
-        }
-    )
-
-    panel = pd.read_csv(ROOT / "results" / "real_tables" / "panel_coverage.csv").copy()
-    panel = panel.loc[panel["inclusion"] == 1].copy()
-    panel_table = pd.DataFrame(
-        {
-            "市场": panel["market"].replace(VALUE_LABELS),
-            "事件阶段": panel["event_phase"].replace(VALUE_LABELS),
-            "事件窗口数": panel["n_event_windows"].map(lambda value: f"{int(value):,}"),
-            "平均窗口观测数": panel["avg_window_obs"].map(lambda value: f"{int(round(value)):,}"),
-            "平均换手率": panel["avg_turnover"].map(lambda value: f"{value:.2%}"),
-            "平均成交量（股）": panel["avg_volume"].map(lambda value: f"{value:,.0f}"),
-        }
-    )
+    sample_scope = pd.read_csv(ROOT / "results" / "real_tables" / "sample_scope.csv").copy()
+    data_sources = pd.read_csv(ROOT / "results" / "real_tables" / "data_sources.csv").copy()
+    if "文件" in data_sources.columns:
+        data_sources = data_sources.drop(columns=["文件"])
     event_summary = pd.read_csv(ROOT / "results" / "real_tables" / "event_study_summary.csv")
     regression = pd.read_csv(ROOT / "results" / "real_regressions" / "regression_coefficients.csv")
 
+    event_counts["sample_share"] = event_counts["n_events"] / event_counts["n_events"].sum()
     comparison_rows = []
     for market, market_label in [("CN", "中国 A 股"), ("US", "美国")]:
         market_events = int(event_counts.loc[event_counts["market"] == market, "n_events"].sum())
@@ -3087,13 +3098,13 @@ def _build_sample_design_tables() -> list[dict[str, str]]:
     comparison_table = pd.DataFrame(comparison_rows)
     return [
         {
-            "label": "真实事件样本",
-            "html": _render_table(event_table, compact=True),
-            "layout_class": "",
+            "label": "样本范围总表",
+            "html": _render_table(sample_scope, compact=True),
+            "layout_class": "wide",
         },
         {
-            "label": "样本窗口口径",
-            "html": _render_table(panel_table, compact=True),
+            "label": "数据来源与口径",
+            "html": _render_table(data_sources, compact=True),
             "layout_class": "wide",
         },
         {
@@ -3116,19 +3127,17 @@ def _build_sample_design_section() -> dict[str, object]:
 def _build_limits_section() -> dict[str, object]:
     import pandas as pd
 
-    events = pd.read_csv(ROOT / "data" / "raw" / "real_events.csv")
-    prices = pd.read_csv(ROOT / "data" / "raw" / "real_prices.csv")
-    benchmarks = pd.read_csv(ROOT / "data" / "raw" / "real_benchmarks.csv")
+    identification_scope = pd.read_csv(ROOT / "results" / "real_tables" / "identification_scope.csv")
+    data_sources = pd.read_csv(ROOT / "results" / "real_tables" / "data_sources.csv")
+    sample_scope = pd.read_csv(ROOT / "results" / "real_tables" / "sample_scope.csv")
     diagnostics = pd.read_csv(ROOT / "results" / "real_regressions" / "match_diagnostics.csv")
 
-    announce_min = pd.to_datetime(events["announce_date"]).min().date().isoformat()
-    announce_max = pd.to_datetime(events["announce_date"]).max().date().isoformat()
-    effective_min = pd.to_datetime(events["effective_date"]).min().date().isoformat()
-    effective_max = pd.to_datetime(events["effective_date"]).max().date().isoformat()
-    price_min = pd.to_datetime(prices["date"]).min().date().isoformat()
-    price_max = pd.to_datetime(prices["date"]).max().date().isoformat()
-    benchmark_min = pd.to_datetime(benchmarks["date"]).min().date().isoformat()
-    benchmark_max = pd.to_datetime(benchmarks["date"]).max().date().isoformat()
+    event_row = data_sources.loc[data_sources["数据集"] == "事件样本"].iloc[0]
+    price_row = data_sources.loc[data_sources["数据集"] == "日频价格"].iloc[0]
+    benchmark_row = data_sources.loc[data_sources["数据集"] == "基准收益"].iloc[0]
+    matched_row = sample_scope.loc[sample_scope["样本层"] == "匹配回归面板"].iloc[0]
+    short_id_row = identification_scope.loc[identification_scope["分析层"] == "短窗口事件研究"].iloc[0]
+    rdd_row = identification_scope.loc[identification_scope["分析层"] == "中国 RDD 扩展"].iloc[0]
     matched_rate = (diagnostics["status"] == "matched").mean()
     sector_relaxed_rate = diagnostics["sector_relaxed"].fillna(False).astype(bool).mean()
 
@@ -3136,16 +3145,16 @@ def _build_limits_section() -> dict[str, object]:
         {
             "kicker": "样本期",
             "title": "结果主要反映 2024 至 2025 年的纳入批次",
-            "meta": f"公告日 {announce_min} 至 {announce_max}",
-            "copy": "当前真实事件主要集中在 2024 至 2025 年，结论更适合作为近期制度环境下的证据，而不应直接外推到更早时期的长期历史平均效应。",
-            "foot": f"价格与基准收益覆盖到 {price_max}，用于构造事件窗口，但事件本身仍集中在较新的指数调整批次。",
+            "meta": f'事件样本 {event_row["起始日期"]} 至 {event_row["结束日期"]}',
+            "copy": "当前真实事件主要集中在较新的指数调整批次，结论更适合作为近期制度环境下的证据，而不应直接外推到更早时期的长期历史平均效应。",
+            "foot": f'价格与基准收益分别覆盖到 {price_row["结束日期"]} 与 {benchmark_row["结束日期"]}，用于构造事件窗口与市场调整收益。',
         },
         {
             "kicker": "识别范围",
             "title": "事件研究、匹配回归与 RDD 分别回答不同问题",
             "meta": f"匹配成功率 {_format_share(matched_rate)}",
-            "copy": "事件研究擅长描述价格路径，匹配回归用于控制样本差异，而 RDD 只在具备边界候选样本时提供更强识别。三者不应被混成同一种证据强度。",
-            "foot": "中国主线中的 RDD 结果更接近识别设计展示；若要形成正式论文主证据，仍应进一步扩充边界候选样本与敏感性检验。",
+            "copy": str(short_id_row["当前口径"]),
+            "foot": f'当前匹配回归面板共 {int(matched_row["观测值"]):,} 条观测值；中国 RDD 扩展目前的证据状态为“{rdd_row["证据状态"]}”。',
         },
         {
             "kicker": "数据口径",
@@ -3158,19 +3167,11 @@ def _build_limits_section() -> dict[str, object]:
 
     scope_table = pd.DataFrame(
         [
-            {"模块": "真实事件样本", "范围": f"公告日 {announce_min} 至 {announce_max}；生效日 {effective_min} 至 {effective_max}", "说明": "以真实纳入事件为基础，覆盖中国 A 股与美国两个市场。"},
-            {"模块": "价格数据", "范围": f"{price_min} 至 {price_max}", "说明": "用于构造事件窗口、异常收益与机制变量。"},
-            {"模块": "基准指数数据", "范围": f"{benchmark_min} 至 {benchmark_max}", "说明": "用于市场调整收益与异常收益计算。"},
+            {"模块": "真实事件样本", "范围": f'{event_row["起始日期"]} 至 {event_row["结束日期"]}', "说明": "以真实纳入事件为基础，覆盖中国 A 股与美国两个市场。"},
+            {"模块": "价格数据", "范围": f'{price_row["起始日期"]} 至 {price_row["结束日期"]}', "说明": "用于构造事件窗口、异常收益与机制变量。"},
+            {"模块": "基准指数数据", "范围": f'{benchmark_row["起始日期"]} 至 {benchmark_row["结束日期"]}', "说明": "用于市场调整收益与异常收益计算。"},
             {"模块": "匹配回归", "范围": f"匹配成功率 {_format_share(matched_rate)}", "说明": "对照组构造总体稳定，但仍存在少量无法匹配的事件。"},
-            {"模块": "RDD 扩展", "范围": "当前以中国样本边界候选事件为主", "说明": "用于提升识别强度，不等同于覆盖全市场所有纳入事件。"},
-        ]
-    )
-
-    caveat_table = pd.DataFrame(
-        [
-            {"边界类型": "样本外推", "当前口径": "结果主要反映近两年批次", "阅读方式": "适合解释当前制度环境下的指数效应，不宜直接视为长期历史均值。"},
-            {"边界类型": "识别强度", "当前口径": "事件研究 + 匹配回归 + RDD 并置", "阅读方式": "应区分“现象证据”和“强识别证据”，避免把所有结果当成同等强度。"},
-            {"边界类型": "数据来源", "当前口径": "公开可得价格、成交量、市值与基准数据", "阅读方式": "适合课程论文与研究展示，但不宜表述为官方成分数据库的精确复刻。"},
+            {"模块": "RDD 扩展", "范围": str(rdd_row["证据状态"]), "说明": str(rdd_row["当前口径"])},
         ]
     )
 
@@ -3179,7 +3180,7 @@ def _build_limits_section() -> dict[str, object]:
         "summary_cards": summary_cards,
         "tables": [
             {"label": "样本与数据范围", "html": _render_table(scope_table, compact=True), "layout_class": "wide"},
-            {"label": "结论阅读边界", "html": _render_table(caveat_table, compact=True), "layout_class": "wide"},
+            {"label": "识别范围说明", "html": _render_table(identification_scope, compact=True), "layout_class": "wide"},
         ],
     }
 

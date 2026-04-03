@@ -53,6 +53,7 @@ results/
   regressions/         回归与匹配诊断结果
   figures/             论文图表
   tables/              论文表格与结果摘要
+  real_tables/         真实样本主结果表、数据来源表、样本范围表
   literature/          仪表盘三条主线对应的结果包
 
 scripts/
@@ -214,6 +215,17 @@ python3 scripts/download_real_data.py
 ```
 
 真实数据说明见 [docs/real_data_notes.md](docs/real_data_notes.md)。
+
+真实样本主结果目前会统一导出到 `results/real_tables/`，其中包括：
+
+- `event_study_summary.csv`
+- `long_window_event_study_summary.csv`
+- `retention_summary.csv`
+- `regression_coefficients.csv`
+- `regression_models.csv`
+- `data_sources.csv`
+- `sample_scope.csv`
+- `identification_scope.csv`
 
 ### 3. 清洗事件样本
 
