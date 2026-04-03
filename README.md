@@ -1,31 +1,169 @@
 # Index Inclusion Research Toolkit
 
-`index-inclusion-research` 是一个以 `16 篇指数效应文献库` 为理论底座、为“股票被纳入指数后为什么会上涨”这类论文准备的 Python 实证分析项目。它默认支持 A 股和美股的跨市场比较，并把整套项目统一组织成三条研究主线：
+`index-inclusion-research` 是一个围绕“股票被纳入指数后为什么会上涨”这一问题搭建的实证研究项目。  
+项目现在不再按“3 篇核心文献 + 后续补充”组织，而是以 `16 篇指数效应文献库` 为理论底座，统一抽象成 3 条研究主线：
 
 - `短期价格压力与效应减弱`
 - `需求曲线与长期保留`
 - `制度识别与中国市场证据`
 
-项目从原始事件表和价格表出发，生成事件窗口面板、事件研究结果、匹配对照样本、回归结果以及论文可直接引用的图表和表格。
+这三条主线分别对应你在文献中最关心的三个问题：
 
-## 目录
+- 指数纳入后的上涨是不是只是短期交易冲击？
+- 价格效应会不会只部分回吐，从而支持需求曲线向下倾斜？
+- 不同市场制度和识别方法会不会改变结论，尤其是在中国市场？
+
+## 你应该先看什么
+
+如果你只是想快速进入项目，最推荐的顺序是：
+
+1. 看 [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)
+   这里解释 16 篇文献如何统一映射到当前项目。
+2. 启动界面：
+   ```bash
+   python3 scripts/start_literature_dashboard.py
+   ```
+   然后打开 <http://127.0.0.1:5001>
+3. 在界面里先看：
+    - `/`：一页式总展板，直接展示主线结果、文献框架和补充层
+    - `/framework`：看五大阵营、演进脉络和会议话术
+    - `/supplement`：看事件时钟、机制链和冲击估算
+
+如果你是要直接跑数据和结果，推荐从“命令行入口”一节开始。
+
+## 项目结构
 
 ```text
-config/markets.yml
-data/raw/
-data/processed/
-results/event_study/
-results/regressions/
-results/figures/
-results/tables/
+config/
+  markets.yml
+
+data/
+  raw/                 原始示例数据、真实数据、RDD demo 数据
+  processed/           清洗后的事件样本和事件窗口面板
+
+docs/
+  index_effect_literature_map.md
+  literature_review_author_year_cn.md
+  literature_to_project_guide.md
+  paper_outline.md
+  real_data_notes.md
+
+results/
+  event_study/         事件研究结果
+  regressions/         回归与匹配诊断结果
+  figures/             论文图表
+  tables/              论文表格与结果摘要
+  literature/          仪表盘三条主线对应的结果包
+
 scripts/
+  数据清洗、事件研究、回归、文献仪表盘入口脚本
+
 src/index_inclusion_research/
+  analysis/            事件研究、回归、RDD
+  loaders/             数据读写
+  pipeline/            样本构建与匹配
+  literature.py        机制与汇总逻辑
+  literature_catalog.py 16 篇文献目录与项目映射
+
 tests/
+  测试
 ```
 
-## 输入数据契约
+## 16 篇文献驱动的三条主线
 
-`events.csv` 必含列：
+### 1. 短期价格压力与效应减弱
+
+这条主线回答：
+
+`指数纳入后的上涨是不是主要来自短期交易冲击？`
+
+在项目里，它主要依赖：
+
+- 短窗口 `CAR[-1,+1]`、`CAR[-3,+3]`、`CAR[-5,+5]`
+- 公告日 / 生效日平均异常收益路径
+- 成交量、换手率、波动率的短期变化
+
+界面入口：
+
+- 首页的 `短期价格压力与效应减弱`
+
+研究主线入口：
+
+- `scripts/start_price_pressure_track.py`
+
+兼容旧入口：
+
+- `scripts/start_harris_gurel.py`
+
+### 2. 需求曲线与长期保留
+
+这条主线回答：
+
+`价格上涨会不会只部分回吐，从而支持需求曲线向下倾斜？`
+
+在项目里，它主要依赖：
+
+- 长窗口 `CAR[0,+20]`、`CAR[0,+60]`、`CAR[0,+120]`
+- retention ratio
+- short-window 和 long-window CAR 的对比
+
+界面入口：
+
+- 首页的 `需求曲线与长期保留`
+
+研究主线入口：
+
+- `scripts/start_demand_curve_track.py`
+
+兼容旧入口：
+
+- `scripts/start_shleifer.py`
+
+### 3. 制度识别与中国市场证据
+
+这条主线回答：
+
+`指数效应的结论会不会因为制度背景和识别方法而改变？`
+
+在项目里，它主要依赖：
+
+- 中国样本事件研究
+- 匹配对照组、DID 风格汇总
+- RDD 扩展与分箱图
+
+界面入口：
+
+- 首页的 `制度识别与中国市场证据`
+
+研究主线入口：
+
+- `scripts/start_identification_china_track.py`
+
+兼容旧入口：
+
+- `scripts/start_hs300_style.py`
+- `scripts/start_hs300_rdd.py`
+
+## 文献相关文件
+
+这些文件现在是项目的“理论入口”：
+
+- [docs/index_effect_literature_map.md](docs/index_effect_literature_map.md)
+  16 篇文献的立场分类
+- [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)
+  16 篇文献如何映射到三条研究主线
+- [docs/literature_review_author_year_cn.md](docs/literature_review_author_year_cn.md)
+  可直接放进论文的作者（年份）版中文文献综述
+- [docs/literature_five_camps_framework_cn.md](docs/literature_five_camps_framework_cn.md)
+  把 16 篇文献组织成五大阵营与会议表达框架
+- [docs/index_inclusion_playbook_cn.md](docs/index_inclusion_playbook_cn.md)
+  把事件时钟、机制链和冲击估算整理成投研补充层
+- [src/index_inclusion_research/literature_catalog.py](src/index_inclusion_research/literature_catalog.py)
+  项目内的结构化文献目录、五大阵营、项目映射与实战用法
+
+## 数据输入契约
+
+`events.csv` 必需列：
 
 - `market`
 - `index_name`
@@ -40,7 +178,7 @@ tests/
 - `sector`
 - `note`
 
-`prices.csv` 必含列：
+`prices.csv` 必需列：
 
 - `market`
 - `ticker`
@@ -55,27 +193,29 @@ tests/
 
 - `sector`
 
-`benchmarks.csv` 必含列：
+`benchmarks.csv` 必需列：
 
 - `market`
 - `date`
 - `benchmark_ret`
 
-## 快速开始
+## 命令行入口
 
-1. 生成一套可运行的示例数据：
+### 1. 生成示例数据
 
 ```bash
 python3 scripts/generate_sample_data.py
 ```
 
-如果你想直接切到真实公开数据：
+### 2. 下载真实公开数据
 
 ```bash
 python3 scripts/download_real_data.py
 ```
 
-2. 清洗并标准化指数纳入事件：
+真实数据说明见 [docs/real_data_notes.md](docs/real_data_notes.md)。
+
+### 3. 清洗事件样本
 
 ```bash
 python3 scripts/build_event_sample.py \
@@ -83,7 +223,7 @@ python3 scripts/build_event_sample.py \
   --output data/processed/events_clean.csv
 ```
 
-3. 构建事件窗口面板并运行事件研究：
+### 4. 构建事件窗口面板
 
 ```bash
 python3 scripts/build_price_panel.py \
@@ -91,13 +231,17 @@ python3 scripts/build_price_panel.py \
   --prices data/raw/sample_prices.csv \
   --benchmarks data/raw/sample_benchmarks.csv \
   --output data/processed/event_panel.csv
+```
 
+### 5. 运行事件研究
+
+```bash
 python3 scripts/run_event_study.py \
   --panel data/processed/event_panel.csv \
   --output-dir results/event_study
 ```
 
-4. 构建匹配对照样本并跑回归：
+### 6. 构建匹配样本并回归
 
 ```bash
 python3 scripts/match_controls.py \
@@ -117,66 +261,103 @@ python3 scripts/run_regressions.py \
   --output-dir results/regressions
 ```
 
-5. 导出图表和论文表格：
+### 7. 导出论文图表和表格
 
 ```bash
 python3 scripts/make_figures_tables.py
 ```
 
-6. 自动生成一份论文结果摘要：
+### 8. 自动生成论文结果摘要
 
 ```bash
 python3 scripts/generate_research_report.py
 ```
 
-7. 启动文献结果界面：
+### 9. 打开文献与结果仪表盘
 
 ```bash
 python3 scripts/start_literature_dashboard.py
 ```
 
-然后打开 <http://127.0.0.1:5001>。
+这就是当前项目唯一推荐的前端启动方式。
+首页默认进入 `演示模式`，更适合汇报和展示；需要更多表格时可切到 `完整模式`。
 
-界面中现在的 3 个分析入口，不再对应“3 篇核心论文”，而是对应从 16 篇文献中抽出来的 3 条研究主线。
-同时还内置了：
-- `16 篇文献库` 页面：查看反方、中性、正方文献的项目映射，并从页面打开 PDF
-- `文献综述` 页面：按反方、中性、正方三组分别展示文献，方便直接写综述
+打开后常用页面：
 
-## 16 篇文献驱动的项目结构
+- `/`：一页式总展板
+- `/library`：16 篇文献库
+- `/review`：反方 / 中性 / 正方综述导航页
+- `/framework`：五大阵营与量化投研话术页
+- `/supplement`：事件时钟、机制链与冲击估算页
 
-- `短期价格压力与效应减弱`
-  使用短窗口事件研究结果，重点对应 Harris and Gurel、Kasch and Sarkar、Greenwood and Sammon 等文献
-- `需求曲线与长期保留`
-  使用长窗口 CAR 和 retention 指标，重点对应 Shleifer、Kaul et al.、Wurgler and Zhuravskaya 等文献
-- `制度识别与中国市场证据`
-  使用匹配对照组、DID 风格分析和 RDD 扩展，重点对应 Ahn and Patatoukas、Chang et al.、姚东旻等、Chu et al. 等文献
+### 10. 直接运行三条研究主线
 
-## 核心脚本对应关系
+```bash
+python3 scripts/start_price_pressure_track.py
+python3 scripts/start_demand_curve_track.py
+python3 scripts/start_identification_china_track.py
+```
 
-- `run_event_study.py`：验证公告日/生效日前后的超额收益路径
-- `match_controls.py`：生成课程论文够用的 matched sample
-- `run_regressions.py`：将指数纳入变量与 CAR、换手率、成交量、波动率变化联结起来
-- `make_figures_tables.py`：导出可直接嵌入论文的图和表
-- `generate_research_report.py`：把结果自动整理成中文 Markdown 摘要，便于写论文
+## 哪些文件是“核心文件”
 
-## 文献与写作
+如果你时间不多，优先看这些：
 
-- 论文写作模板见 [docs/paper_outline.md](docs/paper_outline.md)
-- 自动生成的结果摘要默认输出到 `results/tables/research_summary.md`
-- 推荐流程：
-- 先用真实数据替换 `sample_*`
-- 跑完整条管线
-- 打开 `results/tables/research_summary.md`
-- 再把其中的结论句式改成你的论文语言
+- [README.md](README.md)
+- [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)
+- [docs/literature_review_author_year_cn.md](docs/literature_review_author_year_cn.md)
+- [scripts/start_literature_dashboard.py](scripts/start_literature_dashboard.py)
+- [src/index_inclusion_research/literature_catalog.py](src/index_inclusion_research/literature_catalog.py)
+- [results/real_tables/research_summary.md](results/real_tables/research_summary.md)
 
-真实数据说明见 [docs/real_data_notes.md](docs/real_data_notes.md)。
-- 16 篇文献分类见 [docs/index_effect_literature_map.md](docs/index_effect_literature_map.md)
-- 16 篇文献到项目主线的使用说明见 [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)
-- 文献综述初稿见 [docs/literature_review_draft_cn.md](docs/literature_review_draft_cn.md)
-- 作者（年份）版综述见 [docs/literature_review_author_year_cn.md](docs/literature_review_author_year_cn.md)
+## 哪些文件主要是生成产物
 
-## 扩展建议
+下面这些目录里的多数文件都可以重新生成：
 
-- 将 `benchmark_ret` 换成 CAPM 或 Fama-French 因子收益
-- 在 `config/markets.yml` 中加入更细的市场日历和指数配置
-- 把示例 `sample_*` 数据替换成你自己的真实事件和价格数据
+- `data/processed/`
+- `results/event_study/`
+- `results/regressions/`
+- `results/figures/`
+- `results/tables/`
+- `results/literature/`
+
+所以平时真正需要维护的“源文件”主要还是：
+
+- `scripts/`
+- `src/index_inclusion_research/`
+- `docs/`
+- `config/markets.yml`
+
+## 论文写作建议
+
+论文模板见 [docs/paper_outline.md](docs/paper_outline.md)。
+
+最推荐的写法是：
+
+1. 文献综述按 `反方 / 中性 / 正方` 展开
+2. 实证设计按三条研究主线展开
+3. 结果部分按 `短期冲击 -> 长期保留 -> 中国市场识别扩展` 展开
+
+## 测试
+
+运行：
+
+```bash
+pytest -q
+```
+
+当前项目包含：
+
+- 事件研究与机制汇总测试
+- RDD 测试
+- 文献目录与主线映射测试
+- 报表与页面相关测试
+
+## 备注
+
+如果你接下来继续做清理，最值得优先保持稳定的是：
+
+- `src/index_inclusion_research/literature_catalog.py`
+- `scripts/start_literature_dashboard.py`
+- `docs/literature_to_project_guide.md`
+
+因为这三处现在定义了整个项目的统一主线。

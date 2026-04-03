@@ -13,6 +13,11 @@ from matplotlib import pyplot as plt
 plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
 plt.rcParams["axes.unicode_minus"] = False
 
+LEFT_COLOR = "#a63b28"
+RIGHT_COLOR = "#0f5c6e"
+LEFT_SOFT = "#d9b39d"
+RIGHT_SOFT = "#9fc7cf"
+
 OUTCOME_LABELS = {
     "car_m1_p1": "CAR[-1,+1]",
     "car_m3_p3": "CAR[-3,+3]",
@@ -140,15 +145,33 @@ def plot_rdd_bins(
     output.parent.mkdir(parents=True, exist_ok=True)
     fig, ax = plt.subplots(figsize=(8.5, 6))
     if not left_bins.empty:
-        ax.scatter(left_bins["bin_center"], left_bins["mean_outcome"], label="断点左侧样本", color="#c44e52")
+        ax.scatter(
+            left_bins["bin_center"],
+            left_bins["mean_outcome"],
+            label="断点左侧样本",
+            color=LEFT_COLOR,
+            s=72,
+        )
     if not right_bins.empty:
-        ax.scatter(right_bins["bin_center"], right_bins["mean_outcome"], label="断点右侧样本", color="#4c72b0")
-    ax.axvline(0, color="black", linestyle="--", linewidth=1)
-    ax.set_title(f"{outcome_label} 断点回归分箱图")
+        ax.scatter(
+            right_bins["bin_center"],
+            right_bins["mean_outcome"],
+            label="断点右侧样本",
+            color=RIGHT_COLOR,
+            s=72,
+        )
+    if not left.empty:
+        ax.scatter(left[running_col], left[outcome_col], color=LEFT_SOFT, alpha=0.18, s=22)
+    if not right.empty:
+        ax.scatter(right[running_col], right[outcome_col], color=RIGHT_SOFT, alpha=0.18, s=22)
+    ax.axvline(0, color="#5c6b77", linestyle="--", linewidth=1.2)
+    ax.set_title(f"{outcome_label} 断点回归分箱图", pad=12)
     ax.set_xlabel("距断点距离")
     ax.set_ylabel(outcome_label)
-    ax.legend()
-    ax.grid(alpha=0.3)
+    ax.legend(frameon=False)
+    ax.grid(alpha=0.24)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
     fig.tight_layout()
     fig.savefig(output, dpi=180)
     plt.close(fig)

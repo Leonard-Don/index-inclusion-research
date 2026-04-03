@@ -16,15 +16,37 @@ MARKET_LABELS = {
     "US": "美国",
 }
 
+MARKET_COLORS = {
+    "CN": "#a63b28",
+    "US": "#0f5c6e",
+}
+
 PHASE_LABELS = {
     "announce": "公告日",
     "effective": "生效日",
+}
+
+PHASE_LINESTYLES = {
+    "announce": "-",
+    "effective": "--",
 }
 
 INCLUSION_LABELS = {
     1: "纳入样本",
     0: "匹配对照组",
 }
+
+INCLUSION_STYLES = {
+    1: {"alpha": 1.0, "marker": "o", "linewidth": 2.4},
+    0: {"alpha": 0.55, "marker": "s", "linewidth": 1.8},
+}
+
+
+def _lighten(color: str, factor: float = 0.45) -> tuple[float, float, float]:
+    import matplotlib.colors as mcolors
+
+    base = mcolors.to_rgb(color)
+    return tuple(channel + (1 - channel) * factor for channel in base)
 
 
 def _ensure_directory(path: str | Path) -> Path:
@@ -40,23 +62,32 @@ def plot_average_paths(average_paths: pd.DataFrame, output_dir: str | Path) -> N
 
     for (market, event_phase), group in average_paths.groupby(["market", "event_phase"], dropna=False):
         fig, ax = plt.subplots(figsize=(9.5, 6))
+        base_color = MARKET_COLORS.get(str(market), "#30424f")
+        linestyle = PHASE_LINESTYLES.get(str(event_phase), "-")
         for inclusion, inclusion_group in group.groupby("inclusion", dropna=False):
             label = INCLUSION_LABELS.get(int(inclusion), str(inclusion))
+            style = INCLUSION_STYLES.get(int(inclusion), {"alpha": 0.9, "marker": "o", "linewidth": 2.0})
+            line_color = base_color if int(inclusion) == 1 else _lighten(base_color)
             ax.plot(
                 inclusion_group["relative_day"],
                 inclusion_group["mean_car"],
-                marker="o",
-                linewidth=1.8,
+                marker=style["marker"],
+                linewidth=style["linewidth"],
+                linestyle=linestyle,
+                color=line_color,
+                alpha=style["alpha"],
                 label=label,
             )
-        ax.axvline(0, color="black", linestyle="--", linewidth=1)
+        ax.axvline(0, color=base_color, linestyle=linestyle, linewidth=1.2, alpha=0.85)
         market_label = MARKET_LABELS.get(str(market), str(market))
         phase_label = PHASE_LABELS.get(str(event_phase), str(event_phase))
-        ax.set_title(f"{market_label}{phase_label}平均累计异常收益路径")
+        ax.set_title(f"{market_label}{phase_label}平均累计异常收益路径", color=base_color, pad=12)
         ax.set_xlabel("相对交易日")
         ax.set_ylabel("平均累计异常收益")
-        ax.legend()
-        ax.grid(alpha=0.3)
+        ax.legend(title=f"{market_label} · {phase_label}", frameon=False)
+        ax.grid(alpha=0.24)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
         fig.tight_layout()
         fig.savefig(target_dir / f"{market.lower()}_{event_phase}_car_path.png", dpi=180)
         plt.close(fig)
