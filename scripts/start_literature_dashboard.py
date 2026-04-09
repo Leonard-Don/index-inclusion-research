@@ -20,6 +20,7 @@ from start_identification_china_track import run_analysis as run_identification_
 from start_price_pressure_track import run_analysis as run_price_pressure_track
 from index_inclusion_research.literature_catalog import (
     build_camp_summary_frame,
+    build_literature_catalog_frame,
     build_grouped_literature_frame,
     build_literature_dashboard_frame,
     build_literature_evolution_frame,
@@ -89,6 +90,10 @@ SUPPLEMENT_CARD = {
     "title": "机制与执行补充",
     "subtitle": "Mechanics & Execution",
     "description_zh": "事件时钟、机制链、冲击估算与表达框架，不进入文献库，仅作补充层",
+}
+
+PROJECT_MODULE_DISPLAY = {
+    config["project_module"]: config["title"] for config in ANALYSES.values()
 }
 
 RUN_CACHE: dict[str, dict[str, object]] = {}
@@ -232,7 +237,7 @@ APP_TEMPLATE = """
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>指数纳入效应研究界面</title>
+  <title>{% if current and current.page_title %}{{ current.page_title }}{% elif current and current.title %}{{ current.title }}｜指数纳入效应研究界面{% else %}指数纳入效应研究界面{% endif %}</title>
   <style>
     :root {
       --bg: #f7f1e8;
@@ -458,6 +463,37 @@ APP_TEMPLATE = """
       color: var(--muted);
       font-style: italic;
     }
+    .summary-card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+    .summary-card {
+      padding: 16px 17px;
+      border-radius: 18px;
+      border: 1px solid rgba(24,33,43,0.08);
+      background: linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.42));
+    }
+    .summary-card .kicker {
+      margin-bottom: 8px;
+    }
+    .summary-card h4 {
+      margin: 0 0 6px;
+      font-size: 18px;
+      line-height: 1.3;
+      color: #1d2a37;
+    }
+    .summary-card .meta {
+      margin-bottom: 8px;
+      gap: 6px;
+    }
+    .summary-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+    }
     .foot {
       margin-top: 18px;
       font-size: 13px;
@@ -555,10 +591,32 @@ APP_TEMPLATE = """
             <div style="font-size: 14px; color: #7a6d5a; text-transform: uppercase; letter-spacing: 0.05em;">{{ current.subtitle }}</div>
             {% endif %}
           </div>
+          {% if current.primary_actions %}
+          <div class="btn-row" style="margin-top: 14px;">
+            {% for action in current.primary_actions %}
+            <a class="btn secondary" href="{{ action.href }}" {% if action.target %}target="{{ action.target }}"{% endif %}>{{ action.label }}</a>
+            {% endfor %}
+          </div>
+          {% endif %}
           {% if current.summary_text %}
           <div class="section">
             <h3>摘要说明</h3>
             <div class="md">{{ current.summary_text }}</div>
+          </div>
+          {% endif %}
+          {% if current.summary_cards %}
+          <div class="section">
+            <h3>阅读提示</h3>
+            <div class="summary-card-grid">
+              {% for card in current.summary_cards %}
+              <div class="summary-card">
+                {% if card.kicker %}<div class="kicker">{{ card.kicker }}</div>{% endif %}
+                <h4>{{ card.title }}</h4>
+                {% if card.meta %}<div class="meta">{{ card.meta }}</div>{% endif %}
+                <p>{{ card.copy }}</p>
+              </div>
+              {% endfor %}
+            </div>
           </div>
           {% endif %}
           <div class="section">
@@ -585,7 +643,9 @@ APP_TEMPLATE = """
               <div class="empty">暂无图表。</div>
             {% endif %}
           </div>
+          {% if current.output_dir %}
           <div class="foot">输出目录：{{ current.output_dir }}</div>
+          {% endif %}
         {% else %}
           <div class="notice">
             左侧研究模块支持分别生成对应主线的支撑文献、图表与数据表，便于分主题展示相关结果。
@@ -594,6 +654,723 @@ APP_TEMPLATE = """
       </main>
     </div>
   </div>
+</body>
+</html>
+"""
+
+PAPER_TEMPLATE = """
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if current and current.page_title %}{{ current.page_title }}{% elif current and current.title %}{{ current.title }}｜指数纳入效应研究界面{% else %}单篇文献讲义｜指数纳入效应研究界面{% endif %}</title>
+  <style>
+    :root {
+      --bg: #f7f1e8;
+      --paper: #fffaf2;
+      --ink: #1f2a37;
+      --muted: #5b6773;
+      --line: rgba(31, 42, 55, 0.12);
+      --accent: #005f73;
+      --accent-2: #ae2012;
+      --shadow: 0 24px 60px rgba(42, 36, 26, 0.08);
+      --radius: 24px;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+    body {
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(0,95,115,0.08), transparent 26%),
+        radial-gradient(circle at top right, rgba(174,32,18,0.08), transparent 24%),
+        linear-gradient(180deg, #f9f4ed 0%, var(--bg) 100%);
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .page {
+      width: min(1180px, 100%);
+      margin: 28px auto 64px;
+      padding: 0 16px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 18px;
+      color: var(--muted);
+      font-size: 14px;
+      flex-wrap: wrap;
+    }
+    .topbar-nav {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .hero {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 34px 36px 28px;
+    }
+    .hero-kicker {
+      color: var(--accent-2);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(34px, 4vw, 54px);
+      line-height: 1.02;
+      letter-spacing: -0.03em;
+    }
+    .hero-subtitle {
+      margin-top: 12px;
+      font-size: 16px;
+      line-height: 1.7;
+      color: var(--muted);
+    }
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 15px;
+      border-radius: 999px;
+      border: 1px solid var(--accent);
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .btn.primary {
+      background: var(--accent);
+      color: white;
+    }
+    .btn.secondary {
+      background: transparent;
+      color: var(--accent);
+    }
+    .hero-summary {
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(31, 42, 55, 0.08);
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.8;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .section {
+      margin-top: 22px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: end;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .section-kicker {
+      color: #7a6d5a;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .section h2 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: -0.02em;
+    }
+    .section-intro {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.7;
+      max-width: 68ch;
+    }
+    .insight-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .insight-card {
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(31, 42, 55, 0.08);
+      background: linear-gradient(180deg, rgba(255,255,255,0.76), rgba(255,255,255,0.5));
+    }
+    .insight-card .kicker {
+      color: #7b6344;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+    .insight-card h3 {
+      margin: 0 0 8px;
+      font-size: 19px;
+      line-height: 1.35;
+      color: #1d2a37;
+    }
+    .insight-meta {
+      color: #7a6d5a;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    .insight-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.75;
+    }
+    .table-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+    .table-card h3 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: white;
+    }
+    table.dataframe {
+      width: max-content;
+      min-width: 100%;
+      border-collapse: collapse;
+      font-size: 15px;
+    }
+    table.dataframe th, table.dataframe td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #efe3d2;
+      text-align: left;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      vertical-align: top;
+      min-width: 92px;
+    }
+    table.dataframe thead th {
+      background: #fbf7f1;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .note {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    .timeline-track {
+      position: relative;
+      margin-bottom: 22px;
+    }
+    .timeline-track::before {
+      content: "";
+      position: absolute;
+      left: 12%;
+      right: 12%;
+      top: 34px;
+      height: 2px;
+      background: linear-gradient(90deg, rgba(0,95,115,0.18), rgba(174,32,18,0.22));
+      z-index: 0;
+    }
+    .sequence-grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 1.15fr 1fr;
+      gap: 16px;
+    }
+    .timeline-label-row {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 1.15fr 1fr;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+    .timeline-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(31, 42, 55, 0.10);
+      background: rgba(255, 255, 255, 0.84);
+      color: #5f4d37;
+      font-size: 12px;
+      line-height: 1.2;
+      font-weight: 700;
+      text-align: center;
+    }
+    .timeline-label.current {
+      color: var(--accent-2);
+      border-color: rgba(174,32,18,0.18);
+      background: rgba(174,32,18,0.06);
+    }
+    .sequence-card,
+    .recommend-card {
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(31, 42, 55, 0.08);
+      background: linear-gradient(180deg, rgba(255,255,255,0.78), rgba(255,255,255,0.54));
+    }
+    .sequence-card {
+      position: relative;
+      padding-top: 34px;
+    }
+    .sequence-card.current {
+      border-color: rgba(0, 95, 115, 0.24);
+      background: linear-gradient(180deg, rgba(0,95,115,0.08), rgba(255,255,255,0.78));
+    }
+    .sequence-card::before {
+      content: "";
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      background: white;
+      border: 3px solid rgba(0,95,115,0.38);
+      box-shadow: 0 0 0 6px rgba(0,95,115,0.08);
+    }
+    .sequence-card.current::before {
+      border-color: var(--accent-2);
+      box-shadow: 0 0 0 7px rgba(174,32,18,0.10);
+    }
+    .sequence-card.current::after {
+      content: "当前文献";
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--accent-2);
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .mini-kicker {
+      color: #7b6344;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+    .sequence-card h3,
+    .recommend-card h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      line-height: 1.4;
+    }
+    .mini-meta {
+      color: #7a6d5a;
+      font-size: 13px;
+      margin-bottom: 8px;
+      line-height: 1.6;
+    }
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0 0 10px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(31, 42, 55, 0.10);
+      background: rgba(255,255,255,0.82);
+      color: #634b2f;
+      font-size: 12px;
+      line-height: 1;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .pill.year {
+      color: var(--accent);
+      border-color: rgba(0,95,115,0.16);
+      background: rgba(0,95,115,0.06);
+    }
+    .pill.camp {
+      color: var(--accent-2);
+      border-color: rgba(174,32,18,0.16);
+      background: rgba(174,32,18,0.05);
+    }
+    .sequence-card p,
+    .recommend-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.72;
+    }
+    .sequence-card a,
+    .recommend-card a {
+      display: inline-flex;
+      margin-top: 12px;
+      font-weight: 700;
+    }
+    .recommend-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .evolution-nav {
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(31, 42, 55, 0.08);
+    }
+    .evolution-nav h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+    }
+    .evolution-nav-copy {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.72;
+      margin-bottom: 14px;
+      max-width: 72ch;
+    }
+    .evolution-switcher {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .evolution-switcher button {
+      appearance: none;
+      border: 1px solid rgba(31, 42, 55, 0.12);
+      background: rgba(255,255,255,0.78);
+      color: #5f4d37;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .evolution-switcher button.active {
+      background: rgba(0,95,115,0.09);
+      color: var(--accent);
+      border-color: rgba(0,95,115,0.22);
+    }
+    .evolution-view {
+      display: none;
+    }
+    .evolution-view.active {
+      display: block;
+    }
+    .evolution-group {
+      margin-top: 18px;
+    }
+    .evolution-group:first-of-type {
+      margin-top: 0;
+    }
+    .evolution-group-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: baseline;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .evolution-group-head h4 {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.4;
+      color: #1d2a37;
+    }
+    .evolution-group-head .group-meta {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .evolution-nav-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .evolution-link {
+      display: block;
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(31, 42, 55, 0.08);
+      background: linear-gradient(180deg, rgba(255,255,255,0.86), rgba(255,255,255,0.58));
+      color: inherit;
+      text-decoration: none;
+      min-height: 138px;
+    }
+    .evolution-link.current {
+      border-color: rgba(174,32,18,0.20);
+      background: linear-gradient(180deg, rgba(174,32,18,0.07), rgba(255,255,255,0.76));
+      box-shadow: inset 0 0 0 1px rgba(174,32,18,0.05);
+    }
+    .evolution-link .eyebrow {
+      color: #7b6344;
+      font-size: 11px;
+      line-height: 1.4;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .evolution-link h4 {
+      margin: 0 0 10px;
+      font-size: 16px;
+      line-height: 1.4;
+      color: #1d2a37;
+    }
+    .evolution-link .mini-meta {
+      margin-bottom: 10px;
+    }
+    .evolution-link p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+    @media (max-width: 900px) {
+      .timeline-track::before {
+        display: none;
+      }
+      .page {
+        margin: 18px auto 44px;
+        padding: 0 12px;
+      }
+      .hero,
+      .section {
+        border-radius: 18px;
+        padding: 20px;
+      }
+      .sequence-grid,
+      .recommend-grid,
+      .evolution-nav-grid,
+      .insight-grid,
+      .table-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <div>单篇文献讲义</div>
+      <div class="topbar-nav">
+        <a href="{{ url_for('show_library') }}">返回文献库</a>
+        <a href="{{ url_for('show_review') }}">文献综述</a>
+        <a href="{{ url_for('show_framework') }}">研究框架</a>
+        <a href="{{ url_for('home') }}">返回首页</a>
+      </div>
+    </div>
+
+    <section class="hero">
+      <div class="hero-kicker">{{ current.id }}</div>
+      <h1>{{ current.title }}</h1>
+      <div class="hero-subtitle">
+        <div>{{ current.description }}</div>
+        {% if current.subtitle %}
+        <div>{{ current.subtitle }}</div>
+        {% endif %}
+      </div>
+      <div class="hero-actions">
+        {% for action in current.primary_actions or [] %}
+        <a class="btn {% if loop.first %}primary{% else %}secondary{% endif %}" href="{{ action.href }}" {% if action.target %}target="{{ action.target }}"{% endif %}>{{ action.label }}</a>
+        {% endfor %}
+        <a class="btn secondary" href="{{ url_for('show_library') }}">返回文献库</a>
+      </div>
+      {% if current.summary_text %}
+      <div class="hero-summary">{{ current.summary_text }}</div>
+      {% endif %}
+    </section>
+
+    {% if current.summary_cards %}
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">核心解读</div>
+          <h2>这篇论文真正贡献了什么</h2>
+        </div>
+        <div class="section-intro">阅读顺序建议是：先看识别对象，再看它挑战了哪条旧假设，最后看这篇证据在整个指数效应争论中把问题往前推进了哪一步。</div>
+      </div>
+      <div class="insight-grid">
+        {% for card in current.summary_cards %}
+        <article class="insight-card">
+          <div class="kicker">{{ card.kicker }}</div>
+          <h3>{{ card.title }}</h3>
+          {% if card.meta %}<div class="insight-meta">{{ card.meta }}</div>{% endif %}
+          <p>{{ card.copy }}</p>
+        </article>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if current.sequence_cards or current.recommended_cards %}
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">研究路径</div>
+          <h2>这篇论文在 16 篇链条中的位置</h2>
+        </div>
+        <div class="section-intro">先看前后相邻文献把握它在整条争论中的位置，再根据推荐阅读判断下一步是继续追机制、追识别，还是回到中国市场语境。</div>
+      </div>
+      {% if current.sequence_cards %}
+      <div class="timeline-track">
+        <div class="timeline-label-row">
+          {% for card in current.sequence_cards %}
+          <div class="timeline-label {% if card.is_current %}current{% endif %}">{{ card.track_label }}</div>
+          {% endfor %}
+        </div>
+        <div class="sequence-grid">
+          {% for card in current.sequence_cards %}
+          <article class="sequence-card {% if card.is_current %}current{% endif %}">
+            <div class="mini-kicker">{{ card.kicker }}</div>
+            <h3>{{ card.title }}</h3>
+            {% if card.year_label or card.camp %}
+            <div class="pill-row">
+              {% if card.year_label %}<span class="pill year">{{ card.year_label }}</span>{% endif %}
+              {% if card.camp %}<span class="pill camp">{{ card.camp }}</span>{% endif %}
+            </div>
+            {% endif %}
+            {% if card.meta %}<div class="mini-meta">{{ card.meta }}</div>{% endif %}
+            <p>{{ card.copy }}</p>
+            {% if card.href %}
+            <a href="{{ card.href }}">进入文献讲义</a>
+            {% endif %}
+          </article>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      {% if current.recommended_cards %}
+      <div class="recommend-grid">
+        {% for card in current.recommended_cards %}
+        <article class="recommend-card">
+          <div class="mini-kicker">{{ card.kicker }}</div>
+          <h3>{{ card.title }}</h3>
+          {% if card.year_label or card.camp %}
+          <div class="pill-row">
+            {% if card.year_label %}<span class="pill year">{{ card.year_label }}</span>{% endif %}
+            {% if card.camp %}<span class="pill camp">{{ card.camp }}</span>{% endif %}
+          </div>
+          {% endif %}
+          {% if card.meta %}<div class="mini-meta">{{ card.meta }}</div>{% endif %}
+          <p>{{ card.copy }}</p>
+          {% if card.href %}
+          <a href="{{ card.href }}">推荐继续阅读</a>
+          {% endif %}
+        </article>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if current.evolution_nav_cards %}
+      <div class="evolution-nav">
+        <h3>完整文献演进导航</h3>
+        <div class="evolution-nav-copy">以下 16 篇文献按阵营和时间排序。当前页可作为入口页使用，沿着这张导航可以直接跳转到任意一篇文献讲义。</div>
+        <div class="evolution-switcher">
+          <button class="active" type="button" data-view-target="camp">按阵营</button>
+          <button type="button" data-view-target="track">按主线</button>
+          <button type="button" data-view-target="stance">按立场</button>
+        </div>
+        {% for view in current.evolution_nav_views %}
+        <div class="evolution-view {% if loop.first %}active{% endif %}" data-view-name="{{ view.id }}">
+          {% for group in view.groups %}
+          <section class="evolution-group">
+            <div class="evolution-group-head">
+              <h4>{{ group.title }}</h4>
+              {% if group.meta %}<div class="group-meta">{{ group.meta }}</div>{% endif %}
+            </div>
+            <div class="evolution-nav-grid">
+              {% for card in group.cards %}
+              <a class="evolution-link {% if card.is_current %}current{% endif %}" href="{{ card.href }}">
+                <div class="eyebrow">{{ card.kicker }}</div>
+                <h4>{{ card.title }}</h4>
+                <div class="pill-row">
+                  <span class="pill year">{{ card.year_label }}</span>
+                  <span class="pill camp">{{ card.camp }}</span>
+                </div>
+                <div class="mini-meta">{{ card.track_label }}</div>
+                <p>{{ card.copy }}</p>
+              </a>
+              {% endfor %}
+            </div>
+          </section>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">结构化信息</div>
+          <h2>论文信息与深度解读</h2>
+        </div>
+        <div class="section-intro">这里把适合展示与答辩引用的关键信息压缩成两张表：左边是论文基本信息，右边是当前项目中的深度解读。</div>
+      </div>
+      <div class="table-grid">
+        {% for label, html_table in current.rendered_tables %}
+        <div class="table-card">
+          <h3>{{ label }}</h3>
+          <div class="table-wrap">{{ html_table|safe }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="note">如果需要进入原文，请使用上方“打开原文 PDF”按钮；当前页面的目的，是先把这篇论文在整条研究链中的位置讲清楚，而不是直接跳进扫描版原文。</div>
+    </section>
+  </div>
+  <script>
+    const viewButtons = document.querySelectorAll('[data-view-target]');
+    const viewPanels = document.querySelectorAll('[data-view-name]');
+    viewButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const target = button.getAttribute('data-view-target');
+        viewButtons.forEach((item) => item.classList.toggle('active', item === button));
+        viewPanels.forEach((panel) => {
+          panel.classList.toggle('active', panel.getAttribute('data-view-name') === target);
+        });
+      });
+    });
+  </script>
 </body>
 </html>
 """
@@ -1078,6 +1855,32 @@ HOME_TEMPLATE = """
       line-height: 1.7;
       color: #243545;
     }
+    .support-deep-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 14px;
+    }
+    .support-deep {
+      padding: 12px 13px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.6);
+      border: 1px solid rgba(24,33,43,0.06);
+    }
+    .support-deep.full {
+      grid-column: 1 / -1;
+    }
+    .support-deep-label {
+      color: #7b6344;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+      font-weight: 700;
+    }
+    .support-deep-copy {
+      color: #2a3948;
+      font-size: 14px;
+      line-height: 1.72;
+    }
     .support-detail {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1432,6 +2235,7 @@ HOME_TEMPLATE = """
       .hero-note, .kpi, .surface-pad { padding: 16px; }
       .hero-rail, .hero-notes, .kpi-grid, .thumb-grid { grid-template-columns: 1fr; }
       .support-detail { grid-template-columns: 1fr; }
+      .support-deep-grid { grid-template-columns: 1fr; }
       .stat-row { grid-template-columns: 1fr; gap: 6px; }
     }
   </style>
@@ -1677,12 +2481,26 @@ HOME_TEMPLATE = """
               </div>
               <div class="support-citation">{{ paper.citation }}</div>
               <div class="support-role">{{ paper.one_line_role }}</div>
+              <div class="support-deep-grid">
+                <div class="support-deep">
+                  <div class="support-deep-label">识别对象</div>
+                  <div class="support-deep-copy">{{ paper.identification_target }}</div>
+                </div>
+                <div class="support-deep">
+                  <div class="support-deep-label">挑战的假设</div>
+                  <div class="support-deep-copy">{{ paper.challenged_assumption }}</div>
+                </div>
+                <div class="support-deep full">
+                  <div class="support-deep-label">争论推进</div>
+                  <div class="support-deep-copy">{{ paper.deep_contribution }}</div>
+                </div>
+              </div>
               <div class="support-detail">
                 <div><strong>方法</strong>{{ paper.method_focus }}</div>
                 <div><strong>作用</strong>{{ paper.practical_use }}</div>
               </div>
               {% if paper.pdf_href %}
-              <a class="support-link" href="{{ paper.pdf_href }}" target="_blank">查看原文</a>
+              <a class="support-link" href="{{ paper.pdf_href }}" target="_blank">文献讲义</a>
               {% endif %}
             </div>
             {% endfor %}
@@ -1890,7 +2708,7 @@ def _build_figure_caption(path: Path, custom_caption: str | None = None, prefix:
     elif stem.endswith("_rdd_main"):
         outcome = stem.removesuffix("_rdd_main")
         outcome_label = COLUMN_LABELS.get(outcome, outcome)
-        caption = f"图意：展示 {outcome_label} 的断点回归主图。阅读重点：同时观察断点两侧的分箱均值与拟合线，在 0 附近判断是否存在结构性跳跃。"
+        caption = f"中国样本 RDD 主图。图意：展示 {outcome_label} 的断点回归主图。阅读重点：同时观察断点两侧的分箱均值与拟合线，在 0 附近判断是否存在结构性跳跃。"
     elif stem == "sample_event_timeline":
         caption = "图意：展示真实纳入事件在时间轴上的分布。阅读重点：判断样本是否集中在少数批次，以及公告日和生效日是否在时间上形成清晰分层。"
     elif stem == "sample_car_heatmap":
@@ -2064,6 +2882,29 @@ def _build_framework_summary_cards() -> list[dict[str, str]]:
             }
         )
     return cards
+
+
+def _build_review_summary_cards() -> list[dict[str, str]]:
+    return [
+        {
+            "kicker": "反方文献",
+            "title": "先怀疑永久效应",
+            "meta": "价格压力、动量错觉与效应弱化",
+            "copy": "先看反方文献如何把早期上涨重新解释为短期流动性冲击、纳入前强势表现或现代市场中的提前定价。",
+        },
+        {
+            "kicker": "中性文献",
+            "title": "再看争论如何转向识别",
+            "meta": "制度差异、套利约束与价格发现",
+            "copy": "中性文献的重要性不在于表态，而在于说明结论会随着指数制度、市场摩擦和识别设计而改变。",
+        },
+        {
+            "kicker": "正方文献",
+            "title": "最后看哪些机制仍然成立",
+            "meta": "需求曲线、长期保留与中国证据",
+            "copy": "正方文献并不只是重复“会涨”，而是在更强设计下继续保留部分永久性、信息背书和中国市场不对称证据。",
+        },
+    ]
 
 
 def _build_supplement_summary_cards() -> list[dict[str, str]]:
@@ -2310,7 +3151,7 @@ def _create_identification_figures() -> list[dict[str, str]]:
     return [
         {
             "path": _safe_relative(figure_path),
-            "caption": "图意：以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。阅读重点：聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
+            "caption": "中国样本 RDD 主图。图意：以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。阅读重点：聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
         }
     ]
 
@@ -2369,6 +3210,20 @@ def _load_literature_library_result() -> dict[str, object]:
         "description": LIBRARY_CARD["description_zh"],
         "subtitle": LIBRARY_CARD["subtitle"],
         "summary_text": build_literature_summary_markdown(),
+        "summary_cards": [
+            {
+                "kicker": "文献目录",
+                "title": "先按阵营读，再按年份读",
+                "meta": "统一排序规则",
+                "copy": "当前目录已统一按阵营排序，阵营内部按年份排序，适合从研究史角度把握指数效应争论的演进脉络。",
+            },
+            {
+                "kicker": "深度信息",
+                "title": "不只看立场，也看识别对象",
+                "meta": "目录已加入识别对象与挑战的假设",
+                "copy": "这张总表现在不仅告诉你文献属于哪一派，也告诉你每篇文献具体识别了什么，并反驳了哪条旧假设。",
+            },
+        ],
         "rendered_tables": [
             ("文献分组统计", _render_table(build_literature_summary_frame(), compact=True)),
             ("文献目录", _render_table(build_literature_dashboard_frame(), compact=True)),
@@ -2385,6 +3240,7 @@ def _load_literature_review_result() -> dict[str, object]:
         "description": REVIEW_CARD["description_zh"],
         "subtitle": REVIEW_CARD["subtitle"],
         "summary_text": build_literature_review_markdown(),
+        "summary_cards": _build_review_summary_cards(),
         "rendered_tables": [
             ("反方文献", _render_table(build_grouped_literature_frame("反方"), compact=True)),
             ("中性文献", _render_table(build_grouped_literature_frame("中性"), compact=True)),
@@ -2402,6 +3258,7 @@ def _load_literature_framework_result() -> dict[str, object]:
         "description": FRAMEWORK_CARD["description_zh"],
         "subtitle": FRAMEWORK_CARD["subtitle"],
         "summary_text": build_literature_framework_markdown(),
+        "summary_cards": _build_framework_summary_cards(),
         "rendered_tables": [
             ("五大阵营概览", _render_table(build_camp_summary_frame(), compact=True)),
             ("文献演进总表", _render_table(build_literature_evolution_frame(), compact=True)),
@@ -2409,6 +3266,244 @@ def _load_literature_framework_result() -> dict[str, object]:
         ],
         "figure_paths": [],
         "output_dir": "docs",
+    }
+
+
+def _compact_author_label(authors: str) -> str:
+    parts = [part.strip() for part in authors.split(";") if part.strip()]
+    if not parts:
+        return authors
+
+    def family_name(name: str) -> str:
+        tokens = name.split()
+        return tokens[-1] if len(tokens) > 1 else name
+
+    families = [family_name(part) for part in parts]
+    if len(families) == 1:
+        return families[0]
+    if len(families) == 2:
+        return f"{families[0]}、{families[1]}"
+    return f"{families[0]} 等"
+
+
+def _paper_brief_title(record: dict[str, object]) -> str:
+    return f"{_compact_author_label(str(record.get('authors', '')))}（{record.get('year_label', '')}）"
+
+
+def _project_module_display(project_module: str) -> str:
+    return PROJECT_MODULE_DISPLAY.get(project_module, project_module)
+
+
+def _group_evolution_cards(cards: list[dict[str, object]], key: str) -> list[dict[str, object]]:
+    groups: dict[str, list[dict[str, object]]] = {}
+    for card in cards:
+        label = str(card.get(key, ""))
+        groups.setdefault(label, []).append(card)
+    ordered: list[dict[str, object]] = []
+    for label, group_cards in groups.items():
+        ordered.append(
+            {
+                "title": label,
+                "meta": f"{len(group_cards)} 篇文献",
+                "cards": group_cards,
+            }
+        )
+    return ordered
+
+
+def _load_paper_detail_result(paper_id: str) -> dict[str, object] | None:
+    import pandas as pd
+
+    paper = get_literature_paper(paper_id)
+    if paper is None:
+        return None
+
+    catalog_full = build_literature_catalog_frame()
+    current_rows = catalog_full.loc[catalog_full["paper_id"] == paper_id]
+    if current_rows.empty:
+        return None
+    current_index = int(current_rows.index[0])
+    current_catalog_record = current_rows.iloc[0].to_dict()
+
+    catalog = build_literature_dashboard_frame()
+    row = catalog.loc[catalog["PDF"].str.contains(f'/paper/{paper_id}"', regex=False)].head(1)
+    if row.empty:
+        return None
+    record = row.iloc[0].to_dict()
+
+    authors = [part.strip() for part in paper.authors.split(";") if part.strip()]
+    short_authors = authors[0] if len(authors) == 1 else f"{authors[0]} 等"
+
+    info_frame = pd.DataFrame(
+        [
+            {"项目": "作者", "内容": paper.authors},
+            {"项目": "年份", "内容": paper.year_label},
+            {"项目": "阵营", "内容": record.get("阵营", "")},
+            {"项目": "立场", "内容": record.get("立场", "")},
+            {"项目": "市场 / 指数", "内容": record.get("市场 / 指数", "")},
+            {"项目": "方法 / 关键词", "内容": record.get("方法 / 关键词", "")},
+            {"项目": "研究主线", "内容": paper.project_module},
+            {
+                "项目": "原文入口",
+                "内容": f'<a href="/paper/{paper_id}/pdf" target="_blank">打开原文 PDF</a>' if paper.exists else "PDF 不存在",
+            },
+        ]
+    )
+    deep_frame = pd.DataFrame(
+        [
+            {"分析维度": "识别对象", "内容": record.get("识别对象", "")},
+            {"分析维度": "挑战的假设", "内容": record.get("挑战的假设", "")},
+            {"分析维度": "一句话定位", "内容": record.get("一句话定位", "")},
+            {"分析维度": "争论推进", "内容": record.get("争论推进", "")},
+            {"分析维度": "研究中的作用", "内容": record.get("研究中的作用", "")},
+        ]
+    )
+    summary_cards = [
+        {
+            "kicker": "识别对象",
+            "title": str(record.get("识别对象", "")),
+            "meta": f'{record.get("阵营", "")} · {record.get("立场", "")}',
+            "copy": "这篇论文真正试图识别的核心问题，可以帮助区分它是在讨论短期冲击、长期保留、信息效应，还是识别设计本身。",
+        },
+        {
+            "kicker": "挑战的假设",
+            "title": str(record.get("挑战的假设", "")),
+            "meta": "这篇论文在反驳什么",
+            "copy": "读这篇文献时，关键不只是记住它支持哪一派，更要看它究竟在拆掉哪条旧前提。",
+        },
+        {
+            "kicker": "争论推进",
+            "title": str(record.get("一句话定位", "")),
+            "meta": "它把文献往前推了哪一步",
+            "copy": str(record.get("争论推进", "")),
+        },
+        {
+            "kicker": "本文用途",
+            "title": paper.project_module,
+            "meta": "在当前项目中的位置",
+            "copy": str(record.get("研究中的作用", "")),
+        },
+    ]
+    summary_text = "\n\n".join(
+        [
+            f"# {short_authors}（{paper.year_label}）",
+            "",
+            paper.title,
+            "",
+            f"这篇论文位于“{record.get('阵营', '')}”阵营，在当前项目中主要服务于“{paper.project_module}”这条主线。",
+            "",
+            "阅读这页时，建议先看识别对象与挑战的假设，再看它对整个指数效应争论推进了什么，最后再决定是否进入原文 PDF。",
+        ]
+    )
+
+    sequence_cards: list[dict[str, object]] = []
+    prev_row = catalog_full.iloc[current_index - 1].to_dict() if current_index > 0 else None
+    next_row = catalog_full.iloc[current_index + 1].to_dict() if current_index < len(catalog_full) - 1 else None
+
+    if prev_row is not None:
+        sequence_cards.append(
+            {
+                "kicker": "前一篇",
+                "title": _paper_brief_title(prev_row),
+                "year_label": str(prev_row.get("year_label", "")),
+                "camp": str(prev_row.get("camp", "")),
+                "track_label": _project_module_display(str(prev_row.get("project_module", ""))),
+                "meta": f"{prev_row.get('camp', '')} · {prev_row.get('method_focus', '')}",
+                "copy": str(prev_row.get("deep_contribution", "")),
+                "href": f"/paper/{prev_row.get('paper_id')}",
+                "is_current": False,
+            }
+        )
+    sequence_cards.append(
+        {
+            "kicker": "当前位置",
+            "title": f"{short_authors}（{paper.year_label}）",
+            "year_label": str(current_catalog_record.get("year_label", "")),
+            "camp": str(current_catalog_record.get("camp", "")),
+            "track_label": _project_module_display(str(current_catalog_record.get("project_module", ""))),
+            "meta": f"{current_catalog_record.get('camp', '')} · {current_catalog_record.get('method_focus', '')}",
+            "copy": str(current_catalog_record.get("deep_contribution", "")),
+            "href": "",
+            "is_current": True,
+        }
+    )
+    if next_row is not None:
+        sequence_cards.append(
+            {
+                "kicker": "后一篇",
+                "title": _paper_brief_title(next_row),
+                "year_label": str(next_row.get("year_label", "")),
+                "camp": str(next_row.get("camp", "")),
+                "track_label": _project_module_display(str(next_row.get("project_module", ""))),
+                "meta": f"{next_row.get('camp', '')} · {next_row.get('method_focus', '')}",
+                "copy": str(next_row.get("deep_contribution", "")),
+                "href": f"/paper/{next_row.get('paper_id')}",
+                "is_current": False,
+            }
+        )
+
+    candidates = catalog_full.loc[catalog_full["paper_id"] != paper_id].copy()
+    same_module = candidates.loc[candidates["project_module"] == paper.project_module]
+    same_camp = same_module.loc[same_module["camp"] == paper.camp]
+    recommended = pd.concat(
+        [
+            same_camp.head(2),
+            same_module.loc[~same_module["paper_id"].isin(same_camp["paper_id"])].head(2),
+            candidates.loc[~candidates["paper_id"].isin(same_module["paper_id"])].head(2),
+        ],
+        ignore_index=True,
+    ).drop_duplicates(subset=["paper_id"]).head(2)
+    recommended_cards = [
+        {
+            "kicker": "推荐下一篇",
+            "title": _paper_brief_title(rec.to_dict()),
+            "year_label": str(rec["year_label"]),
+            "camp": str(rec["camp"]),
+            "meta": f"{rec['camp']} · {rec['project_module']} · {rec['method_focus']}",
+            "copy": str(rec["practical_use"]),
+            "href": f"/paper/{rec['paper_id']}",
+        }
+        for _, rec in recommended.iterrows()
+    ]
+    evolution_nav_cards = [
+        {
+            "kicker": f"{idx + 1:02d} · {row['stance']}",
+            "title": _paper_brief_title(row.to_dict()),
+            "year_label": str(row["year_label"]),
+            "camp": str(row["camp"]),
+            "stance": str(row["stance"]),
+            "project_module": str(row["project_module"]),
+            "track_label": _project_module_display(str(row["project_module"])),
+            "copy": str(row["one_line_role"]),
+            "href": f"/paper/{row['paper_id']}",
+            "is_current": str(row["paper_id"]) == paper_id,
+        }
+        for idx, (_, row) in enumerate(catalog_full.iterrows())
+    ]
+    evolution_nav_views = [
+        {"id": "camp", "groups": _group_evolution_cards(evolution_nav_cards, "camp")},
+        {"id": "track", "groups": _group_evolution_cards(evolution_nav_cards, "track_label")},
+        {"id": "stance", "groups": _group_evolution_cards(evolution_nav_cards, "stance")},
+    ]
+
+    return {
+        "id": f"paper_{paper_id}",
+        "title": f"{short_authors}（{paper.year_label}）",
+        "description": paper.title,
+        "subtitle": f"{record.get('阵营', '')} · {record.get('方法 / 关键词', '')}",
+        "summary_text": summary_text,
+        "summary_cards": summary_cards,
+        "rendered_tables": [
+            ("论文信息", _render_table(info_frame, compact=True)),
+            ("深度解读", _render_table(deep_frame, compact=True)),
+        ],
+        "sequence_cards": sequence_cards,
+        "recommended_cards": recommended_cards,
+        "evolution_nav_cards": evolution_nav_cards,
+        "evolution_nav_views": evolution_nav_views,
+        "figure_paths": [],
+        "primary_actions": ([{"label": "打开原文 PDF", "href": f"/paper/{paper_id}/pdf", "target": "_blank"}] if paper.exists else []),
+        "output_dir": "",
     }
 
 
@@ -3340,6 +4435,14 @@ def serve_result_file(subpath: str):
 
 
 @app.get("/paper/<paper_id>")
+def show_paper_brief(paper_id: str):
+    current = _load_paper_detail_result(paper_id)
+    if current is None:
+        abort(404)
+    return render_template_string(PAPER_TEMPLATE, current=current)
+
+
+@app.get("/paper/<paper_id>/pdf")
 def serve_library_pdf(paper_id: str):
     paper = get_literature_paper(paper_id)
     if paper is None or not paper.exists:
