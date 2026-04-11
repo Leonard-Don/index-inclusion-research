@@ -346,10 +346,20 @@ PAPER_TEMPLATE = """
       padding-top: 18px;
       border-top: 1px solid rgba(31, 42, 55, 0.08);
       color: var(--muted);
-      font-size: 16px;
-      line-height: 1.8;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
+      display: grid;
+      gap: 10px;
+      font-size: 15px;
+      line-height: 1.75;
+    }
+    .hero-summary p {
+      margin: 0;
+      max-width: 72ch;
+    }
+    .hero-summary .summary-title {
+      color: #1d2a37;
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.6;
     }
     .section {
       margin-top: 22px;
@@ -787,8 +797,14 @@ PAPER_TEMPLATE = """
         {% endfor %}
         <a class="btn secondary" href="{{ url_for('show_library') }}">返回文献库</a>
       </div>
-      {% if current.summary_text %}
-      <div class="hero-summary">{{ current.summary_text }}</div>
+      {% if current.summary_paragraphs %}
+      <div class="hero-summary">
+        {% for paragraph in current.summary_paragraphs %}
+        <p class="{% if loop.first %}summary-title{% endif %}">{{ paragraph }}</p>
+        {% endfor %}
+      </div>
+      {% elif current.summary_text %}
+      <div class="hero-summary"><p>{{ current.summary_text }}</p></div>
       {% endif %}
     </section>
 
@@ -2966,17 +2982,12 @@ def _load_paper_detail_result(paper_id: str) -> dict[str, object] | None:
             "copy": str(record.get("研究中的作用", "")),
         },
     ]
-    summary_text = "\n\n".join(
-        [
-            f"# {short_authors}（{paper.year_label}）",
-            "",
-            paper.title,
-            "",
-            f"这篇论文位于“{record.get('阵营', '')}”阵营，在当前项目中主要服务于“{paper.project_module}”这条主线。",
-            "",
-            "阅读这页时，建议先看识别对象与挑战的假设，再看它对整个指数效应争论推进了什么，最后再决定是否进入原文 PDF。",
-        ]
-    )
+    summary_paragraphs = [
+        f"{short_authors}（{paper.year_label}）对应的原始论文题目为《{paper.title}》。",
+        f"这篇论文位于“{record.get('阵营', '')}”阵营，在当前项目中主要服务于“{paper.project_module}”这条主线。",
+        "阅读这页时，可先看识别对象与挑战的假设，再看它如何推动指数效应争论向前发展，最后再决定是否进入原文 PDF。",
+    ]
+    summary_text = " ".join(summary_paragraphs)
 
     sequence_cards: list[dict[str, object]] = []
     prev_row = catalog_full.iloc[current_index - 1].to_dict() if current_index > 0 else None
@@ -3074,6 +3085,7 @@ def _load_paper_detail_result(paper_id: str) -> dict[str, object] | None:
         "description": paper.title,
         "subtitle": f"{record.get('阵营', '')} · {record.get('方法 / 关键词', '')}",
         "summary_text": summary_text,
+        "summary_paragraphs": summary_paragraphs,
         "summary_cards": summary_cards,
         "rendered_tables": [
             ("论文信息", _render_table(info_frame, compact=True)),
