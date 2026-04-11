@@ -80,6 +80,18 @@ def test_home_dashboard_supports_full_mode() -> None:
     assert "完整材料" in html
 
 
+def test_home_dashboard_supports_three_minute_mode() -> None:
+    client = dashboard.app.test_client()
+    response = client.get("/?mode=brief")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "3 分钟汇报" in html
+    assert "3 分钟汇报模式下" in html
+    assert "核心研究结论" in html
+    assert "三条主线，对应三类核心问题" in html
+    assert "支撑文献" not in html
+
+
 def test_paper_route_now_renders_brief_before_pdf() -> None:
     client = dashboard.app.test_client()
     response = client.get("/paper/harris_gurel_1986")
@@ -106,6 +118,8 @@ def test_paper_route_now_renders_brief_before_pdf() -> None:
     assert "按主线" in html
     assert "按立场" in html
     assert "短期价格压力与效应减弱" in html or "需求曲线与长期保留" in html or "制度识别与中国市场证据" in html
+    assert "<built-in method copy" not in html
+    assert "把指数效应首先解释成短期价格压力" in html
     assert "研究模块" not in html
     assert "文献页面" not in html
 
@@ -113,9 +127,22 @@ def test_paper_route_now_renders_brief_before_pdf() -> None:
     assert pdf_response.status_code == 200
 
 
-def test_framework_route_uses_specific_page_title() -> None:
+def test_legacy_secondary_routes_redirect_to_single_frontend_anchors() -> None:
     client = dashboard.app.test_client()
-    response = client.get("/framework")
-    assert response.status_code == 200
-    html = response.get_data(as_text=True)
-    assert "<title>研究框架｜指数纳入效应研究界面</title>" in html
+    redirects = {
+        "/library": "/#framework",
+        "/review": "/#framework",
+        "/framework": "/#framework",
+        "/supplement": "/#supplement",
+        "/analysis/price_pressure_track": "/#price_pressure_track",
+        "/analysis/demand_curve_track": "/#demand_curve_track",
+        "/analysis/identification_china_track": "/#identification_china_track",
+    }
+    for route, target in redirects.items():
+        response = client.get(route)
+        assert response.status_code == 302
+        assert response.headers["Location"].endswith(target)
+
+
+def test_old_app_template_has_been_removed() -> None:
+    assert not hasattr(dashboard, "APP_TEMPLATE")

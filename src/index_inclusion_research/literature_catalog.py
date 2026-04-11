@@ -58,6 +58,89 @@ CAMP_LABELS = {
     },
 }
 
+DEEP_ANALYSIS = {
+    "harris_gurel_1986": {
+        "identification_target": "公告日前后短期异常收益与成交量冲击",
+        "challenged_assumption": "观察到上涨并不等于已经识别出永久重估",
+        "deep_contribution": "把指数效应首先解释成短期价格压力，并为后续所有永久性争论设定了基准对照。",
+    },
+    "shleifer_1986": {
+        "identification_target": "指数纳入所代表的外生需求冲击",
+        "challenged_assumption": "股票可以被视为完全可替代资产",
+        "deep_contribution": "把指数效应从交易现象推进成资产定价问题，提出需求曲线向下倾斜这一理论根基。",
+    },
+    "lynch_mendenhall_1997": {
+        "identification_target": "公告日与生效日分离后的价格反应路径",
+        "challenged_assumption": "价格要么完全回吐，要么完全永久化",
+        "deep_contribution": "证明短期价格压力和部分持久效应可以同时存在，是连接两大经典解释的桥梁文献。",
+    },
+    "kaul_mehrotra_morck_2000": {
+        "identification_target": "不伴随信息变化的纯权重调整冲击",
+        "challenged_assumption": "指数效应主要来自信息或样本选择",
+        "deep_contribution": "用更干净的权重变动说明纯资金冲击本身也能带来不易回吐的价格变化。",
+    },
+    "denis_et_al_2003": {
+        "identification_target": "纳入前后分析师预期与真实盈利改善",
+        "challenged_assumption": "S&P 500 纳入是无信息事件",
+        "deep_contribution": "把机制争论从纯需求曲线推进到信息背书，提醒研究者不能把所有上涨都解释成被动买盘。",
+    },
+    "wurgler_zhuravskaya_2002": {
+        "identification_target": "股票可替代性与需求曲线斜率之间的关系",
+        "challenged_assumption": "若存在错定价，套利者会立刻把它抹平",
+        "deep_contribution": "补上了需求曲线机制的套利约束基础，解释为什么偏离可能持续存在。",
+    },
+    "madhavan_2003": {
+        "identification_target": "Russell 重构中的收益冲击、流动性与交易成本",
+        "challenged_assumption": "指数效应只能是纯暂时或纯永久二选一",
+        "deep_contribution": "说明现实市场里短期价格压力与更长期的流动性变化往往叠加出现。",
+    },
+    "petajisto_2011": {
+        "identification_target": "指数溢价、价格弹性与指数换手成本",
+        "challenged_assumption": "指数效应只是学术上的价格异象，与资产管理实践无关",
+        "deep_contribution": "把指数效应转译成被动基金承担的隐性交易成本，连接学术争论与产业含义。",
+    },
+    "kasch_sarkar_2011": {
+        "identification_target": "纳入前强势表现与纳入后价值/共动变化",
+        "challenged_assumption": "纳入样本可被视为近似随机，永久效应可直接归因于指数成员身份",
+        "deep_contribution": "把很多永久效应重新解释为纳入前盈利、规模和动量表现的延续，强调样本选择偏差。",
+    },
+    "ahn_patatoukas_2022": {
+        "identification_target": "指数化对套利能力与价格发现速度的影响",
+        "challenged_assumption": "指数化天然会恶化市场定价效率",
+        "deep_contribution": "把争论提升到市场质量层面，说明指数化在部分样本上甚至可能改善价格发现。",
+    },
+    "coakley_et_al_2022": {
+        "identification_target": "期权市场隐含 beta 所反映的前瞻共动变化",
+        "challenged_assumption": "正式纳入时点仍是效应的主要信息到达时刻",
+        "deep_contribution": "说明现代市场中许多指数效应早在公告前就被预期和交易，正式事件日剩余空间有限。",
+    },
+    "greenwood_sammon_2022": {
+        "identification_target": "S&P 500 指数效应的年代变化",
+        "challenged_assumption": "经典美股指数效应在不同时代都同样强",
+        "deep_contribution": "把问题改写成时变效应：机制未必消失，但可见 alpha 已被更成熟的套利显著压缩。",
+    },
+    "chang_hong_liskovich_2014": {
+        "identification_target": "Russell 断点附近纯指数化冲击的价格效应",
+        "challenged_assumption": "普通 CAR 足以干净识别指数效应",
+        "deep_contribution": "用 RDD 把争论从现象描述推进到更强识别，是后续中国市场 RDD 文献的直接方法祖先。",
+    },
+    "chu_et_al_2021": {
+        "identification_target": "CSI 300 调入调出的长期持有期表现",
+        "challenged_assumption": "中国市场会复制美股那套标准长期路径",
+        "deep_contribution": "揭示中国市场长期结果的反常性和制度异质性，强调本土投资者结构与国企特征的重要性。",
+    },
+    "yao_zhang_li_hs300": {
+        "identification_target": "沪深300 边界样本的调入调出效应",
+        "challenged_assumption": "传统事件研究足以在中国市场给出稳定结论",
+        "deep_contribution": "把中国市场指数效应的争论重新锚定到识别方法本身，强调 RD 与 DID 的必要性。",
+    },
+    "yao_zhou_chen_2022": {
+        "identification_target": "CSI300 边界样本在国际期刊框架下的 RD 与 DID 证据",
+        "challenged_assumption": "中国市场证据只能停留在现象描述，难以进入更一般的指数效应争论",
+        "deep_contribution": "将中国市场的不对称指数效应放进国际准实验识别语言中，增强了可比性和外部说服力。",
+    },
+}
+
 
 @dataclass(frozen=True)
 class LiteraturePaper:
@@ -390,6 +473,7 @@ def build_literature_catalog_frame() -> pd.DataFrame:
     rows: list[dict[str, object]] = []
     for paper in PAPER_LIBRARY:
         row = asdict(paper)
+        row.update(DEEP_ANALYSIS.get(paper.paper_id, {}))
         row["pdf_path"] = str(paper.pdf_path)
         row["pdf_exists"] = paper.exists
         row["camp_order"] = paper.camp_order
@@ -405,7 +489,7 @@ def build_literature_catalog_frame() -> pd.DataFrame:
 def build_literature_dashboard_frame() -> pd.DataFrame:
     rows: list[dict[str, object]] = []
     for paper in PAPER_LIBRARY:
-        open_link = f'<a href="/paper/{paper.paper_id}" target="_blank">打开 PDF</a>' if paper.exists else "PDF 不存在"
+        open_link = f'<a href="/paper/{paper.paper_id}" target="_blank">文献讲义</a>' if paper.exists else "PDF 不存在"
         rows.append(
             {
                 "阵营": CAMP_LABELS[paper.camp]["title"],
@@ -414,7 +498,10 @@ def build_literature_dashboard_frame() -> pd.DataFrame:
                 "年份": paper.year_label,
                 "市场 / 指数": paper.market_focus,
                 "方法 / 关键词": paper.method_focus,
+                "识别对象": DEEP_ANALYSIS.get(paper.paper_id, {}).get("identification_target", ""),
+                "挑战的假设": DEEP_ANALYSIS.get(paper.paper_id, {}).get("challenged_assumption", ""),
                 "一句话定位": paper.one_line_role,
+                "争论推进": DEEP_ANALYSIS.get(paper.paper_id, {}).get("deep_contribution", ""),
                 "项目模块": paper.project_module,
                 "研究中的作用": paper.practical_use,
                 "PDF": open_link,
@@ -474,7 +561,10 @@ def build_literature_evolution_frame() -> pd.DataFrame:
             "year_label",
             "market_focus",
             "method_focus",
+            "identification_target",
+            "challenged_assumption",
             "one_line_role",
+            "deep_contribution",
             "project_module",
             "practical_use",
             "camp_order",
@@ -488,7 +578,10 @@ def build_literature_evolution_frame() -> pd.DataFrame:
             "year_label": "年份",
             "market_focus": "市场 / 指数",
             "method_focus": "方法 / 关键词",
+            "identification_target": "识别对象",
+            "challenged_assumption": "挑战的假设",
             "one_line_role": "一句话定位",
+            "deep_contribution": "争论推进",
             "project_module": "项目模块",
             "practical_use": "研究中的作用",
             "camp_order": "camp_order",
@@ -507,7 +600,10 @@ def build_literature_evolution_frame() -> pd.DataFrame:
             "代表文献",
             "市场 / 指数",
             "方法 / 关键词",
+            "识别对象",
+            "挑战的假设",
             "一句话定位",
+            "争论推进",
             "项目模块",
             "研究中的作用",
             "camp_order",
@@ -578,7 +674,7 @@ def build_literature_summary_markdown() -> str:
         f"- 方法革命：{int(camp_counts.get('方法革命', 0))} 篇",
         f"- 中国 A 股主战场：{int(camp_counts.get('中国A股主战场', 0))} 篇",
         "",
-        "页面中已可直接查看每篇文献的立场、阵营、核心逻辑、一句话定位与研究中的作用。",
+        "页面中已可直接查看每篇文献的立场、阵营、核心逻辑、识别对象、挑战的假设与研究中的作用。",
     ]
     return "\n".join(lines)
 
@@ -592,6 +688,8 @@ def build_project_track_frame(project_module: str) -> pd.DataFrame:
             "stance",
             "authors",
             "year_label",
+            "identification_target",
+            "challenged_assumption",
             "one_line_role",
             "practical_use",
             "paper_id",
@@ -605,6 +703,8 @@ def build_project_track_frame(project_module: str) -> pd.DataFrame:
             "stance": "立场",
             "authors": "作者",
             "year_label": "年份",
+            "identification_target": "识别对象",
+            "challenged_assumption": "挑战的假设",
             "one_line_role": "一句话定位",
             "practical_use": "在本项目中的作用",
             "paper_id": "paper_id",
@@ -615,7 +715,7 @@ def build_project_track_frame(project_module: str) -> pd.DataFrame:
     )
     grouped["阵营"] = grouped["阵营"].map(lambda value: CAMP_LABELS[value]["title"])
     grouped["PDF"] = grouped.apply(
-        lambda row: f'<a href="/paper/{row["paper_id"]}" target="_blank">打开 PDF</a>' if bool(row["pdf_exists"]) else "PDF 不存在",
+        lambda row: f'<a href="/paper/{row["paper_id"]}" target="_blank">文献讲义</a>' if bool(row["pdf_exists"]) else "PDF 不存在",
         axis=1,
     )
     grouped["代表文献"] = grouped.apply(
@@ -623,7 +723,7 @@ def build_project_track_frame(project_module: str) -> pd.DataFrame:
         axis=1,
     )
     grouped = grouped[
-        ["阵营", "立场", "代表文献", "一句话定位", "在本项目中的作用", "PDF", "camp_order", "year_order"]
+        ["阵营", "立场", "代表文献", "识别对象", "挑战的假设", "一句话定位", "在本项目中的作用", "PDF", "camp_order", "year_order"]
     ].sort_values(["camp_order", "year_order", "代表文献"], kind="stable")
     return grouped.drop(columns=["camp_order", "year_order"]).reset_index(drop=True)
 
@@ -667,6 +767,9 @@ def build_project_track_support_records(project_module: str) -> list[dict[str, s
                 "stance": paper.stance,
                 "market_focus": paper.market_focus,
                 "method_focus": paper.method_focus,
+                "identification_target": DEEP_ANALYSIS.get(paper.paper_id, {}).get("identification_target", ""),
+                "challenged_assumption": DEEP_ANALYSIS.get(paper.paper_id, {}).get("challenged_assumption", ""),
+                "deep_contribution": DEEP_ANALYSIS.get(paper.paper_id, {}).get("deep_contribution", ""),
                 "one_line_role": paper.one_line_role,
                 "practical_use": paper.practical_use,
                 "pdf_href": f"/paper/{paper.paper_id}" if paper.exists else "",
@@ -691,6 +794,8 @@ def build_grouped_literature_frame(stance: str) -> pd.DataFrame:
             "authors",
             "year_label",
             "market_focus",
+            "identification_target",
+            "challenged_assumption",
             "one_line_role",
             "practical_use",
             "paper_id",
@@ -704,6 +809,8 @@ def build_grouped_literature_frame(stance: str) -> pd.DataFrame:
             "authors": "作者",
             "year_label": "年份",
             "market_focus": "市场 / 指数",
+            "identification_target": "识别对象",
+            "challenged_assumption": "挑战的假设",
             "one_line_role": "一句话定位",
             "practical_use": "研究中的作用",
             "paper_id": "paper_id",
@@ -714,7 +821,7 @@ def build_grouped_literature_frame(stance: str) -> pd.DataFrame:
     )
     grouped["阵营"] = grouped["阵营"].map(lambda value: CAMP_LABELS[value]["title"])
     grouped["PDF"] = grouped.apply(
-        lambda row: f'<a href="/paper/{row["paper_id"]}" target="_blank">打开 PDF</a>' if bool(row["pdf_exists"]) else "PDF 不存在",
+        lambda row: f'<a href="/paper/{row["paper_id"]}" target="_blank">文献讲义</a>' if bool(row["pdf_exists"]) else "PDF 不存在",
         axis=1,
     )
     grouped["代表文献"] = grouped.apply(
@@ -722,7 +829,7 @@ def build_grouped_literature_frame(stance: str) -> pd.DataFrame:
         axis=1,
     )
     grouped = grouped[
-        ["阵营", "代表文献", "市场 / 指数", "一句话定位", "研究中的作用", "PDF", "camp_order", "year_order"]
+        ["阵营", "代表文献", "市场 / 指数", "识别对象", "挑战的假设", "一句话定位", "研究中的作用", "PDF", "camp_order", "year_order"]
     ].sort_values(["camp_order", "year_order", "代表文献"], kind="stable")
     return grouped.drop(columns=["camp_order", "year_order"]).reset_index(drop=True)
 

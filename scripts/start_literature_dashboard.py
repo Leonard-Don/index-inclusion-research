@@ -231,433 +231,6 @@ VALUE_LABELS = {
     "volatility_change": "波动率变化",
 }
 
-APP_TEMPLATE = """
-<!doctype html>
-<html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% if current and current.page_title %}{{ current.page_title }}{% elif current and current.title %}{{ current.title }}｜指数纳入效应研究界面{% else %}指数纳入效应研究界面{% endif %}</title>
-  <style>
-    :root {
-      --bg: #f7f1e8;
-      --card: #fffaf2;
-      --ink: #1f2a37;
-      --muted: #52606d;
-      --line: #d9c9b1;
-      --accent: #005f73;
-      --accent-2: #ae2012;
-      --shadow: 0 18px 40px rgba(42, 36, 26, 0.08);
-    }
-    * { box-sizing: border-box; }
-    html, body {
-      max-width: 100%;
-      overflow-x: hidden;
-    }
-    body {
-      margin: 0;
-      font-family: Georgia, "Times New Roman", serif;
-      color: var(--ink);
-      background:
-        radial-gradient(circle at top left, rgba(0,95,115,0.08), transparent 26%),
-        radial-gradient(circle at top right, rgba(174,32,18,0.08), transparent 24%),
-        linear-gradient(180deg, #f9f4ed 0%, var(--bg) 100%);
-    }
-    a { color: var(--accent); text-decoration: none; }
-    .page {
-      width: min(1280px, 100%);
-      margin: 24px auto 56px;
-      padding: 0 16px;
-    }
-    .hero, .panel, .analysis-card {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      box-shadow: var(--shadow);
-    }
-    .hero {
-      padding: 28px 30px;
-      margin-bottom: 18px;
-    }
-    .hero h1 {
-      margin: 0 0 10px;
-      font-size: clamp(30px, 4vw, 48px);
-      line-height: 1.05;
-      letter-spacing: -0.03em;
-    }
-    .hero p {
-      margin: 0;
-      max-width: 880px;
-      color: var(--muted);
-      font-size: 17px;
-      line-height: 1.6;
-    }
-    .sidebar-title {
-      margin: 2px 0 0;
-      color: #7a6d5a;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.18em;
-      font-weight: 700;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
-      gap: 18px;
-      align-items: start;
-      min-width: 0;
-    }
-    .sidebar {
-      display: grid;
-      gap: 16px;
-      position: sticky;
-      top: 18px;
-      min-width: 0;
-    }
-    .analysis-card {
-      padding: 18px;
-    }
-    .analysis-card h3 {
-      margin: 0 0 6px;
-      font-size: 22px;
-    }
-    .analysis-card .subtle {
-      margin: 0 0 8px;
-      font-size: 13px;
-      color: #7a6d5a;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-    .analysis-card p {
-      margin: 0 0 14px;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-    .btn-row {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .btn {
-      appearance: none;
-      border: 1px solid var(--accent);
-      background: var(--accent);
-      color: white;
-      padding: 10px 14px;
-      border-radius: 999px;
-      font-size: 14px;
-      cursor: pointer;
-    }
-    .btn.secondary {
-      background: transparent;
-      color: var(--accent);
-    }
-    .panel {
-      padding: 24px;
-      min-height: 70vh;
-      min-width: 0;
-      overflow: hidden;
-    }
-    .panel h2 {
-      margin: 0 0 8px;
-      font-size: 28px;
-      letter-spacing: -0.02em;
-    }
-    .kicker {
-      color: var(--accent-2);
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.18em;
-      margin-bottom: 8px;
-      font-weight: 700;
-    }
-    .meta {
-      color: var(--muted);
-      margin-bottom: 18px;
-      line-height: 1.6;
-    }
-    .section {
-      margin-top: 24px;
-    }
-    .section h3 {
-      margin: 0 0 12px;
-      font-size: 20px;
-    }
-    .notice {
-      background: rgba(0,95,115,0.08);
-      border: 1px solid rgba(0,95,115,0.16);
-      padding: 14px 16px;
-      border-radius: 16px;
-      color: var(--ink);
-      line-height: 1.55;
-    }
-    .md {
-      background: #fff;
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 16px 18px;
-      line-height: 1.65;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-      font-size: 15px;
-    }
-    .figure-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 18px;
-      min-width: 0;
-    }
-    .figure-card {
-      border: 1px solid var(--line);
-      background: #fff;
-      border-radius: 18px;
-      padding: 16px;
-    }
-    .figure-card img {
-      width: 100%;
-      height: auto;
-      display: block;
-      border-radius: 12px;
-      border: 1px solid #eadfce;
-      background: #fff;
-    }
-    .figure-card .caption {
-      margin-top: 10px;
-      font-size: 14px;
-      color: var(--muted);
-      word-break: break-all;
-    }
-    .table-wrap {
-      width: 100%;
-      max-width: 100%;
-      overflow-x: auto;
-      overflow-y: hidden;
-      -webkit-overflow-scrolling: touch;
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      background: white;
-    }
-    table.dataframe {
-      width: max-content;
-      min-width: 100%;
-      border-collapse: collapse;
-      font-size: 15px;
-    }
-    table.dataframe th, table.dataframe td {
-      padding: 12px 14px;
-      border-bottom: 1px solid #efe3d2;
-      text-align: left;
-      white-space: normal;
-      word-break: break-word;
-      overflow-wrap: anywhere;
-      vertical-align: top;
-      min-width: 92px;
-    }
-    table.dataframe thead th {
-      position: sticky;
-      top: 0;
-      background: #fbf7f1;
-      z-index: 1;
-    }
-    .empty {
-      color: var(--muted);
-      font-style: italic;
-    }
-    .summary-card-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 14px;
-      margin-bottom: 22px;
-    }
-    .summary-card {
-      padding: 16px 17px;
-      border-radius: 18px;
-      border: 1px solid rgba(24,33,43,0.08);
-      background: linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.42));
-    }
-    .summary-card .kicker {
-      margin-bottom: 8px;
-    }
-    .summary-card h4 {
-      margin: 0 0 6px;
-      font-size: 18px;
-      line-height: 1.3;
-      color: #1d2a37;
-    }
-    .summary-card .meta {
-      margin-bottom: 8px;
-      gap: 6px;
-    }
-    .summary-card p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.7;
-    }
-    .foot {
-      margin-top: 18px;
-      font-size: 13px;
-      color: var(--muted);
-      overflow-wrap: anywhere;
-    }
-    @media (max-width: 980px) {
-      .grid { grid-template-columns: 1fr; }
-      .sidebar { position: static; }
-      .page {
-        margin: 16px auto 36px;
-        padding: 0 12px;
-      }
-      .hero, .panel, .analysis-card {
-        border-radius: 18px;
-      }
-      .hero {
-        padding: 22px 20px;
-      }
-      .panel {
-        padding: 18px;
-      }
-      .analysis-card {
-        padding: 16px;
-      }
-      .figure-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="page">
-    <section class="hero">
-      <h1>指数纳入效应研究界面</h1>
-      <p>这个界面以 16 篇指数效应文献为底，组织为三条研究主线，并在同一页中呈现支撑文献、结果表与图表解释。</p>
-    </section>
-    <div class="grid">
-      <aside class="sidebar">
-        <div class="sidebar-title">研究模块</div>
-        {% for key, item in analyses.items() %}
-        <div class="analysis-card">
-          <h3>{{ item.title }}</h3>
-          <div class="subtle">{{ item.subtitle }}</div>
-          <p>{{ item.description_zh }}</p>
-          <div class="btn-row">
-            <form method="post" action="{{ url_for('run_analysis', analysis_id=key) }}">
-              <button class="btn" type="submit">生成分析</button>
-            </form>
-            <a class="btn secondary" href="{{ url_for('show_analysis', analysis_id=key) }}">打开页面</a>
-          </div>
-        </div>
-        {% endfor %}
-        <div class="sidebar-title">文献页面</div>
-        <div class="analysis-card">
-          <h3>{{ library_card.title }}</h3>
-          <div class="subtle">{{ library_card.subtitle }}</div>
-          <p>{{ library_card.description_zh }}</p>
-          <div class="btn-row">
-            <a class="btn secondary" href="{{ url_for('show_library') }}">打开页面</a>
-          </div>
-        </div>
-        <div class="analysis-card">
-          <h3>{{ review_card.title }}</h3>
-          <div class="subtle">{{ review_card.subtitle }}</div>
-          <p>{{ review_card.description_zh }}</p>
-          <div class="btn-row">
-            <a class="btn secondary" href="{{ url_for('show_review') }}">打开页面</a>
-          </div>
-        </div>
-        <div class="analysis-card">
-          <h3>{{ framework_card.title }}</h3>
-          <div class="subtle">{{ framework_card.subtitle }}</div>
-          <p>{{ framework_card.description_zh }}</p>
-          <div class="btn-row">
-            <a class="btn secondary" href="{{ url_for('show_framework') }}">打开页面</a>
-          </div>
-        </div>
-        <div class="analysis-card">
-          <h3>{{ supplement_card.title }}</h3>
-          <div class="subtle">{{ supplement_card.subtitle }}</div>
-          <p>{{ supplement_card.description_zh }}</p>
-          <div class="btn-row">
-            <a class="btn secondary" href="{{ url_for('show_supplement') }}">打开页面</a>
-          </div>
-        </div>
-      </aside>
-      <main class="panel">
-        {% if current %}
-          <div class="kicker">{{ current.id }}</div>
-          <h2>{{ current.title }}</h2>
-          <div class="meta">
-            <div>{{ current.description }}</div>
-            {% if current.subtitle %}
-            <div style="font-size: 14px; color: #7a6d5a; text-transform: uppercase; letter-spacing: 0.05em;">{{ current.subtitle }}</div>
-            {% endif %}
-          </div>
-          {% if current.primary_actions %}
-          <div class="btn-row" style="margin-top: 14px;">
-            {% for action in current.primary_actions %}
-            <a class="btn secondary" href="{{ action.href }}" {% if action.target %}target="{{ action.target }}"{% endif %}>{{ action.label }}</a>
-            {% endfor %}
-          </div>
-          {% endif %}
-          {% if current.summary_text %}
-          <div class="section">
-            <h3>摘要说明</h3>
-            <div class="md">{{ current.summary_text }}</div>
-          </div>
-          {% endif %}
-          {% if current.summary_cards %}
-          <div class="section">
-            <h3>阅读提示</h3>
-            <div class="summary-card-grid">
-              {% for card in current.summary_cards %}
-              <div class="summary-card">
-                {% if card.kicker %}<div class="kicker">{{ card.kicker }}</div>{% endif %}
-                <h4>{{ card.title }}</h4>
-                {% if card.meta %}<div class="meta">{{ card.meta }}</div>{% endif %}
-                <p>{{ card.copy }}</p>
-              </div>
-              {% endfor %}
-            </div>
-          </div>
-          {% endif %}
-          <div class="section">
-            <h3>结果表</h3>
-            {% for label, html_table in current.rendered_tables %}
-              <h4>{{ label }}</h4>
-              <div class="table-wrap">{{ html_table|safe }}</div>
-            {% else %}
-              <div class="empty">暂无表格结果。</div>
-            {% endfor %}
-          </div>
-          <div class="section">
-            <h3>图表</h3>
-            {% if current.figure_paths %}
-              <div class="figure-grid">
-                {% for figure in current.figure_paths %}
-                <div class="figure-card">
-                  <img src="{{ url_for('serve_result_file', subpath=figure.path) }}" alt="{{ figure.caption }}">
-                  <div class="caption">{{ figure.caption }}</div>
-                </div>
-                {% endfor %}
-              </div>
-            {% else %}
-              <div class="empty">暂无图表。</div>
-            {% endif %}
-          </div>
-          {% if current.output_dir %}
-          <div class="foot">输出目录：{{ current.output_dir }}</div>
-          {% endif %}
-        {% else %}
-          <div class="notice">
-            左侧研究模块支持分别生成对应主线的支撑文献、图表与数据表，便于分主题展示相关结果。
-          </div>
-        {% endif %}
-      </main>
-    </div>
-  </div>
-</body>
-</html>
-"""
-
 PAPER_TEMPLATE = """
 <!doctype html>
 <html lang="zh-CN">
@@ -1234,7 +807,7 @@ PAPER_TEMPLATE = """
           <div class="kicker">{{ card.kicker }}</div>
           <h3>{{ card.title }}</h3>
           {% if card.meta %}<div class="insight-meta">{{ card.meta }}</div>{% endif %}
-          <p>{{ card.copy }}</p>
+          <p>{{ card["copy"] }}</p>
         </article>
         {% endfor %}
       </div>
@@ -1269,7 +842,7 @@ PAPER_TEMPLATE = """
             </div>
             {% endif %}
             {% if card.meta %}<div class="mini-meta">{{ card.meta }}</div>{% endif %}
-            <p>{{ card.copy }}</p>
+            <p>{{ card["copy"] }}</p>
             {% if card.href %}
             <a href="{{ card.href }}">进入文献讲义</a>
             {% endif %}
@@ -1291,7 +864,7 @@ PAPER_TEMPLATE = """
           </div>
           {% endif %}
           {% if card.meta %}<div class="mini-meta">{{ card.meta }}</div>{% endif %}
-          <p>{{ card.copy }}</p>
+          <p>{{ card["copy"] }}</p>
           {% if card.href %}
           <a href="{{ card.href }}">推荐继续阅读</a>
           {% endif %}
@@ -1326,7 +899,7 @@ PAPER_TEMPLATE = """
                   <span class="pill camp">{{ card.camp }}</span>
                 </div>
                 <div class="mini-meta">{{ card.track_label }}</div>
-                <p>{{ card.copy }}</p>
+                <p>{{ card["copy"] }}</p>
               </a>
               {% endfor %}
             </div>
@@ -2254,6 +1827,7 @@ HOME_TEMPLATE = """
         <a href="#framework">文献框架</a>
         <a href="#supplement">机制补充</a>
         <a href="#limits">研究边界</a>
+        <a href="{{ url_for('home', mode='brief') }}">3 分钟汇报</a>
         <a href="{{ url_for('home', mode='demo') }}">展示版</a>
         <a href="{{ url_for('home', mode='full') }}">完整材料</a>
         <form method="post" action="{{ url_for('refresh_dashboard', mode=mode) }}">
@@ -2363,6 +1937,7 @@ HOME_TEMPLATE = """
         {% endfor %}
       </div>
       {% endif %}
+      {% if mode != "brief" %}
       <div class="library-panels">
         {% for figure in design_section.figures %}
         <div class="result-card {{ figure.layout_class }}">
@@ -2380,6 +1955,9 @@ HOME_TEMPLATE = """
         </div>
         {% endfor %}
       </div>
+      {% else %}
+      <div class="section-side">3 分钟汇报模式下，这里只保留样本设计摘要卡；完整图表和数据来源表可切换到展示版或完整材料查看。</div>
+      {% endif %}
     </section>
 
     <section class="section" id="tracks">
@@ -2455,7 +2033,7 @@ HOME_TEMPLATE = """
             </div>
           </div>
         </div>
-        {% if section.display_tables %}
+        {% if section.display_tables and mode != "brief" %}
         <div class="result-grid">
           {% for table in section.display_tables %}
           <div class="result-card {{ table.layout_class }}">
@@ -2465,7 +2043,7 @@ HOME_TEMPLATE = """
           {% endfor %}
         </div>
         {% endif %}
-        {% if section.display_support_papers %}
+        {% if section.display_support_papers and mode != "brief" %}
         <div class="support-band">
           <div class="support-head">
             <h4>支撑文献</h4>
@@ -2511,6 +2089,7 @@ HOME_TEMPLATE = """
       {% endfor %}
     </section>
 
+    {% if mode != "brief" %}
     <section class="section" id="framework">
       <div class="section-head">
         <div>
@@ -2582,6 +2161,7 @@ HOME_TEMPLATE = """
         {% endfor %}
       </div>
     </section>
+    {% endif %}
 
     <section class="section" id="limits">
       <div class="section-head">
@@ -2609,6 +2189,7 @@ HOME_TEMPLATE = """
         {% endfor %}
       </div>
       {% endif %}
+      {% if mode != "brief" %}
       <div class="library-panels">
         {% for table in limits_section.tables %}
         <div class="result-card {{ table.layout_class }}">
@@ -2617,6 +2198,7 @@ HOME_TEMPLATE = """
         </div>
         {% endfor %}
       </div>
+      {% endif %}
     </section>
 
     <section class="cta-strip">
@@ -3550,8 +3132,9 @@ def _clean_display_text(text: str) -> str:
     return "\n".join(lines).strip()
 
 
-def _is_demo_mode() -> bool:
-    return request.args.get("mode", "demo") != "full"
+def _dashboard_mode() -> str:
+    mode = request.args.get("mode", "demo")
+    return mode if mode in {"brief", "demo", "full"} else "demo"
 
 
 def _saved_output_dir_for_analysis(analysis_id: str) -> Path | None:
@@ -4282,7 +3865,8 @@ def _build_limits_section() -> dict[str, object]:
 
 @app.route("/")
 def home():
-    demo_mode = _is_demo_mode()
+    display_mode = _dashboard_mode()
+    demo_mode = display_mode != "full"
     track_sections = []
     for analysis_id in ANALYSES:
         section = _load_or_build_track_section(analysis_id)
@@ -4299,7 +3883,7 @@ def home():
     design_section = _build_sample_design_section()
     return render_template_string(
         HOME_TEMPLATE,
-        mode="demo" if demo_mode else "full",
+        mode=display_mode,
         overview_metrics=_build_overview_metrics(),
         overview_notes=_build_overview_notes(),
         overview_summary=_build_overview_summary(),
@@ -4333,94 +3917,34 @@ def run_analysis(analysis_id: str):
     current["subtitle"] = config["subtitle"]
     current = _attach_project_track_context(current, config)
     RUN_CACHE[analysis_id] = current
-    return redirect(url_for("show_analysis", analysis_id=analysis_id))
+    return redirect(url_for("home", _anchor=analysis_id))
 
 
 @app.get("/library")
 def show_library():
-    current = RUN_CACHE.get("paper_library")
-    if current is None:
-        current = _load_literature_library_result()
-        RUN_CACHE["paper_library"] = current
-    return render_template_string(
-        APP_TEMPLATE,
-        analyses=ANALYSES,
-        library_card=LIBRARY_CARD,
-        review_card=REVIEW_CARD,
-        framework_card=FRAMEWORK_CARD,
-        supplement_card=SUPPLEMENT_CARD,
-        current=current,
-    )
+    return redirect(url_for("home", _anchor="framework"))
 
 
 @app.get("/review")
 def show_review():
-    current = RUN_CACHE.get("paper_review")
-    if current is None:
-        current = _load_literature_review_result()
-        RUN_CACHE["paper_review"] = current
-    return render_template_string(
-        APP_TEMPLATE,
-        analyses=ANALYSES,
-        library_card=LIBRARY_CARD,
-        review_card=REVIEW_CARD,
-        framework_card=FRAMEWORK_CARD,
-        supplement_card=SUPPLEMENT_CARD,
-        current=current,
-    )
+    return redirect(url_for("home", _anchor="framework"))
 
 
 @app.get("/framework")
 def show_framework():
-    current = RUN_CACHE.get("paper_framework")
-    if current is None:
-        current = _load_literature_framework_result()
-        RUN_CACHE["paper_framework"] = current
-    return render_template_string(
-        APP_TEMPLATE,
-        analyses=ANALYSES,
-        library_card=LIBRARY_CARD,
-        review_card=REVIEW_CARD,
-        framework_card=FRAMEWORK_CARD,
-        supplement_card=SUPPLEMENT_CARD,
-        current=current,
-    )
+    return redirect(url_for("home", _anchor="framework"))
 
 
 @app.get("/supplement")
 def show_supplement():
-    current = RUN_CACHE.get("project_supplement")
-    if current is None:
-        current = _load_supplement_result()
-        RUN_CACHE["project_supplement"] = current
-    return render_template_string(
-        APP_TEMPLATE,
-        analyses=ANALYSES,
-        library_card=LIBRARY_CARD,
-        review_card=REVIEW_CARD,
-        framework_card=FRAMEWORK_CARD,
-        supplement_card=SUPPLEMENT_CARD,
-        current=current,
-    )
+    return redirect(url_for("home", _anchor="supplement"))
 
 
 @app.get("/analysis/<analysis_id>")
 def show_analysis(analysis_id: str):
-    config = ANALYSES.get(analysis_id)
-    if not config:
+    if analysis_id not in ANALYSES:
         abort(404)
-    current = RUN_CACHE.get(analysis_id)
-    if current is None:
-        current = _load_saved_track_result(analysis_id, config)
-    return render_template_string(
-        APP_TEMPLATE,
-        analyses=ANALYSES,
-        library_card=LIBRARY_CARD,
-        review_card=REVIEW_CARD,
-        framework_card=FRAMEWORK_CARD,
-        supplement_card=SUPPLEMENT_CARD,
-        current=current,
-    )
+    return redirect(url_for("home", _anchor=analysis_id))
 
 
 @app.get("/files/<path:subpath>")

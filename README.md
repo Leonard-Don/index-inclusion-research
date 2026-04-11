@@ -24,10 +24,10 @@
    python3 scripts/start_literature_dashboard.py
    ```
    然后打开 <http://127.0.0.1:5001>
-3. 在界面里先看：
-    - `/`：一页式总展板，直接展示主线结果、文献框架和补充层
-    - `/framework`：看五大阵营、演进脉络和会议话术
-    - `/supplement`：看事件时钟、机制链和冲击估算
+3. 在界面里先看首页 `/`：
+    - `3 分钟汇报`：只保留开场结论、样本摘要、三条主线核心证据和研究边界，适合直接给教授讲
+    - `展示版`：默认模式，适合课堂展示和研究讨论
+    - `完整材料`：显示更多表格、图表和支撑材料，适合自己检查细节
 
 如果你是要直接跑数据和结果，推荐从“命令行入口”一节开始。
 
@@ -43,6 +43,7 @@ data/
 
 docs/
   index_effect_literature_map.md
+  literature_deep_analysis_cn.md
   literature_review_author_year_cn.md
   literature_to_project_guide.md
   paper_outline.md
@@ -155,6 +156,8 @@ tests/
   16 篇文献如何映射到三条研究主线
 - [docs/literature_review_author_year_cn.md](docs/literature_review_author_year_cn.md)
   可直接放进论文的作者（年份）版中文文献综述
+- [docs/literature_deep_analysis_cn.md](docs/literature_deep_analysis_cn.md)
+  16 篇文献的深度分析，重点拆解每篇论文识别了什么、挑战了什么假设、对当前论文有什么用途
 - [docs/literature_five_camps_framework_cn.md](docs/literature_five_camps_framework_cn.md)
   把 16 篇文献组织成五大阵营与会议表达框架
 - [docs/index_inclusion_playbook_cn.md](docs/index_inclusion_playbook_cn.md)
@@ -292,15 +295,22 @@ python3 scripts/start_literature_dashboard.py
 ```
 
 这就是当前项目唯一推荐的前端启动方式。
-首页默认进入 `演示模式`，更适合汇报和展示；需要更多表格时可切到 `完整模式`。
+首页默认进入 `展示版`，更适合汇报和展示；需要更短的口头汇报可切到 `3 分钟汇报`，需要更多表格时可切到 `完整材料`。
 
-打开后常用页面：
+打开后常用入口：
 
-- `/`：一页式总展板
-- `/library`：16 篇文献库
-- `/review`：反方 / 中性 / 正方综述导航页
-- `/framework`：五大阵营与量化投研话术页
-- `/supplement`：事件时钟、机制链与冲击估算页
+- `/`：一页式总展板，包含主线结果、文献框架、机制补充和研究边界
+- `/?mode=brief`：3 分钟汇报模式
+- `/?mode=demo`：展示版
+- `/?mode=full`：完整材料
+- `/paper/<paper_id>`：单篇文献讲义页
+- `/paper/<paper_id>/pdf`：打开对应原文 PDF
+
+历史副页入口已经并入首页：
+
+- `/library`、`/review`、`/framework` 会重定向到 `/#framework`
+- `/supplement` 会重定向到 `/#supplement`
+- `/analysis/<analysis_id>` 会重定向到首页对应研究主线锚点
 
 ### 10. 直接运行三条研究主线
 
