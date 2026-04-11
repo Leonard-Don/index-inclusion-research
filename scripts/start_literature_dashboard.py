@@ -2262,7 +2262,7 @@ HOME_TEMPLATE = """
     <section class="cta-strip">
       <div>
         <h3>同一界面中的文献、样本与结果。</h3>
-        <p>页面同步呈现主线结果、文献框架与机制补充，便于在同一叙述中完成现象、机制与识别三个层面的展示。</p>
+        <p>{{ cta_copy }}</p>
       </div>
       <form method="post" action="{{ url_for('refresh_dashboard', mode=mode) }}">
         <input type="hidden" name="anchor" value="overview" data-anchor-input>
@@ -2291,11 +2291,35 @@ HOME_TEMPLATE = """
       }
 
       function syncTopbarState() {
-        const hash = currentHash();
-        const sectionHash = currentSectionHash();
+        const activeModeLink =
+          modeLinks.find((link) => link.classList.contains("active")) ||
+          modeLinks[0];
+        const activeAllowedHashes = ((activeModeLink && activeModeLink.dataset.allowedHashes) || "")
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean);
+        const activeDefaultHash = (activeModeLink && activeModeLink.dataset.defaultHash) || "#overview";
+        const rawHash = currentHash();
+        let hash = rawHash;
+        if (activeAllowedHashes.length && !activeAllowedHashes.includes(hash)) {
+          hash = ["#framework", "#supplement"].includes(hash) && activeAllowedHashes.includes("#tracks")
+            ? "#tracks"
+            : activeDefaultHash;
+        }
+        if (hash !== rawHash) {
+          history.replaceState(null, "", `${window.location.pathname}${window.location.search}${hash}`);
+          const target = document.querySelector(hash);
+          if (target) {
+            requestAnimationFrame(() => {
+              target.scrollIntoView({ block: "start" });
+            });
+          }
+        }
 
         sectionLinks.forEach((link) => {
-          link.classList.toggle("active", link.getAttribute("href") === sectionHash);
+          const linkHash = link.getAttribute("href");
+          const normalizedSectionHash = aliasMap.get(hash) || hash;
+          link.classList.toggle("active", linkHash === normalizedSectionHash);
         });
 
         modeLinks.forEach((link) => {
@@ -3245,6 +3269,22 @@ def _dashboard_mode() -> str:
     return mode if mode in {"brief", "demo", "full"} else "demo"
 
 
+def _normalize_anchor_for_mode(mode: str, anchor: str | None) -> str:
+    raw = (anchor or "").strip().lstrip("#")
+    allowed = {item["anchor"] for item in _nav_sections_for_mode(mode)} | {
+        "price_pressure_track",
+        "demand_curve_track",
+        "identification_china_track",
+    }
+    if not raw:
+        return "overview"
+    if raw in allowed:
+        return raw
+    if raw in {"framework", "supplement"} and "tracks" in allowed:
+        return "tracks"
+    return "overview"
+
+
 def _nav_sections_for_mode(mode: str) -> list[dict[str, str]]:
     items = [
         {"anchor": "overview", "label": "总览"},
@@ -3485,11 +3525,37 @@ def _build_overview_notes() -> list[dict[str, str]]:
     ]
 
 
+def _build_overview_notes_for_mode(mode: str) -> list[dict[str, str]]:
+    if mode == "brief":
+        return [
+            {"title": "样本层", "copy": "首页先交代真实样本覆盖、事件窗口口径与跨市场比较的基本范围。"},
+            {"title": "结果层", "copy": "3 分钟汇报模式保留三条研究主线的核心结果，便于快速建立主要结论。"},
+            {"title": "识别层", "copy": "事件研究、匹配回归与 RDD 的识别含义仍保留在主线解释中，只是不再展开完整附加材料。"},
+            {"title": "边界层", "copy": "页面最后仍保留研究边界，用于交代样本期、识别范围与数据口径。"},
+        ]
+    return _build_overview_notes()
+
+
 def _build_overview_summary() -> str:
     return (
         "页面将文献框架、真实数据结果、机制解释与识别设计放在同一叙述结构中，"
         "从而形成一条完整且可连续展开的研究链条。"
     )
+
+
+def _build_overview_summary_for_mode(mode: str) -> str:
+    if mode == "brief":
+        return (
+            "页面将真实样本、三条研究主线与研究边界压缩为一套适合快速汇报的展示材料，"
+            "用于在较短时间内说明现象、机制与识别三个层面。"
+        )
+    return _build_overview_summary()
+
+
+def _build_cta_copy_for_mode(mode: str) -> str:
+    if mode == "brief":
+        return "页面以压缩方式呈现样本、主线与研究边界，适合在较短时间内完成问题提出、证据展示与边界交代。"
+    return "页面同步呈现主线结果、文献框架与机制补充，便于在同一叙述中完成现象、机制与识别三个层面的展示。"
 
 
 def _build_abstract_lead() -> str:
@@ -4040,12 +4106,16 @@ def home():
         section["notes"] = _build_track_notes(analysis_id)
         section = _prepare_track_display(section, analysis_id, demo_mode)
         track_sections.append(section)
-    framework_section = RUN_CACHE.get("paper_framework") or _load_literature_framework_result()
-    framework_section = _prepare_framework_display(framework_section, demo_mode)
-    RUN_CACHE["paper_framework"] = framework_section
-    supplement_section = RUN_CACHE.get("project_supplement") or _load_supplement_result()
-    supplement_section = _prepare_supplement_display(supplement_section, demo_mode)
-    RUN_CACHE["project_supplement"] = supplement_section
+    if display_mode != "brief":
+        framework_section = RUN_CACHE.get("paper_framework") or _load_literature_framework_result()
+        framework_section = _prepare_framework_display(framework_section, demo_mode)
+        RUN_CACHE["paper_framework"] = framework_section
+        supplement_section = RUN_CACHE.get("project_supplement") or _load_supplement_result()
+        supplement_section = _prepare_supplement_display(supplement_section, demo_mode)
+        RUN_CACHE["project_supplement"] = supplement_section
+    else:
+        framework_section = {"display_summary": "", "display_tables": [], "summary_cards": []}
+        supplement_section = {"display_summary": "", "display_tables": [], "summary_cards": []}
     design_section = _build_sample_design_section()
     return render_template_string(
         HOME_TEMPLATE,
@@ -4053,8 +4123,9 @@ def home():
         nav_sections=_nav_sections_for_mode(display_mode),
         mode_tabs=_mode_tabs_for_mode(display_mode),
         overview_metrics=_build_overview_metrics(),
-        overview_notes=_build_overview_notes(),
-        overview_summary=_build_overview_summary(),
+        overview_notes=_build_overview_notes_for_mode(display_mode),
+        overview_summary=_build_overview_summary_for_mode(display_mode),
+        cta_copy=_build_cta_copy_for_mode(display_mode),
         abstract_lead=_build_abstract_lead(),
         abstract_points=_build_abstract_points(),
         highlights=_build_highlights(),
@@ -4069,8 +4140,9 @@ def home():
 @app.post("/refresh")
 def refresh_dashboard():
     _run_and_cache_all()
-    redirect_kwargs: dict[str, str] = {"mode": request.args.get("mode", "demo")}
-    anchor = request.form.get("anchor", "").strip()
+    mode = _dashboard_mode()
+    redirect_kwargs: dict[str, str] = {"mode": mode}
+    anchor = _normalize_anchor_for_mode(mode, request.form.get("anchor", ""))
     if anchor:
         redirect_kwargs["_anchor"] = anchor
     return redirect(url_for("home", **redirect_kwargs))
