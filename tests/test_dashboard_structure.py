@@ -78,6 +78,27 @@ def test_home_dashboard_supports_full_mode() -> None:
     assert response.status_code == 200
     html = response.get_data(as_text=True)
     assert "完整材料" in html
+    assert 'aria-current="page"' in html
+    assert '>完整材料</a>' in html
+    assert 'data-mode-link' in html
+
+
+def test_home_dashboard_keeps_mode_tabs_and_refresh_anchor_logic() -> None:
+    client = dashboard.app.test_client()
+    response = client.get("/?mode=demo")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert 'data-section-link' in html
+    assert 'data-section-key="framework"' in html
+    assert 'data-section-key="supplement"' in html
+    assert 'data-anchor-input' in html
+    assert 'data-base-href="/?mode=brief"' in html
+    assert 'data-base-href="/?mode=demo"' in html
+    assert 'data-base-href="/?mode=full"' in html
+
+    refreshed = client.post("/refresh?mode=full", data={"anchor": "framework"})
+    assert refreshed.status_code == 302
+    assert refreshed.headers["Location"].endswith("/?mode=full#framework")
 
 
 def test_home_dashboard_supports_three_minute_mode() -> None:
@@ -90,6 +111,9 @@ def test_home_dashboard_supports_three_minute_mode() -> None:
     assert "核心研究结论" in html
     assert "三条主线，对应三类核心问题" in html
     assert "支撑文献" not in html
+    assert 'data-section-key="framework"' not in html
+    assert 'data-section-key="supplement"' not in html
+    assert 'data-allowed-hashes="#overview,#design,#tracks,#limits,#price_pressure_track,#demand_curve_track,#identification_china_track"' in html
 
 
 def test_paper_route_now_renders_brief_before_pdf() -> None:
