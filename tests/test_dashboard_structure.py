@@ -100,6 +100,10 @@ def test_home_dashboard_keeps_mode_tabs_and_refresh_anchor_logic() -> None:
     assert refreshed.status_code == 302
     assert refreshed.headers["Location"].endswith("/?mode=full#framework")
 
+    brief_refreshed = client.post("/refresh?mode=brief", data={"anchor": "framework"})
+    assert brief_refreshed.status_code == 302
+    assert brief_refreshed.headers["Location"].endswith("/?mode=brief#tracks")
+
 
 def test_home_dashboard_supports_three_minute_mode() -> None:
     client = dashboard.app.test_client()
@@ -114,6 +118,8 @@ def test_home_dashboard_supports_three_minute_mode() -> None:
     assert 'data-section-key="framework"' not in html
     assert 'data-section-key="supplement"' not in html
     assert 'data-allowed-hashes="#overview,#design,#tracks,#limits,#price_pressure_track,#demand_curve_track,#identification_china_track"' in html
+    assert "页面将真实样本、三条研究主线与研究边界压缩为一套适合快速汇报的展示材料" in html
+    assert "页面同步呈现主线结果、文献框架与机制补充" not in html
 
 
 def test_paper_route_now_renders_brief_before_pdf() -> None:
