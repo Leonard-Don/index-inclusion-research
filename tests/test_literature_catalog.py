@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from index_inclusion_research.literature_catalog import (
+    DEEP_ANALYSIS,
+    PAPER_LIBRARY,
     build_camp_summary_frame,
     build_grouped_literature_frame,
     build_literature_catalog_frame,
@@ -38,6 +40,8 @@ def test_literature_dashboard_frame_contains_open_links() -> None:
     assert "PDF" in dashboard.columns
     assert "阵营" in dashboard.columns
     assert "代表文献" in dashboard.columns
+    assert "识别对象" in dashboard.columns
+    assert "挑战的假设" in dashboard.columns
     assert "一句话定位" in dashboard.columns
     assert dashboard["PDF"].str.contains('href="/paper/').any()
 
@@ -67,6 +71,28 @@ def test_project_tracks_are_built_from_full_16_paper_library() -> None:
     support_records = build_project_track_support_records("短期价格压力")
     assert support_records[0]["citation"].endswith("）")
     assert "one_line_role" in support_records[0]
+    assert "identification_target" in support_records[0]
+    assert "challenged_assumption" in support_records[0]
+    assert "deep_contribution" in support_records[0]
+
+
+def test_chu_2021_support_record_has_deep_analysis_fields() -> None:
+    support_records = build_project_track_support_records("沪深300论文复现")
+    target = next(record for record in support_records if record["citation"] == "Chu 等（2021）")
+    assert target["identification_target"] == "CSI 300 调入调出的长期持有期表现"
+    assert target["challenged_assumption"] == "中国市场会复制美股那套标准长期路径"
+    assert "制度异质性" in target["deep_contribution"]
+
+
+def test_every_paper_has_matching_deep_analysis_mapping() -> None:
+    paper_ids = {paper.paper_id for paper in PAPER_LIBRARY}
+    deep_ids = set(DEEP_ANALYSIS)
+    assert paper_ids == deep_ids
+    for paper in PAPER_LIBRARY:
+        payload = DEEP_ANALYSIS[paper.paper_id]
+        assert payload["identification_target"]
+        assert payload["challenged_assumption"]
+        assert payload["deep_contribution"]
 
 
 def test_five_camp_framework_is_populated() -> None:
@@ -77,11 +103,14 @@ def test_five_camp_framework_is_populated() -> None:
     evolution = build_literature_evolution_frame()
     assert len(evolution) == 16
     assert "代表文献" in evolution.columns
+    assert "识别对象" in evolution.columns
+    assert "挑战的假设" in evolution.columns
     assert "一句话定位" in evolution.columns
+    assert "争论推进" in evolution.columns
     assert "研究中的作用" in evolution.columns
 
     track = build_project_track_frame("短期价格压力")
-    assert track.columns.tolist() == ["阵营", "立场", "代表文献", "一句话定位", "在本项目中的作用", "PDF"]
+    assert track.columns.tolist() == ["阵营", "立场", "代表文献", "识别对象", "挑战的假设", "一句话定位", "在本项目中的作用", "PDF"]
 
     meeting = build_literature_meeting_frame()
     assert len(meeting) >= 5
