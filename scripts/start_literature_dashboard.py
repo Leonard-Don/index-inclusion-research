@@ -1039,11 +1039,30 @@ HOME_TEMPLATE = """
       letter-spacing: 0.03em;
       white-space: nowrap;
     }
+    .topbar-controls {
+      display: grid;
+      gap: 8px;
+      justify-items: end;
+      flex: 1;
+      min-width: 0;
+    }
     .nav {
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
       justify-content: flex-end;
+    }
+    .nav-sections,
+    .nav-modes {
+      align-items: center;
+    }
+    .nav-inline-label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-right: 2px;
     }
     .nav a, .nav button {
       border: 1px solid rgba(24, 33, 43, 0.08);
@@ -1059,6 +1078,12 @@ HOME_TEMPLATE = """
       transform: translateY(-1px);
       background: rgba(255,255,255,0.85);
       border-color: rgba(24, 33, 43, 0.14);
+    }
+    .nav a.active, .nav button.active {
+      background: rgba(0,95,115,0.10);
+      color: var(--accent);
+      border-color: rgba(0,95,115,0.22);
+      box-shadow: inset 0 0 0 1px rgba(0,95,115,0.04);
     }
     .nav form { margin: 0; }
     .hero {
@@ -1820,6 +1845,7 @@ HOME_TEMPLATE = """
       .topbar-inner { display: grid; gap: 12px; }
       .brand { display: block; }
       .brand-copy { margin-top: 8px; white-space: normal; }
+      .topbar-controls { justify-items: stretch; }
       .nav { justify-content: flex-start; }
       .hero-note, .kpi, .surface-pad { padding: 16px; }
       .hero-rail, .hero-notes, .kpi-grid, .thumb-grid { grid-template-columns: 1fr; }
@@ -1836,19 +1862,35 @@ HOME_TEMPLATE = """
         <div class="brand-mark">指数纳入效应研究展板</div>
         <div class="brand-copy">文献脉络 · 样本证据 · 识别设计</div>
       </div>
-      <div class="nav">
-        <a href="#overview">总览</a>
-        <a href="#design">样本与设计</a>
-        <a href="#tracks">主线结果</a>
-        <a href="#framework">文献框架</a>
-        <a href="#supplement">机制补充</a>
-        <a href="#limits">研究边界</a>
-        <a href="{{ url_for('home', mode='brief') }}">3 分钟汇报</a>
-        <a href="{{ url_for('home', mode='demo') }}">展示版</a>
-        <a href="{{ url_for('home', mode='full') }}">完整材料</a>
-        <form method="post" action="{{ url_for('refresh_dashboard', mode=mode) }}">
-          <button type="submit">刷新数据</button>
-        </form>
+      <div class="topbar-controls">
+        <div class="nav nav-sections">
+          {% for item in nav_sections %}
+          <a
+            class="{% if loop.first %}active{% endif %}"
+            data-section-link
+            data-section-key="{{ item.anchor }}"
+            href="#{{ item.anchor }}"
+          >{{ item.label }}</a>
+          {% endfor %}
+        </div>
+        <div class="nav nav-modes">
+          <span class="nav-inline-label">展示模式</span>
+          {% for item in mode_tabs %}
+          <a
+            data-mode-link
+            data-base-href="{{ item.base_href }}"
+            data-default-hash="{{ item.default_hash }}"
+            data-allowed-hashes="{{ item.allowed_hashes|join(',') }}"
+            class="{% if item.active %}active{% endif %}"
+            href="{{ item.href }}"
+            {% if item.active %}aria-current="page"{% endif %}
+          >{{ item.label }}</a>
+          {% endfor %}
+          <form method="post" action="{{ url_for('refresh_dashboard', mode=mode) }}">
+            <input type="hidden" name="anchor" value="overview" data-anchor-input>
+            <button type="submit">刷新数据</button>
+          </form>
+        </div>
       </div>
     </div>
   </div>
@@ -2223,10 +2265,64 @@ HOME_TEMPLATE = """
         <p>页面同步呈现主线结果、文献框架与机制补充，便于在同一叙述中完成现象、机制与识别三个层面的展示。</p>
       </div>
       <form method="post" action="{{ url_for('refresh_dashboard', mode=mode) }}">
+        <input type="hidden" name="anchor" value="overview" data-anchor-input>
         <button type="submit">刷新全部材料</button>
       </form>
     </section>
   </div>
+  <script>
+    (() => {
+      const sectionLinks = Array.from(document.querySelectorAll("[data-section-link]"));
+      const modeLinks = Array.from(document.querySelectorAll("[data-mode-link]"));
+      const anchorInputs = Array.from(document.querySelectorAll("[data-anchor-input]"));
+      const aliasMap = new Map([
+        ["#price_pressure_track", "#tracks"],
+        ["#demand_curve_track", "#tracks"],
+        ["#identification_china_track", "#tracks"],
+      ]);
+
+      function currentHash() {
+        return window.location.hash || "#overview";
+      }
+
+      function currentSectionHash() {
+        const hash = currentHash();
+        return aliasMap.get(hash) || hash;
+      }
+
+      function syncTopbarState() {
+        const hash = currentHash();
+        const sectionHash = currentSectionHash();
+
+        sectionLinks.forEach((link) => {
+          link.classList.toggle("active", link.getAttribute("href") === sectionHash);
+        });
+
+        modeLinks.forEach((link) => {
+          const baseHref = link.dataset.baseHref || "/";
+          const allowedHashes = (link.dataset.allowedHashes || "")
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean);
+          const defaultHash = link.dataset.defaultHash || "#overview";
+          let nextHash = hash;
+          if (allowedHashes.length && !allowedHashes.includes(hash)) {
+            nextHash = ["#framework", "#supplement"].includes(hash) && allowedHashes.includes("#tracks")
+              ? "#tracks"
+              : defaultHash;
+          }
+          link.setAttribute("href", `${baseHref}${nextHash}`);
+        });
+
+        anchorInputs.forEach((input) => {
+          input.value = hash.replace(/^#/, "") || "overview";
+        });
+      }
+
+      syncTopbarState();
+      window.addEventListener("hashchange", syncTopbarState);
+    })();
+  </script>
 </body>
 </html>
 """
@@ -3149,6 +3245,64 @@ def _dashboard_mode() -> str:
     return mode if mode in {"brief", "demo", "full"} else "demo"
 
 
+def _nav_sections_for_mode(mode: str) -> list[dict[str, str]]:
+    items = [
+        {"anchor": "overview", "label": "总览"},
+        {"anchor": "design", "label": "样本与设计"},
+        {"anchor": "tracks", "label": "主线结果"},
+    ]
+    if mode != "brief":
+        items.extend(
+            [
+                {"anchor": "framework", "label": "文献框架"},
+                {"anchor": "supplement", "label": "机制补充"},
+            ]
+        )
+    items.append({"anchor": "limits", "label": "研究边界"})
+    return items
+
+
+def _available_hashes_for_mode(mode: str) -> list[str]:
+    hashes = ["#overview", "#design", "#tracks", "#limits"]
+    if mode != "brief":
+        hashes.extend(["#framework", "#supplement"])
+    hashes.extend(
+        [
+            "#price_pressure_track",
+            "#demand_curve_track",
+            "#identification_china_track",
+        ]
+    )
+    return hashes
+
+
+def _mode_tabs_for_mode(mode: str) -> list[dict[str, object]]:
+    labels = {
+        "brief": "3 分钟汇报",
+        "demo": "展示版",
+        "full": "完整材料",
+    }
+    default_hash = {
+        "brief": "#overview",
+        "demo": "#overview",
+        "full": "#overview",
+    }
+    tabs: list[dict[str, object]] = []
+    for tab_mode in ("brief", "demo", "full"):
+        tabs.append(
+            {
+                "mode": tab_mode,
+                "label": labels[tab_mode],
+                "base_href": url_for("home", mode=tab_mode),
+                "href": url_for("home", mode=tab_mode, _anchor=default_hash[tab_mode].lstrip("#")),
+                "default_hash": default_hash[tab_mode],
+                "allowed_hashes": _available_hashes_for_mode(tab_mode),
+                "active": tab_mode == mode,
+            }
+        )
+    return tabs
+
+
 def _saved_output_dir_for_analysis(analysis_id: str) -> Path | None:
     mapping = {
         "price_pressure_track": ROOT / "results" / "literature" / "harris_gurel",
@@ -3896,6 +4050,8 @@ def home():
     return render_template_string(
         HOME_TEMPLATE,
         mode=display_mode,
+        nav_sections=_nav_sections_for_mode(display_mode),
+        mode_tabs=_mode_tabs_for_mode(display_mode),
         overview_metrics=_build_overview_metrics(),
         overview_notes=_build_overview_notes(),
         overview_summary=_build_overview_summary(),
@@ -3913,7 +4069,11 @@ def home():
 @app.post("/refresh")
 def refresh_dashboard():
     _run_and_cache_all()
-    return redirect(url_for("home", mode=request.args.get("mode", "demo")))
+    redirect_kwargs: dict[str, str] = {"mode": request.args.get("mode", "demo")}
+    anchor = request.form.get("anchor", "").strip()
+    if anchor:
+        redirect_kwargs["_anchor"] = anchor
+    return redirect(url_for("home", **redirect_kwargs))
 
 
 @app.post("/run/<analysis_id>")
