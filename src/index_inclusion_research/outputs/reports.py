@@ -318,8 +318,11 @@ def build_identification_scope_table(
     matched_rows = _safe_int(len(matched_panel)) if not matched_panel.empty else pd.NA
     rdd_n_obs = _safe_int(rdd_summary["n_obs"].max()) if not rdd_summary.empty and "n_obs" in rdd_summary.columns else pd.NA
 
-    rdd_status = "正式边界样本"
-    rdd_note = "基于真实候选排名变量，可作为更强识别证据。"
+    rdd_status = "待补正式样本"
+    rdd_note = "尚未提供有效的 hs300_rdd_candidates.csv，当前中国主线的正式证据仍以事件研究与匹配回归为主。"
+    if rdd_mode == "real":
+        rdd_status = "正式边界样本"
+        rdd_note = "基于真实候选排名变量，可作为更强识别证据。"
     if rdd_mode == "demo":
         rdd_status = "方法展示"
         rdd_note = "当前使用 demo 伪排名变量，展示的是断点回归方法框架，不应与正式实证结果混用。"

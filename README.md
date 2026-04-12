@@ -38,7 +38,7 @@ config/
   markets.yml
 
 data/
-  raw/                 原始示例数据、真实数据、RDD demo 数据
+  raw/                 原始示例数据、真实数据、RDD 模板与显式 demo 数据
   processed/           清洗后的事件样本和事件窗口面板
 
 docs/
@@ -145,6 +145,15 @@ tests/
 
 - `scripts/start_hs300_style.py`
 - `scripts/start_hs300_rdd.py`
+
+其中 `RDD` 默认不再自动回退 demo。  
+只有当 [data/raw/hs300_rdd_candidates.csv](data/raw/hs300_rdd_candidates.csv) 存在且通过校验时，`RDD` 才会进入正式证据链；如需开发演示，请显式运行：
+
+```bash
+python3 scripts/start_hs300_rdd.py --demo
+```
+
+正式字段模板见 [data/raw/hs300_rdd_candidates.template.csv](data/raw/hs300_rdd_candidates.template.csv)，数据契约见 [docs/hs300_rdd_data_contract.md](docs/hs300_rdd_data_contract.md)。
 
 ## 文献相关文件
 

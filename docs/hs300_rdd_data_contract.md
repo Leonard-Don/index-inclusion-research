@@ -1,8 +1,23 @@
-# HS300 RDD 数据契约
+# HS300 RDD 正式数据契约
 
-如果你想让 `start_hs300_rdd.py` 跑出真正接近论文的断点回归证据，请准备：
+`start_hs300_rdd.py` 现在默认走“正式候选样本文件”模式。  
+只有当 [data/raw/hs300_rdd_candidates.csv](/Users/leonardodon/paper/data/raw/hs300_rdd_candidates.csv) 存在且通过校验时，`RDD` 才会进入正式证据链。
 
-- 路径：`data/raw/hs300_rdd_candidates.csv`
+如果文件缺失或不合法：
+- 脚本默认写出 `missing` 状态
+- 不再自动回退到 demo 系数结果
+- 首页只展示“待补正式样本”的说明，不展示伪正式 `tau`
+
+开发调试时，如确实需要跑 demo，请显式使用：
+
+```bash
+python3 scripts/start_hs300_rdd.py --demo
+```
+
+## 正式文件路径
+
+- 真实候选样本：`data/raw/hs300_rdd_candidates.csv`
+- 字段模板：`data/raw/hs300_rdd_candidates.template.csv`
 
 ## 必需列
 
@@ -10,41 +25,84 @@
 - `market`
 - `index_name`
 - `ticker`
+- `security_name`
 - `announce_date`
 - `effective_date`
-- `inclusion`
 - `running_variable`
 - `cutoff`
+- `inclusion`
 
-## 含义
+## 推荐列
+
+- `event_type`
+- `source`
+- `source_url`
+- `note`
+- `sector`
+
+## 字段要求
 
 - `batch_id`
-  - 一次调样批次的唯一标识，比如 `2024-11-29`
-- `inclusion`
-  - 是否实际被调入，`1` 表示调入，`0` 表示未调入但接近边界
+  - 同一调样批次的唯一标识，例如 `2024-11-29`
+- `market`
+  - 当前正式使用场景应为 `CN`
+- `index_name`
+  - 当前正式使用场景应为 `CSI300`
+- `ticker`
+  - 候选股票代码
+- `security_name`
+  - 候选股票名称
+- `announce_date`
+  - 批次公告日，必须能被解析为有效日期
+- `effective_date`
+  - 批次生效日，必须能被解析为有效日期
 - `running_variable`
-  - 断点回归里的 running variable，通常是“进入指数的排序得分”或“排名分数”
+  - 断点回归中的 running variable，必须是数值
 - `cutoff`
-  - 断点位置，比如第 300 名的阈值
+  - 断点位置，必须是数值
+- `inclusion`
+  - 是否实际调入，只允许 `0` 或 `1`
 
 ## 最小示例
 
 ```csv
-batch_id,market,index_name,ticker,announce_date,effective_date,inclusion,running_variable,cutoff
-2024-11-29,CN,CSI300,000686,2024-11-29,2024-12-16,1,300.22,300
-2024-11-29,CN,CSI300,000001,2024-11-29,2024-12-16,0,299.91,300
-2024-11-29,CN,CSI300,000002,2024-11-29,2024-12-16,0,299.73,300
+batch_id,market,index_name,ticker,security_name,announce_date,effective_date,running_variable,cutoff,inclusion,event_type,source,source_url,note,sector
+2024-11-29,CN,CSI300,000686,东北证券,2024-11-29,2024-12-16,300.22,300,1,addition,CSIndex,https://www.csindex.com.cn/,manual transcription,Financials
+2024-11-29,CN,CSI300,000001,平安银行,2024-11-29,2024-12-16,299.91,300,0,borderline,CSIndex,https://www.csindex.com.cn/,manual transcription,Financials
 ```
 
-## 当前脚本会做什么
+## 校验失败会怎样
 
-1. 对每个候选样本构建事件窗口
-2. 计算 `car_m1_p1`、`car_m3_p3`、`turnover_change`、`volume_change`
-3. 在 cutoff 两侧做 local linear RD
-4. 输出 `rdd_summary.csv`
-5. 画每个 outcome 的断点分箱图
+下面这些情况都会被视为“无效正式文件”：
 
-## 当前的边界
+- 缺少必需列
+- 必需列存在空值
+- `announce_date` 或 `effective_date` 不是合法日期
+- `running_variable` 或 `cutoff` 不是数值
+- `inclusion` 不是 `0/1`
 
-- 如果你没有提供 `hs300_rdd_candidates.csv`，脚本会自动生成 `demo` 版伪排名数据，以便展示流程。
-- `demo` 版只用于跑通方法，不应当当作正式论文证据。
+脚本行为：
+
+- 命令行直接运行时：明确报错，不回退 demo
+- 仪表盘刷新或研究主线联动时：写出 `missing` 状态，保留方法说明，但不展示正式 `RDD` 系数
+
+## 正式输出
+
+当真实文件通过校验时，会在 [results/literature/hs300_rdd](/Users/leonardodon/paper/results/literature/hs300_rdd) 下生成：
+
+- `rdd_status.csv`
+- `summary.md`
+- `event_level_with_running.csv`
+- `rdd_summary.csv`
+- `figures/*.png`
+
+其中 `rdd_status.csv` 是前端和主结果层读取的正式状态源。
+
+## 缺文件或无效文件时
+
+当真实文件缺失或无效时，同一目录下只保留：
+
+- `rdd_status.csv`
+- `summary.md`
+
+旧的 `rdd_summary.csv`、事件层文件和图表会被清理掉，避免旧 demo 结果继续被前端误读成正式证据。

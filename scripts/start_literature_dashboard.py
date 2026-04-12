@@ -2625,6 +2625,8 @@ def _load_saved_tables(output_dir: Path) -> list[tuple[str, str]]:
     ordered_files.extend(path for path in csv_files if path not in ordered_files)
     for path in ordered_files:
         key = path.stem
+        if key == "rdd_status":
+            continue
         if key in seen:
             continue
         seen.add(key)
@@ -2659,6 +2661,62 @@ def _read_csv_if_exists(path: str | Path) -> pd.DataFrame:
     if not csv_path.exists():
         return pd.DataFrame()
     return pd.read_csv(csv_path, low_memory=False)
+
+
+def _rdd_output_dir() -> Path:
+    return ROOT / "results" / "literature" / "hs300_rdd"
+
+
+def _load_rdd_status(output_dir: Path | None = None) -> dict[str, str]:
+    rdd_dir = output_dir or _rdd_output_dir()
+    status_path = rdd_dir / "rdd_status.csv"
+    if status_path.exists():
+        status_frame = _read_csv_if_exists(status_path)
+        if not status_frame.empty:
+            row = status_frame.iloc[0]
+            return {
+                "mode": str(row.get("status", "missing")),
+                "evidence_status": str(row.get("evidence_status", "待补正式样本")),
+                "message": str(row.get("message", "等待真实候选样本文件。")),
+                "note": str(row.get("note", "等待真实候选样本文件或修复文件校验错误后，RDD 才进入正式证据链。")),
+            }
+
+    summary_path = rdd_dir / "summary.md"
+    if summary_path.exists():
+        summary_text = summary_path.read_text(encoding="utf-8")
+        if "显式 `--demo` 模式" in summary_text or "demo 伪排名数据" in summary_text:
+            return {
+                "mode": "demo",
+                "evidence_status": "方法展示",
+                "message": "当前为显式 demo 模式，只用于方法展示。",
+                "note": "当前为显式 demo 模式，只用于方法展示，不进入正式证据链。",
+            }
+        if "当前正在使用你提供的真实候选排名文件" in summary_text:
+            return {
+                "mode": "real",
+                "evidence_status": "正式边界样本",
+                "message": "当前正在使用你提供的真实候选排名文件。",
+                "note": "基于真实候选排名变量，可作为更强识别证据。",
+            }
+    return {
+        "mode": "missing",
+        "evidence_status": "待补正式样本",
+        "message": "等待真实候选样本文件：data/raw/hs300_rdd_candidates.csv。",
+        "note": "等待真实候选样本文件或修复文件校验错误后，RDD 才进入正式证据链。",
+    }
+
+
+def _apply_live_rdd_status_to_identification_scope(frame: pd.DataFrame) -> pd.DataFrame:
+    if frame.empty or "分析层" not in frame.columns:
+        return frame
+    updated = frame.copy()
+    mask = updated["分析层"] == "中国 RDD 扩展"
+    if not mask.any():
+        return updated
+    status = _load_rdd_status()
+    updated.loc[mask, "证据状态"] = status["evidence_status"]
+    updated.loc[mask, "当前口径"] = status["note"]
+    return updated
 
 
 def _format_pct(value: float) -> str:
@@ -2862,12 +2920,12 @@ def _build_demand_curve_cards() -> list[dict[str, str]]:
 
 def _build_identification_cards() -> list[dict[str, str]]:
     style_dir = ROOT / "results" / "literature" / "hs300_style"
-    rdd_dir = ROOT / "results" / "literature" / "hs300_rdd"
     event = pd.read_csv(ROOT / "results" / "real_tables" / "event_study_summary.csv")
     asymmetry = pd.read_csv(ROOT / "results" / "real_tables" / "asymmetry_summary.csv")
     did = _load_single_csv(style_dir, "did_summary.csv")
     regression = pd.read_csv(ROOT / "results" / "real_regressions" / "regression_coefficients.csv")
-    rdd = _load_single_csv(rdd_dir, "rdd_summary.csv")
+    rdd_status = _load_rdd_status()
+    rdd = _load_single_csv(_rdd_output_dir(), "rdd_summary.csv") if rdd_status["mode"] == "real" else None
     cards: list[dict[str, str]] = []
     if event is not None:
         announce = event.loc[
@@ -2904,6 +2962,8 @@ def _build_identification_cards() -> list[dict[str, str]]:
         if not tau.empty:
             row = tau.iloc[0]
             cards.append({"label": "RDD 断点效应", "value": f"{float(row['tau']):.4f}", "copy": _format_p_value(float(row["p_value"]))})
+    else:
+        cards.append({"label": "正式 RDD 状态", "value": rdd_status["evidence_status"], "copy": rdd_status["message"]})
     return cards[:4]
 
 
@@ -2953,7 +3013,6 @@ def _build_demand_curve_tables() -> list[tuple[str, str]]:
 
 def _build_identification_tables() -> list[tuple[str, str]]:
     style_dir = ROOT / "results" / "literature" / "hs300_style"
-    rdd_dir = ROOT / "results" / "literature" / "hs300_rdd"
     tables: list[tuple[str, str]] = []
     event = pd.read_csv(ROOT / "results" / "real_tables" / "event_study_summary.csv")
     if event is not None:
@@ -2982,7 +3041,8 @@ def _build_identification_tables() -> list[tuple[str, str]]:
             ["event_phase", "dependent_variable", "coefficient", "p_value"],
         ]
         tables.append(("匹配回归核心系数", _render_table(focus, compact=True)))
-    rdd = _load_single_csv(rdd_dir, "rdd_summary.csv")
+    rdd_status = _load_rdd_status()
+    rdd = _load_single_csv(_rdd_output_dir(), "rdd_summary.csv") if rdd_status["mode"] == "real" else None
     if rdd is not None:
         focus = rdd.loc[:, ["outcome", "tau", "p_value", "n_obs", "bandwidth"]]
         tables.append(("RDD 摘要", _render_table(focus, compact=True)))
@@ -3075,9 +3135,16 @@ def _create_identification_figures() -> list[dict[str, str]]:
     plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
     plt.rcParams["axes.unicode_minus"] = False
 
+    rdd_status = _load_rdd_status()
+    if rdd_status["mode"] != "real":
+        return []
+
     rdd_dir = ROOT / "results" / "literature" / "hs300_rdd" / "figures"
     rdd_dir.mkdir(parents=True, exist_ok=True)
-    panel = pd.read_csv(ROOT / "results" / "literature" / "hs300_rdd" / "event_level_with_running.csv")
+    event_level_path = ROOT / "results" / "literature" / "hs300_rdd" / "event_level_with_running.csv"
+    if not event_level_path.exists():
+        return []
+    panel = pd.read_csv(event_level_path)
     subset = panel.loc[panel["event_phase"] == "announce", ["distance_to_cutoff", "car_m1_p1"]].dropna().copy()
     if subset.empty:
         return []
@@ -3116,7 +3183,7 @@ def _create_identification_figures() -> list[dict[str, str]]:
     figure_path = rdd_dir / "car_m1_p1_rdd_main.png"
     if _figure_cache_is_fresh(
         [figure_path],
-        [ROOT / "results" / "literature" / "hs300_rdd" / "event_level_with_running.csv"],
+        [event_level_path],
     ):
         return [
             {
@@ -3154,30 +3221,33 @@ def _create_identification_figures() -> list[dict[str, str]]:
 
 def _load_identification_china_saved_result() -> dict[str, object]:
     style_dir = ROOT / "results" / "literature" / "hs300_style"
-    rdd_dir = ROOT / "results" / "literature" / "hs300_rdd"
+    rdd_dir = _rdd_output_dir()
+    rdd_status = _load_rdd_status(rdd_dir)
 
     style_summary_path = style_dir / "summary.md"
     rdd_summary_path = rdd_dir / "summary.md"
     style_summary = style_summary_path.read_text(encoding="utf-8").strip() if style_summary_path.exists() else "暂无风格识别摘要。"
-    rdd_summary = rdd_summary_path.read_text(encoding="utf-8").strip() if rdd_summary_path.exists() else "暂无断点回归摘要。"
+    rdd_summary = rdd_summary_path.read_text(encoding="utf-8").strip() if rdd_summary_path.exists() else rdd_status["message"]
 
     combined_tables: list[tuple[str, str]] = []
     for label, html_table in _load_saved_tables(style_dir):
         combined_tables.append((f"风格识别：{label}", html_table))
-    for label, html_table in _load_saved_tables(rdd_dir):
-        combined_tables.append((f"断点回归：{label}", html_table))
+    if rdd_status["mode"] == "real":
+        for label, html_table in _load_saved_tables(rdd_dir):
+            combined_tables.append((f"断点回归：{label}", html_table))
 
     figure_paths = []
     for path in sorted(style_dir.rglob("*.png")):
         figure_paths.append({"path": _safe_relative(path), "caption": _build_figure_caption(path, prefix="风格识别")})
-    for path in sorted(rdd_dir.rglob("*.png")):
-        figure_paths.append({"path": _safe_relative(path), "caption": _build_figure_caption(path, prefix="断点回归")})
+    if rdd_status["mode"] == "real":
+        for path in sorted(rdd_dir.rglob("*.png")):
+            figure_paths.append({"path": _safe_relative(path), "caption": _build_figure_caption(path, prefix="断点回归")})
 
     summary_text = "\n\n".join(
         [
             "# 制度识别与中国市场证据结果包",
             "",
-            "这个页面把中国市场识别主线下的风格识别与断点回归结果合并到同一页中，便于直接比较两类识别策略。",
+            "这个页面把中国市场识别主线下的风格识别结果与 RDD 状态放在同一页中，用于区分“现象是否存在”和“更强识别是否已进入正式证据链”。",
             "",
             "## 第一部分：风格识别",
             style_summary,
@@ -3784,8 +3854,8 @@ def _build_track_notes(analysis_id: str) -> list[dict[str, str]]:
         ]
     return [
         {"name": "主问题", "copy": "这条主线专门处理识别问题，回答不同制度背景和识别方法是否会改变对指数效应的判断。"},
-        {"name": "阅读顺序", "copy": "先观察中国样本的匹配对照组结果，再查看 DID 风格摘要，最后结合 RDD 结果比较识别强度。"},
-        {"name": "样本特征", "copy": "目前风格识别部分已基于真实样本运行；RDD 部分主要展示识别方法与边界样本思路，正式研究时可替换为真实候选排名文件。"},
+        {"name": "阅读顺序", "copy": "先观察中国样本的匹配对照组结果，再查看 DID 风格摘要，最后根据 RDD 当前状态判断更强识别是否已经进入正式证据链。"},
+        {"name": "样本特征", "copy": "风格识别部分已基于真实样本运行；RDD 只有在提供并通过校验的真实候选排名文件后，才会进入正式证据链。"},
     ]
 
 
@@ -4493,7 +4563,9 @@ def _build_robustness_section() -> dict[str, object]:
 def _build_limits_section() -> dict[str, object]:
     import pandas as pd
 
-    identification_scope = pd.read_csv(ROOT / "results" / "real_tables" / "identification_scope.csv")
+    identification_scope = _apply_live_rdd_status_to_identification_scope(
+        pd.read_csv(ROOT / "results" / "real_tables" / "identification_scope.csv")
+    )
     data_sources = pd.read_csv(ROOT / "results" / "real_tables" / "data_sources.csv")
     sample_scope = pd.read_csv(ROOT / "results" / "real_tables" / "sample_scope.csv")
     diagnostics = pd.read_csv(ROOT / "results" / "real_regressions" / "match_diagnostics.csv")
