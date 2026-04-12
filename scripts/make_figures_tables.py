@@ -39,6 +39,30 @@ def _read_csv_if_exists(path: str | Path, parse_dates: list[str] | None = None) 
     return pd.read_csv(csv_path, parse_dates=parse_dates, low_memory=False)
 
 
+def _infer_rdd_mode(summary_note_path: str | Path | None) -> str:
+    if not summary_note_path:
+        return "missing"
+
+    note_path = Path(summary_note_path)
+    status_path = note_path.parent / "rdd_status.csv"
+    if status_path.exists():
+        status_frame = _read_csv_if_exists(status_path)
+        if not status_frame.empty and "status" in status_frame.columns:
+            status = str(status_frame.iloc[0]["status"]).strip().lower()
+            if status in {"real", "demo", "missing"}:
+                return status
+
+    if note_path.exists():
+        note_text = note_path.read_text(encoding="utf-8")
+        if "显式 `--demo` 模式" in note_text or "demo 伪排名数据" in note_text:
+            return "demo"
+        if "当前正在使用你提供的真实候选排名文件" in note_text:
+            return "real"
+        if "等待真实候选样本文件" in note_text:
+            return "missing"
+    return "missing"
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Create paper-ready figures and tables.")
     parser.add_argument("--events", default="data/processed/events_clean.csv", help="Events CSV.")
@@ -196,15 +220,7 @@ def main() -> None:
                 save_dataframe(robustness_regression_summary, Path(args.tables_dir) / "robustness_regression_summary.csv")
                 frames["robustness_regression_summary"] = robustness_regression_summary
 
-        rdd_mode = "unavailable"
-        if args.rdd_summary_note:
-            note_path = Path(args.rdd_summary_note)
-            if note_path.exists():
-                note_text = note_path.read_text(encoding="utf-8")
-                if "demo 伪排名数据" in note_text:
-                    rdd_mode = "demo"
-                elif "真实候选排名文件" in note_text and "当前正在使用你提供的真实候选排名文件" in note_text:
-                    rdd_mode = "real"
+        rdd_mode = _infer_rdd_mode(args.rdd_summary_note)
         identification_scope = build_identification_scope_table(
             events,
             panel=panel,

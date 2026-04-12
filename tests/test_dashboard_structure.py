@@ -30,6 +30,17 @@ def test_dashboard_does_not_expose_legacy_third_paper_copy() -> None:
     assert "第三篇论文结果包" not in saved["summary_text"]
 
 
+def test_dashboard_reads_live_missing_rdd_status_and_hides_formal_rdd_outputs() -> None:
+    status = dashboard._load_rdd_status()
+    assert status["mode"] == "missing"
+    assert "等待真实候选样本文件" in status["message"]
+
+    saved = dashboard._load_identification_china_saved_result()
+    labels = [label for label, _ in saved["rendered_tables"]]
+    assert "断点回归：RDD 摘要" not in labels
+    assert all("hs300_rdd" not in figure["path"] for figure in saved["figure_paths"])
+
+
 def test_dashboard_exposes_framework_page() -> None:
     assert dashboard.FRAMEWORK_CARD["title"] == "研究框架"
     framework = dashboard._load_literature_framework_result()

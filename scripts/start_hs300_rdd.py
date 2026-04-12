@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import argparse
+import shutil
 from pathlib import Path
 
 import pandas as pd
@@ -18,6 +20,29 @@ from index_inclusion_research.pipeline import build_event_sample, build_matched_
 
 REAL_INPUT = ROOT / "data" / "raw" / "hs300_rdd_candidates.csv"
 DEMO_INPUT = ROOT / "data" / "raw" / "hs300_rdd_demo.csv"
+TEMPLATE_INPUT = ROOT / "data" / "raw" / "hs300_rdd_candidates.template.csv"
+OUTPUT_DIR = ROOT / "results" / "literature" / "hs300_rdd"
+STATUS_FILE = OUTPUT_DIR / "rdd_status.csv"
+
+REQUIRED_COLUMNS = [
+    "batch_id",
+    "market",
+    "index_name",
+    "ticker",
+    "security_name",
+    "announce_date",
+    "effective_date",
+    "running_variable",
+    "cutoff",
+    "inclusion",
+]
+OPTIONAL_COLUMNS = [
+    "event_type",
+    "source",
+    "source_url",
+    "note",
+    "sector",
+]
 
 
 def _generate_demo_candidates() -> pd.DataFrame:
@@ -56,11 +81,14 @@ def _generate_demo_candidates() -> pd.DataFrame:
             demo_rows.append(row_dict)
 
     demo = pd.DataFrame(demo_rows)
+    if "security_name" not in demo.columns:
+        demo["security_name"] = demo["ticker"].astype(str)
     columns = [
         "batch_id",
         "market",
         "index_name",
         "ticker",
+        "security_name",
         "announce_date",
         "effective_date",
         "event_type",
@@ -71,17 +99,202 @@ def _generate_demo_candidates() -> pd.DataFrame:
         "note",
         "sector",
         "source",
+        "source_url",
     ]
     demo = demo.loc[:, [column for column in columns if column in demo.columns]].copy()
     save_dataframe(demo, DEMO_INPUT)
     return demo
 
 
-def _load_candidate_file() -> tuple[pd.DataFrame, str]:
+def _normalize_demo_frame(frame: pd.DataFrame) -> pd.DataFrame:
+    work = frame.copy()
+    if "security_name" not in work.columns:
+        work["security_name"] = work["ticker"].astype(str)
+    return work
+
+
+def _validate_candidate_frame(frame: pd.DataFrame) -> pd.DataFrame:
+    if frame.empty:
+        raise ValueError("RDD candidate file is empty.")
+
+    missing_columns = [column for column in REQUIRED_COLUMNS if column not in frame.columns]
+    if missing_columns:
+        raise ValueError(f"RDD candidate file is missing required columns: {', '.join(missing_columns)}")
+
+    work = frame.copy()
+    string_columns = ["batch_id", "market", "index_name", "ticker", "security_name"]
+    for column in string_columns:
+        work[column] = work[column].astype("string").str.strip()
+        if work[column].isna().any() or (work[column] == "").any():
+            raise ValueError(f"RDD candidate file contains empty values in required column: {column}")
+
+    for column in ["announce_date", "effective_date"]:
+        work[column] = pd.to_datetime(work[column], errors="coerce", format="mixed")
+        if work[column].isna().any():
+            raise ValueError(f"RDD candidate file contains invalid dates in required column: {column}")
+
+    for column in ["running_variable", "cutoff"]:
+        work[column] = pd.to_numeric(work[column], errors="coerce")
+        if work[column].isna().any():
+            raise ValueError(f"RDD candidate file contains non-numeric values in required column: {column}")
+
+    work["inclusion"] = pd.to_numeric(work["inclusion"], errors="coerce")
+    if work["inclusion"].isna().any():
+        raise ValueError("RDD candidate file contains non-numeric values in required column: inclusion")
+    unique_inclusion = set(work["inclusion"].astype(int).unique())
+    if not unique_inclusion.issubset({0, 1}):
+        raise ValueError("RDD candidate file must encode inclusion as 0/1.")
+    work["inclusion"] = work["inclusion"].astype(int)
+
+    if "event_type" not in work.columns:
+        work["event_type"] = "inclusion_rdd"
+    else:
+        work["event_type"] = work["event_type"].astype("string").fillna("inclusion_rdd").str.strip().replace("", "inclusion_rdd")
+
+    ordered_columns = [*REQUIRED_COLUMNS, *OPTIONAL_COLUMNS]
+    return work.loc[:, [column for column in ordered_columns if column in work.columns]].copy()
+
+
+def _load_candidate_file(*, allow_demo: bool, strict_validation: bool) -> tuple[pd.DataFrame, str, str]:
     if REAL_INPUT.exists():
-        frame = pd.read_csv(REAL_INPUT, parse_dates=["announce_date", "effective_date"])
-        return frame, "real"
-    return _generate_demo_candidates(), "demo"
+        try:
+            frame = pd.read_csv(REAL_INPUT, low_memory=False)
+            validated = _validate_candidate_frame(frame)
+            return validated, "real", f"当前正在使用你提供的真实候选排名文件：`{REAL_INPUT.name}`。"
+        except Exception as exc:
+            if strict_validation:
+                raise
+            return pd.DataFrame(), "missing", f"真实候选样本文件校验失败：{exc}"
+
+    if allow_demo:
+        demo_frame = pd.read_csv(DEMO_INPUT, low_memory=False) if DEMO_INPUT.exists() else _generate_demo_candidates()
+        validated_demo = _validate_candidate_frame(_normalize_demo_frame(demo_frame))
+        return validated_demo, "demo", "当前处于显式 `--demo` 模式，仅用于方法展示，不进入正式证据链。"
+
+    return (
+        pd.DataFrame(),
+        "missing",
+        "等待真实候选样本文件：`data/raw/hs300_rdd_candidates.csv`。当前中国主线的正式证据仅来自事件研究与匹配回归。",
+    )
+
+
+def _clear_rdd_outputs(output_dir: Path) -> None:
+    for filename in ["rdd_summary.csv", "event_level_with_running.csv"]:
+        (output_dir / filename).unlink(missing_ok=True)
+    figures_dir = output_dir / "figures"
+    if figures_dir.exists():
+        shutil.rmtree(figures_dir)
+
+
+def _status_display(mode: str) -> tuple[str, str]:
+    if mode == "real":
+        return "正式边界样本", "基于真实候选排名变量，可作为更强识别证据。"
+    if mode == "demo":
+        return "方法展示", "当前为显式 demo 模式，只用于方法展示，不进入正式证据链。"
+    return "待补正式样本", "等待真实候选样本文件或修复文件校验错误后，RDD 才进入正式证据链。"
+
+
+def _write_status(
+    output_dir: Path,
+    *,
+    mode: str,
+    message: str,
+    input_file: Path,
+    used_demo: bool,
+    candidate_rows: int | None = None,
+    validation_error: str = "",
+) -> pd.DataFrame:
+    try:
+        input_path = str(input_file.relative_to(ROOT))
+    except ValueError:
+        input_path = str(input_file)
+    evidence_status, default_note = _status_display(mode)
+    status_frame = pd.DataFrame(
+        [
+            {
+                "status": mode,
+                "evidence_status": evidence_status,
+                "message": message,
+                "note": default_note,
+                "input_file": input_path,
+                "input_exists": input_file.exists(),
+                "used_demo": used_demo,
+                "candidate_rows": candidate_rows if candidate_rows is not None else pd.NA,
+                "validation_error": validation_error or pd.NA,
+            }
+        ]
+    )
+    save_dataframe(status_frame, output_dir / "rdd_status.csv")
+    return status_frame
+
+
+def _write_summary(
+    output_dir: Path,
+    *,
+    mode: str,
+    message: str,
+    status_frame: pd.DataFrame,
+) -> None:
+    row = status_frame.iloc[0]
+    lines = [
+        "# 制度识别与中国市场证据：断点回归结果包",
+        "",
+        message,
+        "",
+        "当前状态：",
+        f"- 模式：`{row['status']}`",
+        f"- 证据状态：`{row['evidence_status']}`",
+        f"- 当前口径：{row['note']}",
+        f"- 候选样本路径：`{row['input_file']}`",
+        "",
+        "真实候选样本必需列：",
+        "- batch_id",
+        "- market",
+        "- index_name",
+        "- ticker",
+        "- security_name",
+        "- announce_date",
+        "- effective_date",
+        "- running_variable",
+        "- cutoff",
+        "- inclusion",
+        "",
+        "推荐补充列：",
+        "- event_type",
+        "- source",
+        "- source_url",
+        "- note",
+        "- sector",
+        "",
+        f"模板文件：`{TEMPLATE_INPUT.relative_to(ROOT)}`",
+        f"数据契约说明：`{(ROOT / 'docs' / 'hs300_rdd_data_contract.md').relative_to(ROOT)}`",
+    ]
+
+    if mode == "real":
+        lines.extend(
+            [
+                "",
+                f"RDD 汇总文件：`{(output_dir / 'rdd_summary.csv').relative_to(ROOT)}`",
+                f"事件层文件：`{(output_dir / 'event_level_with_running.csv').relative_to(ROOT)}`",
+                f"图表目录：`{(output_dir / 'figures').relative_to(ROOT)}`",
+            ]
+        )
+    elif mode == "demo":
+        lines.extend(
+            [
+                "",
+                "当前显式启用了 demo 模式。即使生成了系数、图表与摘要，也只用于开发验证，不应用于正式主结论。",
+            ]
+        )
+    elif pd.notna(row["validation_error"]):
+        lines.extend(
+            [
+                "",
+                f"校验失败原因：{row['validation_error']}",
+            ]
+        )
+
+    write_markdown(output_dir / "summary.md", "\n".join(lines) + "\n")
 
 
 def _prepare_rdd_event_level(candidates: pd.DataFrame) -> pd.DataFrame:
@@ -99,6 +312,7 @@ def _prepare_rdd_event_level(candidates: pd.DataFrame) -> pd.DataFrame:
             "market",
             "index_name",
             "ticker",
+            "security_name",
             "announce_date",
             "effective_date",
         ]
@@ -108,82 +322,106 @@ def _prepare_rdd_event_level(candidates: pd.DataFrame) -> pd.DataFrame:
     return event_level
 
 
-def run_analysis(verbose: bool = True) -> dict[str, object]:
-    output_dir = ROOT / "results" / "literature" / "hs300_rdd"
-    candidates, mode = _load_candidate_file()
-    if "batch_id" not in candidates.columns:
-        raise ValueError("RDD candidate file must include batch_id.")
-    if "running_variable" not in candidates.columns or "cutoff" not in candidates.columns:
-        raise ValueError("RDD candidate file must include running_variable and cutoff.")
-    if "event_type" not in candidates.columns:
-        candidates["event_type"] = "inclusion_rdd"
-    if "inclusion" not in candidates.columns:
-        raise ValueError("RDD candidate file must include inclusion.")
+def run_analysis(
+    verbose: bool = True,
+    *,
+    allow_demo: bool = False,
+    strict_validation: bool = False,
+) -> dict[str, object]:
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    validation_error = ""
+    try:
+        candidates, mode, message = _load_candidate_file(allow_demo=allow_demo, strict_validation=strict_validation)
+    except Exception as exc:
+        validation_error = str(exc)
+        _clear_rdd_outputs(OUTPUT_DIR)
+        status_frame = _write_status(
+            OUTPUT_DIR,
+            mode="missing",
+            message=f"真实候选样本文件校验失败：{exc}",
+            input_file=REAL_INPUT,
+            used_demo=False,
+            candidate_rows=None,
+            validation_error=validation_error,
+        )
+        _write_summary(OUTPUT_DIR, mode="missing", message=status_frame.iloc[0]["message"], status_frame=status_frame)
+        raise
+
+    if mode == "missing":
+        _clear_rdd_outputs(OUTPUT_DIR)
+        status_frame = _write_status(
+            OUTPUT_DIR,
+            mode="missing",
+            message=message,
+            input_file=REAL_INPUT,
+            used_demo=False,
+            candidate_rows=None,
+            validation_error=validation_error,
+        )
+        _write_summary(OUTPUT_DIR, mode="missing", message=message, status_frame=status_frame)
+        result = {
+            "id": "hs300_rdd",
+            "title": "制度识别与中国市场证据：断点回归",
+            "output_dir": OUTPUT_DIR,
+            "summary_path": OUTPUT_DIR / "summary.md",
+            "tables": {},
+            "figures": [],
+            "description": message,
+            "mode": "missing",
+            "status_frame": status_frame,
+        }
+        if verbose:
+            print("\nHS300 RDD startup script completed.")
+            print(f"Output directory: {OUTPUT_DIR}")
+            print(message)
+        return result
 
     event_level = _prepare_rdd_event_level(candidates)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    save_dataframe(event_level, output_dir / "event_level_with_running.csv")
+    _clear_rdd_outputs(OUTPUT_DIR)
+    save_dataframe(event_level, OUTPUT_DIR / "event_level_with_running.csv")
 
     outcome_cols = ["car_m1_p1", "car_m3_p3", "turnover_change", "volume_change"]
     rdd_summary = run_rdd_suite(event_level, outcome_cols=outcome_cols)
-    save_dataframe(rdd_summary, output_dir / "rdd_summary.csv")
+    save_dataframe(rdd_summary, OUTPUT_DIR / "rdd_summary.csv")
 
     for outcome_col in outcome_cols:
         plot_rdd_bins(
             event_level,
             outcome_col=outcome_col,
-            output_path=output_dir / "figures" / f"{outcome_col}_rdd_bins.png",
+            output_path=OUTPUT_DIR / "figures" / f"{outcome_col}_rdd_bins.png",
         )
 
-    data_note = (
-        "当前正在使用你提供的真实候选排名文件。"
-        if mode == "real"
-        else "当前正在使用 demo 伪排名数据。把 data/raw/hs300_rdd_candidates.csv 换成真实候选排名文件后，才能得到正式 RD 证据。"
+    input_file = REAL_INPUT if mode == "real" else DEMO_INPUT
+    status_frame = _write_status(
+        OUTPUT_DIR,
+        mode=mode,
+        message=message,
+        input_file=input_file,
+        used_demo=mode == "demo",
+        candidate_rows=len(candidates),
     )
-    write_markdown(
-        output_dir / "summary.md",
-        "\n".join(
-            [
-                "# 制度识别与中国市场证据：断点回归结果包",
-                "",
-                data_note,
-                "",
-                "真实数据必需列：",
-                "- batch_id",
-                "- market",
-                "- index_name",
-                "- ticker",
-                "- announce_date",
-                "- effective_date",
-                "- inclusion",
-                "- running_variable",
-                "- cutoff",
-                "",
-                f"RDD 汇总文件：`{output_dir / 'rdd_summary.csv'}`",
-                f"事件层文件：`{output_dir / 'event_level_with_running.csv'}`",
-                f"图表目录：`{output_dir / 'figures'}`",
-                "",
-            ]
-        ),
-    )
-    figures = sorted((output_dir / "figures").glob("*.png"))
+    _write_summary(OUTPUT_DIR, mode=mode, message=message, status_frame=status_frame)
+
+    figures = sorted((OUTPUT_DIR / "figures").glob("*.png"))
     result = {
         "id": "hs300_rdd",
         "title": "制度识别与中国市场证据：断点回归",
-        "output_dir": output_dir,
-        "summary_path": output_dir / "summary.md",
+        "output_dir": OUTPUT_DIR,
+        "summary_path": OUTPUT_DIR / "summary.md",
         "tables": {
             "RDD 汇总": rdd_summary,
             "事件层数据": event_level,
         },
         "figures": figures,
-        "description": data_note,
+        "description": message,
         "mode": mode,
+        "status_frame": status_frame,
     }
     if verbose:
         print("\nHS300 RDD startup script completed.")
-        print(f"Output directory: {output_dir}")
-        print(data_note)
+        print(f"Output directory: {OUTPUT_DIR}")
+        print(message)
         print_frame(
             "RDD summary",
             rdd_summary,
@@ -197,7 +435,14 @@ def run_analysis(verbose: bool = True) -> dict[str, object]:
 
 
 def main() -> None:
-    run_analysis(verbose=True)
+    parser = argparse.ArgumentParser(description="Run the HS300 RDD extension.")
+    parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="Use explicit demo pseudo-ranking input for development only. Demo results do not count as formal evidence.",
+    )
+    args = parser.parse_args()
+    run_analysis(verbose=True, allow_demo=args.demo, strict_validation=True)
 
 
 if __name__ == "__main__":
