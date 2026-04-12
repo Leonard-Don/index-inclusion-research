@@ -25,6 +25,140 @@ def _normalise_windows(car_windows: list[list[int]] | list[tuple[int, int]]) -> 
     return [WindowDefinition(int(start), int(end)) for start, end in car_windows]
 
 
+def _window_definition_from_slug(slug: str) -> WindowDefinition:
+    if slug.startswith("m"):
+        start_part, end_part = slug.split("_p", maxsplit=1)
+        return WindowDefinition(-int(start_part[1:]), int(end_part))
+    if slug.startswith("p"):
+        start_part, end_part = slug.split("_p", maxsplit=1)
+        return WindowDefinition(int(start_part[1:]), int(end_part))
+    raise ValueError(f"Unsupported CAR window slug: {slug}")
+
+
+def _summarise_values(values: pd.Series) -> dict[str, float | int]:
+    clean = values.dropna().astype(float)
+    n_obs = int(clean.count())
+    mean_value = clean.mean() if not clean.empty else np.nan
+    std_value = clean.std(ddof=1) if len(clean) > 1 else np.nan
+    se_value = std_value / np.sqrt(n_obs) if len(clean) > 1 else np.nan
+    ci_low = mean_value - 1.96 * se_value if pd.notna(se_value) else np.nan
+    ci_high = mean_value + 1.96 * se_value if pd.notna(se_value) else np.nan
+    t_stat = np.nan
+    p_value = np.nan
+    if len(clean) > 1:
+        t_stat, p_value = stats.ttest_1samp(clean, popmean=0.0, nan_policy="omit")
+    return {
+        "n_events": n_obs,
+        "mean_car": mean_value,
+        "std_car": std_value,
+        "se_car": se_value,
+        "ci_low_95": ci_low,
+        "ci_high_95": ci_high,
+        "t_stat": t_stat,
+        "p_value": p_value,
+    }
+
+
+def summarize_event_level_metrics(
+    event_level: pd.DataFrame,
+    car_windows: list[list[int]] | list[tuple[int, int]] | None = None,
+    sample_filter: str | None = None,
+) -> pd.DataFrame:
+    if event_level.empty:
+        return pd.DataFrame()
+
+    work = event_level.copy()
+    if "treatment_group" in work.columns:
+        work = work.loc[work["treatment_group"] == 1].copy()
+    if work.empty:
+        return pd.DataFrame()
+
+    windows = _normalise_windows(car_windows) if car_windows is not None else [
+        _window_definition_from_slug(column.removeprefix("car_"))
+        for column in work.columns
+        if column.startswith("car_")
+    ]
+    windows = sorted(windows, key=lambda window: (window.start, window.end))
+
+    summary_rows: list[dict[str, object]] = []
+    for (market, event_phase, inclusion), group in work.groupby(["market", "event_phase", "inclusion"], dropna=False):
+        for window in windows:
+            column = f"car_{window.slug}"
+            if column not in group.columns:
+                continue
+            row: dict[str, object] = {
+                "market": market,
+                "event_phase": event_phase,
+                "inclusion": inclusion,
+                "window": window.label,
+                "window_slug": window.slug,
+            }
+            if sample_filter is not None:
+                row["sample_filter"] = sample_filter
+            row.update(_summarise_values(group[column]))
+            summary_rows.append(row)
+
+    return pd.DataFrame(summary_rows)
+
+
+def filter_nonoverlap_event_windows(
+    frame: pd.DataFrame,
+    *,
+    days: int = 120,
+    event_id_col: str = "event_id",
+) -> pd.DataFrame:
+    required = {"event_ticker", "event_phase", "event_date", event_id_col}
+    if frame.empty or not required.issubset(frame.columns):
+        return frame.copy()
+
+    work = frame.copy()
+    work["event_date"] = pd.to_datetime(work["event_date"], errors="coerce")
+    key_frame = (
+        work.loc[:, [event_id_col, "event_ticker", "event_phase", "event_date"]]
+        .dropna(subset=["event_date"])
+        .drop_duplicates()
+        .sort_values(["event_ticker", "event_phase", "event_date", event_id_col])
+        .copy()
+    )
+    if key_frame.empty:
+        return work
+
+    key_frame["prev_gap_days"] = key_frame.groupby(["event_ticker", "event_phase"], dropna=False)["event_date"].diff().dt.days
+    key_frame["next_gap_days"] = (
+        key_frame.groupby(["event_ticker", "event_phase"], dropna=False)["event_date"].diff(-1).abs().dt.days
+    )
+    prev_overlap = key_frame["prev_gap_days"].le(days).fillna(False)
+    next_overlap = key_frame["next_gap_days"].le(days).fillna(False)
+    key_frame["overlap_flag"] = prev_overlap | next_overlap
+    valid_ids = key_frame.loc[~key_frame["overlap_flag"], event_id_col].astype(str)
+    return work.loc[work[event_id_col].astype(str).isin(valid_ids)].copy()
+
+
+def winsorize_event_level_metrics(
+    event_level: pd.DataFrame,
+    *,
+    quantile: float = 0.01,
+) -> pd.DataFrame:
+    if event_level.empty:
+        return event_level.copy()
+
+    work = event_level.copy()
+    car_columns = [column for column in work.columns if column.startswith("car_")]
+    if not car_columns:
+        return work
+
+    group_columns = [column for column in ["market", "event_phase", "inclusion"] if column in work.columns]
+    for column in car_columns:
+        if group_columns:
+            lower = work.groupby(group_columns, dropna=False)[column].transform(lambda series: series.quantile(quantile))
+            upper = work.groupby(group_columns, dropna=False)[column].transform(lambda series: series.quantile(1 - quantile))
+        else:
+            lower = pd.Series(work[column].quantile(quantile), index=work.index)
+            upper = pd.Series(work[column].quantile(1 - quantile), index=work.index)
+        work[column] = work[column].clip(lower=lower, upper=upper)
+    return work
+
+
 def compute_event_level_metrics(
     panel: pd.DataFrame,
     car_windows: list[list[int]] | list[tuple[int, int]],
@@ -77,40 +211,25 @@ def compute_event_study(
     panel: pd.DataFrame,
     car_windows: list[list[int]] | list[tuple[int, int]],
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    windows = _normalise_windows(car_windows)
     event_level = compute_event_level_metrics(panel, car_windows)
 
     path_frame = panel.sort_values(["event_id", "event_phase", "relative_day"]).copy()
     path_frame["car_path"] = path_frame.groupby(["event_id", "event_phase"], dropna=False)["ar"].cumsum()
     average_paths = (
         path_frame.groupby(["market", "event_phase", "inclusion", "relative_day"], dropna=False)
-        .agg(mean_ar=("ar", "mean"), mean_car=("car_path", "mean"), n_obs=("ar", "size"))
+        .agg(
+            mean_ar=("ar", "mean"),
+            std_ar=("ar", lambda series: series.std(ddof=1)),
+            mean_car=("car_path", "mean"),
+            std_car=("car_path", lambda series: series.std(ddof=1)),
+            n_obs=("ar", "size"),
+        )
         .reset_index()
     )
+    average_paths["se_ar"] = average_paths["std_ar"] / np.sqrt(average_paths["n_obs"].where(average_paths["n_obs"] > 1))
+    average_paths["se_car"] = average_paths["std_car"] / np.sqrt(average_paths["n_obs"].where(average_paths["n_obs"] > 1))
+    average_paths["ci_low_95"] = average_paths["mean_car"] - 1.96 * average_paths["se_car"]
+    average_paths["ci_high_95"] = average_paths["mean_car"] + 1.96 * average_paths["se_car"]
 
-    summary_rows: list[dict[str, object]] = []
-    for (market, event_phase, inclusion), group in event_level.groupby(["market", "event_phase", "inclusion"], dropna=False):
-        for window in windows:
-            column = f"car_{window.slug}"
-            values = group[column].dropna()
-            t_stat = np.nan
-            p_value = np.nan
-            if len(values) > 1:
-                t_stat, p_value = stats.ttest_1samp(values, popmean=0.0, nan_policy="omit")
-            summary_rows.append(
-                {
-                    "market": market,
-                    "event_phase": event_phase,
-                    "inclusion": inclusion,
-                    "window": window.label,
-                    "window_slug": window.slug,
-                    "n_events": int(values.count()),
-                    "mean_car": values.mean() if not values.empty else np.nan,
-                    "std_car": values.std(ddof=1) if len(values) > 1 else np.nan,
-                    "t_stat": t_stat,
-                    "p_value": p_value,
-                }
-            )
-
-    summary = pd.DataFrame(summary_rows)
+    summary = summarize_event_level_metrics(event_level, car_windows)
     return event_level, summary, average_paths

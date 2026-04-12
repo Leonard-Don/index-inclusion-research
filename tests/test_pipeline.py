@@ -3,7 +3,12 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from index_inclusion_research.analysis import build_regression_dataset, compute_event_study
+from index_inclusion_research.analysis import (
+    build_regression_dataset,
+    compute_event_study,
+    filter_nonoverlap_event_windows,
+    winsorize_event_level_metrics,
+)
 from index_inclusion_research.pipeline import build_event_panel, build_event_sample, build_matched_sample, map_to_trading_date
 
 
@@ -148,5 +153,31 @@ def test_event_study_and_regression_dataset_outputs() -> None:
     assert {"car_m1_p1", "car_m3_p3"}.issubset(event_level.columns)
     assert not summary.empty
     assert not average_paths.empty
+    assert {"se_car", "ci_low_95", "ci_high_95"}.issubset(summary.columns)
+    assert {"se_car", "ci_low_95", "ci_high_95"}.issubset(average_paths.columns)
     assert "turnover_change" in dataset.columns
     assert "treatment_group" in dataset.columns
+
+
+def test_filter_nonoverlap_event_windows_excludes_close_repeat_events() -> None:
+    frame = pd.DataFrame(
+        [
+            {"event_id": "e1", "event_ticker": "AAA", "event_phase": "announce", "event_date": "2024-01-01"},
+            {"event_id": "e2", "event_ticker": "AAA", "event_phase": "announce", "event_date": "2024-03-01"},
+            {"event_id": "e3", "event_ticker": "AAA", "event_phase": "announce", "event_date": "2024-10-01"},
+        ]
+    )
+    filtered = filter_nonoverlap_event_windows(frame, days=120)
+    assert filtered["event_id"].tolist() == ["e3"]
+
+
+def test_winsorize_event_level_metrics_clips_extreme_car_values() -> None:
+    frame = pd.DataFrame(
+        [
+            {"market": "US", "event_phase": "announce", "inclusion": 1, "event_id": "e1", "car_m1_p1": 0.01},
+            {"market": "US", "event_phase": "announce", "inclusion": 1, "event_id": "e2", "car_m1_p1": 0.02},
+            {"market": "US", "event_phase": "announce", "inclusion": 1, "event_id": "e3", "car_m1_p1": 0.90},
+        ]
+    )
+    winsorized = winsorize_event_level_metrics(frame, quantile=0.01)
+    assert winsorized["car_m1_p1"].max() < frame["car_m1_p1"].max()

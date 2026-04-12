@@ -19,6 +19,22 @@ def test_compute_retention_summary_reports_reversal_and_ratio() -> None:
     assert np.isclose(row["long_mean_car"], 0.035)
     assert np.isclose(row["car_reversal"], 0.045)
     assert np.isclose(row["retention_ratio"], 0.4375)
+    assert bool(row["retention_ratio_valid"]) is True
+    assert "可用于解释长期保留率" in row["retention_note"]
+
+
+def test_compute_retention_summary_marks_small_short_window_as_invalid() -> None:
+    event_level = pd.DataFrame(
+        [
+            {"event_id": "a", "market": "CN", "event_phase": "effective", "inclusion": 1, "treatment_group": 1, "car_p0_p20": 0.002, "car_p0_p120": 0.03},
+            {"event_id": "b", "market": "CN", "event_phase": "effective", "inclusion": 1, "treatment_group": 1, "car_p0_p20": 0.004, "car_p0_p120": 0.01},
+        ]
+    )
+    summary = compute_retention_summary(event_level)
+    row = summary.iloc[0]
+    assert pd.isna(row["retention_ratio"])
+    assert bool(row["retention_ratio_valid"]) is False
+    assert "短窗口基数过小" in row["retention_note"]
 
 
 def test_compute_did_summary_compares_treated_and_control_changes() -> None:

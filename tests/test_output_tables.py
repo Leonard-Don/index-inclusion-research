@@ -7,7 +7,11 @@ from index_inclusion_research.outputs import (
     build_data_source_table,
     build_event_counts_by_year_table,
     build_identification_scope_table,
+    build_robustness_event_study_summary,
+    build_robustness_regression_summary,
+    build_robustness_retention_summary,
     build_sample_scope_table,
+    build_sample_filter_summary,
     build_time_series_event_study_summary,
 )
 
@@ -130,5 +134,50 @@ def test_extended_output_tables_are_built_with_expected_columns() -> None:
     asymmetry = build_asymmetry_summary(event_level, long_event_level=long_event_level)
 
     assert {"market", "announce_year", "inclusion", "n_events"}.issubset(counts.columns)
-    assert {"market", "inclusion", "event_phase", "announce_year", "mean_car_m1_p1"}.issubset(time_series.columns)
+    assert {"market", "inclusion", "event_phase", "announce_year", "mean_car_m1_p1", "se_car_m1_p1", "ci_low_95_car_m1_p1", "ci_high_95_car_m1_p1"}.issubset(time_series.columns)
     assert {"market", "event_phase", "addition_car_m1_p1", "deletion_car_m1_p1", "asymmetry_car_m1_p1"}.issubset(asymmetry.columns)
+
+
+def test_robustness_output_tables_are_built_with_expected_columns() -> None:
+    short_event_level = pd.DataFrame(
+        [
+            {"event_id": "e1", "market": "US", "event_phase": "announce", "event_ticker": "AAA", "event_date": "2024-01-01", "inclusion": 1, "treatment_group": 1, "car_m1_p1": 0.03, "car_m3_p3": 0.04, "car_m5_p5": 0.05},
+            {"event_id": "e2", "market": "US", "event_phase": "announce", "event_ticker": "AAA", "event_date": "2024-03-01", "inclusion": 1, "treatment_group": 1, "car_m1_p1": 0.02, "car_m3_p3": 0.03, "car_m5_p5": 0.04},
+            {"event_id": "e3", "market": "US", "event_phase": "announce", "event_ticker": "BBB", "event_date": "2024-12-01", "inclusion": 1, "treatment_group": 1, "car_m1_p1": 0.01, "car_m3_p3": 0.02, "car_m5_p5": 0.03},
+            {"event_id": "e4", "market": "CN", "event_phase": "effective", "event_ticker": "000001", "event_date": "2024-05-01", "inclusion": 1, "treatment_group": 1, "car_m1_p1": 0.005, "car_m3_p3": 0.006, "car_m5_p5": 0.007},
+            {"event_id": "e5", "market": "CN", "event_phase": "effective", "event_ticker": "000002", "event_date": "2024-10-01", "inclusion": 1, "treatment_group": 1, "car_m1_p1": 0.004, "car_m3_p3": 0.005, "car_m5_p5": 0.006},
+        ]
+    )
+    long_event_level = pd.DataFrame(
+        [
+            {"event_id": "e1", "market": "US", "event_phase": "announce", "event_ticker": "AAA", "event_date": "2024-01-01", "inclusion": 1, "treatment_group": 1, "car_p0_p20": 0.03, "car_p0_p120": 0.05},
+            {"event_id": "e2", "market": "US", "event_phase": "announce", "event_ticker": "AAA", "event_date": "2024-03-01", "inclusion": 1, "treatment_group": 1, "car_p0_p20": 0.02, "car_p0_p120": 0.03},
+            {"event_id": "e3", "market": "US", "event_phase": "announce", "event_ticker": "BBB", "event_date": "2024-12-01", "inclusion": 1, "treatment_group": 1, "car_p0_p20": 0.01, "car_p0_p120": 0.02},
+            {"event_id": "e4", "market": "CN", "event_phase": "effective", "event_ticker": "000001", "event_date": "2024-05-01", "inclusion": 1, "treatment_group": 1, "car_p0_p20": 0.003, "car_p0_p120": 0.02},
+            {"event_id": "e5", "market": "CN", "event_phase": "effective", "event_ticker": "000002", "event_date": "2024-10-01", "inclusion": 1, "treatment_group": 1, "car_p0_p20": 0.004, "car_p0_p120": 0.01},
+        ]
+    )
+    regression_dataset = pd.DataFrame(
+        [
+            {"event_id": "e1", "comparison_id": "e1", "market": "US", "event_phase": "announce", "event_ticker": "AAA", "event_date": "2024-01-01", "treatment_group": 1, "car_m1_p1": 0.03, "log_mkt_cap": 10.0, "pre_event_return": 0.01},
+            {"event_id": "c1", "comparison_id": "e1", "market": "US", "event_phase": "announce", "event_ticker": "CCC", "event_date": "2024-01-01", "treatment_group": 0, "car_m1_p1": 0.01, "log_mkt_cap": 10.1, "pre_event_return": 0.00},
+            {"event_id": "e2", "comparison_id": "e2", "market": "US", "event_phase": "announce", "event_ticker": "AAA", "event_date": "2024-03-01", "treatment_group": 1, "car_m1_p1": 0.02, "log_mkt_cap": 10.2, "pre_event_return": 0.02},
+            {"event_id": "c2", "comparison_id": "e2", "market": "US", "event_phase": "announce", "event_ticker": "DDD", "event_date": "2024-03-01", "treatment_group": 0, "car_m1_p1": 0.00, "log_mkt_cap": 10.3, "pre_event_return": 0.01},
+            {"event_id": "e3", "comparison_id": "e3", "market": "US", "event_phase": "announce", "event_ticker": "BBB", "event_date": "2024-12-01", "treatment_group": 1, "car_m1_p1": 0.01, "log_mkt_cap": 10.4, "pre_event_return": 0.00},
+            {"event_id": "c3", "comparison_id": "e3", "market": "US", "event_phase": "announce", "event_ticker": "EEE", "event_date": "2024-12-01", "treatment_group": 0, "car_m1_p1": -0.01, "log_mkt_cap": 10.5, "pre_event_return": -0.01},
+            {"event_id": "e4", "comparison_id": "e4", "market": "CN", "event_phase": "effective", "event_ticker": "000001", "event_date": "2024-05-01", "treatment_group": 1, "car_m1_p1": 0.005, "log_mkt_cap": 9.5, "pre_event_return": 0.01},
+            {"event_id": "c4", "comparison_id": "e4", "market": "CN", "event_phase": "effective", "event_ticker": "000003", "event_date": "2024-05-01", "treatment_group": 0, "car_m1_p1": -0.002, "log_mkt_cap": 9.6, "pre_event_return": 0.00},
+            {"event_id": "e5", "comparison_id": "e5", "market": "CN", "event_phase": "effective", "event_ticker": "000002", "event_date": "2024-10-01", "treatment_group": 1, "car_m1_p1": 0.004, "log_mkt_cap": 9.7, "pre_event_return": 0.02},
+            {"event_id": "c5", "comparison_id": "e5", "market": "CN", "event_phase": "effective", "event_ticker": "000004", "event_date": "2024-10-01", "treatment_group": 0, "car_m1_p1": -0.001, "log_mkt_cap": 9.8, "pre_event_return": 0.01},
+        ]
+    )
+
+    sample_filters = build_sample_filter_summary(short_event_level, long_event_level=long_event_level, regression_dataset=regression_dataset)
+    robustness_events = build_robustness_event_study_summary(short_event_level, long_event_level=long_event_level)
+    robustness_regressions = build_robustness_regression_summary(regression_dataset)
+    robustness_retention = build_robustness_retention_summary(long_event_level)
+
+    assert {"sample_filter", "n_treated_events", "share_of_baseline"}.issubset(sample_filters.columns)
+    assert {"sample_filter", "market", "window", "se_car", "ci_low_95", "ci_high_95"}.issubset(robustness_events.columns)
+    assert {"estimation", "covariance", "market", "coefficient", "std_error", "n_obs"}.issubset(robustness_regressions.columns)
+    assert {"sample_filter", "retention_ratio_valid", "retention_note"}.issubset(robustness_retention.columns)
