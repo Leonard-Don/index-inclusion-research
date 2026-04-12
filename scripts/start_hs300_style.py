@@ -58,7 +58,7 @@ def run_analysis(verbose: bool = True) -> dict[str, object]:
     write_markdown(output_dir / "summary.md", report)
 
     treated_short = summary.loc[(summary["inclusion"] == 1) & (summary["window_slug"] == "m1_p1")].copy()
-    inclusion_rows = coefficients.loc[coefficients["parameter"] == "inclusion"].copy()
+    treatment_rows = coefficients.loc[coefficients["parameter"] == "treatment_group"].copy()
     figures = sorted((output_dir / "treated_only" / "figures").glob("*.png"))
     result = {
         "id": "hs300_style",
@@ -68,7 +68,7 @@ def run_analysis(verbose: bool = True) -> dict[str, object]:
         "tables": {
             "中国样本短窗口 CAR": treated_short,
             "DID 风格汇总": did_summary,
-            "纳入变量回归系数": inclusion_rows,
+            "处理组变量回归系数": treatment_rows,
             "模型统计量": model_stats,
         },
         "figures": figures,
@@ -97,8 +97,8 @@ def run_analysis(verbose: bool = True) -> dict[str, object]:
             ],
         )
         print_frame(
-            "Matched regression inclusion coefficients",
-            inclusion_rows,
+            "Matched regression treatment coefficients",
+            treatment_rows,
             columns=[
                 "market",
                 "event_phase",

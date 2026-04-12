@@ -23,7 +23,11 @@ DEMO_INPUT = ROOT / "data" / "raw" / "hs300_rdd_demo.csv"
 def _generate_demo_candidates() -> pd.DataFrame:
     events, prices, _ = ensure_real_data()
     clean_events = prepare_clean_events(events)
-    cn_events = clean_events.loc[(clean_events["market"] == "CN") & (clean_events["index_name"] == "CSI300")].copy()
+    cn_events = clean_events.loc[
+        (clean_events["market"] == "CN")
+        & (clean_events["index_name"] == "CSI300")
+        & (clean_events["inclusion"] == 1)
+    ].copy()
     matched_events, _ = build_matched_sample(cn_events, prices, lookback_days=20, num_controls=3)
     matched_events["batch_id"] = matched_events["matched_to_event_id"].where(
         matched_events["matched_to_event_id"].notna(),
@@ -37,15 +41,17 @@ def _generate_demo_candidates() -> pd.DataFrame:
 
     demo_rows: list[dict[str, object]] = []
     for _, group in matched_events.groupby("batch_id", dropna=False):
-        treated = group.loc[group["inclusion"] == 1].copy()
-        controls = group.loc[group["inclusion"] == 0].copy().sort_values("ticker").reset_index(drop=True)
+        treated = group.loc[group["treatment_group"] == 1].copy()
+        controls = group.loc[group["treatment_group"] == 0].copy().sort_values("ticker").reset_index(drop=True)
         if not treated.empty:
+            treated["inclusion"] = 1
             treated = treated.assign(running_variable=[300.35] * len(treated))
             demo_rows.extend(treated.to_dict(orient="records"))
         demo_scores = [299.85, 299.55, 299.25, 298.95, 298.65]
         for idx, (_, row) in enumerate(controls.iterrows()):
             score = demo_scores[idx] if idx < len(demo_scores) else 298.35 - idx * 0.1
             row_dict = row.to_dict()
+            row_dict["inclusion"] = 0
             row_dict["running_variable"] = score
             demo_rows.append(row_dict)
 

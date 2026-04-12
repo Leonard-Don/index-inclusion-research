@@ -16,9 +16,10 @@ def _sample_events() -> pd.DataFrame:
                 "ticker": "CN01",
                 "announce_date": "2024-01-06",
                 "effective_date": "2024-01-08",
-                "event_type": "inclusion",
+                "event_type": "addition",
                 "sector": "Technology",
                 "inclusion": 1,
+                "treatment_group": 1,
             },
             {
                 "market": "US",
@@ -26,9 +27,10 @@ def _sample_events() -> pd.DataFrame:
                 "ticker": "US01",
                 "announce_date": "2024-01-06",
                 "effective_date": "2024-01-08",
-                "event_type": "inclusion",
+                "event_type": "deletion",
                 "sector": "Technology",
-                "inclusion": 1,
+                "inclusion": 0,
+                "treatment_group": 1,
             },
         ]
     )
@@ -120,6 +122,20 @@ def test_matching_skips_missing_market_cap_candidates_without_failing() -> None:
     assert "status" in diagnostics.columns
 
 
+def test_matching_controls_keep_event_direction_and_flip_treatment_group() -> None:
+    events = _sample_events().iloc[[0]].copy()
+    events["announce_date"] = pd.to_datetime(events["announce_date"])
+    events["effective_date"] = pd.to_datetime(events["effective_date"])
+    cleaned = build_event_sample(events)
+    prices, _ = _sample_prices_and_benchmarks()
+    matched_events, _ = build_matched_sample(cleaned, prices, lookback_days=3, num_controls=1)
+    treated = matched_events.loc[matched_events["treatment_group"] == 1].iloc[0]
+    control = matched_events.loc[matched_events["treatment_group"] == 0].iloc[0]
+    assert treated["inclusion"] == 1
+    assert control["inclusion"] == 1
+    assert control["matched_to_event_id"] == treated["event_id"]
+
+
 def test_event_study_and_regression_dataset_outputs() -> None:
     events = _sample_events()
     events["announce_date"] = pd.to_datetime(events["announce_date"])
@@ -133,3 +149,4 @@ def test_event_study_and_regression_dataset_outputs() -> None:
     assert not summary.empty
     assert not average_paths.empty
     assert "turnover_change" in dataset.columns
+    assert "treatment_group" in dataset.columns

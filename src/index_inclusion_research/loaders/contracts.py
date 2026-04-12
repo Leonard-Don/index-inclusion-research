@@ -11,7 +11,18 @@ REQUIRED_EVENT_COLUMNS = [
     "announce_date",
     "effective_date",
 ]
-OPTIONAL_EVENT_COLUMNS = ["event_type", "source", "sector", "note", "inclusion", "matched_to_event_id"]
+OPTIONAL_EVENT_COLUMNS = [
+    "event_type",
+    "source",
+    "source_url",
+    "sector",
+    "note",
+    "inclusion",
+    "matched_to_event_id",
+    "batch_id",
+    "security_name",
+    "treatment_group",
+]
 
 REQUIRED_PRICE_COLUMNS = [
     "market",

@@ -12,6 +12,9 @@ def build_regression_dataset(
     car_windows: list[list[int]] | list[tuple[int, int]],
 ) -> pd.DataFrame:
     dataset = compute_event_level_metrics(panel, car_windows)
+    if "treatment_group" not in dataset.columns:
+        dataset["treatment_group"] = 1
+    dataset["treatment_group"] = dataset["treatment_group"].astype(int)
     dataset["inclusion"] = dataset["inclusion"].astype(int)
     return dataset
 
@@ -32,11 +35,15 @@ def run_regressions(
     for (market, event_phase), group in dataset.groupby(["market", "event_phase"], dropna=False):
         group = group.copy()
         for spec_name, dependent in specs.items():
-            regression_frame = group[[dependent, "inclusion", "log_mkt_cap", "pre_event_return"]].replace([np.inf, -np.inf], np.nan).dropna()
-            if regression_frame.empty or regression_frame["inclusion"].nunique() < 2 or len(regression_frame) < 4:
+            regression_frame = (
+                group[[dependent, "treatment_group", "log_mkt_cap", "pre_event_return"]]
+                .replace([np.inf, -np.inf], np.nan)
+                .dropna()
+            )
+            if regression_frame.empty or regression_frame["treatment_group"].nunique() < 2 or len(regression_frame) < 4:
                 continue
             design_matrix = sm.add_constant(
-                regression_frame[["inclusion", "log_mkt_cap", "pre_event_return"]],
+                regression_frame[["treatment_group", "log_mkt_cap", "pre_event_return"]],
                 has_constant="add",
             )
             model = sm.OLS(regression_frame[dependent], design_matrix).fit(cov_type="HC1")

@@ -33,7 +33,7 @@ RAW_REAL_PATHS = {
 
 def ensure_real_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     if not all(path.exists() for path in RAW_REAL_PATHS.values()):
-        events, prices, benchmarks, metadata = build_real_dataset(start="2024-01-01", end="2026-01-15")
+        events, prices, benchmarks, metadata = build_real_dataset(start="2009-01-01", end="2026-01-15")
         save_dataframe(events, RAW_REAL_PATHS["events"])
         save_dataframe(prices, RAW_REAL_PATHS["prices"])
         save_dataframe(benchmarks, RAW_REAL_PATHS["benchmarks"])

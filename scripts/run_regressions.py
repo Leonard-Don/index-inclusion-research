@@ -24,7 +24,11 @@ def main() -> None:
     args = parser.parse_args()
 
     config = load_project_config(args.config)
-    panel = pd.read_csv(args.panel, parse_dates=["event_date_raw", "mapped_market_date", "event_date", "date"])
+    panel = pd.read_csv(
+        args.panel,
+        parse_dates=["event_date_raw", "mapped_market_date", "event_date", "date"],
+        low_memory=False,
+    )
     dataset = build_regression_dataset(panel, config["defaults"]["car_windows"])
     coefficients, model_stats = run_regressions(dataset)
     output_dir = Path(args.output_dir)

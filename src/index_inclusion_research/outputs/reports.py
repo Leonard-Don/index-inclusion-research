@@ -32,8 +32,8 @@ PHASE_LINESTYLES = {
 }
 
 INCLUSION_LABELS = {
-    1: "纳入样本",
-    0: "匹配对照组",
+    1: "调入样本",
+    0: "调出样本",
 }
 
 INCLUSION_STYLES = {
@@ -121,7 +121,7 @@ def build_data_source_table(
                 "行数": _safe_int(len(events)),
                 "股票数": _safe_int(events["ticker"].nunique()) if "ticker" in events.columns else pd.NA,
                 "事件数": _safe_int(len(events)),
-                "备注": "A 股样本为沪深300新增成分股，美股样本为 S&P 500 新纳入成分股。",
+                "备注": "A 股样本为沪深300调入/调出事件，美股样本为 S&P 500 加入/剔除事件。",
             }
         )
 
@@ -193,7 +193,7 @@ def build_data_source_table(
         rows.append(
             {
                 "数据集": "匹配回归面板",
-                "来源": "由匹配后的纳入样本、对照组与基准收益拼接生成",
+                "来源": "由匹配后的真实事件样本、对照组与基准收益拼接生成",
                 "市场范围": _market_scope_from_values(matched_panel["market"]),
                 "起始日期": matched_start,
                 "结束日期": matched_end,
@@ -229,7 +229,7 @@ def build_sample_scope_table(
                 "观测值": pd.NA,
                 "起始日期": event_start,
                 "结束日期": event_end,
-                "说明": "每个纳入事件同时对应公告日与生效日两个事件时点。",
+                "说明": "每个真实事件同时对应公告日与生效日两个事件时点。",
             }
         )
     if not panel.empty:
@@ -270,7 +270,7 @@ def build_sample_scope_table(
                 "观测值": _safe_int(len(matched_panel)),
                 "起始日期": matched_start,
                 "结束日期": matched_end,
-                "说明": "每个纳入事件默认匹配 3 个对照股票，用于主回归与机制回归。",
+                "说明": "每个真实事件默认匹配 3 个对照股票，用于主回归与机制回归。",
             }
         )
     if not long_event_level.empty or not long_panel.empty:
@@ -323,7 +323,7 @@ def build_identification_scope_table(
         {
             "分析层": "短窗口事件研究",
             "市场范围": "中国 A 股 + 美国",
-            "样本基础": f"{_display_value(event_count)} 个真实纳入事件、{_display_value(panel_windows)} 个事件相位窗口",
+            "样本基础": f"{_display_value(event_count)} 个真实调入/调出事件、{_display_value(panel_windows)} 个事件相位窗口",
             "主要输出": "CAR[-1,+1]、CAR[-3,+3]、CAR[-5,+5]、平均路径图",
             "证据状态": "正式样本",
             "当前口径": "直接回答事件附近是否存在显著超额收益。",
@@ -418,6 +418,100 @@ def export_descriptive_tables(
     event_counts.to_csv(target_dir / "event_counts.csv", index=False)
     panel_coverage.to_csv(target_dir / "panel_coverage.csv", index=False)
     return event_counts, panel_coverage
+
+
+def build_event_counts_by_year_table(events: pd.DataFrame) -> pd.DataFrame:
+    if events.empty:
+        return pd.DataFrame()
+    work = events.copy()
+    work["announce_year"] = pd.to_datetime(work["announce_date"], errors="coerce").dt.year
+    return (
+        work.groupby(["market", "announce_year", "inclusion"], dropna=False)
+        .agg(
+            n_events=("event_id", "nunique"),
+            n_tickers=("ticker", "nunique"),
+            n_batches=("batch_id", "nunique"),
+        )
+        .reset_index()
+        .sort_values(["market", "announce_year", "inclusion"])
+        .reset_index(drop=True)
+    )
+
+
+def build_time_series_event_study_summary(event_level: pd.DataFrame) -> pd.DataFrame:
+    if event_level.empty or "announce_date" not in event_level.columns:
+        return pd.DataFrame()
+    work = event_level.copy()
+    work["announce_year"] = pd.to_datetime(work["announce_date"], errors="coerce").dt.year
+    value_columns = [column for column in ["car_m1_p1", "car_m3_p3", "car_m5_p5", "car_p0_p20", "car_p0_p120"] if column in work.columns]
+    if not value_columns:
+        return pd.DataFrame()
+    aggregations: dict[str, tuple[str, str]] = {"n_events": ("event_id", "nunique")}
+    for column in value_columns:
+        aggregations[f"mean_{column}"] = (column, "mean")
+    return (
+        work.groupby(["market", "inclusion", "event_phase", "announce_year"], dropna=False)
+        .agg(**aggregations)
+        .reset_index()
+        .sort_values(["market", "inclusion", "event_phase", "announce_year"])
+        .reset_index(drop=True)
+    )
+
+
+def build_asymmetry_summary(
+    event_level: pd.DataFrame,
+    long_event_level: pd.DataFrame = pd.DataFrame(),
+) -> pd.DataFrame:
+    if event_level.empty:
+        return pd.DataFrame()
+    treated = event_level.copy()
+    if "treatment_group" in treated.columns:
+        treated = treated.loc[treated["treatment_group"] == 1].copy()
+    if treated.empty:
+        return pd.DataFrame()
+
+    long_treated = long_event_level.copy()
+    if not long_treated.empty and "treatment_group" in long_treated.columns:
+        long_treated = long_treated.loc[long_treated["treatment_group"] == 1].copy()
+
+    rows: list[dict[str, object]] = []
+    for (market, event_phase), group in treated.groupby(["market", "event_phase"], dropna=False):
+        additions = group.loc[group["inclusion"] == 1]
+        deletions = group.loc[group["inclusion"] == 0]
+        long_group = (
+            long_treated.loc[(long_treated["market"] == market) & (long_treated["event_phase"] == event_phase)]
+            if not long_treated.empty
+            else pd.DataFrame()
+        )
+        long_additions = long_group.loc[long_group["inclusion"] == 1] if not long_group.empty else pd.DataFrame()
+        long_deletions = long_group.loc[long_group["inclusion"] == 0] if not long_group.empty else pd.DataFrame()
+        rows.append(
+            {
+                "market": market,
+                "event_phase": event_phase,
+                "n_additions": int(additions["event_id"].nunique()),
+                "n_deletions": int(deletions["event_id"].nunique()),
+                "addition_car_m1_p1": additions["car_m1_p1"].mean() if "car_m1_p1" in additions.columns else pd.NA,
+                "deletion_car_m1_p1": deletions["car_m1_p1"].mean() if "car_m1_p1" in deletions.columns else pd.NA,
+                "asymmetry_car_m1_p1": (
+                    additions["car_m1_p1"].mean() - deletions["car_m1_p1"].mean()
+                    if "car_m1_p1" in additions.columns and "car_m1_p1" in deletions.columns
+                    else pd.NA
+                ),
+                "addition_turnover_change": additions["turnover_change"].mean() if "turnover_change" in additions.columns else pd.NA,
+                "deletion_turnover_change": deletions["turnover_change"].mean() if "turnover_change" in deletions.columns else pd.NA,
+                "addition_volume_change": additions["volume_change"].mean() if "volume_change" in additions.columns else pd.NA,
+                "deletion_volume_change": deletions["volume_change"].mean() if "volume_change" in deletions.columns else pd.NA,
+                "addition_car_p0_p120": long_additions["car_p0_p120"].mean() if "car_p0_p120" in long_additions.columns else pd.NA,
+                "deletion_car_p0_p120": long_deletions["car_p0_p120"].mean() if "car_p0_p120" in long_deletions.columns else pd.NA,
+                "asymmetry_car_p0_p120": (
+                    long_additions["car_p0_p120"].mean() - long_deletions["car_p0_p120"].mean()
+                    if "car_p0_p120" in long_additions.columns and "car_p0_p120" in long_deletions.columns
+                    else pd.NA
+                ),
+            }
+        )
+    return pd.DataFrame(rows)
 
 
 def export_latex_tables(frames: dict[str, pd.DataFrame], output_dir: str | Path) -> None:

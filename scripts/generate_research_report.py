@@ -71,7 +71,7 @@ def build_report_text(
         ("volume_mechanism", "成交量变化"),
         ("volatility_mechanism", "波动率变化"),
     ]:
-        subset = _coef_lookup(regression_coefficients, spec_name, "inclusion")
+        subset = _coef_lookup(regression_coefficients, spec_name, "treatment_group")
         if subset.empty:
             lines.append(f"- {cn_label}：当前没有足够样本支撑回归。")
             continue
@@ -79,7 +79,7 @@ def build_report_text(
             direction = "正相关" if row.coefficient > 0 else "负相关"
             significance = "显著" if row.p_value < 0.10 else "不显著"
             lines.append(
-                f"- {row.market} 市场 {row.event_phase} 阶段中，指数纳入变量对 `{row.dependent_variable}` 的系数为 "
+                f"- {row.market} 市场 {row.event_phase} 阶段中，处理组变量对 `{row.dependent_variable}` 的系数为 "
                 f"`{_fmt(row.coefficient)}`，表现为{direction}，统计上{significance}。"
             )
 
