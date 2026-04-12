@@ -6,6 +6,7 @@ __pycache__/
 
 data/processed/*
 !data/processed/.gitkeep
+data/raw/real_prices.csv
 
 results/*
 !results/.gitkeep

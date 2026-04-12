@@ -61,7 +61,7 @@ def test_build_report_text_includes_key_sections() -> None:
                 "event_phase": "announce",
                 "specification": "turnover_mechanism",
                 "dependent_variable": "turnover_change",
-                "parameter": "inclusion",
+                "parameter": "treatment_group",
                 "coefficient": 0.12,
                 "std_error": 0.04,
                 "t_stat": 2.5,

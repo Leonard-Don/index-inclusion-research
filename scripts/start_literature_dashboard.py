@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from flask import Flask, abort, redirect, render_template_string, request, send_file, url_for
+import pandas as pd
 
 os.environ.setdefault("MPLBACKEND", "Agg")
 
@@ -115,12 +116,16 @@ TABLE_LABELS = {
     "data_sources": "数据来源与口径表",
     "identification_scope": "识别范围说明表",
     "long_window_event_study_summary": "长窗口事件研究汇总表",
+    "event_counts_by_year": "按年份事件分布表",
+    "time_series_event_study_summary": "时间变化事件研究表",
+    "asymmetry_summary": "调入调出非对称性表",
 }
 
 COLUMN_LABELS = {
     "market": "市场",
     "event_phase": "事件阶段",
-    "inclusion": "是否纳入",
+    "inclusion": "事件方向",
+    "treatment_group": "处理组",
     "window": "窗口",
     "window_slug": "窗口代码",
     "n_events": "事件数",
@@ -201,6 +206,20 @@ COLUMN_LABELS = {
     "主要输出": "主要输出",
     "证据状态": "证据状态",
     "当前口径": "当前口径",
+    "announce_year": "公告年份",
+    "n_batches": "批次数",
+    "n_additions": "调入事件数",
+    "n_deletions": "调出事件数",
+    "addition_car_m1_p1": "调入 CAR[-1,+1]",
+    "deletion_car_m1_p1": "调出 CAR[-1,+1]",
+    "asymmetry_car_m1_p1": "短窗口非对称差值",
+    "addition_turnover_change": "调入换手率变化",
+    "deletion_turnover_change": "调出换手率变化",
+    "addition_volume_change": "调入成交量变化",
+    "deletion_volume_change": "调出成交量变化",
+    "addition_car_p0_p120": "调入 CAR[0,+120]",
+    "deletion_car_p0_p120": "调出 CAR[0,+120]",
+    "asymmetry_car_p0_p120": "长窗口非对称差值",
 }
 
 VALUE_LABELS = {
@@ -216,7 +235,10 @@ VALUE_LABELS = {
     "volume_mechanism": "成交量机制",
     "volatility_mechanism": "波动率机制",
     "const": "常数项",
-    "inclusion": "是否纳入",
+    "inclusion": "调入",
+    "addition": "调入",
+    "deletion": "调出",
+    "treatment_group": "处理组变量",
     "log_mkt_cap": "对数市值",
     "pre_event_return": "事件前收益",
     "car_m1_p1": "CAR[-1,+1]",
@@ -775,15 +797,15 @@ PAPER_TEMPLATE = """
     <div class="topbar">
       <div>单篇文献讲义</div>
       <div class="topbar-nav">
-        <a href="{{ url_for('show_library') }}">返回文献库</a>
-        <a href="{{ url_for('show_review') }}">文献综述</a>
-        <a href="{{ url_for('show_framework') }}">研究框架</a>
+        <a href="{{ url_for('home', _anchor='framework') }}">返回文献库</a>
+        <a href="{{ url_for('home', _anchor='framework') }}">研究框架</a>
+        <a href="{{ url_for('home', _anchor='supplement') }}">机制补充</a>
         <a href="{{ url_for('home') }}">返回首页</a>
       </div>
     </div>
 
     <section class="hero">
-      <div class="hero-kicker">{{ current.id }}</div>
+      <div class="hero-kicker">结构化文献解读</div>
       <h1>{{ current.title }}</h1>
       <div class="hero-subtitle">
         <div>{{ current.description }}</div>
@@ -795,7 +817,7 @@ PAPER_TEMPLATE = """
         {% for action in current.primary_actions or [] %}
         <a class="btn {% if loop.first %}primary{% else %}secondary{% endif %}" href="{{ action.href }}" {% if action.target %}target="{{ action.target }}"{% endif %}>{{ action.label }}</a>
         {% endfor %}
-        <a class="btn secondary" href="{{ url_for('show_library') }}">返回文献库</a>
+        <a class="btn secondary" href="{{ url_for('home', _anchor='framework') }}">返回文献库</a>
       </div>
       {% if current.summary_paragraphs %}
       <div class="hero-summary">
@@ -2373,8 +2395,12 @@ def _render_table(frame, compact: bool = False) -> str:
         display = display.head(120)
     display = display.rename(columns={column: COLUMN_LABELS.get(column, column) for column in display.columns})
     for column in display.columns:
+        if column == "事件方向":
+            display[column] = display[column].map({1: "调入", 0: "调出"}).fillna(display[column])
+        if column == "处理组":
+            display[column] = display[column].map({1: "处理组", 0: "对照组"}).fillna(display[column])
         if display[column].dtype == object:
-            display[column] = display[column].replace(VALUE_LABELS)
+            display[column] = display[column].map(lambda value: VALUE_LABELS.get(value, value))
     return display.to_html(
         index=False,
         classes=classes,
@@ -2428,13 +2454,13 @@ def _build_figure_caption(path: Path, custom_caption: str | None = None, prefix:
         outcome_label = COLUMN_LABELS.get(outcome, outcome)
         caption = f"中国样本 RDD 主图。图意：展示 {outcome_label} 的断点回归主图。阅读重点：同时观察断点两侧的分箱均值与拟合线，在 0 附近判断是否存在结构性跳跃。"
     elif stem == "sample_event_timeline":
-        caption = "图意：展示真实纳入事件在时间轴上的分布。阅读重点：判断样本是否集中在少数批次，以及公告日和生效日是否在时间上形成清晰分层。"
+        caption = "图意：展示真实调入/调出事件在时间轴上的分布。阅读重点：判断样本是否集中在少数批次，以及公告日和生效日是否在时间上形成清晰分层。"
     elif stem == "sample_car_heatmap":
         caption = "图意：把短窗口 CAR 在市场与事件阶段两个维度上压缩成一张总览图。阅读重点：优先比较美国公告日与中国生效日所在单元格的方向、幅度和显著性。"
     elif stem == "main_regression_coefficients":
-        caption = "图意：展示主回归中纳入变量的估计系数与置信区间。阅读重点：比较不同市场、不同事件阶段下系数的方向与显著性，而不只看点估计大小。"
+        caption = "图意：展示主回归中处理组变量的估计系数与置信区间。阅读重点：比较不同市场、不同事件阶段下系数的方向与显著性，而不只看点估计大小。"
     elif stem == "mechanism_regression_coefficients":
-        caption = "图意：展示机制回归中纳入变量对换手率、成交量和波动率的影响。阅读重点：比较中国 A 股与美国在公告日、生效日的机制方向是否一致。"
+        caption = "图意：展示机制回归中处理组变量对换手率、成交量和波动率的影响。阅读重点：比较中国 A 股与美国在公告日、生效日的机制方向是否一致。"
     elif stem == "match_diagnostics_overview":
         caption = "图意：同时展示匹配状态分布与匹配质量指标。阅读重点：先看匹配成功率，再看三对照构造和行业口径放宽占比，以判断对照组设计的稳定性。"
     else:
@@ -2569,8 +2595,11 @@ def _table_layout_for_label(label: str) -> str:
         "A 股与美股并列总结",
         "样本窗口口径",
         "样本范围总表",
+        "按年份事件分布",
         "数据来源与口径",
         "识别范围说明",
+        "时间变化摘要",
+        "调入调出非对称性",
     }
     return "wide" if label in wide_labels else ""
 
@@ -2663,13 +2692,22 @@ def _build_supplement_summary_cards() -> list[dict[str, str]]:
 
 
 def _build_price_pressure_cards() -> list[dict[str, str]]:
-    output_dir = ROOT / "results" / "literature" / "harris_gurel"
-    event = _load_single_csv(output_dir, "event_study_summary.csv")
-    mechanism = _load_single_csv(output_dir, "mechanism_summary.csv")
+    event = pd.read_csv(ROOT / "results" / "real_tables" / "event_study_summary.csv")
+    mechanism = _load_single_csv(ROOT / "results" / "literature" / "harris_gurel", "mechanism_summary.csv")
     cards: list[dict[str, str]] = []
     if event is not None:
-        us_announce = event.loc[(event["market"] == "US") & (event["event_phase"] == "announce") & (event["window_slug"] == "m1_p1")]
-        cn_effective = event.loc[(event["market"] == "CN") & (event["event_phase"] == "effective") & (event["window_slug"] == "m1_p1")]
+        us_announce = event.loc[
+            (event["market"] == "US")
+            & (event["event_phase"] == "announce")
+            & (event["window_slug"] == "m1_p1")
+            & (event["inclusion"] == 1)
+        ]
+        cn_effective = event.loc[
+            (event["market"] == "CN")
+            & (event["event_phase"] == "effective")
+            & (event["window_slug"] == "m1_p1")
+            & (event["inclusion"] == 1)
+        ]
         if not us_announce.empty:
             row = us_announce.iloc[0]
             cards.append({"label": "美股公告日 CAR[-1,+1]", "value": _format_pct(float(row["mean_car"])), "copy": _format_p_value(float(row["p_value"]))})
@@ -2677,8 +2715,12 @@ def _build_price_pressure_cards() -> list[dict[str, str]]:
             row = cn_effective.iloc[0]
             cards.append({"label": "A 股生效日 CAR[-1,+1]", "value": _format_pct(float(row["mean_car"])), "copy": _format_p_value(float(row["p_value"]))})
     if mechanism is not None:
-        us_announce_mech = mechanism.loc[(mechanism["market"] == "US") & (mechanism["event_phase"] == "announce")]
-        cn_effective_mech = mechanism.loc[(mechanism["market"] == "CN") & (mechanism["event_phase"] == "effective")]
+        us_announce_mech = mechanism.loc[
+            (mechanism["market"] == "US") & (mechanism["event_phase"] == "announce") & (mechanism["inclusion"] == 1)
+        ]
+        cn_effective_mech = mechanism.loc[
+            (mechanism["market"] == "CN") & (mechanism["event_phase"] == "effective") & (mechanism["inclusion"] == 1)
+        ]
         if not us_announce_mech.empty:
             row = us_announce_mech.iloc[0]
             cards.append({"label": "美股公告日成交量变化", "value": _format_pct(float(row["mean_volume_change"])), "copy": "反映短期建仓冲击强度"})
@@ -2689,13 +2731,16 @@ def _build_price_pressure_cards() -> list[dict[str, str]]:
 
 
 def _build_demand_curve_cards() -> list[dict[str, str]]:
-    output_dir = ROOT / "results" / "literature" / "shleifer"
-    event = _load_single_csv(output_dir, "event_study_summary.csv")
-    retention = _load_single_csv(output_dir, "retention_summary.csv")
+    event = pd.read_csv(ROOT / "results" / "real_tables" / "long_window_event_study_summary.csv")
+    retention = pd.read_csv(ROOT / "results" / "real_tables" / "retention_summary.csv")
     cards: list[dict[str, str]] = []
     if retention is not None:
-        us_announce = retention.loc[(retention["market"] == "US") & (retention["event_phase"] == "announce")]
-        cn_effective = retention.loc[(retention["market"] == "CN") & (retention["event_phase"] == "effective")]
+        us_announce = retention.loc[
+            (retention["market"] == "US") & (retention["event_phase"] == "announce") & (retention["inclusion"] == 1)
+        ]
+        cn_effective = retention.loc[
+            (retention["market"] == "CN") & (retention["event_phase"] == "effective") & (retention["inclusion"] == 1)
+        ]
         if not us_announce.empty:
             row = us_announce.iloc[0]
             cards.append({"label": "美股公告日保留率", "value": f"{float(row['retention_ratio']):.2f}", "copy": "大于 1 表示长窗口效应仍在累积"})
@@ -2703,8 +2748,18 @@ def _build_demand_curve_cards() -> list[dict[str, str]]:
             row = cn_effective.iloc[0]
             cards.append({"label": "A 股生效日保留率", "value": f"{float(row['retention_ratio']):.2f}", "copy": "用于比较中国样本的长期保留程度"})
     if event is not None:
-        us_long = event.loc[(event["market"] == "US") & (event["event_phase"] == "announce") & (event["window_slug"] == "p0_p120")]
-        cn_long = event.loc[(event["market"] == "CN") & (event["event_phase"] == "announce") & (event["window_slug"] == "p0_p120")]
+        us_long = event.loc[
+            (event["market"] == "US")
+            & (event["event_phase"] == "announce")
+            & (event["window_slug"] == "p0_p120")
+            & (event["inclusion"] == 1)
+        ]
+        cn_long = event.loc[
+            (event["market"] == "CN")
+            & (event["event_phase"] == "announce")
+            & (event["window_slug"] == "p0_p120")
+            & (event["inclusion"] == 1)
+        ]
         if not us_long.empty:
             row = us_long.iloc[0]
             cards.append({"label": "美股公告日 CAR[0,+120]", "value": _format_pct(float(row["mean_car"])), "copy": _format_p_value(float(row["p_value"]))})
@@ -2717,26 +2772,42 @@ def _build_demand_curve_cards() -> list[dict[str, str]]:
 def _build_identification_cards() -> list[dict[str, str]]:
     style_dir = ROOT / "results" / "literature" / "hs300_style"
     rdd_dir = ROOT / "results" / "literature" / "hs300_rdd"
-    event = _load_single_csv(style_dir, "event_study_summary.csv")
+    event = pd.read_csv(ROOT / "results" / "real_tables" / "event_study_summary.csv")
+    asymmetry = pd.read_csv(ROOT / "results" / "real_tables" / "asymmetry_summary.csv")
     did = _load_single_csv(style_dir, "did_summary.csv")
-    regression = _load_single_csv(style_dir, "regression_coefficients.csv")
+    regression = pd.read_csv(ROOT / "results" / "real_regressions" / "regression_coefficients.csv")
     rdd = _load_single_csv(rdd_dir, "rdd_summary.csv")
     cards: list[dict[str, str]] = []
     if event is not None:
-        announce = event.loc[(event["event_phase"] == "announce") & (event["window_slug"] == "m1_p1")]
+        announce = event.loc[
+            (event["market"] == "CN")
+            & (event["event_phase"] == "announce")
+            & (event["window_slug"] == "m1_p1")
+            & (event["inclusion"] == 1)
+        ]
         if not announce.empty:
             row = announce.iloc[0]
             cards.append({"label": "中国样本公告日 CAR[-1,+1]", "value": _format_pct(float(row["mean_car"])), "copy": _format_p_value(float(row["p_value"]))})
+    if asymmetry is not None:
+        announce_gap = asymmetry.loc[(asymmetry["market"] == "CN") & (asymmetry["event_phase"] == "announce")]
+        if not announce_gap.empty:
+            row = announce_gap.iloc[0]
+            cards.append({"label": "中国公告日非对称差值", "value": _format_pct(float(row["asymmetry_car_m1_p1"])), "copy": "比较调入与调出短窗口反应差异"})
     if did is not None:
-        ar = did.loc[(did["event_phase"] == "announce") & (did["metric"] == "abnormal_return")]
+        ar = did.loc[(did["event_phase"] == "announce") & (did["metric"] == "abnormal_return") & (did["inclusion"] == 1)]
         if not ar.empty:
             row = ar.iloc[0]
             cards.append({"label": "DID 异常收益估计", "value": _format_pct(float(row["did_estimate"])), "copy": f"处理组 {int(row['n_treated'])} / 对照组 {int(row['n_control'])}"})
     if regression is not None:
-        inc = regression.loc[(regression["parameter"] == "inclusion") & (regression["specification"] == "main_car") & (regression["event_phase"] == "announce")]
+        inc = regression.loc[
+            (regression["parameter"] == "treatment_group")
+            & (regression["specification"] == "main_car")
+            & (regression["market"] == "CN")
+            & (regression["event_phase"] == "announce")
+        ]
         if not inc.empty:
             row = inc.iloc[0]
-            cards.append({"label": "匹配回归纳入系数", "value": f"{float(row['coefficient']):.4f}", "copy": _format_p_value(float(row["p_value"]))})
+            cards.append({"label": "匹配回归处理组系数", "value": f"{float(row['coefficient']):.4f}", "copy": _format_p_value(float(row["p_value"]))})
     if rdd is not None:
         tau = rdd.loc[rdd["outcome"] == "car_m1_p1"]
         if not tau.empty:
@@ -2746,29 +2817,45 @@ def _build_identification_cards() -> list[dict[str, str]]:
 
 
 def _build_price_pressure_tables() -> list[tuple[str, str]]:
-    output_dir = ROOT / "results" / "literature" / "harris_gurel"
     tables: list[tuple[str, str]] = []
-    event = _load_single_csv(output_dir, "event_study_summary.csv")
+    event = pd.read_csv(ROOT / "results" / "real_tables" / "event_study_summary.csv")
     if event is not None:
-        focus = event.loc[event["window_slug"].isin(["m1_p1", "m3_p3"]), ["market", "event_phase", "window", "mean_car", "p_value", "n_events"]]
+        focus = event.loc[
+            (event["inclusion"] == 1) & event["window_slug"].isin(["m1_p1", "m3_p3"]),
+            ["market", "event_phase", "window", "mean_car", "p_value", "n_events"],
+        ]
         tables.append(("短窗口 CAR 摘要", _render_table(focus, compact=True)))
-    mechanism = _load_single_csv(output_dir, "mechanism_summary.csv")
+    time_series = pd.read_csv(ROOT / "results" / "real_tables" / "time_series_event_study_summary.csv")
+    focus_time = time_series.loc[
+        (time_series["inclusion"] == 1) & (time_series["event_phase"] == "announce"),
+        ["market", "announce_year", "mean_car_m1_p1", "mean_car_m3_p3", "n_events"],
+    ]
+    tables.append(("时间变化摘要", _render_table(focus_time, compact=True)))
+    mechanism = _load_single_csv(ROOT / "results" / "literature" / "harris_gurel", "mechanism_summary.csv")
     if mechanism is not None:
-        focus = mechanism.loc[:, ["market", "event_phase", "mean_turnover_change", "mean_volume_change", "mean_volatility_change", "n_events"]]
+        focus = mechanism.loc[
+            mechanism["inclusion"] == 1,
+            ["market", "event_phase", "mean_turnover_change", "mean_volume_change", "mean_volatility_change", "n_events"],
+        ]
         tables.append(("机制变量变化", _render_table(focus, compact=True)))
     return tables
 
 
 def _build_demand_curve_tables() -> list[tuple[str, str]]:
-    output_dir = ROOT / "results" / "literature" / "shleifer"
     tables: list[tuple[str, str]] = []
-    event = _load_single_csv(output_dir, "event_study_summary.csv")
+    event = pd.read_csv(ROOT / "results" / "real_tables" / "long_window_event_study_summary.csv")
     if event is not None:
-        focus = event.loc[event["window_slug"].isin(["m1_p1", "p0_p20", "p0_p120"]), ["market", "event_phase", "window", "mean_car", "p_value", "n_events"]]
+        focus = event.loc[
+            (event["inclusion"] == 1) & event["window_slug"].isin(["m1_p1", "p0_p20", "p0_p120"]),
+            ["market", "event_phase", "window", "mean_car", "p_value", "n_events"],
+        ]
         tables.append(("长短窗口 CAR 对比", _render_table(focus, compact=True)))
-    retention = _load_single_csv(output_dir, "retention_summary.csv")
+    retention = pd.read_csv(ROOT / "results" / "real_tables" / "retention_summary.csv")
     if retention is not None:
-        focus = retention.loc[:, ["market", "event_phase", "short_mean_car", "long_mean_car", "car_reversal", "retention_ratio"]]
+        focus = retention.loc[
+            retention["inclusion"] == 1,
+            ["market", "event_phase", "short_mean_car", "long_mean_car", "car_reversal", "retention_ratio"],
+        ]
         tables.append(("保留率与回吐", _render_table(focus, compact=True)))
     return tables
 
@@ -2777,23 +2864,103 @@ def _build_identification_tables() -> list[tuple[str, str]]:
     style_dir = ROOT / "results" / "literature" / "hs300_style"
     rdd_dir = ROOT / "results" / "literature" / "hs300_rdd"
     tables: list[tuple[str, str]] = []
-    event = _load_single_csv(style_dir, "event_study_summary.csv")
+    event = pd.read_csv(ROOT / "results" / "real_tables" / "event_study_summary.csv")
     if event is not None:
-        focus = event.loc[event["window_slug"].isin(["m1_p1", "m3_p3"]), ["event_phase", "window", "mean_car", "p_value", "n_events"]]
+        focus = event.loc[
+            (event["market"] == "CN") & event["window_slug"].isin(["m1_p1", "m3_p3"]),
+            ["event_phase", "inclusion", "window", "mean_car", "p_value", "n_events"],
+        ]
         tables.append(("中国样本事件研究", _render_table(focus, compact=True)))
+    asymmetry = pd.read_csv(ROOT / "results" / "real_tables" / "asymmetry_summary.csv")
+    if asymmetry is not None:
+        focus = asymmetry.loc[
+            asymmetry["market"] == "CN",
+            ["event_phase", "n_additions", "n_deletions", "addition_car_m1_p1", "deletion_car_m1_p1", "asymmetry_car_m1_p1"],
+        ]
+        tables.append(("调入调出非对称性", _render_table(focus, compact=True)))
     did = _load_single_csv(style_dir, "did_summary.csv")
     if did is not None:
-        focus = did.loc[:, ["event_phase", "metric", "did_estimate", "n_treated", "n_control"]]
+        focus = did.loc[:, ["event_phase", "inclusion", "metric", "did_estimate", "n_treated", "n_control"]]
         tables.append(("DID 摘要", _render_table(focus, compact=True)))
-    regression = _load_single_csv(style_dir, "regression_coefficients.csv")
+    regression = pd.read_csv(ROOT / "results" / "real_regressions" / "regression_coefficients.csv")
     if regression is not None:
-        focus = regression.loc[(regression["parameter"] == "inclusion") & (regression["specification"] == "main_car"), ["event_phase", "dependent_variable", "coefficient", "p_value"]]
+        focus = regression.loc[
+            (regression["market"] == "CN")
+            & (regression["parameter"] == "treatment_group")
+            & (regression["specification"] == "main_car"),
+            ["event_phase", "dependent_variable", "coefficient", "p_value"],
+        ]
         tables.append(("匹配回归核心系数", _render_table(focus, compact=True)))
     rdd = _load_single_csv(rdd_dir, "rdd_summary.csv")
     if rdd is not None:
         focus = rdd.loc[:, ["outcome", "tau", "p_value", "n_obs", "bandwidth"]]
         tables.append(("RDD 摘要", _render_table(focus, compact=True)))
     return tables
+
+
+def _create_price_pressure_figures() -> list[dict[str, str]]:
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
+    plt.rcParams["axes.unicode_minus"] = False
+
+    target_dir = _dashboard_figure_dir()
+    summary = pd.read_csv(ROOT / "results" / "real_tables" / "time_series_event_study_summary.csv")
+    summary = summary.loc[summary["inclusion"] == 1].copy()
+    if summary.empty:
+        return []
+
+    market_labels = {"CN": "中国 A 股", "US": "美国"}
+    phase_labels = {"announce": "公告日", "effective": "生效日"}
+    market_colors = {"CN": "#a63b28", "US": "#0f5c6e"}
+    phase_linestyles = {"announce": "-", "effective": "--"}
+
+    figure_path = target_dir / "price_pressure_time_series.png"
+    if _figure_cache_is_fresh(
+        [figure_path],
+        [ROOT / "results" / "real_tables" / "time_series_event_study_summary.csv"],
+    ):
+        return [
+            {
+                "label": "短窗口 CAR 时间变化图",
+                "caption": "图意：按公告年份追踪调入事件的 CAR[-1,+1]。阅读重点：观察美股公告日效应是否随时间减弱，以及中国样本是否呈现不同的阶段性变化。",
+                "path": _safe_relative(figure_path),
+                "layout_class": "wide",
+            }
+        ]
+    fig, ax = plt.subplots(figsize=(11.6, 5.2))
+    for (market, event_phase), group in summary.groupby(["market", "event_phase"], dropna=False):
+        ax.plot(
+            group["announce_year"],
+            group["mean_car_m1_p1"],
+            color=market_colors.get(market, "#30424f"),
+            linestyle=phase_linestyles.get(event_phase, "-"),
+            marker="o",
+            linewidth=2.2,
+            markersize=6,
+            label=f"{market_labels.get(market, market)}{phase_labels.get(event_phase, event_phase)}",
+        )
+    ax.axhline(0, color="#92a0aa", linewidth=1.0, linestyle="--")
+    ax.set_title("短窗口 CAR 的时间变化", fontsize=16, pad=14)
+    ax.set_xlabel("公告年份")
+    ax.set_ylabel("平均 CAR[-1,+1]")
+    ax.grid(axis="y", alpha=0.25)
+    ax.legend(frameon=False, ncol=2)
+    fig.tight_layout()
+    fig.savefig(figure_path, dpi=220)
+    plt.close(fig)
+
+    return [
+        {
+            "label": "短窗口 CAR 时间变化图",
+            "caption": "图意：按公告年份追踪调入事件的 CAR[-1,+1]。阅读重点：观察美股公告日效应是否随时间减弱，以及中国样本是否呈现不同的阶段性变化。",
+            "path": _safe_relative(figure_path),
+            "layout_class": "wide",
+        }
+    ]
 
 
 def _create_identification_figures() -> list[dict[str, str]]:
@@ -2846,6 +3013,16 @@ def _create_identification_figures() -> list[dict[str, str]]:
     right_x, right_y = _fit_line(right)
 
     figure_path = rdd_dir / "car_m1_p1_rdd_main.png"
+    if _figure_cache_is_fresh(
+        [figure_path],
+        [ROOT / "results" / "literature" / "hs300_rdd" / "event_level_with_running.csv"],
+    ):
+        return [
+            {
+                "path": _safe_relative(figure_path),
+                "caption": "中国样本 RDD 主图。图意：以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。阅读重点：聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
+            }
+        ]
     fig, ax = plt.subplots(figsize=(10.8, 6.0))
     ax.axvline(0, color="#5c6b77", linestyle="--", linewidth=1.2)
     ax.scatter(left["distance_to_cutoff"], left["car_m1_p1"], color="#d7b49e", alpha=0.24, s=28)
@@ -3418,7 +3595,7 @@ def _load_or_build_track_section(analysis_id: str) -> dict[str, object]:
 def _prepare_track_display(section: dict[str, object], analysis_id: str, demo_mode: bool) -> dict[str, object]:
     display = dict(section)
     curated_summary = {
-        "price_pressure_track": "这条主线集中展示短窗口 CAR、公告日与生效日差异，以及交易活跃度变化。当前样本表明，美国市场的公告日效应更强，而中国 A 股在生效日呈现更明显的不对称性。",
+        "price_pressure_track": "这条主线集中展示短窗口 CAR、公告日与生效日差异，以及交易活跃度变化。当前样本表明，美国市场的公告日效应更强；中国 A 股更值得关注的是生效阶段长期窗口中的调入/调出分化。",
         "demand_curve_track": "这条主线关注价格冲击是否只在短期出现，还是会在更长窗口中保留。阅读时应重点比较保留率、长窗口 CAR，以及短长窗口之间的差异。",
         "identification_china_track": "这条主线把中国样本的匹配对照组结果与 RDD 扩展并排展示，用于区分“现象是否存在”与“识别是否足够严格”这两个层面。",
     }
@@ -3431,6 +3608,8 @@ def _prepare_track_display(section: dict[str, object], analysis_id: str, demo_mo
     }.get(analysis_id, [])
     display["result_cards"] = cards
     extra_figures = []
+    if analysis_id == "price_pressure_track":
+        extra_figures = _create_price_pressure_figures()
     if analysis_id == "identification_china_track":
         extra_figures = _create_identification_figures()
     all_figures = [*extra_figures, *display.get("figure_paths", [])]
@@ -3443,7 +3622,7 @@ def _prepare_track_display(section: dict[str, object], analysis_id: str, demo_mo
     display["display_tables"] = _decorate_display_tables(curated_tables)
     display["badge"] = "核心结果" if demo_mode else "完整结果"
     takeaway = {
-        "price_pressure_track": "当前样本更支持“短期冲击具有明显市场差异”这一判断，而不是简单地认为所有市场都会在纳入后同步上涨。",
+        "price_pressure_track": "当前样本更支持“短期冲击具有明显市场差异”这一判断，而不是简单地认为所有市场都会在指数调整后同步上涨。",
         "demand_curve_track": "价格冲击并未在所有窗口中完全回吐，这意味着需求曲线效应仍有解释力，但其保留程度具有明显的阶段差异。",
         "identification_china_track": "中国市场证据不仅取决于现象本身，还取决于识别设计；匹配回归与 RDD 的并置展示正好体现了这一点。",
     }
@@ -3486,9 +3665,9 @@ def _prepare_supplement_display(section: dict[str, object], demo_mode: bool) -> 
 def _build_track_notes(analysis_id: str) -> list[dict[str, str]]:
     if analysis_id == "price_pressure_track":
         return [
-            {"name": "主问题", "copy": "这条主线专门回答指数纳入后的上涨是不是主要来自短期交易冲击，而不是长期重估。"},
-            {"name": "阅读顺序", "copy": "先比较短窗口 CAR，再观察公告日与生效日的相对强弱，最后结合成交量、换手率与波动率变化。"},
-            {"name": "样本特征", "copy": "真实样本中，美股公告日效应更强；A 股生效日短窗口出现显著负向表现，说明中国样本具有更明显的异质性。"},
+            {"name": "主问题", "copy": "这条主线专门回答指数调入后的上涨是不是主要来自短期交易冲击，而不是长期重估。"},
+            {"name": "阅读顺序", "copy": "先比较调入事件的短窗口 CAR，再看按年份展开的时变结果，最后结合成交量、换手率与波动率变化。"},
+            {"name": "样本特征", "copy": "扩展样本中，美股公告日调入效应更强；中国 A 股更值得关注的是生效阶段长期窗口中的调入/调出分化。"},
         ]
     if analysis_id == "demand_curve_track":
         return [
@@ -3512,7 +3691,7 @@ def _build_overview_metrics() -> list[dict[str, str]]:
         {"value": "16", "label": "篇核心文献，构成理论基础"},
         {"value": "3", "label": "条研究主线，对应主要实证模块"},
         {"value": "5", "label": "个研究阵营，构成文献演进框架"},
-        {"value": str(total_events), "label": "个真实纳入事件，纳入当前样本"},
+        {"value": str(total_events), "label": "个真实调入/调出事件，构成默认样本"},
     ]
 
 
@@ -3560,7 +3739,7 @@ def _build_cta_copy_for_mode(mode: str) -> str:
 
 def _build_abstract_lead() -> str:
     return (
-        "当前样本表明，指数纳入效应并非在所有市场与阶段中都以同一方向出现。"
+        "扩展样本表明，指数调整效应并非在所有市场、年份与事件方向上都以同一方向出现。"
         "更合理的解释框架是将短期冲击、长期保留与识别设计同时纳入分析。"
     )
 
@@ -3569,7 +3748,7 @@ def _build_abstract_points() -> list[dict[str, str]]:
     return [
         {
             "title": "现象层",
-            "copy": "美国市场的公告日效应最稳定，中国 A 股则在生效阶段呈现更明显的不对称性，说明跨市场比较必须区分事件时点。",
+            "copy": "美国市场的公告日效应最稳定；中国 A 股的关键差异更多体现在生效阶段长期窗口中的调入/调出分化，说明跨市场比较必须区分事件时点与持有窗口。",
         },
         {
             "title": "机制层",
@@ -3586,12 +3765,34 @@ def _build_highlights() -> list[dict[str, str]]:
     import pandas as pd
 
     summary = pd.read_csv(ROOT / "results" / "real_tables" / "event_study_summary.csv")
+    asymmetry = pd.read_csv(ROOT / "results" / "real_tables" / "asymmetry_summary.csv")
     us_announce = summary.loc[
-        (summary["market"] == "US") & (summary["event_phase"] == "announce") & (summary["window_slug"] == "m1_p1")
+        (summary["market"] == "US")
+        & (summary["event_phase"] == "announce")
+        & (summary["window_slug"] == "m1_p1")
+        & (summary["inclusion"] == 1)
     ].iloc[0]
     cn_effective = summary.loc[
-        (summary["market"] == "CN") & (summary["event_phase"] == "effective") & (summary["window_slug"] == "m1_p1")
+        (summary["market"] == "CN")
+        & (summary["event_phase"] == "effective")
+        & (summary["window_slug"] == "m1_p1")
+        & (summary["inclusion"] == 1)
     ].iloc[0]
+    cn_effective_asymmetry = asymmetry.loc[
+        (asymmetry["market"] == "CN") & (asymmetry["event_phase"] == "effective")
+    ].iloc[0]
+    if float(cn_effective["p_value"]) < 0.05:
+        cn_discussion = (
+            f"中国 A 股在生效日 CAR[-1,+1] 平均值为 {cn_effective['mean_car']:.2%}，"
+            f"且统计显著。这说明 A 股市场不能机械套用美股的经典指数纳入叙事。"
+        )
+    else:
+        cn_discussion = (
+            f"中国 A 股在生效日 CAR[-1,+1] 平均值为 {cn_effective['mean_car']:.2%}，"
+            f"但统计上并不显著；更值得关注的是 [0,+120] 窗口下调入与调出的 CAR 差异达到 "
+            f"{cn_effective_asymmetry['asymmetry_car_p0_p120']:.2%}。"
+            "这说明中国市场的关键分化更多体现在生效后的长期路径，而不是简单复制美股的短期公告效应。"
+        )
     return [
         {
             "label": "最强结论",
@@ -3601,7 +3802,7 @@ def _build_highlights() -> list[dict[str, str]]:
         {
             "label": "最值得讨论",
             "headline": "A 股生效日并不简单重复美股叙事。",
-            "copy": f"中国 A 股在生效日 CAR[-1,+1] 平均值为 {cn_effective['mean_car']:.2%}，且统计显著。这说明 A 股市场不能机械套用美股的经典指数纳入叙事。",
+            "copy": cn_discussion,
         },
         {
             "label": "方法含义",
@@ -3615,6 +3816,16 @@ def _dashboard_figure_dir() -> Path:
     target = ROOT / "results" / "real_figures"
     target.mkdir(parents=True, exist_ok=True)
     return target
+
+
+def _figure_cache_is_fresh(targets: list[Path], sources: list[Path]) -> bool:
+    existing_targets = [path for path in targets if path.exists()]
+    existing_sources = [path for path in sources if path.exists()]
+    if len(existing_targets) != len(targets) or not existing_sources:
+        return False
+    latest_source = max(path.stat().st_mtime for path in existing_sources)
+    oldest_target = min(path.stat().st_mtime for path in existing_targets)
+    return oldest_target >= latest_source
 
 
 def _significance_stars(p_value: float) -> str:
@@ -3640,6 +3851,52 @@ def _create_sample_design_figures() -> list[dict[str, str]]:
     plt.rcParams["axes.unicode_minus"] = False
 
     target_dir = _dashboard_figure_dir()
+    timeline_path = target_dir / "sample_event_timeline.png"
+    heatmap_path = target_dir / "sample_car_heatmap.png"
+    main_path = target_dir / "main_regression_coefficients.png"
+    mechanism_path = target_dir / "mechanism_regression_coefficients.png"
+    match_path = target_dir / "match_diagnostics_overview.png"
+    if _figure_cache_is_fresh(
+        [timeline_path, heatmap_path, main_path, mechanism_path, match_path],
+        [
+            ROOT / "results" / "real_tables" / "event_study_summary.csv",
+            ROOT / "results" / "real_regressions" / "regression_coefficients.csv",
+            ROOT / "results" / "real_regressions" / "match_diagnostics.csv",
+            ROOT / "data" / "raw" / "real_events.csv",
+        ],
+    ):
+        return [
+            {
+                "label": "真实调入调出事件时间线",
+                "caption": "图意：按市场与事件阶段展开所有真实调入/调出事件。阅读重点：观察样本是否集中于少数批次，以及公告日与生效日是否在时间轴上形成清晰层次。",
+                "path": _safe_relative(timeline_path),
+                "layout_class": "wide",
+            },
+            {
+                "label": "真实样本短窗口 CAR 热力图",
+                "caption": "图意：把三组短窗口 CAR 压缩到同一张热力图中。阅读重点：优先比较美国公告日和中国生效日单元格的方向、幅度与显著性差异。",
+                "path": _safe_relative(heatmap_path),
+                "layout_class": "wide",
+            },
+            {
+                "label": "主回归处理组系数图",
+                "caption": "图意：展示主回归中处理组变量系数与 95% 置信区间。阅读重点：比较不同市场、不同事件阶段的方向是否一致，以及置信区间是否跨越 0。",
+                "path": _safe_relative(main_path),
+                "layout_class": "",
+            },
+            {
+                "label": "机制回归系数图",
+                "caption": "图意：把换手率、成交量与波动率三类机制回归放在同一张图中。阅读重点：观察中国 A 股与美国在公告日和生效日的机制方向是否一致。",
+                "path": _safe_relative(mechanism_path),
+                "layout_class": "",
+            },
+            {
+                "label": "匹配诊断图",
+                "caption": "图意：同时展示匹配状态分布与匹配质量指标。阅读重点：先看匹配成功率，再看三对照构造与行业口径放宽占比，从而判断对照组设计是否稳定。",
+                "path": _safe_relative(match_path),
+                "layout_class": "wide",
+            },
+        ]
     event = pd.read_csv(ROOT / "results" / "real_tables" / "event_study_summary.csv")
     regression = pd.read_csv(ROOT / "results" / "real_regressions" / "regression_coefficients.csv")
     diagnostics = pd.read_csv(ROOT / "results" / "real_regressions" / "match_diagnostics.csv")
@@ -3654,7 +3911,6 @@ def _create_sample_design_figures() -> list[dict[str, str]]:
     }
     market_colors = {"CN": "#a63b28", "US": "#0f5c6e"}
 
-    timeline_path = target_dir / "sample_event_timeline.png"
     long_events = real_events.loc[:, ["market", "ticker", "announce_date", "effective_date"]].copy()
     announce = long_events.rename(columns={"announce_date": "event_date"}).assign(event_phase="announce")
     effective = long_events.rename(columns={"effective_date": "event_date"}).assign(event_phase="effective")
@@ -3683,10 +3939,12 @@ def _create_sample_design_figures() -> list[dict[str, str]]:
             )
     ax.set_yticks(range(len(row_order)))
     ax.set_yticklabels(row_order, fontsize=11)
-    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
+    year_span = timeline["event_date"].dt.year.max() - timeline["event_date"].dt.year.min()
+    locator_interval = 1 if year_span <= 6 else 2
+    ax.xaxis.set_major_locator(mdates.YearLocator(base=locator_interval))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
     ax.tick_params(axis="x", labelrotation=0)
-    ax.set_title("真实纳入事件时间线", fontsize=16, pad=14)
+    ax.set_title("真实调入调出事件时间线", fontsize=16, pad=14)
     ax.set_xlabel("事件日期")
     ax.set_ylabel("样本分层")
     ax.grid(axis="x", alpha=0.25)
@@ -3697,9 +3955,8 @@ def _create_sample_design_figures() -> list[dict[str, str]]:
     fig.savefig(timeline_path, dpi=220)
     plt.close(fig)
 
-    heatmap_path = target_dir / "sample_car_heatmap.png"
     window_order = ["[-1,+1]", "[-3,+3]", "[-5,+5]"]
-    heat = event.copy()
+    heat = event.loc[event["inclusion"] == 1].copy()
     heat["row_label"] = heat["market"].map(market_labels) + " · " + heat["event_phase"].map(phase_labels)
     heat_matrix = (
         heat.pivot_table(index="row_label", columns="window", values="mean_car", aggfunc="first")
@@ -3742,9 +3999,8 @@ def _create_sample_design_figures() -> list[dict[str, str]]:
     fig.savefig(heatmap_path, dpi=220)
     plt.close(fig)
 
-    main_path = target_dir / "main_regression_coefficients.png"
     main = regression.loc[
-        (regression["parameter"] == "inclusion") & (regression["specification"] == "main_car")
+        (regression["parameter"] == "treatment_group") & (regression["specification"] == "main_car")
     ].copy()
     main["label"] = main["market"].map(market_labels) + " · " + main["event_phase"].map(phase_labels)
     main["ci"] = 1.96 * main["std_error"]
@@ -3777,17 +4033,16 @@ def _create_sample_design_figures() -> list[dict[str, str]]:
         )
     ax.set_yticks(y_positions)
     ax.set_yticklabels(main["label"], fontsize=11)
-    ax.set_xlabel("纳入变量估计系数")
-    ax.set_title("主回归纳入系数与 95% 置信区间", fontsize=16, pad=14)
+    ax.set_xlabel("处理组变量估计系数")
+    ax.set_title("主回归处理组系数与 95% 置信区间", fontsize=16, pad=14)
     ax.grid(axis="x", alpha=0.25)
     ax.invert_yaxis()
     fig.tight_layout()
     fig.savefig(main_path, dpi=220)
     plt.close(fig)
 
-    mechanism_path = target_dir / "mechanism_regression_coefficients.png"
     mechanism = regression.loc[
-        (regression["parameter"] == "inclusion") & (regression["specification"] != "main_car")
+        (regression["parameter"] == "treatment_group") & (regression["specification"] != "main_car")
     ].copy()
     mechanism["metric_label"] = mechanism["specification"].map(spec_labels)
     mechanism["phase_label"] = mechanism["event_phase"].map(phase_labels)
@@ -3832,19 +4087,19 @@ def _create_sample_design_figures() -> list[dict[str, str]]:
         ax.set_title(market_labels[market], fontsize=14)
         ax.grid(axis="x", alpha=0.25)
         ax.invert_yaxis()
-    fig.supxlabel("纳入变量估计系数", fontsize=12)
-    fig.suptitle("机制回归纳入系数与 95% 置信区间", fontsize=16, y=0.98)
+    fig.supxlabel("处理组变量估计系数", fontsize=12)
+    fig.suptitle("机制回归处理组系数与 95% 置信区间", fontsize=16, y=0.98)
     fig.tight_layout()
     fig.savefig(mechanism_path, dpi=220)
     plt.close(fig)
 
-    match_path = target_dir / "match_diagnostics_overview.png"
     matched_total = len(diagnostics)
     status_counts = diagnostics["status"].value_counts().sort_values(ascending=False)
+    sector_relaxed = diagnostics["sector_relaxed"].where(diagnostics["sector_relaxed"].notna(), False).astype(bool)
     metrics = {
         "匹配成功率": (diagnostics["status"] == "matched").mean(),
         "完整三对照比例": (diagnostics["selected_controls"] == 3).mean(),
-        "行业口径放宽占比": diagnostics["sector_relaxed"].fillna(False).astype(bool).mean(),
+        "行业口径放宽占比": sector_relaxed.mean(),
     }
     fig, axes = plt.subplots(1, 2, figsize=(11.8, 4.8))
     ax = axes[0]
@@ -3888,8 +4143,8 @@ def _create_sample_design_figures() -> list[dict[str, str]]:
 
     return [
         {
-            "label": "真实纳入事件时间线",
-            "caption": "图意：按市场与事件阶段展开所有真实纳入事件。阅读重点：观察样本是否集中于少数批次，以及公告日与生效日是否在时间轴上形成清晰层次。",
+            "label": "真实调入调出事件时间线",
+            "caption": "图意：按市场与事件阶段展开所有真实调入/调出事件。阅读重点：观察样本是否集中于少数批次，以及公告日与生效日是否在时间轴上形成清晰层次。",
             "path": _safe_relative(timeline_path),
             "layout_class": "wide",
         },
@@ -3900,8 +4155,8 @@ def _create_sample_design_figures() -> list[dict[str, str]]:
             "layout_class": "wide",
         },
         {
-            "label": "主回归纳入系数图",
-            "caption": "图意：展示主回归中纳入变量系数与 95% 置信区间。阅读重点：比较不同市场、不同事件阶段的方向是否一致，以及置信区间是否跨越 0。",
+            "label": "主回归处理组系数图",
+            "caption": "图意：展示主回归中处理组变量系数与 95% 置信区间。阅读重点：比较不同市场、不同事件阶段的方向是否一致，以及置信区间是否跨越 0。",
             "path": _safe_relative(main_path),
             "layout_class": "",
         },
@@ -3937,9 +4192,9 @@ def _build_sample_design_cards() -> list[dict[str, str]]:
     return [
         {
             "kicker": "真实样本",
-            "title": f"{total_events} 个纳入事件",
+            "title": f"{total_events} 个真实事件",
             "meta": f'{source_row["市场范围"]} · {source_row["起始日期"]} 至 {source_row["结束日期"]}',
-            "copy": "当前样本以正式事件样本表为基础，统一覆盖真实纳入事件、事件相位窗口与跨市场比较所需的核心样本层。",
+            "copy": "当前样本以正式事件样本表为基础，统一覆盖真实调入/调出事件、事件相位窗口与跨市场比较所需的核心样本层。",
             "foot": "样本层的重点不是单纯扩大数量，而是在同一口径下同时覆盖不同市场、不同事件阶段与可比事件窗口。",
         },
         {
@@ -3963,6 +4218,7 @@ def _build_sample_design_tables() -> list[dict[str, str]]:
     import pandas as pd
 
     event_counts = pd.read_csv(ROOT / "results" / "real_tables" / "event_counts.csv").copy()
+    event_counts_by_year = pd.read_csv(ROOT / "results" / "real_tables" / "event_counts_by_year.csv").copy()
     sample_scope = pd.read_csv(ROOT / "results" / "real_tables" / "sample_scope.csv").copy()
     data_sources = pd.read_csv(ROOT / "results" / "real_tables" / "data_sources.csv").copy()
     if "文件" in data_sources.columns:
@@ -3970,17 +4226,19 @@ def _build_sample_design_tables() -> list[dict[str, str]]:
     event_summary = pd.read_csv(ROOT / "results" / "real_tables" / "event_study_summary.csv")
     regression = pd.read_csv(ROOT / "results" / "real_regressions" / "regression_coefficients.csv")
 
-    event_counts["sample_share"] = event_counts["n_events"] / event_counts["n_events"].sum()
     comparison_rows = []
     for market, market_label in [("CN", "中国 A 股"), ("US", "美国")]:
         market_events = int(event_counts.loc[event_counts["market"] == market, "n_events"].sum())
+        market_years = event_counts_by_year.loc[event_counts_by_year["market"] == market]
+        added_events = int(market_years.loc[market_years["inclusion"] == 1, "n_events"].sum())
+        deleted_events = int(market_years.loc[market_years["inclusion"] == 0, "n_events"].sum())
         short_window = event_summary.loc[
-            (event_summary["market"] == market) & (event_summary["window_slug"] == "m1_p1")
+            (event_summary["market"] == market) & (event_summary["window_slug"] == "m1_p1") & (event_summary["inclusion"] == 1)
         ].copy()
         strongest = short_window.loc[short_window["mean_car"].abs().idxmax()]
         main_reg = regression.loc[
             (regression["market"] == market)
-            & (regression["parameter"] == "inclusion")
+            & (regression["parameter"] == "treatment_group")
             & (regression["specification"] == "main_car")
         ].copy()
         reg_focus = main_reg.loc[main_reg["p_value"].idxmin()]
@@ -3996,10 +4254,11 @@ def _build_sample_design_tables() -> list[dict[str, str]]:
         comparison_rows.append(
             {
                 "市场": market_label,
-                "纳入事件数": f"{market_events:,}",
+                "事件数": f"{market_events:,}",
+                "调入 / 调出": f"{added_events:,} / {deleted_events:,}",
                 "最强阶段": stage_text,
                 "最强短窗口 CAR": car_text,
-                "主回归纳入系数": reg_text,
+                "主回归处理组系数": reg_text,
                 "最值得讨论": discussion,
                 "识别含义": implication,
             }
@@ -4010,6 +4269,11 @@ def _build_sample_design_tables() -> list[dict[str, str]]:
         {
             "label": "样本范围总表",
             "html": _render_table(sample_scope, compact=True),
+            "layout_class": "wide",
+        },
+        {
+            "label": "按年份事件分布",
+            "html": _render_table(event_counts_by_year, compact=True),
             "layout_class": "wide",
         },
         {
@@ -4049,14 +4313,14 @@ def _build_limits_section() -> dict[str, object]:
     short_id_row = identification_scope.loc[identification_scope["分析层"] == "短窗口事件研究"].iloc[0]
     rdd_row = identification_scope.loc[identification_scope["分析层"] == "中国 RDD 扩展"].iloc[0]
     matched_rate = (diagnostics["status"] == "matched").mean()
-    sector_relaxed_rate = diagnostics["sector_relaxed"].fillna(False).astype(bool).mean()
+    sector_relaxed_rate = diagnostics["sector_relaxed"].where(diagnostics["sector_relaxed"].notna(), False).astype(bool).mean()
 
     summary_cards = [
         {
             "kicker": "样本期",
-            "title": "结果主要反映 2024 至 2025 年的纳入批次",
+            "title": "结果覆盖美股 2010 至 2025 年与 A 股 2020 至 2025 年批次",
             "meta": f'事件样本 {event_row["起始日期"]} 至 {event_row["结束日期"]}',
-            "copy": "当前真实事件主要集中在较新的指数调整批次，结论更适合作为近期制度环境下的证据，而不应直接外推到更早时期的长期历史平均效应。",
+            "copy": "当前默认口径已经把美股长期样本与 A 股近年批次放在同一套框架中，但两边覆盖年限不同，因此更适合做跨市场比较与制度异质性讨论，而不是直接当作完全同质的长历史样本。",
             "foot": f'价格与基准收益分别覆盖到 {price_row["结束日期"]} 与 {benchmark_row["结束日期"]}，用于构造事件窗口与市场调整收益。',
         },
         {
@@ -4077,7 +4341,7 @@ def _build_limits_section() -> dict[str, object]:
 
     scope_table = pd.DataFrame(
         [
-            {"模块": "真实事件样本", "范围": f'{event_row["起始日期"]} 至 {event_row["结束日期"]}', "说明": "以真实纳入事件为基础，覆盖中国 A 股与美国两个市场。"},
+            {"模块": "真实事件样本", "范围": f'{event_row["起始日期"]} 至 {event_row["结束日期"]}', "说明": "以真实调入/调出事件为基础，覆盖中国 A 股与美国两个市场。"},
             {"模块": "价格数据", "范围": f'{price_row["起始日期"]} 至 {price_row["结束日期"]}', "说明": "用于构造事件窗口、异常收益与机制变量。"},
             {"模块": "基准指数数据", "范围": f'{benchmark_row["起始日期"]} 至 {benchmark_row["结束日期"]}', "说明": "用于市场调整收益与异常收益计算。"},
             {"模块": "匹配回归", "范围": f"匹配成功率 {_format_share(matched_rate)}", "说明": "对照组构造总体稳定，但仍存在少量无法匹配的事件。"},

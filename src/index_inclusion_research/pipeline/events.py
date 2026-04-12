@@ -11,10 +11,13 @@ def _slugify(value: str) -> str:
 
 def build_event_sample(events: pd.DataFrame, duplicate_window_days: int = 30) -> pd.DataFrame:
     prepared = events.copy()
-    prepared["event_type"] = prepared["event_type"].fillna("inclusion")
+    prepared["event_type"] = prepared["event_type"].fillna("addition")
     prepared["inclusion"] = prepared["inclusion"].fillna(1).astype(int)
+    if "treatment_group" not in prepared.columns:
+        prepared["treatment_group"] = 1
+    prepared["treatment_group"] = prepared["treatment_group"].fillna(1).astype(int)
     prepared = prepared.sort_values(
-        ["market", "ticker", "index_name", "announce_date", "effective_date"]
+        ["market", "ticker", "index_name", "announce_date", "effective_date", "inclusion", "treatment_group"]
     ).reset_index(drop=True)
 
     dedupe_columns = [
@@ -52,6 +55,7 @@ def build_event_sample(events: pd.DataFrame, duplicate_window_days: int = 30) ->
             f"{_slugify(row['ticker'])}-"
             f"{row['announce_date']:%Y%m%d}-"
             f"{row['effective_date']:%Y%m%d}-"
+            f"{'add' if int(row['inclusion']) == 1 else 'del'}-"
             f"{int(row['event_sequence']):02d}"
         ),
         axis=1,

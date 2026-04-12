@@ -5,11 +5,13 @@ import pandas as pd
 
 
 def summarise_mechanism_changes(event_level: pd.DataFrame) -> pd.DataFrame:
-    included = event_level.loc[event_level["inclusion"] == 1].copy()
-    if included.empty:
+    treated = event_level.copy()
+    if "treatment_group" in treated.columns:
+        treated = treated.loc[treated["treatment_group"] == 1].copy()
+    if treated.empty:
         return pd.DataFrame()
     summary = (
-        included.groupby(["market", "event_phase"], dropna=False)
+        treated.groupby(["market", "event_phase", "inclusion"], dropna=False)
         .agg(
             n_events=("event_id", "nunique"),
             mean_turnover_change=("turnover_change", "mean"),
@@ -26,15 +28,17 @@ def compute_retention_summary(
     short_window_slug: str = "p0_p20",
     long_window_slug: str = "p0_p120",
 ) -> pd.DataFrame:
-    included = event_level.loc[event_level["inclusion"] == 1].copy()
+    treated = event_level.copy()
+    if "treatment_group" in treated.columns:
+        treated = treated.loc[treated["treatment_group"] == 1].copy()
     short_col = f"car_{short_window_slug}"
     long_col = f"car_{long_window_slug}"
     required = {"market", "event_phase", short_col, long_col}
-    if included.empty or not required.issubset(included.columns):
+    if treated.empty or not required.issubset(treated.columns):
         return pd.DataFrame()
 
     rows: list[dict[str, object]] = []
-    for (market, event_phase), group in included.groupby(["market", "event_phase"], dropna=False):
+    for (market, event_phase, inclusion), group in treated.groupby(["market", "event_phase", "inclusion"], dropna=False):
         short_mean = group[short_col].mean()
         long_mean = group[long_col].mean()
         retention_ratio = np.nan
@@ -44,6 +48,7 @@ def compute_retention_summary(
             {
                 "market": market,
                 "event_phase": event_phase,
+                "inclusion": inclusion,
                 "n_events": int(group["event_id"].nunique()),
                 "short_window_slug": short_window_slug,
                 "long_window_slug": long_window_slug,
@@ -73,16 +78,25 @@ def compute_did_summary(
     }
 
     event_rows: list[dict[str, object]] = []
-    for (comparison_id, event_phase, inclusion), group in work.groupby(
-        ["comparison_id", "event_phase", "inclusion"],
+    grouping = ["comparison_id", "event_phase", "inclusion"]
+    if "treatment_group" in work.columns:
+        grouping.append("treatment_group")
+    for keys, group in work.groupby(
+        grouping,
         dropna=False,
     ):
         first = group.iloc[0]
+        if len(grouping) == 4:
+            comparison_id, event_phase, inclusion, treatment_group = keys
+        else:
+            comparison_id, event_phase, inclusion = keys
+            treatment_group = int(first.get("treatment_group", first.get("inclusion", 1)))
         row: dict[str, object] = {
             "comparison_id": comparison_id,
             "market": first["market"],
             "event_phase": event_phase,
             "inclusion": int(inclusion),
+            "treatment_group": int(treatment_group),
         }
         pre_mask = (group["relative_day"] >= pre_window[0]) & (group["relative_day"] <= pre_window[1])
         post_mask = (group["relative_day"] >= post_window[0]) & (group["relative_day"] <= post_window[1])
@@ -99,9 +113,9 @@ def compute_did_summary(
         return pd.DataFrame()
 
     summary_rows: list[dict[str, object]] = []
-    for (market, event_phase), group in event_level.groupby(["market", "event_phase"], dropna=False):
-        treated = group.loc[group["inclusion"] == 1]
-        control = group.loc[group["inclusion"] == 0]
+    for (market, event_phase, inclusion), group in event_level.groupby(["market", "event_phase", "inclusion"], dropna=False):
+        treated = group.loc[group["treatment_group"] == 1]
+        control = group.loc[group["treatment_group"] == 0]
         for metric_name in metric_specs:
             treated_mean = treated[f"diff_{metric_name}"].mean()
             control_mean = control[f"diff_{metric_name}"].mean()
@@ -109,6 +123,7 @@ def compute_did_summary(
                 {
                     "market": market,
                     "event_phase": event_phase,
+                    "inclusion": int(inclusion),
                     "metric": metric_name,
                     "treated_post_minus_pre": treated_mean,
                     "control_post_minus_pre": control_mean,

@@ -97,12 +97,19 @@ def build_event_panel(
             window_frame["market"] = market
             window_frame["index_name"] = event.index_name
             window_frame["source"] = getattr(event, "source", pd.NA)
+            window_frame["source_url"] = getattr(event, "source_url", pd.NA)
+            window_frame["note"] = getattr(event, "note", pd.NA)
+            window_frame["batch_id"] = getattr(event, "batch_id", pd.NA)
+            window_frame["security_name"] = getattr(event, "security_name", pd.NA)
             window_frame["event_date_raw"] = raw_event_date
             window_frame["event_date"] = mapped_ticker_date
             window_frame["mapped_market_date"] = mapped_market_date
             window_frame["inclusion"] = getattr(event, "inclusion", 1)
+            window_frame["treatment_group"] = getattr(event, "treatment_group", 1)
             window_frame["matched_to_event_id"] = getattr(event, "matched_to_event_id", pd.NA)
             window_frame["event_ticker"] = ticker
+            window_frame["announce_date"] = getattr(event, "announce_date", pd.NaT)
+            window_frame["effective_date"] = getattr(event, "effective_date", pd.NaT)
             if "sector" not in window_frame.columns:
                 window_frame["sector"] = getattr(event, "sector", pd.NA)
             else:
@@ -123,6 +130,11 @@ def build_event_panel(
         "event_phase",
         "event_type",
         "inclusion",
+        "treatment_group",
+        "batch_id",
+        "security_name",
+        "announce_date",
+        "effective_date",
         "event_date_raw",
         "mapped_market_date",
         "event_date",
@@ -137,6 +149,8 @@ def build_event_panel(
         "mkt_cap",
         "sector",
         "source",
+        "source_url",
+        "note",
     ]
     return panel[column_order].sort_values(
         ["market", "event_phase", "event_id", "relative_day"]

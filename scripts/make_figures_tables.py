@@ -13,11 +13,14 @@ import pandas as pd
 
 from index_inclusion_research.analysis import compute_event_study
 from index_inclusion_research.literature import compute_retention_summary
-from index_inclusion_research.loaders import save_dataframe
+from index_inclusion_research.loaders import load_benchmarks, load_events, load_prices, save_dataframe
 from index_inclusion_research.outputs import (
+    build_asymmetry_summary,
     build_data_source_table,
+    build_event_counts_by_year_table,
     build_identification_scope_table,
     build_sample_scope_table,
+    build_time_series_event_study_summary,
     export_descriptive_tables,
     export_latex_tables,
     plot_average_paths,
@@ -29,7 +32,7 @@ def _read_csv_if_exists(path: str | Path, parse_dates: list[str] | None = None) 
     csv_path = Path(path)
     if not csv_path.exists():
         return pd.DataFrame()
-    return pd.read_csv(csv_path, parse_dates=parse_dates)
+    return pd.read_csv(csv_path, parse_dates=parse_dates, low_memory=False)
 
 
 def main() -> None:
@@ -55,10 +58,10 @@ def main() -> None:
     parser.add_argument("--tables-dir", default="results/tables", help="Table output directory.")
     args = parser.parse_args()
 
-    events = _read_csv_if_exists(args.events, parse_dates=["announce_date", "effective_date"])
+    events = load_events(args.events) if Path(args.events).exists() else pd.DataFrame()
     panel = _read_csv_if_exists(args.panel, parse_dates=["event_date_raw", "mapped_market_date", "event_date", "date"])
-    prices = _read_csv_if_exists(args.prices, parse_dates=["date"]) if args.prices else pd.DataFrame()
-    benchmarks = _read_csv_if_exists(args.benchmarks, parse_dates=["date"]) if args.benchmarks else pd.DataFrame()
+    prices = load_prices(args.prices) if args.prices and Path(args.prices).exists() else pd.DataFrame()
+    benchmarks = load_benchmarks(args.benchmarks) if args.benchmarks and Path(args.benchmarks).exists() else pd.DataFrame()
     metadata = _read_csv_if_exists(args.metadata) if args.metadata else pd.DataFrame()
     matched_panel = (
         _read_csv_if_exists(args.matched_panel, parse_dates=["event_date_raw", "mapped_market_date", "event_date", "date"])
@@ -94,6 +97,13 @@ def main() -> None:
             if not retention_summary.empty:
                 save_dataframe(retention_summary, Path(args.tables_dir) / "retention_summary.csv")
                 frames["retention_summary"] = retention_summary
+            asymmetry_summary = build_asymmetry_summary(
+                event_level=_read_csv_if_exists(long_output_dir / "event_level_metrics.csv"),
+                long_event_level=long_event_level,
+            )
+            if not asymmetry_summary.empty:
+                save_dataframe(asymmetry_summary, Path(args.tables_dir) / "asymmetry_summary.csv")
+                frames["asymmetry_summary"] = asymmetry_summary
 
     if not event_summary.empty:
         save_dataframe(event_summary, Path(args.tables_dir) / "event_study_summary.csv")
@@ -106,6 +116,11 @@ def main() -> None:
         frames["regression_models"] = regression_models
 
     if not events.empty:
+        event_counts_by_year = build_event_counts_by_year_table(events)
+        if not event_counts_by_year.empty:
+            save_dataframe(event_counts_by_year, Path(args.tables_dir) / "event_counts_by_year.csv")
+            frames["event_counts_by_year"] = event_counts_by_year
+
         data_sources = build_data_source_table(
             events,
             prices=prices,
@@ -137,6 +152,21 @@ def main() -> None:
         if not sample_scope.empty:
             save_dataframe(sample_scope, Path(args.tables_dir) / "sample_scope.csv")
             frames["sample_scope"] = sample_scope
+
+        if not panel.empty:
+            short_event_level_path = Path(args.event_summary).parent / "event_level_metrics.csv"
+            short_event_level = _read_csv_if_exists(short_event_level_path, parse_dates=["announce_date", "effective_date", "event_date"])
+            if short_event_level.empty and args.panel:
+                short_event_level, _, _ = compute_event_study(panel, [(-1, 1), (-3, 3), (-5, 5)])
+            time_series_summary = build_time_series_event_study_summary(short_event_level)
+            if not time_series_summary.empty:
+                save_dataframe(time_series_summary, Path(args.tables_dir) / "time_series_event_study_summary.csv")
+                frames["time_series_event_study_summary"] = time_series_summary
+            if "asymmetry_summary" not in frames:
+                asymmetry_summary = build_asymmetry_summary(short_event_level, long_event_level=long_event_level)
+                if not asymmetry_summary.empty:
+                    save_dataframe(asymmetry_summary, Path(args.tables_dir) / "asymmetry_summary.csv")
+                    frames["asymmetry_summary"] = asymmetry_summary
 
         rdd_mode = "unavailable"
         if args.rdd_summary_note:

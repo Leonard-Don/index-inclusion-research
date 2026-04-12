@@ -83,7 +83,7 @@ def test_home_dashboard_supports_full_mode() -> None:
     assert 'data-mode-link' in html
 
 
-def test_home_dashboard_keeps_mode_tabs_and_refresh_anchor_logic() -> None:
+def test_home_dashboard_keeps_mode_tabs_and_refresh_anchor_logic(monkeypatch) -> None:
     client = dashboard.app.test_client()
     response = client.get("/?mode=demo")
     assert response.status_code == 200
@@ -96,6 +96,7 @@ def test_home_dashboard_keeps_mode_tabs_and_refresh_anchor_logic() -> None:
     assert 'data-base-href="/?mode=demo"' in html
     assert 'data-base-href="/?mode=full"' in html
 
+    monkeypatch.setattr(dashboard, "_run_and_cache_all", lambda: None)
     refreshed = client.post("/refresh?mode=full", data={"anchor": "framework"})
     assert refreshed.status_code == 302
     assert refreshed.headers["Location"].endswith("/?mode=full#framework")
@@ -120,6 +121,14 @@ def test_home_dashboard_supports_three_minute_mode() -> None:
     assert 'data-allowed-hashes="#overview,#design,#tracks,#limits,#price_pressure_track,#demand_curve_track,#identification_china_track"' in html
     assert "页面将真实样本、三条研究主线与研究边界压缩为一套适合快速汇报的展示材料" in html
     assert "页面同步呈现主线结果、文献框架与机制补充" not in html
+
+
+def test_highlights_copy_stays_consistent_with_current_cn_effective_results() -> None:
+    highlights = dashboard._build_highlights()
+    discussion = next(item for item in highlights if item["label"] == "最值得讨论")
+    assert "但统计上并不显著" in discussion["copy"]
+    assert "[0,+120] 窗口下调入与调出的 CAR 差异达到" in discussion["copy"]
+    assert "且统计显著。这说明 A 股市场不能机械套用美股的经典指数纳入叙事。" not in discussion["copy"]
 
 
 def test_paper_route_now_renders_brief_before_pdf() -> None:

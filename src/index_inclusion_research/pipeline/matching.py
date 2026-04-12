@@ -63,20 +63,47 @@ def build_matched_sample(
     reference_date_column: str = "announce_date",
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     treated = events.copy()
-    treated["inclusion"] = treated["inclusion"].fillna(1).astype(int)
-    treated = treated.loc[treated["inclusion"] == 1].copy()
+    if "treatment_group" not in treated.columns:
+        treated["treatment_group"] = 1
+    treated["treatment_group"] = treated["treatment_group"].fillna(1).astype(int)
+    treated = treated.loc[treated["treatment_group"] == 1].copy()
     treated_tickers = set(treated["ticker"].astype(str))
+    history_by_key = {
+        (market, ticker): group.sort_values("date").reset_index(drop=True)
+        for (market, ticker), group in prices.groupby(["market", "ticker"], dropna=False)
+    }
+    tickers_by_market = {
+        market: sorted(group["ticker"].astype(str).unique().tolist())
+        for market, group in prices.groupby("market")
+    }
+    snapshot_cache: dict[tuple[str, str, str, int], dict[str, object] | None] = {}
+
+    def get_snapshot(market: str, ticker: str, reference_date: pd.Timestamp) -> dict[str, object] | None:
+        cache_key = (market, str(ticker), pd.Timestamp(reference_date).date().isoformat(), lookback_days)
+        if cache_key in snapshot_cache:
+            return snapshot_cache[cache_key]
+        history = history_by_key.get((market, ticker))
+        if history is None:
+            snapshot_cache[cache_key] = None
+            return None
+        mapped_snapshot = _compute_security_snapshot(
+            prices=history,
+            market=market,
+            ticker=ticker,
+            reference_date=reference_date,
+            lookback_days=lookback_days,
+        )
+        snapshot_cache[cache_key] = mapped_snapshot
+        return mapped_snapshot
 
     matched_rows: list[dict[str, object]] = []
     diagnostics: list[dict[str, object]] = []
     for event in treated.itertuples(index=False):
         reference_date = getattr(event, reference_date_column)
-        target_snapshot = _compute_security_snapshot(
-            prices=prices,
+        target_snapshot = get_snapshot(
             market=event.market,
             ticker=event.ticker,
             reference_date=reference_date,
-            lookback_days=lookback_days,
         )
         if target_snapshot is None:
             diagnostics.append(
@@ -89,16 +116,13 @@ def build_matched_sample(
             continue
 
         candidates: list[dict[str, object]] = []
-        market_prices = prices.loc[prices["market"] == event.market, ["ticker"]].drop_duplicates()
-        for candidate_ticker in market_prices["ticker"]:
+        for candidate_ticker in tickers_by_market.get(event.market, []):
             if candidate_ticker == event.ticker or str(candidate_ticker) in treated_tickers:
                 continue
-            candidate_snapshot = _compute_security_snapshot(
-                prices=prices,
+            candidate_snapshot = get_snapshot(
                 market=event.market,
                 ticker=candidate_ticker,
                 reference_date=reference_date,
-                lookback_days=lookback_days,
             )
             if candidate_snapshot is None:
                 continue
@@ -144,7 +168,7 @@ def build_matched_sample(
                     **event._asdict(),
                     "event_id": f"{event.event_id}-ctrl-{rank:02d}",
                     "ticker": candidate.ticker,
-                    "inclusion": 0,
+                    "treatment_group": 0,
                     "matched_to_event_id": event.event_id,
                     "note": f"Matched control {rank} for {event.event_id}",
                 }
@@ -155,5 +179,8 @@ def build_matched_sample(
     matched_events = pd.concat([treated_rows, pd.DataFrame(matched_rows)], ignore_index=True, sort=False)
     if matched_events.empty:
         matched_events = treated_rows
-    matched_events = matched_events.sort_values(["market", "matched_to_event_id", "inclusion"], ascending=[True, True, False])
+    matched_events = matched_events.sort_values(
+        ["market", "matched_to_event_id", "treatment_group", "inclusion"],
+        ascending=[True, True, False, False],
+    )
     return matched_events.reset_index(drop=True), pd.DataFrame(diagnostics)
