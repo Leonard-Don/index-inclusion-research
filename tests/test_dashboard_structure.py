@@ -78,6 +78,7 @@ def test_home_dashboard_supports_full_mode() -> None:
     assert response.status_code == 200
     html = response.get_data(as_text=True)
     assert "完整材料" in html
+    assert "稳健性检查" in html
     assert 'aria-current="page"' in html
     assert '>完整材料</a>' in html
     assert 'data-mode-link' in html
@@ -91,6 +92,7 @@ def test_home_dashboard_keeps_mode_tabs_and_refresh_anchor_logic(monkeypatch) ->
     assert 'data-section-link' in html
     assert 'data-section-key="framework"' in html
     assert 'data-section-key="supplement"' in html
+    assert 'data-section-key="robustness"' not in html
     assert 'data-anchor-input' in html
     assert 'data-base-href="/?mode=brief"' in html
     assert 'data-base-href="/?mode=demo"' in html
@@ -121,6 +123,7 @@ def test_home_dashboard_supports_three_minute_mode() -> None:
     assert 'data-allowed-hashes="#overview,#design,#tracks,#limits,#price_pressure_track,#demand_curve_track,#identification_china_track"' in html
     assert "页面将真实样本、三条研究主线与研究边界压缩为一套适合快速汇报的展示材料" in html
     assert "页面同步呈现主线结果、文献框架与机制补充" not in html
+    assert "稳健性检查" not in html
 
 
 def test_highlights_copy_stays_consistent_with_current_cn_effective_results() -> None:

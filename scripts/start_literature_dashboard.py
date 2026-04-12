@@ -119,6 +119,10 @@ TABLE_LABELS = {
     "event_counts_by_year": "按年份事件分布表",
     "time_series_event_study_summary": "时间变化事件研究表",
     "asymmetry_summary": "调入调出非对称性表",
+    "sample_filter_summary": "样本过滤摘要表",
+    "robustness_event_study_summary": "事件研究稳健性表",
+    "robustness_regression_summary": "回归稳健性表",
+    "robustness_retention_summary": "长期保留稳健性表",
 }
 
 COLUMN_LABELS = {
@@ -132,6 +136,9 @@ COLUMN_LABELS = {
     "n_obs": "样本量",
     "mean_car": "平均 CAR",
     "std_car": "CAR 标准差",
+    "se_car": "CAR 标准误",
+    "ci_low_95": "95% 区间下界",
+    "ci_high_95": "95% 区间上界",
     "t_stat": "t 值",
     "p_value": "p 值",
     "mean_turnover_change": "平均换手率变化",
@@ -220,6 +227,32 @@ COLUMN_LABELS = {
     "addition_car_p0_p120": "调入 CAR[0,+120]",
     "deletion_car_p0_p120": "调出 CAR[0,+120]",
     "asymmetry_car_p0_p120": "长窗口非对称差值",
+    "sample_filter": "样本口径",
+    "share_of_baseline": "相对基准样本占比",
+    "n_treated_events": "处理事件数",
+    "n_short_event_phase_windows": "短窗口事件相位数",
+    "n_long_event_phase_windows": "长窗口事件相位数",
+    "n_regression_comparisons": "回归比较组数",
+    "n_regression_rows": "回归样本行数",
+    "covariance": "标准误口径",
+    "estimation": "稳健性规格",
+    "retention_ratio_valid": "保留率是否有效",
+    "retention_note": "保留率说明",
+    "se_car_m1_p1": "CAR[-1,+1] 标准误",
+    "ci_low_95_car_m1_p1": "CAR[-1,+1] 95% 下界",
+    "ci_high_95_car_m1_p1": "CAR[-1,+1] 95% 上界",
+    "se_car_m3_p3": "CAR[-3,+3] 标准误",
+    "ci_low_95_car_m3_p3": "CAR[-3,+3] 95% 下界",
+    "ci_high_95_car_m3_p3": "CAR[-3,+3] 95% 上界",
+    "se_car_m5_p5": "CAR[-5,+5] 标准误",
+    "ci_low_95_car_m5_p5": "CAR[-5,+5] 95% 下界",
+    "ci_high_95_car_m5_p5": "CAR[-5,+5] 95% 上界",
+    "se_car_p0_p20": "CAR[0,+20] 标准误",
+    "ci_low_95_car_p0_p20": "CAR[0,+20] 95% 下界",
+    "ci_high_95_car_p0_p20": "CAR[0,+20] 95% 上界",
+    "se_car_p0_p120": "CAR[0,+120] 标准误",
+    "ci_low_95_car_p0_p120": "CAR[0,+120] 95% 下界",
+    "ci_high_95_car_p0_p120": "CAR[0,+120] 95% 上界",
 }
 
 VALUE_LABELS = {
@@ -239,6 +272,13 @@ VALUE_LABELS = {
     "addition": "调入",
     "deletion": "调出",
     "treatment_group": "处理组变量",
+    "baseline": "基准样本",
+    "winsorized_1pct": "1% 缩尾样本",
+    "nonoverlap_120d": "去重叠样本",
+    "baseline_ols": "基准 OLS",
+    "hc3": "HC3 稳健标准误",
+    "True": "是",
+    "False": "否",
     "log_mkt_cap": "对数市值",
     "pre_event_return": "事件前收益",
     "car_m1_p1": "CAR[-1,+1]",
@@ -2243,6 +2283,44 @@ HOME_TEMPLATE = """
     </section>
     {% endif %}
 
+    {% if mode == "full" %}
+    <section class="section" id="robustness">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">稳健性检查</div>
+          <h2>把主结论放回样本过滤、异常值处理与区间估计中再看一遍。</h2>
+          <div class="section-intro">这一部分不追求增加新结论，而是检验现有结论是否依赖单一样本口径，从而增强论文式证据链的可信度。</div>
+        </div>
+        <div class="section-side">{{ robustness_section.summary }}</div>
+      </div>
+      {% if robustness_section.summary_cards %}
+      <div class="section-summary-grid">
+        {% for card in robustness_section.summary_cards %}
+        <div class="summary-card">
+          <div class="summary-kicker">{{ card.kicker }}</div>
+          <h3 class="summary-title">{{ card.title }}</h3>
+          {% if card.meta %}
+          <div class="summary-meta">{{ card.meta }}</div>
+          {% endif %}
+          <div class="summary-copy">{{ card["copy"] }}</div>
+          {% if card["foot"] %}
+          <div class="summary-foot">{{ card["foot"] }}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <div class="library-panels">
+        {% for table in robustness_section.tables %}
+        <div class="result-card {{ table.layout_class }}">
+          <div class="table-label">{{ table.label }}</div>
+          <div class="table-wrap">{{ table.html|safe }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
     <section class="section" id="limits">
       <div class="section-head">
         <div>
@@ -2324,7 +2402,7 @@ HOME_TEMPLATE = """
         const rawHash = currentHash();
         let hash = rawHash;
         if (activeAllowedHashes.length && !activeAllowedHashes.includes(hash)) {
-          hash = ["#framework", "#supplement"].includes(hash) && activeAllowedHashes.includes("#tracks")
+          hash = ["#framework", "#supplement", "#robustness"].includes(hash) && activeAllowedHashes.includes("#tracks")
             ? "#tracks"
             : activeDefaultHash;
         }
@@ -2353,7 +2431,7 @@ HOME_TEMPLATE = """
           const defaultHash = link.dataset.defaultHash || "#overview";
           let nextHash = hash;
           if (allowedHashes.length && !allowedHashes.includes(hash)) {
-            nextHash = ["#framework", "#supplement"].includes(hash) && allowedHashes.includes("#tracks")
+            nextHash = ["#framework", "#supplement", "#robustness"].includes(hash) && allowedHashes.includes("#tracks")
               ? "#tracks"
               : defaultHash;
           }
@@ -2399,6 +2477,8 @@ def _render_table(frame, compact: bool = False) -> str:
             display[column] = display[column].map({1: "调入", 0: "调出"}).fillna(display[column])
         if column == "处理组":
             display[column] = display[column].map({1: "处理组", 0: "对照组"}).fillna(display[column])
+        if display[column].dtype == bool:
+            display[column] = display[column].map({True: "是", False: "否"})
         if display[column].dtype == object:
             display[column] = display[column].map(lambda value: VALUE_LABELS.get(value, value))
     return display.to_html(
@@ -2574,6 +2654,13 @@ def _load_single_csv(output_dir: Path, filename: str):
         return None
 
 
+def _read_csv_if_exists(path: str | Path) -> pd.DataFrame:
+    csv_path = Path(path)
+    if not csv_path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(csv_path, low_memory=False)
+
+
 def _format_pct(value: float) -> str:
     return f"{value:.2%}"
 
@@ -2600,6 +2687,10 @@ def _table_layout_for_label(label: str) -> str:
         "识别范围说明",
         "时间变化摘要",
         "调入调出非对称性",
+        "样本过滤摘要",
+        "事件研究稳健性",
+        "回归稳健性",
+        "长期保留稳健性",
     }
     return "wide" if label in wide_labels else ""
 
@@ -2933,6 +3024,16 @@ def _create_price_pressure_figures() -> list[dict[str, str]]:
         ]
     fig, ax = plt.subplots(figsize=(11.6, 5.2))
     for (market, event_phase), group in summary.groupby(["market", "event_phase"], dropna=False):
+        group = group.sort_values("announce_year").copy()
+        if {"ci_low_95_car_m1_p1", "ci_high_95_car_m1_p1"}.issubset(group.columns):
+            ax.fill_between(
+                group["announce_year"],
+                group["ci_low_95_car_m1_p1"],
+                group["ci_high_95_car_m1_p1"],
+                color=market_colors.get(market, "#30424f"),
+                alpha=0.12 if event_phase == "announce" else 0.08,
+                linewidth=0,
+            )
         ax.plot(
             group["announce_year"],
             group["mean_car_m1_p1"],
@@ -3457,7 +3558,7 @@ def _normalize_anchor_for_mode(mode: str, anchor: str | None) -> str:
         return "overview"
     if raw in allowed:
         return raw
-    if raw in {"framework", "supplement"} and "tracks" in allowed:
+    if raw in {"framework", "supplement", "robustness"} and "tracks" in allowed:
         return "tracks"
     return "overview"
 
@@ -3475,6 +3576,8 @@ def _nav_sections_for_mode(mode: str) -> list[dict[str, str]]:
                 {"anchor": "supplement", "label": "机制补充"},
             ]
         )
+    if mode == "full":
+        items.append({"anchor": "robustness", "label": "稳健性检查"})
     items.append({"anchor": "limits", "label": "研究边界"})
     return items
 
@@ -3483,6 +3586,8 @@ def _available_hashes_for_mode(mode: str) -> list[str]:
     hashes = ["#overview", "#design", "#tracks", "#limits"]
     if mode != "brief":
         hashes.extend(["#framework", "#supplement"])
+    if mode == "full":
+        hashes.append("#robustness")
     hashes.extend(
         [
             "#price_pressure_track",
@@ -3600,6 +3705,8 @@ def _prepare_track_display(section: dict[str, object], analysis_id: str, demo_mo
         "identification_china_track": "这条主线把中国样本的匹配对照组结果与 RDD 扩展并排展示，用于区分“现象是否存在”与“识别是否足够严格”这两个层面。",
     }
     display["display_summary"] = curated_summary.get(analysis_id, _clean_display_text(str(display.get("summary_text", ""))))
+    if demo_mode and "详细稳健性结果见完整材料。" not in display["display_summary"]:
+        display["display_summary"] = f'{display["display_summary"]} 详细稳健性结果见完整材料。'
     display["display_support_papers"] = display.get("support_papers", [])
     cards = {
         "price_pressure_track": _build_price_pressure_cards(),
@@ -4298,6 +4405,91 @@ def _build_sample_design_section() -> dict[str, object]:
     }
 
 
+def _build_robustness_section() -> dict[str, object]:
+    robustness_events = _read_csv_if_exists(ROOT / "results" / "real_tables" / "robustness_event_study_summary.csv")
+    robustness_regressions = _read_csv_if_exists(ROOT / "results" / "real_tables" / "robustness_regression_summary.csv")
+    sample_filters = _read_csv_if_exists(ROOT / "results" / "real_tables" / "sample_filter_summary.csv")
+    robustness_retention = _read_csv_if_exists(ROOT / "results" / "real_tables" / "robustness_retention_summary.csv")
+    if robustness_events.empty or robustness_regressions.empty or sample_filters.empty or robustness_retention.empty:
+        return {
+            "summary": "稳健性结果尚未生成。刷新数据后，完整材料模式会在这里展示区间估计、异常值处理和样本过滤三类检查。",
+            "summary_cards": [],
+            "tables": [],
+        }
+
+    nonoverlap_row = sample_filters.loc[sample_filters["sample_filter"] == "nonoverlap_120d"].iloc[0]
+    baseline_row = sample_filters.loc[sample_filters["sample_filter"] == "baseline"].iloc[0]
+    invalid_retention = robustness_retention.loc[~robustness_retention["retention_ratio_valid"].astype(bool)].copy()
+
+    us_short = robustness_events.loc[
+        (robustness_events["market"] == "US")
+        & (robustness_events["event_phase"] == "announce")
+        & (robustness_events["inclusion"] == 1)
+        & (robustness_events["window_slug"] == "m1_p1")
+    ].copy()
+    short_min = us_short["mean_car"].min() if not us_short.empty else pd.NA
+    short_max = us_short["mean_car"].max() if not us_short.empty else pd.NA
+
+    summary_cards = [
+        {
+            "kicker": "路径不确定性",
+            "title": "平均路径图已加入 95% 置信带",
+            "meta": "短窗口与长窗口主表同步新增区间估计",
+            "copy": "这一步把“平均路径”从单纯均值线升级为带不确定性范围的图形，更适合在论文和答辩中解释哪些阶段的价格路径更稳、哪些阶段离散度更高。",
+            "foot": "图表文件名保持不变，因此现有前端引用不需要改链接。",
+        },
+        {
+            "kicker": "重叠过滤",
+            "title": f'nonoverlap_120d 保留 {_format_share(float(nonoverlap_row["share_of_baseline"]))} 事件相位窗口',
+            "meta": f'基准样本 {int(baseline_row["n_short_event_phase_windows"]):,} -> 过滤后 {int(nonoverlap_row["n_short_event_phase_windows"]):,}',
+            "copy": "通过剔除同一 ticker、同一事件阶段下相邻 120 日内重叠的事件窗口，检验核心结果是否依赖高频重复进入样本的事件。",
+            "foot": str(nonoverlap_row["note"]),
+        },
+        {
+            "kicker": "异常值处理",
+            "title": "1% 缩尾后，美股公告日短窗口方向保持一致",
+            "meta": f'CAR[-1,+1] 范围 {(_format_pct(float(short_min)) if pd.notna(short_min) else "NA")} 至 {(_format_pct(float(short_max)) if pd.notna(short_max) else "NA")}',
+            "copy": "对事件级 CAR 做 1% / 99% winsorize 后，最核心的短窗口结果仍保持同向，说明主结论并不依赖极少数异常波动事件。",
+            "foot": "该口径不改变样本量，只改变事件级 CAR 的尾部取值。",
+        },
+        {
+            "kicker": "长期指标边界",
+            "title": f"{len(invalid_retention):,} 组保留率因短窗口基数过小不作解释",
+            "meta": "避免在分母过小的组合上过度解释 retention ratio",
+            "copy": "长期保留分析继续保留，但当短窗口平均 CAR 绝对值过小、导致比率失真时，页面会明确标注“不可解释”，避免把机械比值误当成强结论。",
+            "foot": "默认阈值为 |短窗口平均 CAR| < 0.5%。",
+        },
+    ]
+
+    event_focus = robustness_events.loc[
+        robustness_events["window_slug"].isin(["m1_p1", "m3_p3", "p0_p120"]),
+        ["sample_filter", "market", "event_phase", "inclusion", "window", "mean_car", "se_car", "ci_low_95", "ci_high_95", "p_value", "n_events"],
+    ].copy()
+    regression_focus = robustness_regressions.loc[
+        :,
+        ["estimation", "covariance", "market", "event_phase", "coefficient", "std_error", "p_value", "n_obs", "r_squared"],
+    ].copy()
+    sample_filter_focus = sample_filters.loc[
+        :,
+        ["sample_filter", "n_treated_events", "n_short_event_phase_windows", "n_long_event_phase_windows", "n_regression_comparisons", "share_of_baseline", "note"],
+    ].copy()
+    retention_focus = robustness_retention.loc[
+        :,
+        ["sample_filter", "market", "event_phase", "inclusion", "short_mean_car", "long_mean_car", "retention_ratio", "retention_ratio_valid", "retention_note"],
+    ].copy()
+
+    return {
+        "summary": "这一部分通过区间估计、异常值处理和重叠事件过滤，检验主结论是否依赖单一样本口径，从而把当前结果升级成更像论文证据链的默认输出。",
+        "summary_cards": summary_cards,
+        "tables": [
+            {"label": "样本过滤摘要", "html": _render_table(sample_filter_focus, compact=True), "layout_class": "wide"},
+            {"label": "事件研究稳健性", "html": _render_table(event_focus, compact=True), "layout_class": "wide"},
+            {"label": "回归稳健性", "html": _render_table(regression_focus, compact=True), "layout_class": "wide"},
+            {"label": "长期保留稳健性", "html": _render_table(retention_focus, compact=True), "layout_class": "wide"},
+        ],
+    }
+
+
 def _build_limits_section() -> dict[str, object]:
     import pandas as pd
 
@@ -4381,6 +4573,7 @@ def home():
         framework_section = {"display_summary": "", "display_tables": [], "summary_cards": []}
         supplement_section = {"display_summary": "", "display_tables": [], "summary_cards": []}
     design_section = _build_sample_design_section()
+    robustness_section = _build_robustness_section() if display_mode == "full" else {"summary": "", "summary_cards": [], "tables": []}
     return render_template_string(
         HOME_TEMPLATE,
         mode=display_mode,
@@ -4397,6 +4590,7 @@ def home():
         track_sections=track_sections,
         framework_section=framework_section,
         supplement_section=supplement_section,
+        robustness_section=robustness_section,
         limits_section=_build_limits_section(),
     )
 

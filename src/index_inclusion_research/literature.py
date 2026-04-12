@@ -27,6 +27,7 @@ def compute_retention_summary(
     event_level: pd.DataFrame,
     short_window_slug: str = "p0_p20",
     long_window_slug: str = "p0_p120",
+    short_mean_threshold: float = 0.005,
 ) -> pd.DataFrame:
     treated = event_level.copy()
     if "treatment_group" in treated.columns:
@@ -42,8 +43,12 @@ def compute_retention_summary(
         short_mean = group[short_col].mean()
         long_mean = group[long_col].mean()
         retention_ratio = np.nan
-        if pd.notna(short_mean) and abs(short_mean) > 1e-9:
+        retention_ratio_valid = False
+        retention_note = "短窗口基数过小，不适合解释保留率。"
+        if pd.notna(short_mean) and pd.notna(long_mean) and abs(short_mean) >= short_mean_threshold:
             retention_ratio = long_mean / short_mean
+            retention_ratio_valid = True
+            retention_note = "短窗口基数充足，可用于解释长期保留率。"
         rows.append(
             {
                 "market": market,
@@ -56,6 +61,8 @@ def compute_retention_summary(
                 "long_mean_car": long_mean,
                 "car_reversal": short_mean - long_mean,
                 "retention_ratio": retention_ratio,
+                "retention_ratio_valid": retention_ratio_valid,
+                "retention_note": retention_note,
             }
         )
     return pd.DataFrame(rows)

@@ -19,7 +19,11 @@ from index_inclusion_research.outputs import (
     build_data_source_table,
     build_event_counts_by_year_table,
     build_identification_scope_table,
+    build_robustness_event_study_summary,
+    build_robustness_regression_summary,
+    build_robustness_retention_summary,
     build_sample_scope_table,
+    build_sample_filter_summary,
     build_time_series_event_study_summary,
     export_descriptive_tables,
     export_latex_tables,
@@ -73,6 +77,7 @@ def main() -> None:
     regression_coefs = _read_csv_if_exists(args.regression_coefs)
     regression_models = _read_csv_if_exists(args.regression_models)
     rdd_summary = _read_csv_if_exists(args.rdd_summary) if args.rdd_summary else pd.DataFrame()
+    regression_dataset = _read_csv_if_exists(Path(args.regression_coefs).parent / "regression_dataset.csv")
 
     if not average_paths.empty:
         plot_average_paths(average_paths, args.figures_dir)
@@ -104,6 +109,10 @@ def main() -> None:
             if not asymmetry_summary.empty:
                 save_dataframe(asymmetry_summary, Path(args.tables_dir) / "asymmetry_summary.csv")
                 frames["asymmetry_summary"] = asymmetry_summary
+            robustness_retention_summary = build_robustness_retention_summary(long_event_level)
+            if not robustness_retention_summary.empty:
+                save_dataframe(robustness_retention_summary, Path(args.tables_dir) / "robustness_retention_summary.csv")
+                frames["robustness_retention_summary"] = robustness_retention_summary
 
     if not event_summary.empty:
         save_dataframe(event_summary, Path(args.tables_dir) / "event_study_summary.csv")
@@ -167,6 +176,25 @@ def main() -> None:
                 if not asymmetry_summary.empty:
                     save_dataframe(asymmetry_summary, Path(args.tables_dir) / "asymmetry_summary.csv")
                     frames["asymmetry_summary"] = asymmetry_summary
+            sample_filter_summary = build_sample_filter_summary(
+                short_event_level,
+                long_event_level=long_event_level,
+                regression_dataset=regression_dataset,
+            )
+            if not sample_filter_summary.empty:
+                save_dataframe(sample_filter_summary, Path(args.tables_dir) / "sample_filter_summary.csv")
+                frames["sample_filter_summary"] = sample_filter_summary
+            robustness_event_summary = build_robustness_event_study_summary(
+                short_event_level,
+                long_event_level=long_event_level,
+            )
+            if not robustness_event_summary.empty:
+                save_dataframe(robustness_event_summary, Path(args.tables_dir) / "robustness_event_study_summary.csv")
+                frames["robustness_event_study_summary"] = robustness_event_summary
+            robustness_regression_summary = build_robustness_regression_summary(regression_dataset)
+            if not robustness_regression_summary.empty:
+                save_dataframe(robustness_regression_summary, Path(args.tables_dir) / "robustness_regression_summary.csv")
+                frames["robustness_regression_summary"] = robustness_regression_summary
 
         rdd_mode = "unavailable"
         if args.rdd_summary_note:

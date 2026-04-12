@@ -8,6 +8,14 @@ import pandas as pd
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+from index_inclusion_research.analysis import (
+    filter_nonoverlap_event_windows,
+    run_regressions,
+    summarize_event_level_metrics,
+    winsorize_event_level_metrics,
+)
+from index_inclusion_research.literature import compute_retention_summary
+
 plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
 plt.rcParams["axes.unicode_minus"] = False
 
@@ -340,7 +348,7 @@ def build_identification_scope_table(
             "分析层": "匹配对照组回归",
             "市场范围": "中国 A 股 + 美国",
             "样本基础": f"{_display_value(matched_rows)} 条匹配面板观测值",
-            "主要输出": "主回归纳入系数、换手率/成交量/波动率机制回归",
+            "主要输出": "主回归处理组系数、换手率/成交量/波动率机制回归",
             "证据状态": "正式样本",
             "当前口径": "在市值与纳入前收益控制下，对事件研究结果进行进一步识别。",
         },
@@ -366,9 +374,19 @@ def plot_average_paths(average_paths: pd.DataFrame, output_dir: str | Path) -> N
         base_color = MARKET_COLORS.get(str(market), "#30424f")
         linestyle = PHASE_LINESTYLES.get(str(event_phase), "-")
         for inclusion, inclusion_group in group.groupby("inclusion", dropna=False):
+            inclusion_group = inclusion_group.sort_values("relative_day").copy()
             label = INCLUSION_LABELS.get(int(inclusion), str(inclusion))
             style = INCLUSION_STYLES.get(int(inclusion), {"alpha": 0.9, "marker": "o", "linewidth": 2.0})
             line_color = base_color if int(inclusion) == 1 else _lighten(base_color)
+            if {"ci_low_95", "ci_high_95"}.issubset(inclusion_group.columns):
+                ax.fill_between(
+                    inclusion_group["relative_day"],
+                    inclusion_group["ci_low_95"],
+                    inclusion_group["ci_high_95"],
+                    color=line_color,
+                    alpha=0.14 if int(inclusion) == 1 else 0.10,
+                    linewidth=0,
+                )
             ax.plot(
                 inclusion_group["relative_day"],
                 inclusion_group["mean_car"],
@@ -442,6 +460,8 @@ def build_time_series_event_study_summary(event_level: pd.DataFrame) -> pd.DataF
     if event_level.empty or "announce_date" not in event_level.columns:
         return pd.DataFrame()
     work = event_level.copy()
+    if "treatment_group" in work.columns:
+        work = work.loc[work["treatment_group"] == 1].copy()
     work["announce_year"] = pd.to_datetime(work["announce_date"], errors="coerce").dt.year
     value_columns = [column for column in ["car_m1_p1", "car_m3_p3", "car_m5_p5", "car_p0_p20", "car_p0_p120"] if column in work.columns]
     if not value_columns:
@@ -449,13 +469,23 @@ def build_time_series_event_study_summary(event_level: pd.DataFrame) -> pd.DataF
     aggregations: dict[str, tuple[str, str]] = {"n_events": ("event_id", "nunique")}
     for column in value_columns:
         aggregations[f"mean_{column}"] = (column, "mean")
-    return (
+        aggregations[f"std_{column}"] = (column, lambda series: series.std(ddof=1))
+    summary = (
         work.groupby(["market", "inclusion", "event_phase", "announce_year"], dropna=False)
         .agg(**aggregations)
         .reset_index()
         .sort_values(["market", "inclusion", "event_phase", "announce_year"])
         .reset_index(drop=True)
     )
+    n_obs = summary["n_events"].where(summary["n_events"] > 1)
+    for column in value_columns:
+        se_column = f"se_{column}"
+        std_column = f"std_{column}"
+        summary[se_column] = summary[std_column] / (n_obs**0.5)
+        summary[f"ci_low_95_{column}"] = summary[f"mean_{column}"] - 1.96 * summary[se_column]
+        summary[f"ci_high_95_{column}"] = summary[f"mean_{column}"] + 1.96 * summary[se_column]
+        summary = summary.drop(columns=[std_column])
+    return summary
 
 
 def build_asymmetry_summary(
@@ -512,6 +542,186 @@ def build_asymmetry_summary(
             }
         )
     return pd.DataFrame(rows)
+
+
+def _attach_comparison_id(frame: pd.DataFrame) -> pd.DataFrame:
+    if frame.empty:
+        return frame.copy()
+    work = frame.copy()
+    if "comparison_id" not in work.columns:
+        if "matched_to_event_id" in work.columns:
+            work["comparison_id"] = work["matched_to_event_id"].where(work["matched_to_event_id"].notna(), work["event_id"])
+        else:
+            work["comparison_id"] = work["event_id"]
+    return work
+
+
+def _filter_nonoverlap_regression_dataset(dataset: pd.DataFrame, *, days: int = 120) -> pd.DataFrame:
+    if dataset.empty:
+        return dataset.copy()
+    work = _attach_comparison_id(dataset)
+    treated = work.loc[work["treatment_group"] == 1].copy()
+    if treated.empty:
+        return work.iloc[0:0].copy()
+    filtered_treated = filter_nonoverlap_event_windows(treated, days=days, event_id_col="comparison_id")
+    keep_keys = filtered_treated.loc[:, ["comparison_id", "event_phase"]].drop_duplicates()
+    if keep_keys.empty:
+        return work.iloc[0:0].copy()
+    merged = work.merge(keep_keys.assign(_keep=True), on=["comparison_id", "event_phase"], how="left")
+    return merged.loc[merged["_keep"].eq(True)].drop(columns="_keep").copy()
+
+
+def build_sample_filter_summary(
+    short_event_level: pd.DataFrame,
+    long_event_level: pd.DataFrame = pd.DataFrame(),
+    regression_dataset: pd.DataFrame = pd.DataFrame(),
+    *,
+    overlap_window_days: int = 120,
+) -> pd.DataFrame:
+    if short_event_level.empty:
+        return pd.DataFrame()
+
+    short_work = short_event_level.copy()
+    if "treatment_group" in short_work.columns:
+        short_work = short_work.loc[short_work["treatment_group"] == 1].copy()
+    long_work = long_event_level.copy()
+    if not long_work.empty and "treatment_group" in long_work.columns:
+        long_work = long_work.loc[long_work["treatment_group"] == 1].copy()
+    regression_work = _attach_comparison_id(regression_dataset)
+
+    short_nonoverlap = filter_nonoverlap_event_windows(short_work, days=overlap_window_days)
+    long_nonoverlap = filter_nonoverlap_event_windows(long_work, days=overlap_window_days) if not long_work.empty else long_work
+    regression_nonoverlap = _filter_nonoverlap_regression_dataset(regression_work, days=overlap_window_days) if not regression_work.empty else regression_work
+
+    baseline_phase_windows = max(len(short_work), 1)
+
+    def _row(sample_filter: str, short_frame: pd.DataFrame, long_frame: pd.DataFrame, reg_frame: pd.DataFrame, note: str) -> dict[str, object]:
+        return {
+            "sample_filter": sample_filter,
+            "n_treated_events": int(short_frame["event_id"].nunique()) if not short_frame.empty else 0,
+            "n_short_event_phase_windows": int(len(short_frame)),
+            "n_long_event_phase_windows": int(len(long_frame)) if not long_frame.empty else 0,
+            "n_regression_comparisons": int(reg_frame["comparison_id"].nunique()) if not reg_frame.empty else 0,
+            "n_regression_rows": int(len(reg_frame)) if not reg_frame.empty else 0,
+            "share_of_baseline": len(short_frame) / baseline_phase_windows,
+            "note": note,
+        }
+
+    rows = [
+        _row("baseline", short_work, long_work, regression_work, "基准样本，不做重叠过滤或极值处理。"),
+        _row("winsorized_1pct", short_work, long_work, regression_work, "仅对事件级 CAR 做 1% / 99% winsorize，不改变样本量。"),
+        _row("nonoverlap_120d", short_nonoverlap, long_nonoverlap, regression_nonoverlap, "剔除同一 ticker、同一事件阶段下 ±120 日历日内重叠的事件窗口。"),
+    ]
+    return pd.DataFrame(rows)
+
+
+def build_robustness_event_study_summary(
+    short_event_level: pd.DataFrame,
+    long_event_level: pd.DataFrame = pd.DataFrame(),
+    *,
+    overlap_window_days: int = 120,
+    winsor_quantile: float = 0.01,
+) -> pd.DataFrame:
+    if short_event_level.empty:
+        return pd.DataFrame()
+
+    frames: list[pd.DataFrame] = []
+    variants = [
+        ("baseline", short_event_level, long_event_level),
+        (
+            "winsorized_1pct",
+            winsorize_event_level_metrics(short_event_level, quantile=winsor_quantile),
+            winsorize_event_level_metrics(long_event_level, quantile=winsor_quantile) if not long_event_level.empty else long_event_level,
+        ),
+        (
+            "nonoverlap_120d",
+            filter_nonoverlap_event_windows(short_event_level, days=overlap_window_days),
+            filter_nonoverlap_event_windows(long_event_level, days=overlap_window_days) if not long_event_level.empty else long_event_level,
+        ),
+    ]
+    for sample_filter, short_frame, long_frame in variants:
+        short_summary = summarize_event_level_metrics(short_frame, sample_filter=sample_filter)
+        if not short_summary.empty:
+            frames.append(short_summary)
+        long_summary = summarize_event_level_metrics(long_frame, sample_filter=sample_filter)
+        if not long_summary.empty:
+            frames.append(long_summary)
+    if not frames:
+        return pd.DataFrame()
+    return pd.concat(frames, ignore_index=True)
+
+
+def build_robustness_regression_summary(
+    regression_dataset: pd.DataFrame,
+    *,
+    main_car_slug: str = "m1_p1",
+    overlap_window_days: int = 120,
+) -> pd.DataFrame:
+    if regression_dataset.empty:
+        return pd.DataFrame()
+
+    work = _attach_comparison_id(regression_dataset)
+    variants = [
+        ("baseline_ols", "nonrobust", work),
+        ("hc3", "HC3", work),
+        ("nonoverlap_120d", "HC3", _filter_nonoverlap_regression_dataset(work, days=overlap_window_days)),
+    ]
+    frames: list[pd.DataFrame] = []
+    for estimation, cov_type, dataset_variant in variants:
+        coefficients, model_stats = run_regressions(
+            dataset_variant,
+            main_car_slug=main_car_slug,
+            cov_type=cov_type,
+            estimation=estimation,
+        )
+        if coefficients.empty or model_stats.empty:
+            continue
+        coef_focus = coefficients.loc[
+            (coefficients["specification"] == "main_car") & (coefficients["parameter"] == "treatment_group")
+        ].copy()
+        model_focus = model_stats.loc[model_stats["specification"] == "main_car"].copy()
+        merged = coef_focus.merge(
+            model_focus.loc[:, ["market", "event_phase", "estimation", "n_obs", "r_squared", "adj_r_squared"]],
+            on=["market", "event_phase", "estimation"],
+            how="left",
+        )
+        merged["covariance"] = "OLS" if cov_type == "nonrobust" else cov_type
+        frames.append(merged)
+    if not frames:
+        return pd.DataFrame()
+    return pd.concat(frames, ignore_index=True)
+
+
+def build_robustness_retention_summary(
+    long_event_level: pd.DataFrame,
+    *,
+    overlap_window_days: int = 120,
+    winsor_quantile: float = 0.01,
+    short_window_slug: str = "p0_p20",
+    long_window_slug: str = "p0_p120",
+) -> pd.DataFrame:
+    if long_event_level.empty:
+        return pd.DataFrame()
+
+    frames: list[pd.DataFrame] = []
+    variants = [
+        ("baseline", long_event_level),
+        ("winsorized_1pct", winsorize_event_level_metrics(long_event_level, quantile=winsor_quantile)),
+        ("nonoverlap_120d", filter_nonoverlap_event_windows(long_event_level, days=overlap_window_days)),
+    ]
+    for sample_filter, frame in variants:
+        summary = compute_retention_summary(
+            frame,
+            short_window_slug=short_window_slug,
+            long_window_slug=long_window_slug,
+        )
+        if summary.empty:
+            continue
+        summary["sample_filter"] = sample_filter
+        frames.append(summary)
+    if not frames:
+        return pd.DataFrame()
+    return pd.concat(frames, ignore_index=True)
 
 
 def export_latex_tables(frames: dict[str, pd.DataFrame], output_dir: str | Path) -> None:
