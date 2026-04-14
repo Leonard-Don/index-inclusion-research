@@ -358,6 +358,12 @@ PAPER_TEMPLATE = """
       box-shadow: var(--shadow);
       padding: 34px 36px 28px;
     }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+      gap: 24px;
+      align-items: start;
+    }
     .hero-kicker {
       color: var(--accent-2);
       font-size: 12px;
@@ -422,6 +428,60 @@ PAPER_TEMPLATE = """
       font-size: 17px;
       font-weight: 700;
       line-height: 1.6;
+    }
+    .hero-aside {
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(0,95,115,0.07), rgba(255,255,255,0.7));
+      border: 1px solid rgba(31, 42, 55, 0.08);
+    }
+    .hero-aside-kicker {
+      color: #7b6344;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+    }
+    .hero-aside-title {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.45;
+      color: #1d2a37;
+    }
+    .hero-fact-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .hero-fact {
+      padding: 11px 12px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.78);
+      border: 1px solid rgba(31, 42, 55, 0.06);
+      min-width: 0;
+    }
+    .hero-fact-label {
+      color: #7a6d5a;
+      font-size: 11px;
+      line-height: 1.35;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+    .hero-fact-value {
+      color: #203040;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .hero-aside-copy {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.72;
+      padding-top: 12px;
+      border-top: 1px solid rgba(31, 42, 55, 0.08);
     }
     .section {
       margin-top: 22px;
@@ -494,14 +554,23 @@ PAPER_TEMPLATE = """
       font-size: 14px;
       line-height: 1.75;
     }
+    .insight-card.primary {
+      grid-column: 1 / -1;
+      background: linear-gradient(180deg, rgba(0,95,115,0.08), rgba(255,255,255,0.78));
+      border-color: rgba(0,95,115,0.12);
+    }
     .table-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
       gap: 18px;
     }
     .table-card h3 {
       margin: 0 0 12px;
       font-size: 18px;
+    }
+    .table-card.primary .table-wrap {
+      border-color: rgba(0,95,115,0.12);
+      box-shadow: inset 0 0 0 1px rgba(0,95,115,0.03);
     }
     .table-wrap {
       width: 100%;
@@ -826,7 +895,9 @@ PAPER_TEMPLATE = """
       .recommend-grid,
       .evolution-nav-grid,
       .insight-grid,
-      .table-grid {
+      .table-grid,
+      .hero-grid,
+      .hero-fact-grid {
         grid-template-columns: 1fr;
       }
     }
@@ -845,29 +916,46 @@ PAPER_TEMPLATE = """
     </div>
 
     <section class="hero">
-      <div class="hero-kicker">结构化文献解读</div>
-      <h1>{{ current.title }}</h1>
-      <div class="hero-subtitle">
-        <div>{{ current.description }}</div>
-        {% if current.subtitle %}
-        <div>{{ current.subtitle }}</div>
-        {% endif %}
+      <div class="hero-grid">
+        <div>
+          <div class="hero-kicker">结构化文献解读</div>
+          <h1>{{ current.title }}</h1>
+          <div class="hero-subtitle">
+            <div>{{ current.description }}</div>
+            {% if current.subtitle %}
+            <div>{{ current.subtitle }}</div>
+            {% endif %}
+          </div>
+          <div class="hero-actions">
+            {% for action in current.primary_actions or [] %}
+            <a class="btn {% if loop.first %}primary{% else %}secondary{% endif %}" href="{{ action.href }}" {% if action.target %}target="{{ action.target }}"{% endif %}>{{ action.label }}</a>
+            {% endfor %}
+            <a class="btn secondary" href="{{ url_for('home', _anchor='framework') }}">返回文献库</a>
+          </div>
+          {% if current.summary_paragraphs %}
+          <div class="hero-summary">
+            {% for paragraph in current.summary_paragraphs %}
+            <p class="{% if loop.first %}summary-title{% endif %}">{{ paragraph }}</p>
+            {% endfor %}
+          </div>
+          {% elif current.summary_text %}
+          <div class="hero-summary"><p>{{ current.summary_text }}</p></div>
+          {% endif %}
+        </div>
+        <aside class="hero-aside">
+          <div class="hero-aside-kicker">论文定位</div>
+          <h2 class="hero-aside-title">{{ current.hero_aside_title }}</h2>
+          <div class="hero-fact-grid">
+            {% for item in current.hero_meta_items %}
+            <div class="hero-fact">
+              <div class="hero-fact-label">{{ item.label }}</div>
+              <div class="hero-fact-value">{{ item.value }}</div>
+            </div>
+            {% endfor %}
+          </div>
+          <div class="hero-aside-copy">{{ current.hero_aside_copy }}</div>
+        </aside>
       </div>
-      <div class="hero-actions">
-        {% for action in current.primary_actions or [] %}
-        <a class="btn {% if loop.first %}primary{% else %}secondary{% endif %}" href="{{ action.href }}" {% if action.target %}target="{{ action.target }}"{% endif %}>{{ action.label }}</a>
-        {% endfor %}
-        <a class="btn secondary" href="{{ url_for('home', _anchor='framework') }}">返回文献库</a>
-      </div>
-      {% if current.summary_paragraphs %}
-      <div class="hero-summary">
-        {% for paragraph in current.summary_paragraphs %}
-        <p class="{% if loop.first %}summary-title{% endif %}">{{ paragraph }}</p>
-        {% endfor %}
-      </div>
-      {% elif current.summary_text %}
-      <div class="hero-summary"><p>{{ current.summary_text }}</p></div>
-      {% endif %}
     </section>
 
     {% if current.summary_cards %}
@@ -881,7 +969,7 @@ PAPER_TEMPLATE = """
       </div>
       <div class="insight-grid">
         {% for card in current.summary_cards %}
-        <article class="insight-card">
+        <article class="insight-card {% if loop.first %}primary{% endif %}">
           <div class="kicker">{{ card.kicker }}</div>
           <h3>{{ card.title }}</h3>
           {% if card.meta %}<div class="insight-meta">{{ card.meta }}</div>{% endif %}
@@ -1000,7 +1088,7 @@ PAPER_TEMPLATE = """
       </div>
       <div class="table-grid">
         {% for label, html_table in current.rendered_tables %}
-        <div class="table-card">
+        <div class="table-card {% if loop.first %}primary{% endif %}">
           <h3>{{ label }}</h3>
           <div class="table-wrap">{{ html_table|safe }}</div>
         </div>
@@ -1149,15 +1237,17 @@ HOME_TEMPLATE = """
     }
     .nav form { margin: 0; }
     .hero {
-      min-height: min(620px, calc(100svh - 92px));
+      min-height: min(540px, calc(100svh - 104px));
       display: grid;
-      grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.9fr);
+      grid-template-columns: minmax(0, 1.16fr) minmax(300px, 0.84fr);
       align-items: start;
-      gap: 28px;
-      padding: 24px 0 4px;
+      gap: 22px;
+      padding: 18px 0 2px;
     }
     .hero-copy {
-      padding: 18px 0 12px;
+      padding: 10px 0 8px;
+      display: grid;
+      gap: 18px;
     }
     .eyebrow {
       color: var(--accent-2);
@@ -1176,75 +1266,97 @@ HOME_TEMPLATE = """
     }
     .hero-lead {
       max-width: 56ch;
-      margin-top: 16px;
+      margin-top: 14px;
       font-size: clamp(15px, 1.45vw, 18px);
-      line-height: 1.78;
+      line-height: 1.72;
       color: var(--muted);
     }
+    .hero-summary-inline {
+      max-width: 60ch;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(24,33,43,0.12);
+      color: #2d4051;
+      font-size: 14px;
+      line-height: 1.72;
+    }
+    .hero-lower {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .hero-rail-shell,
+    .hero-notes-shell {
+      padding: 16px 18px;
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.5), rgba(255,255,255,0.2));
+      border: 1px solid rgba(24,33,43,0.08);
+      min-width: 0;
+    }
     .hero-rail-label {
-      margin-top: 22px;
       color: #8d7450;
       font-size: 12px;
       font-weight: 700;
       letter-spacing: 0.12em;
+      margin: 0 0 10px;
     }
     .hero-rail {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-      margin-top: 10px;
-      padding-top: 16px;
-      border-top: 1px solid rgba(24,33,43,0.12);
+      gap: 12px;
     }
     .hero-step {
-      padding-right: 12px;
+      padding-right: 0;
     }
     .hero-step .index {
       display: block;
       color: #8d7450;
       font-family: "Songti SC", "STSong", "Noto Serif CJK SC", "Iowan Old Style", serif;
-      font-size: 22px;
+      font-size: 19px;
       line-height: 1;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
     .hero-step strong {
       display: block;
-      font-size: 15px;
-      margin-bottom: 8px;
+      font-size: 14px;
+      margin-bottom: 6px;
     }
     .hero-step span {
       display: block;
       color: var(--muted);
-      font-size: 14px;
-      line-height: 1.7;
+      font-size: 13px;
+      line-height: 1.62;
     }
     .hero-notes {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-      margin-top: 24px;
-      max-width: 760px;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      max-width: none;
     }
     .hero-note {
-      padding: 16px 18px;
-      border-top: 1px solid rgba(24,33,43,0.12);
-      background: linear-gradient(180deg, rgba(255,255,255,0.44), rgba(255,255,255,0.14));
+      padding: 12px 13px;
+      border-radius: 16px;
+      border: 1px solid rgba(24,33,43,0.06);
+      background: rgba(255,255,255,0.64);
     }
     .hero-note strong {
       display: block;
-      font-size: 14px;
-      margin-bottom: 8px;
+      font-size: 12px;
+      margin-bottom: 6px;
+      color: #7b6344;
+      letter-spacing: 0.08em;
     }
     .hero-note span {
       display: block;
       color: var(--muted);
-      line-height: 1.6;
-      font-size: 14px;
+      line-height: 1.58;
+      font-size: 13px;
     }
     .hero-side {
       position: relative;
-      min-height: 360px;
-      border-radius: 34px;
+      min-height: 0;
+      border-radius: 30px;
       overflow: hidden;
       background:
         linear-gradient(160deg, rgba(15,92,110,0.92), rgba(10,58,76,0.94) 36%, rgba(24,33,43,0.98) 100%);
@@ -1265,18 +1377,25 @@ HOME_TEMPLATE = """
     .hero-side-inner {
       position: relative;
       height: 100%;
-      padding: 24px;
+      padding: 20px;
       display: grid;
-      gap: 18px;
+      gap: 14px;
       align-content: start;
+    }
+    .hero-side-kicker {
+      color: rgba(255,255,255,0.68);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
     }
     .kpi-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
+      gap: 12px;
     }
     .kpi {
-      padding: 18px;
+      padding: 16px;
       border-radius: 20px;
       background: rgba(255,255,255,0.10);
       border: 1px solid rgba(255,255,255,0.14);
@@ -1296,13 +1415,13 @@ HOME_TEMPLATE = """
       line-height: 1.5;
     }
     .hero-summary {
-      padding: 20px 22px;
+      padding: 16px 18px;
       border-radius: 22px;
       background: rgba(255,255,255,0.08);
       border: 1px solid rgba(255,255,255,0.14);
       color: rgba(255,255,255,0.82);
-      line-height: 1.7;
-      font-size: 15px;
+      line-height: 1.66;
+      font-size: 14px;
     }
     .section {
       padding-top: 58px;
@@ -1585,6 +1704,37 @@ HOME_TEMPLATE = """
       margin-top: 18px;
       min-width: 0;
     }
+    .result-group {
+      display: grid;
+      gap: 14px;
+      margin-top: 18px;
+      min-width: 0;
+    }
+    .result-group + .result-group {
+      margin-top: 10px;
+    }
+    .result-group-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(24,33,43,0.08);
+    }
+    .result-group-head h4 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .result-group-head p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+      max-width: 52ch;
+      text-align: right;
+    }
     .insight-strip {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -1617,12 +1767,81 @@ HOME_TEMPLATE = """
       font-size: 13px;
       line-height: 1.65;
     }
+    .status-panel {
+      display: grid;
+      gap: 16px;
+      margin-top: 18px;
+      padding: 18px 20px;
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(251,246,239,0.95), rgba(246,238,226,0.88));
+      border: 1px solid rgba(166, 119, 71, 0.18);
+      box-shadow: 0 16px 32px rgba(36,53,69,0.06);
+    }
+    .status-panel-head {
+      display: grid;
+      gap: 8px;
+    }
+    .status-kicker {
+      color: #8d7450;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+    }
+    .status-title {
+      margin: 0;
+      font-family: "Songti SC", "STSong", "Noto Serif CJK SC", "Iowan Old Style", serif;
+      font-size: clamp(24px, 2.4vw, 34px);
+      line-height: 1.08;
+      letter-spacing: -0.035em;
+      color: #233443;
+    }
+    .status-copy {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.72;
+      max-width: 72ch;
+    }
+    .status-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .status-meta-card {
+      padding: 12px 13px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.72);
+      border: 1px solid rgba(24,33,43,0.06);
+      min-width: 0;
+    }
+    .status-meta-label {
+      color: #7b6344;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .status-meta-value {
+      color: #2a3b4a;
+      font-size: 13px;
+      line-height: 1.62;
+    }
     .result-card {
       padding: 18px;
       border-radius: 22px;
       background: linear-gradient(180deg, rgba(255,255,255,0.56), rgba(255,255,255,0.26));
       border: 1px solid rgba(24,33,43,0.08);
       min-width: 0;
+    }
+    .result-card.primary {
+      background: linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.36));
+      border-color: rgba(24,33,43,0.10);
+      box-shadow: 0 16px 32px rgba(24,33,43,0.06);
+    }
+    .result-card.detail {
+      background: linear-gradient(180deg, rgba(255,255,255,0.46), rgba(255,255,255,0.18));
+      border-color: rgba(24,33,43,0.06);
     }
     .result-card.wide {
       grid-column: 1 / -1;
@@ -1891,15 +2110,17 @@ HOME_TEMPLATE = """
       cursor: pointer;
     }
     @media (max-width: 1120px) {
-      .hero, .track-meta, .track-panels, .section-head, .library-panels, .cta-strip, .abstract-panel, .support-grid, .result-grid, .insight-strip {
+      .hero, .hero-lower, .track-meta, .track-panels, .section-head, .library-panels, .cta-strip, .abstract-panel, .support-grid, .result-grid, .insight-strip, .status-meta-grid {
         grid-template-columns: 1fr;
       }
       .hero { min-height: auto; }
-      .hero-side { min-height: 420px; }
+      .hero-side { min-height: 0; }
       .highlight-grid { grid-template-columns: 1fr; }
       .highlight + .highlight { border-left: 0; border-top: 1px solid rgba(24,33,43,0.10); }
       .support-head { display: grid; }
       .support-head p { text-align: left; max-width: none; }
+      .result-group-head { display: grid; }
+      .result-group-head p { text-align: left; max-width: none; }
     }
     @media (max-width: 760px) {
       .shell { padding: 0 14px 44px; }
@@ -1960,31 +2181,42 @@ HOME_TEMPLATE = """
     <section class="hero" id="overview">
       <div class="hero-copy">
         <div class="eyebrow">研究总览</div>
-        <h1>16 篇文献、真实样本与识别设计：指数纳入效应的综合证据。</h1>
-        <div class="hero-lead">
-          本页将文献演进、真实样本、三条研究主线、关键图表与核心表格整合为一套连续的研究展示材料，用于回答指数纳入效应是否存在、如何解释以及如何识别。
-        </div>
-        <div class="hero-rail-label">研究路径</div>
-        <div class="hero-rail">
-          {% for section in track_sections %}
-          <div class="hero-step">
-            <span class="index">{{ "%02d"|format(loop.index) }}</span>
-            <strong>{{ section.title }}</strong>
-            <span>{{ section.display_summary }}</span>
+        <div>
+          <h1>16 篇文献、真实样本与识别设计：指数纳入效应的综合证据。</h1>
+          <div class="hero-lead">
+            本页将文献演进、真实样本、三条研究主线、关键图表与核心表格整合为一套连续的研究展示材料，用于回答指数纳入效应是否存在、如何解释以及如何识别。
           </div>
-          {% endfor %}
+          <div class="hero-summary-inline">{{ overview_summary }}</div>
         </div>
-        <div class="hero-notes">
-          {% for note in overview_notes %}
-          <div class="hero-note">
-            <strong>{{ note.title }}</strong>
-            <span>{{ note["copy"] }}</span>
+        <div class="hero-lower">
+          <div class="hero-rail-shell">
+            <div class="hero-rail-label">研究路径</div>
+            <div class="hero-rail">
+              {% for section in track_sections %}
+              <div class="hero-step">
+                <span class="index">{{ "%02d"|format(loop.index) }}</span>
+                <strong>{{ section.title }}</strong>
+                <span>{{ section.display_summary }}</span>
+              </div>
+              {% endfor %}
+            </div>
           </div>
-          {% endfor %}
+          <div class="hero-notes-shell">
+            <div class="hero-rail-label">展示层级</div>
+            <div class="hero-notes">
+              {% for note in overview_notes %}
+              <div class="hero-note">
+                <strong>{{ note.title }}</strong>
+                <span>{{ note["copy"] }}</span>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
         </div>
       </div>
       <div class="hero-side">
         <div class="hero-side-inner">
+          <div class="hero-side-kicker">当前展示口径</div>
           <div class="kpi-grid">
             {% for metric in overview_metrics %}
             <div class="kpi">
@@ -2060,7 +2292,7 @@ HOME_TEMPLATE = """
       {% if mode != "brief" %}
       <div class="library-panels">
         {% for figure in design_section.figures %}
-        <div class="result-card {{ figure.layout_class }}">
+        <div class="result-card {{ figure.layout_class }} primary">
           <div class="table-label">{{ figure.label }}</div>
           <div class="result-figure">
             <img src="{{ url_for('serve_result_file', subpath=figure.path) }}" alt="{{ figure.caption }}">
@@ -2068,13 +2300,39 @@ HOME_TEMPLATE = """
           </div>
         </div>
         {% endfor %}
-        {% for table in design_section.tables %}
-        <div class="result-card {{ table.layout_class }}">
+      </div>
+      {% if design_section.primary_tables %}
+      <div class="result-group">
+        <div class="result-group-head">
+          <h4>核心摘要表</h4>
+          <p>这组表格优先回答样本覆盖、跨市场对照与比较口径，帮助听众先建立研究背景再进入结果解释。</p>
+        </div>
+        <div class="library-panels">
+        {% for table in design_section.primary_tables %}
+        <div class="result-card {{ table.layout_class }} {{ table.tier }}">
           <div class="table-label">{{ table.label }}</div>
           <div class="table-wrap">{{ table.html|safe }}</div>
         </div>
         {% endfor %}
+        </div>
       </div>
+      {% endif %}
+      {% if design_section.detail_tables %}
+      <div class="result-group">
+        <div class="result-group-head">
+          <h4>补充细表</h4>
+          <p>这些表格用于补充年份分布、数据来源与样本细节，便于在问答或写作时回到更完整的样本说明。</p>
+        </div>
+        <div class="library-panels">
+        {% for table in design_section.detail_tables %}
+        <div class="result-card {{ table.layout_class }} {{ table.tier }}">
+          <div class="table-label">{{ table.label }}</div>
+          <div class="table-wrap">{{ table.html|safe }}</div>
+        </div>
+        {% endfor %}
+        </div>
+      </div>
+      {% endif %}
       {% else %}
       <div class="section-side">3 分钟汇报模式下，这里只保留样本设计摘要卡；完整图表和数据来源表可切换到展示版或完整材料查看。</div>
       {% endif %}
@@ -2105,12 +2363,29 @@ HOME_TEMPLATE = """
         {% if section.result_cards %}
         <div class="insight-strip">
           {% for item in section.result_cards %}
-          <div class="insight-card">
+          <div class="insight-card {{ item.tone if item.tone else '' }}">
             <div class="insight-label">{{ item.label }}</div>
             <div class="insight-value">{{ item.value }}</div>
             <div class="insight-copy">{{ item["copy"] }}</div>
           </div>
           {% endfor %}
+        </div>
+        {% endif %}
+        {% if section.status_panel %}
+        <div class="status-panel">
+          <div class="status-panel-head">
+            <div class="status-kicker">{{ section.status_panel.kicker }}</div>
+            <h4 class="status-title">{{ section.status_panel.title }}</h4>
+            <div class="status-copy">{{ section.status_panel["copy"] }}</div>
+          </div>
+          <div class="status-meta-grid">
+            {% for item in section.status_panel.meta %}
+            <div class="status-meta-card">
+              <div class="status-meta-label">{{ item.label }}</div>
+              <div class="status-meta-value">{{ item.value }}</div>
+            </div>
+            {% endfor %}
+          </div>
         </div>
         {% endif %}
         <div class="track-panels">
@@ -2153,14 +2428,36 @@ HOME_TEMPLATE = """
             </div>
           </div>
         </div>
-        {% if section.display_tables and mode != "brief" %}
-        <div class="result-grid">
-          {% for table in section.display_tables %}
-          <div class="result-card {{ table.layout_class }}">
+        {% if section.primary_tables and mode != "brief" %}
+        <div class="result-group">
+          <div class="result-group-head">
+            <h4>核心摘要表</h4>
+            <p>优先阅读这些表格，可以更快把握当前主线的结论方向、比较维度与核心识别结果。</p>
+          </div>
+          <div class="result-grid">
+            {% for table in section.primary_tables %}
+            <div class="result-card {{ table.layout_class }} {{ table.tier }}">
+              <div class="table-label">{{ table.label }}</div>
+              <div class="table-wrap">{{ table.html|safe }}</div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        {% if section.detail_tables and mode != "brief" %}
+        <div class="result-group">
+          <div class="result-group-head">
+            <h4>补充细表</h4>
+            <p>这些表格保留更细的变量分解和辅助比较，用于支撑主结论，而不是替代主结论本身。</p>
+          </div>
+          <div class="result-grid">
+          {% for table in section.detail_tables %}
+          <div class="result-card {{ table.layout_class }} {{ table.tier }}">
             <div class="table-label">{{ table.label }}</div>
             <div class="table-wrap">{{ table.html|safe }}</div>
           </div>
           {% endfor %}
+          </div>
         </div>
         {% endif %}
         {% if section.display_support_papers and mode != "brief" %}
@@ -2236,14 +2533,38 @@ HOME_TEMPLATE = """
         {% endfor %}
       </div>
       {% endif %}
-      <div class="library-panels">
-        {% for table in framework_section.display_tables %}
-        <div class="result-card {{ table.layout_class }}">
+      {% if framework_section.primary_tables %}
+      <div class="result-group">
+        <div class="result-group-head">
+          <h4>核心摘要表</h4>
+          <p>先看阵营概览，再回到演进表和表达框架，文献框架会更容易转换成可讲述的研究脉络。</p>
+        </div>
+        <div class="library-panels">
+        {% for table in framework_section.primary_tables %}
+        <div class="result-card {{ table.layout_class }} {{ table.tier }}">
           <div class="table-label">{{ table.label }}</div>
           <div class="table-wrap">{{ table.html|safe }}</div>
         </div>
         {% endfor %}
+        </div>
       </div>
+      {% endif %}
+      {% if framework_section.detail_tables %}
+      <div class="result-group">
+        <div class="result-group-head">
+          <h4>补充细表</h4>
+          <p>这些表格保留完整演进顺序与表达框架，适合在问答或写作环节回到更细的文献组织方式。</p>
+        </div>
+        <div class="library-panels">
+        {% for table in framework_section.detail_tables %}
+        <div class="result-card {{ table.layout_class }} {{ table.tier }}">
+          <div class="table-label">{{ table.label }}</div>
+          <div class="table-wrap">{{ table.html|safe }}</div>
+        </div>
+        {% endfor %}
+        </div>
+      </div>
+      {% endif %}
     </section>
 
     <section class="section" id="supplement">
@@ -2272,14 +2593,38 @@ HOME_TEMPLATE = """
         {% endfor %}
       </div>
       {% endif %}
-      <div class="library-panels">
-        {% for table in supplement_section.display_tables %}
-        <div class="result-card {{ table.layout_class }}">
+      {% if supplement_section.primary_tables %}
+      <div class="result-group">
+        <div class="result-group-head">
+          <h4>核心摘要表</h4>
+          <p>先看事件时钟和机制链，可以更自然地把实证结果放回交易逻辑，而不是只停留在统计显著性上。</p>
+        </div>
+        <div class="library-panels">
+        {% for table in supplement_section.primary_tables %}
+        <div class="result-card {{ table.layout_class }} {{ table.tier }}">
           <div class="table-label">{{ table.label }}</div>
           <div class="table-wrap">{{ table.html|safe }}</div>
         </div>
         {% endfor %}
+        </div>
       </div>
+      {% endif %}
+      {% if supplement_section.detail_tables %}
+      <div class="result-group">
+        <div class="result-group-head">
+          <h4>补充细表</h4>
+          <p>这里保留冲击估算和表达框架，用于把机制解释进一步转成执行语言或课堂展示语言。</p>
+        </div>
+        <div class="library-panels">
+        {% for table in supplement_section.detail_tables %}
+        <div class="result-card {{ table.layout_class }} {{ table.tier }}">
+          <div class="table-label">{{ table.label }}</div>
+          <div class="table-wrap">{{ table.html|safe }}</div>
+        </div>
+        {% endfor %}
+        </div>
+      </div>
+      {% endif %}
     </section>
     {% endif %}
 
@@ -2310,14 +2655,38 @@ HOME_TEMPLATE = """
         {% endfor %}
       </div>
       {% endif %}
-      <div class="library-panels">
-        {% for table in robustness_section.tables %}
-        <div class="result-card {{ table.layout_class }}">
+      {% if robustness_section.primary_tables %}
+      <div class="result-group">
+        <div class="result-group-head">
+          <h4>核心稳健性表</h4>
+          <p>先看样本过滤、事件研究和主回归三类稳健性表，可以最快判断主结论是否依赖单一样本口径。</p>
+        </div>
+        <div class="library-panels">
+        {% for table in robustness_section.primary_tables %}
+        <div class="result-card {{ table.layout_class }} {{ table.tier }}">
           <div class="table-label">{{ table.label }}</div>
           <div class="table-wrap">{{ table.html|safe }}</div>
         </div>
         {% endfor %}
+        </div>
       </div>
+      {% endif %}
+      {% if robustness_section.detail_tables %}
+      <div class="result-group">
+        <div class="result-group-head">
+          <h4>补充稳健性表</h4>
+          <p>长期保留的稳健性结果继续保留，但作为对主结论边界的补充阅读，而不是首要判断依据。</p>
+        </div>
+        <div class="library-panels">
+        {% for table in robustness_section.detail_tables %}
+        <div class="result-card {{ table.layout_class }} {{ table.tier }}">
+          <div class="table-label">{{ table.label }}</div>
+          <div class="table-wrap">{{ table.html|safe }}</div>
+        </div>
+        {% endfor %}
+        </div>
+      </div>
+      {% endif %}
     </section>
     {% endif %}
 
@@ -2348,14 +2717,38 @@ HOME_TEMPLATE = """
       </div>
       {% endif %}
       {% if mode != "brief" %}
-      <div class="library-panels">
-        {% for table in limits_section.tables %}
-        <div class="result-card {{ table.layout_class }}">
+      {% if limits_section.primary_tables %}
+      <div class="result-group">
+        <div class="result-group-head">
+          <h4>边界摘要表</h4>
+          <p>先看样本与数据范围，再回到更细的识别范围说明，可以避免把边界说明误读成结论本身。</p>
+        </div>
+        <div class="library-panels">
+        {% for table in limits_section.primary_tables %}
+        <div class="result-card {{ table.layout_class }} {{ table.tier }}">
           <div class="table-label">{{ table.label }}</div>
           <div class="table-wrap">{{ table.html|safe }}</div>
         </div>
         {% endfor %}
+        </div>
       </div>
+      {% endif %}
+      {% if limits_section.detail_tables %}
+      <div class="result-group">
+        <div class="result-group-head">
+          <h4>补充说明表</h4>
+          <p>这张表保留更完整的识别范围与口径说明，适合在写作或答疑时回到方法边界逐项核对。</p>
+        </div>
+        <div class="library-panels">
+        {% for table in limits_section.detail_tables %}
+        <div class="result-card {{ table.layout_class }} {{ table.tier }}">
+          <div class="table-label">{{ table.label }}</div>
+          <div class="table-wrap">{{ table.html|safe }}</div>
+        </div>
+        {% endfor %}
+        </div>
+      </div>
+      {% endif %}
       {% endif %}
     </section>
 
@@ -2753,15 +3146,58 @@ def _table_layout_for_label(label: str) -> str:
     return "wide" if label in wide_labels else ""
 
 
+def _table_tier_for_label(label: str) -> str:
+    primary_labels = {
+        "A 股与美股并列总结",
+        "样本范围总表",
+        "短窗口 CAR 摘要",
+        "时间变化摘要",
+        "长短窗口 CAR 对比",
+        "保留率与回吐",
+        "中国样本事件研究",
+        "调入调出非对称性",
+        "匹配回归核心系数",
+        "五大阵营概览",
+        "事件时钟",
+        "机制链",
+        "样本过滤摘要",
+        "事件研究稳健性",
+        "回归稳健性",
+        "样本与数据范围",
+    }
+    return "primary" if label in primary_labels else "detail"
+
+
 def _decorate_display_tables(tables: list[tuple[str, str]]) -> list[dict[str, str]]:
     return [
         {
             "label": label,
             "html": html_table,
             "layout_class": _table_layout_for_label(label),
+            "tier": _table_tier_for_label(label),
         }
         for label, html_table in tables
     ]
+
+
+def _attach_display_tiers(items: list[dict[str, object]]) -> list[dict[str, object]]:
+    enriched: list[dict[str, object]] = []
+    for item in items:
+        row = dict(item)
+        row.setdefault("tier", _table_tier_for_label(str(row.get("label", ""))))
+        enriched.append(row)
+    return enriched
+
+
+def _split_items_by_tier(items: list[dict[str, object]]) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    primary: list[dict[str, object]] = []
+    detail: list[dict[str, object]] = []
+    for item in _attach_display_tiers(items):
+        if item.get("tier") == "detail":
+            detail.append(item)
+        else:
+            primary.append(item)
+    return primary, detail
 
 
 def _build_framework_summary_cards() -> list[dict[str, str]]:
@@ -2962,9 +3398,23 @@ def _build_identification_cards() -> list[dict[str, str]]:
         if not tau.empty:
             row = tau.iloc[0]
             cards.append({"label": "RDD 断点效应", "value": f"{float(row['tau']):.4f}", "copy": _format_p_value(float(row["p_value"]))})
-    else:
-        cards.append({"label": "正式 RDD 状态", "value": rdd_status["evidence_status"], "copy": rdd_status["message"]})
     return cards[:4]
+
+
+def _build_identification_status_panel() -> dict[str, object] | None:
+    rdd_status = _load_rdd_status()
+    if rdd_status["mode"] == "real":
+        return None
+    return {
+        "kicker": "方法状态",
+        "title": rdd_status["evidence_status"],
+        "copy": "中国主线中的 RDD 部分当前只保留方法框架，不进入正式结论比较。只有在提供并通过校验的真实候选样本文件后，断点结果才会进入正式证据链。",
+        "meta": [
+            {"label": "当前状态", "value": "正式 RDD 尚未进入证据链；当前中国主线的正式结果仍以事件研究与匹配回归为主。"},
+            {"label": "进入条件", "value": "提供正式候选样本文件并通过字段与日期校验。"},
+            {"label": "数据契约", "value": "必需列已固定为 batch_id、announce_date、running_variable、cutoff、inclusion 等字段。"},
+        ],
+    }
 
 
 def _build_price_pressure_tables() -> list[tuple[str, str]]:
@@ -3552,6 +4002,14 @@ def _load_paper_detail_result(paper_id: str) -> dict[str, object] | None:
         "title": f"{short_authors}（{paper.year_label}）",
         "description": paper.title,
         "subtitle": f"{record.get('阵营', '')} · {record.get('方法 / 关键词', '')}",
+        "hero_aside_title": str(record.get("一句话定位", "")),
+        "hero_meta_items": [
+            {"label": "年份", "value": paper.year_label},
+            {"label": "阵营", "value": str(record.get("阵营", ""))},
+            {"label": "立场", "value": str(record.get("立场", ""))},
+            {"label": "研究主线", "value": _project_module_display(paper.project_module)},
+        ],
+        "hero_aside_copy": str(record.get("研究中的作用", "")),
         "summary_text": summary_text,
         "summary_paragraphs": summary_paragraphs,
         "summary_cards": summary_cards,
@@ -3772,7 +4230,7 @@ def _prepare_track_display(section: dict[str, object], analysis_id: str, demo_mo
     curated_summary = {
         "price_pressure_track": "这条主线集中展示短窗口 CAR、公告日与生效日差异，以及交易活跃度变化。当前样本表明，美国市场的公告日效应更强；中国 A 股更值得关注的是生效阶段长期窗口中的调入/调出分化。",
         "demand_curve_track": "这条主线关注价格冲击是否只在短期出现，还是会在更长窗口中保留。阅读时应重点比较保留率、长窗口 CAR，以及短长窗口之间的差异。",
-        "identification_china_track": "这条主线把中国样本的匹配对照组结果与 RDD 扩展并排展示，用于区分“现象是否存在”与“识别是否足够严格”这两个层面。",
+        "identification_china_track": "这条主线把中国样本的事件研究、匹配回归与 RDD 识别放在同一结构中，但只有通过正式候选样本文件校验的 RDD 才会进入正式证据链。",
     }
     display["display_summary"] = curated_summary.get(analysis_id, _clean_display_text(str(display.get("summary_text", ""))))
     if demo_mode and "详细稳健性结果见完整材料。" not in display["display_summary"]:
@@ -3797,6 +4255,7 @@ def _prepare_track_display(section: dict[str, object], analysis_id: str, demo_mo
         "identification_china_track": _build_identification_tables(),
     }.get(analysis_id, [])
     display["display_tables"] = _decorate_display_tables(curated_tables)
+    display["primary_tables"], display["detail_tables"] = _split_items_by_tier(display["display_tables"])
     display["badge"] = "核心结果" if demo_mode else "完整结果"
     takeaway = {
         "price_pressure_track": "当前样本更支持“短期冲击具有明显市场差异”这一判断，而不是简单地认为所有市场都会在指数调整后同步上涨。",
@@ -3804,6 +4263,7 @@ def _prepare_track_display(section: dict[str, object], analysis_id: str, demo_mo
         "identification_china_track": "中国市场证据不仅取决于现象本身，还取决于识别设计；匹配回归与 RDD 的并置展示正好体现了这一点。",
     }
     display["takeaway"] = takeaway.get(analysis_id, "")
+    display["status_panel"] = _build_identification_status_panel() if analysis_id == "identification_china_track" else None
     return display
 
 
@@ -3817,8 +4277,11 @@ def _prepare_framework_display(section: dict[str, object], demo_mode: bool) -> d
         ("研究表达框架", raw_tables["研究表达框架"]),
     ]
     display["summary_cards"] = _build_framework_summary_cards()
-    tables = ordered_tables
-    display["display_tables"] = _decorate_display_tables(tables)
+    tables = _decorate_display_tables(ordered_tables)
+    primary_tables, detail_tables = _split_items_by_tier(tables)
+    display["display_tables"] = tables
+    display["primary_tables"] = primary_tables
+    display["detail_tables"] = detail_tables
     return display
 
 
@@ -3834,8 +4297,11 @@ def _prepare_supplement_display(section: dict[str, object], demo_mode: bool) -> 
         ("表达框架", raw_tables["表达框架"]),
     ]
     display["summary_cards"] = _build_supplement_summary_cards()
-    tables = ordered_tables
-    display["display_tables"] = _decorate_display_tables(tables)
+    tables = _decorate_display_tables(ordered_tables)
+    primary_tables, detail_tables = _split_items_by_tier(tables)
+    display["display_tables"] = tables
+    display["primary_tables"] = primary_tables
+    display["detail_tables"] = detail_tables
     return display
 
 
@@ -3854,8 +4320,8 @@ def _build_track_notes(analysis_id: str) -> list[dict[str, str]]:
         ]
     return [
         {"name": "主问题", "copy": "这条主线专门处理识别问题，回答不同制度背景和识别方法是否会改变对指数效应的判断。"},
-        {"name": "阅读顺序", "copy": "先观察中国样本的匹配对照组结果，再查看 DID 风格摘要，最后根据 RDD 当前状态判断更强识别是否已经进入正式证据链。"},
-        {"name": "样本特征", "copy": "风格识别部分已基于真实样本运行；RDD 只有在提供并通过校验的真实候选排名文件后，才会进入正式证据链。"},
+        {"name": "阅读顺序", "copy": "先观察中国样本的事件研究与匹配对照组结果，再查看 DID 风格摘要，最后单独阅读 RDD 的方法状态卡。"},
+        {"name": "样本特征", "copy": "风格识别部分已基于真实样本运行；RDD 只有在提供并通过校验的正式候选样本文件后，才会进入正式证据链。"},
     ]
 
 
@@ -4467,11 +4933,14 @@ def _build_sample_design_tables() -> list[dict[str, str]]:
 
 
 def _build_sample_design_section() -> dict[str, object]:
+    tables = _attach_display_tiers(_build_sample_design_tables())
     return {
         "summary": "这一部分优先交代真实样本覆盖、短窗口口径与回归结果的总体轮廓，使后续主线解释建立在清晰的样本与识别设计之上。",
         "summary_cards": _build_sample_design_cards(),
         "figures": _create_sample_design_figures(),
-        "tables": _build_sample_design_tables(),
+        "tables": tables,
+        "primary_tables": _split_items_by_tier(tables)[0],
+        "detail_tables": _split_items_by_tier(tables)[1],
     }
 
 
@@ -4485,6 +4954,8 @@ def _build_robustness_section() -> dict[str, object]:
             "summary": "稳健性结果尚未生成。刷新数据后，完整材料模式会在这里展示区间估计、异常值处理和样本过滤三类检查。",
             "summary_cards": [],
             "tables": [],
+            "primary_tables": [],
+            "detail_tables": [],
         }
 
     nonoverlap_row = sample_filters.loc[sample_filters["sample_filter"] == "nonoverlap_120d"].iloc[0]
@@ -4548,15 +5019,22 @@ def _build_robustness_section() -> dict[str, object]:
         ["sample_filter", "market", "event_phase", "inclusion", "short_mean_car", "long_mean_car", "retention_ratio", "retention_ratio_valid", "retention_note"],
     ].copy()
 
-    return {
-        "summary": "这一部分通过区间估计、异常值处理和重叠事件过滤，检验主结论是否依赖单一样本口径，从而把当前结果升级成更像论文证据链的默认输出。",
-        "summary_cards": summary_cards,
-        "tables": [
+    tables = _attach_display_tiers(
+        [
             {"label": "样本过滤摘要", "html": _render_table(sample_filter_focus, compact=True), "layout_class": "wide"},
             {"label": "事件研究稳健性", "html": _render_table(event_focus, compact=True), "layout_class": "wide"},
             {"label": "回归稳健性", "html": _render_table(regression_focus, compact=True), "layout_class": "wide"},
             {"label": "长期保留稳健性", "html": _render_table(retention_focus, compact=True), "layout_class": "wide"},
-        ],
+        ]
+    )
+    primary_tables, detail_tables = _split_items_by_tier(tables)
+
+    return {
+        "summary": "这一部分通过区间估计、异常值处理和重叠事件过滤，检验主结论是否依赖单一样本口径，从而把当前结果升级成更像论文证据链的默认输出。",
+        "summary_cards": summary_cards,
+        "tables": tables,
+        "primary_tables": primary_tables,
+        "detail_tables": detail_tables,
     }
 
 
@@ -4613,13 +5091,20 @@ def _build_limits_section() -> dict[str, object]:
         ]
     )
 
+    tables = _attach_display_tiers(
+        [
+            {"label": "样本与数据范围", "html": _render_table(scope_table, compact=True), "layout_class": "wide"},
+            {"label": "识别范围说明", "html": _render_table(identification_scope, compact=True), "layout_class": "wide"},
+        ]
+    )
+    primary_tables, detail_tables = _split_items_by_tier(tables)
+
     return {
         "summary": "明确研究边界的目的，不是削弱结果，而是让结论与样本期、识别设计、数据来源保持一致，从而提升整套展示的可信度。",
         "summary_cards": summary_cards,
-        "tables": [
-            {"label": "样本与数据范围", "html": _render_table(scope_table, compact=True), "layout_class": "wide"},
-            {"label": "识别范围说明", "html": _render_table(identification_scope, compact=True), "layout_class": "wide"},
-        ],
+        "tables": tables,
+        "primary_tables": primary_tables,
+        "detail_tables": detail_tables,
     }
 
 
