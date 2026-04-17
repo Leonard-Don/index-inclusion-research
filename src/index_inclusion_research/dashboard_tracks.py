@@ -1,0 +1,155 @@
+from __future__ import annotations
+
+from collections.abc import Callable, Mapping
+from pathlib import Path
+
+from index_inclusion_research import dashboard_metrics
+from index_inclusion_research import dashboard_presenters
+
+
+def finalize_track_result(
+    raw: Mapping[str, object],
+    config: Mapping[str, object],
+    *,
+    normalize_result: Callable[[dict[str, object]], dict[str, object]],
+    attach_project_track_context: Callable[[dict[str, object], dict[str, object]], dict[str, object]],
+    analysis_id: str,
+) -> dict[str, object]:
+    current = normalize_result(dict(raw))
+    current["id"] = config.get("project_module", analysis_id)
+    current["title"] = config["title"]
+    current["description"] = raw.get("description", config["description_zh"])
+    current["subtitle"] = config["subtitle"]
+    return attach_project_track_context(current, dict(config))
+
+
+def run_and_cache_analysis(
+    analysis_id: str,
+    *,
+    analyses: Mapping[str, Mapping[str, object]],
+    run_cache: dict[str, dict[str, object]],
+    normalize_result: Callable[[dict[str, object]], dict[str, object]],
+    attach_project_track_context: Callable[[dict[str, object], dict[str, object]], dict[str, object]],
+) -> dict[str, object]:
+    config = analyses[analysis_id]
+    raw = config["runner"](verbose=False)
+    current = finalize_track_result(
+        raw,
+        config,
+        normalize_result=normalize_result,
+        attach_project_track_context=attach_project_track_context,
+        analysis_id=analysis_id,
+    )
+    run_cache[analysis_id] = current
+    return current
+
+
+def load_or_build_track_section(
+    analysis_id: str,
+    *,
+    analyses: Mapping[str, Mapping[str, object]],
+    run_cache: dict[str, dict[str, object]],
+    load_saved_track_result: Callable[[str, dict[str, object]], dict[str, object] | None],
+    normalize_result: Callable[[dict[str, object]], dict[str, object]],
+    attach_project_track_context: Callable[[dict[str, object], dict[str, object]], dict[str, object]],
+) -> dict[str, object]:
+    current = run_cache.get(analysis_id)
+    config = dict(analyses[analysis_id])
+    if current is None:
+        current = load_saved_track_result(analysis_id, config)
+        if current is not None:
+            run_cache[analysis_id] = current
+    if current is None:
+        raw = config["runner"](verbose=False)
+        current = finalize_track_result(
+            raw,
+            config,
+            normalize_result=normalize_result,
+            attach_project_track_context=attach_project_track_context,
+            analysis_id=analysis_id,
+        )
+        run_cache[analysis_id] = current
+    return current
+
+
+def run_and_cache_all(
+    *,
+    analyses: Mapping[str, Mapping[str, object]],
+    run_cache: dict[str, dict[str, object]],
+    run_and_cache_analysis: Callable[[str], dict[str, object]],
+    load_literature_library_result: Callable[[], dict[str, object]],
+    load_literature_review_result: Callable[[], dict[str, object]],
+    load_literature_framework_result: Callable[[], dict[str, object]],
+    load_supplement_result: Callable[[], dict[str, object]],
+) -> None:
+    for analysis_id in analyses:
+        run_and_cache_analysis(analysis_id)
+    run_cache["paper_library"] = load_literature_library_result()
+    run_cache["paper_review"] = load_literature_review_result()
+    run_cache["paper_framework"] = load_literature_framework_result()
+    run_cache["project_supplement"] = load_supplement_result()
+
+
+def prepare_track_display(
+    root: Path,
+    section: dict[str, object],
+    analysis_id: str,
+    demo_mode: bool,
+    *,
+    load_rdd_status: Callable[[], dict[str, object]],
+    clean_display_text: Callable[[str], str],
+    render_table: Callable[..., str],
+    format_pct: Callable[[float], str],
+    format_p_value: Callable[[float], str],
+    create_price_pressure_figures: Callable[[], list[dict[str, str]]],
+    create_identification_figures: Callable[[], list[dict[str, str]]],
+) -> dict[str, object]:
+    identification_status = load_rdd_status() if analysis_id == "identification_china_track" else None
+    return dashboard_presenters.prepare_track_display(
+        section,
+        analysis_id,
+        demo_mode,
+        fallback_summary=clean_display_text(str(section.get("summary_text", ""))),
+        result_cards_by_analysis={
+            "price_pressure_track": dashboard_metrics.build_price_pressure_cards(
+                root,
+                format_pct=format_pct,
+                format_p_value=format_p_value,
+            ),
+            "demand_curve_track": dashboard_metrics.build_demand_curve_cards(
+                root,
+                format_pct=format_pct,
+                format_p_value=format_p_value,
+            ),
+            "identification_china_track": dashboard_metrics.build_identification_cards(
+                root,
+                format_pct=format_pct,
+                format_p_value=format_p_value,
+                rdd_status=identification_status,
+            ),
+        },
+        curated_tables_by_analysis={
+            "price_pressure_track": dashboard_metrics.build_price_pressure_tables(
+                root,
+                render_table=render_table,
+            ),
+            "demand_curve_track": dashboard_metrics.build_demand_curve_tables(
+                root,
+                render_table=render_table,
+            ),
+            "identification_china_track": dashboard_metrics.build_identification_tables(
+                root,
+                render_table=render_table,
+                rdd_status=identification_status,
+            ),
+        },
+        extra_figures_by_analysis={
+            "price_pressure_track": create_price_pressure_figures(),
+            "identification_china_track": create_identification_figures(),
+        },
+        status_panel=(
+            dashboard_metrics.build_identification_status_panel(identification_status)
+            if identification_status is not None
+            else None
+        ),
+    )

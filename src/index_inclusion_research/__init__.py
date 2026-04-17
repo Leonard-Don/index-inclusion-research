@@ -14,8 +14,10 @@ from .literature_catalog import (
     list_literature_papers,
 )
 from .literature import compute_did_summary, compute_retention_summary, summarise_mechanism_changes
+from .results_snapshot import ResultsSnapshot
 
 __all__ = [
+    "ResultsSnapshot",
     "build_grouped_literature_frame",
     "build_literature_catalog_frame",
     "build_literature_dashboard_frame",
