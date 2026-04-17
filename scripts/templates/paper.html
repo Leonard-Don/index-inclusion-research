@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if current and current.page_title %}{{ current.page_title }}{% elif current and current.title %}{{ current.title }}｜指数纳入效应研究界面{% else %}单篇文献讲义｜指数纳入效应研究界面{% endif %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='paper.css') }}">
+</head>
+<body data-table-density="cozy">
+  <a class="skip-link" href="#main-content">跳到主内容</a>
+  <main id="main-content" class="page" tabindex="-1">
+    <div class="topbar">
+      <div>单篇文献讲义</div>
+      <nav class="topbar-nav" aria-label="文献页导航">
+        <a href="{{ url_for('home', _anchor='framework') }}">返回文献库</a>
+        <a href="{{ url_for('home', _anchor='framework') }}">研究框架</a>
+        <a href="{{ url_for('home', _anchor='supplement') }}">机制补充</a>
+        <a href="{{ url_for('home') }}">返回首页</a>
+      </nav>
+      <div class="table-density-panel" data-table-density-panel>
+        <div class="table-density-label">表格阅读</div>
+        <div class="table-density-switch" role="toolbar" aria-label="表格密度切换">
+          <button class="active" type="button" data-table-density-button="cozy" aria-pressed="true">舒展</button>
+          <button type="button" data-table-density-button="compact" aria-pressed="false">紧凑</button>
+        </div>
+        <div class="table-density-note">长表支持横向滚动，首列已固定。</div>
+      </div>
+    </div>
+
+    <section class="hero">
+      <div class="hero-grid">
+        <div>
+          <div class="hero-kicker">结构化文献解读</div>
+          <h1>{{ current.title }}</h1>
+          <div class="hero-subtitle">
+            <div>{{ current.description }}</div>
+            {% if current.subtitle %}
+            <div>{{ current.subtitle }}</div>
+            {% endif %}
+          </div>
+          <div class="hero-actions">
+            {% for action in current.primary_actions or [] %}
+            <a class="btn {% if loop.first %}primary{% else %}secondary{% endif %}" href="{{ action.href }}" {% if action.target %}target="{{ action.target }}"{% endif %}{% if action.target == '_blank' %} rel="noopener noreferrer"{% endif %}>{{ action.label }}</a>
+            {% endfor %}
+            <a class="btn secondary" href="{{ url_for('home', _anchor='framework') }}">返回文献库</a>
+          </div>
+          {% if current.summary_paragraphs %}
+          <div class="hero-summary">
+            {% for paragraph in current.summary_paragraphs %}
+            <p class="{% if loop.first %}summary-title{% endif %}">{{ paragraph }}</p>
+            {% endfor %}
+          </div>
+          {% elif current.summary_text %}
+          <div class="hero-summary"><p>{{ current.summary_text }}</p></div>
+          {% endif %}
+        </div>
+        <aside class="hero-aside">
+          <div class="hero-aside-kicker">论文定位</div>
+          <h2 class="hero-aside-title">{{ current.hero_aside_title }}</h2>
+          <div class="hero-fact-grid">
+            {% for item in current.hero_meta_items %}
+            <div class="hero-fact">
+              <div class="hero-fact-label">{{ item.label }}</div>
+              <div class="hero-fact-value">{{ item.value }}</div>
+            </div>
+            {% endfor %}
+          </div>
+          <div class="hero-aside-copy">{{ current.hero_aside_copy }}</div>
+        </aside>
+      </div>
+    </section>
+
+    {% if current.summary_cards %}
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">核心解读</div>
+          <h2>这篇论文真正贡献了什么</h2>
+        </div>
+        <div class="section-intro">阅读顺序建议是：先看识别对象，再看它挑战了哪条旧假设，最后看这篇证据在整个指数效应争论中把问题往前推进了哪一步。</div>
+      </div>
+      <div class="insight-grid">
+        {% for card in current.summary_cards %}
+        <article class="insight-card {% if loop.first %}primary{% endif %}">
+          <div class="kicker">{{ card.kicker }}</div>
+          <h3>{{ card.title }}</h3>
+          {% if card.meta %}<div class="insight-meta">{{ card.meta }}</div>{% endif %}
+          <p>{{ card["copy"] }}</p>
+        </article>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if current.sequence_cards or current.recommended_cards %}
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">研究路径</div>
+          <h2>这篇论文在 16 篇链条中的位置</h2>
+        </div>
+        <div class="section-intro">先看前后相邻文献把握它在整条争论中的位置，再根据推荐阅读判断下一步是继续追机制、追识别，还是回到中国市场语境。</div>
+      </div>
+      {% if current.sequence_cards %}
+      <div class="timeline-track">
+        <div class="timeline-label-row">
+          {% for card in current.sequence_cards %}
+          <div class="timeline-label {% if card.is_current %}current{% endif %}">{{ card.track_label }}</div>
+          {% endfor %}
+        </div>
+        <div class="sequence-grid">
+          {% for card in current.sequence_cards %}
+          <article class="sequence-card {% if card.is_current %}current{% endif %}">
+            <div class="mini-kicker">{{ card.kicker }}</div>
+            <h3>{{ card.title }}</h3>
+            {% if card.year_label or card.camp %}
+            <div class="pill-row">
+              {% if card.year_label %}<span class="pill year">{{ card.year_label }}</span>{% endif %}
+              {% if card.camp %}<span class="pill camp">{{ card.camp }}</span>{% endif %}
+            </div>
+            {% endif %}
+            {% if card.meta %}<div class="mini-meta">{{ card.meta }}</div>{% endif %}
+            <p>{{ card["copy"] }}</p>
+            {% if card.href %}
+            <a href="{{ card.href }}">进入文献讲义</a>
+            {% endif %}
+          </article>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      {% if current.recommended_cards %}
+      <div class="recommend-grid">
+        {% for card in current.recommended_cards %}
+        <article class="recommend-card">
+          <div class="mini-kicker">{{ card.kicker }}</div>
+          <h3>{{ card.title }}</h3>
+          {% if card.year_label or card.camp %}
+          <div class="pill-row">
+            {% if card.year_label %}<span class="pill year">{{ card.year_label }}</span>{% endif %}
+            {% if card.camp %}<span class="pill camp">{{ card.camp }}</span>{% endif %}
+          </div>
+          {% endif %}
+          {% if card.meta %}<div class="mini-meta">{{ card.meta }}</div>{% endif %}
+          <p>{{ card["copy"] }}</p>
+          {% if card.href %}
+          <a href="{{ card.href }}">推荐继续阅读</a>
+          {% endif %}
+        </article>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if current.evolution_nav_cards %}
+      <div class="evolution-nav">
+        <h3>完整文献演进导航</h3>
+        <div class="evolution-nav-copy">以下 16 篇文献按阵营和时间排序。当前页可作为入口页使用，沿着这张导航可以直接跳转到任意一篇文献讲义。</div>
+        <div class="evolution-switcher" role="toolbar" aria-label="文献导航视图">
+          <button class="{% if evolution_view == 'camp' %}active{% endif %}" id="evolution-view-button-camp" type="button" data-view-target="camp" aria-pressed="{% if evolution_view == 'camp' %}true{% else %}false{% endif %}" aria-controls="evolution-view-camp">按阵营</button>
+          <button class="{% if evolution_view == 'track' %}active{% endif %}" id="evolution-view-button-track" type="button" data-view-target="track" aria-pressed="{% if evolution_view == 'track' %}true{% else %}false{% endif %}" aria-controls="evolution-view-track">按主线</button>
+          <button class="{% if evolution_view == 'stance' %}active{% endif %}" id="evolution-view-button-stance" type="button" data-view-target="stance" aria-pressed="{% if evolution_view == 'stance' %}true{% else %}false{% endif %}" aria-controls="evolution-view-stance">按立场</button>
+        </div>
+        {% for view in current.evolution_nav_views %}
+        <div class="evolution-view {% if view.id == evolution_view %}active{% endif %}" id="evolution-view-{{ view.id }}" data-view-name="{{ view.id }}" aria-labelledby="evolution-view-button-{{ view.id }}"{% if view.id != evolution_view %} hidden{% endif %}>
+          {% for group in view.groups %}
+          <section class="evolution-group">
+            <div class="evolution-group-head">
+              <h4>{{ group.title }}</h4>
+              {% if group.meta %}<div class="group-meta">{{ group.meta }}</div>{% endif %}
+            </div>
+            <div class="evolution-nav-grid">
+              {% for card in group.cards %}
+              <a class="evolution-link {% if card.is_current %}current{% endif %}" href="{{ card.href }}">
+                <div class="eyebrow">{{ card.kicker }}</div>
+                <h4>{{ card.title }}</h4>
+                <div class="pill-row">
+                  <span class="pill year">{{ card.year_label }}</span>
+                  <span class="pill camp">{{ card.camp }}</span>
+                </div>
+                <div class="mini-meta">{{ card.track_label }}</div>
+                <p>{{ card["copy"] }}</p>
+              </a>
+              {% endfor %}
+            </div>
+          </section>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">结构化信息</div>
+          <h2>论文信息与深度解读</h2>
+        </div>
+        <div class="section-intro">这里把适合展示与答辩引用的关键信息压缩成两张表：左边是论文基本信息，右边是当前项目中的深度解读。</div>
+      </div>
+      <div class="table-grid">
+        {% for label, html_table in current.rendered_tables %}
+        <div class="table-card {% if loop.first %}primary{% endif %}">
+          <h3>{{ label }}</h3>
+          <div class="table-wrap">{{ html_table|safe }}</div>
+          <div class="table-scroll-note" data-table-scroll-note hidden>支持左右滚动，首列已固定</div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="note">如果需要进入原文，请使用上方“打开原文 PDF”按钮；当前页面的目的，是先把这篇论文在整条研究链中的位置讲清楚，而不是直接跳进扫描版原文。</div>
+    </section>
+  </main>
+  <script src="{{ url_for('static', filename='paper.js') }}" defer></script>
+</body>
+</html>
