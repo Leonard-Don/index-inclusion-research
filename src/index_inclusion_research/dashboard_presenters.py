@@ -164,6 +164,76 @@ def split_items_by_tier(
     return primary, detail
 
 
+def _identification_summary_from_status(status_panel: StatusPanel | None) -> str:
+    if status_panel is None:
+        return (
+            "这条主线把中国样本的事件研究、匹配回归与 RDD 识别放在同一结构中，"
+            "用于比较不同识别方法对指数效应判断的影响。"
+        )
+    tone = str(status_panel.get("tone", ""))
+    signal_value = str(status_panel.get("signal_value", ""))
+    if tone == "official":
+        return (
+            f"这条主线把中国样本的事件研究、匹配回归与 RDD 识别放在同一结构中；当前中国 RDD 已处于 {signal_value}，"
+            "可以与事件研究和匹配回归并列进入正式证据链。"
+        )
+    if tone == "reconstructed":
+        return (
+            f"这条主线把中国样本的事件研究、匹配回归与 RDD 识别放在同一结构中；当前中国 RDD 已处于 {signal_value}，"
+            "已进入公开数据版证据链，但必须明确标注为公开重建口径。"
+        )
+    if tone == "demo":
+        return (
+            f"这条主线把中国样本的事件研究、匹配回归与 RDD 识别放在同一结构中；当前中国 RDD 仍处于 {signal_value}，"
+            "展示重点是识别框架、字段契约与结果链路，而不是正式证据。"
+        )
+    return (
+        f"这条主线把中国样本的事件研究、匹配回归与 RDD 识别放在同一结构中；当前中国 RDD 仍处于 {signal_value}，"
+        "还没有进入正式或公开重建证据链。"
+    )
+
+
+def _identification_takeaway_from_status(status_panel: StatusPanel | None) -> str:
+    if status_panel is None:
+        return "中国市场证据不仅取决于现象本身，还取决于识别设计；匹配回归与 RDD 的并置展示正好体现了这一点。"
+    tone = str(status_panel.get("tone", ""))
+    if tone == "official":
+        return "中国市场证据现在不只是在展示识别框架，RDD 已经进入正式边界样本口径，可以更直接地支撑主结论。"
+    if tone == "reconstructed":
+        return "中国市场证据已经从“只讲方法”推进到“有一版可读的边界结果”，但当前仍应明确标注为公开重建口径。"
+    if tone == "demo":
+        return "中国市场证据当前仍以事件研究和匹配回归为主，RDD 在这一版里主要承担方法展示与链路校验的作用。"
+    return "中国市场证据当前仍以事件研究和匹配回归为主，RDD 识别框架已经搭好，但边界样本还没有进入可读证据链。"
+
+
+def _update_identification_notes(notes: list[TrackNote], status_panel: StatusPanel | None) -> list[TrackNote]:
+    if not notes:
+        return notes
+    if status_panel is None:
+        return notes
+    tone = str(status_panel.get("tone", ""))
+    signal_value = str(status_panel.get("signal_value", ""))
+    updated: list[TrackNote] = []
+    for note in notes:
+        row = dict(note)
+        if row.get("name") == "阅读顺序":
+            if tone in {"official", "reconstructed"}:
+                row["copy"] = "先观察中国样本的事件研究与匹配对照组结果，再看证据等级卡，最后核对 RDD 摘要表与断点图。"
+            else:
+                row["copy"] = "先观察中国样本的事件研究与匹配对照组结果，再查看 DID 风格摘要，最后单独阅读 RDD 的证据等级卡。"
+        if row.get("name") == "样本特征":
+            if tone == "official":
+                row["copy"] = f"风格识别部分已基于真实样本运行；RDD 当前处于 {signal_value}，可与其他识别结果并列进入正式证据链。"
+            elif tone == "reconstructed":
+                row["copy"] = f"风格识别部分已基于真实样本运行；RDD 当前处于 {signal_value}，已进入公开数据版证据链，但必须标注为公开重建口径。"
+            elif tone == "demo":
+                row["copy"] = f"风格识别部分已基于真实样本运行；RDD 当前处于 {signal_value}，主要用于方法展示与链路校验。"
+            else:
+                row["copy"] = f"风格识别部分已基于真实样本运行；RDD 当前处于 {signal_value}，边界样本仍待补齐。"
+        updated.append(row)
+    return updated
+
+
 def prepare_track_display(
     section: TrackDisplaySection,
     analysis_id: str,
@@ -178,12 +248,12 @@ def prepare_track_display(
     curated_summary = {
         "price_pressure_track": "这条主线集中展示短窗口 CAR、公告日与生效日差异，以及交易活跃度变化。当前样本表明，美国市场的公告日效应更强；中国 A 股更值得关注的是生效阶段长期窗口中的调入/调出分化。",
         "demand_curve_track": "这条主线关注价格冲击是否只在短期出现，还是会在更长窗口中保留。阅读时应重点比较保留率、长窗口 CAR，以及短长窗口之间的差异。",
-        "identification_china_track": "这条主线把中国样本的事件研究、匹配回归与 RDD 识别放在同一结构中，但只有通过正式候选样本文件校验的 RDD 才会进入正式证据链。",
+        "identification_china_track": _identification_summary_from_status(status_panel),
     }
     takeaways = {
         "price_pressure_track": "当前样本更支持“短期冲击具有明显市场差异”这一判断，而不是简单地认为所有市场都会在指数调整后同步上涨。",
         "demand_curve_track": "价格冲击并未在所有窗口中完全回吐，这意味着需求曲线效应仍有解释力，但其保留程度具有明显的阶段差异。",
-        "identification_china_track": "中国市场证据不仅取决于现象本身，还取决于识别设计；匹配回归与 RDD 的并置展示正好体现了这一点。",
+        "identification_china_track": _identification_takeaway_from_status(status_panel),
     }
 
     display: TrackDisplaySection = dict(section)
@@ -202,6 +272,8 @@ def prepare_track_display(
     else:
         display["badge"] = default_badge
     display["takeaway"] = takeaways.get(analysis_id, "")
+    if analysis_id == "identification_china_track":
+        display["notes"] = _update_identification_notes(display.get("notes", []), status_panel)
     display["status_panel"] = status_panel
     return display
 

@@ -76,6 +76,41 @@ def test_prepare_track_display_splits_tables_and_keeps_demo_note() -> None:
     assert display["display_support_papers"] == section["support_papers"]
 
 
+def test_prepare_track_display_updates_identification_copy_for_reconstructed_status() -> None:
+    display = dashboard_presenters.prepare_track_display(
+        {
+            "summary_text": "原始说明",
+            "notes": [
+                {"name": "阅读顺序", "copy": "旧阅读顺序"},
+                {"name": "样本特征", "copy": "旧样本特征"},
+            ],
+        },
+        "identification_china_track",
+        False,
+        fallback_summary="回退摘要",
+        result_cards_by_analysis={},
+        curated_tables_by_analysis={},
+        extra_figures_by_analysis={},
+        status_panel={
+            "kicker": "证据等级",
+            "title": "公开重建样本",
+            "tone": "reconstructed",
+            "signal_label": "当前识别层级",
+            "signal_value": "L2 · 公开重建样本",
+            "signal_copy": "公开重建说明",
+            "copy": "状态说明",
+            "meta": [],
+        },
+    )
+
+    assert "L2 · 公开重建样本" in display["display_summary"]
+    assert "公开数据版证据链" in display["display_summary"]
+    assert "公开重建口径" in display["takeaway"]
+    assert display["notes"][0]["copy"] == "先观察中国样本的事件研究与匹配对照组结果，再看证据等级卡，最后核对 RDD 摘要表与断点图。"
+    assert "L2 · 公开重建样本" in display["notes"][1]["copy"]
+    assert "公开重建口径" in display["notes"][1]["copy"]
+
+
 def test_prepare_framework_display_orders_tables() -> None:
     section = {
         "rendered_tables": [
