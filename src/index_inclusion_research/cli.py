@@ -33,3 +33,7 @@ def run_hs300_rdd_main() -> None:
 
 def run_prepare_hs300_rdd_candidates_main() -> None:
     _run_script_main("prepare_hs300_rdd_candidates")
+
+
+def run_reconstruct_hs300_rdd_candidates_main() -> None:
+    _run_script_main("reconstruct_hs300_rdd_candidates")

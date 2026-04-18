@@ -296,6 +296,17 @@ python3 scripts/prepare_hs300_rdd_candidates.py \
 - `candidate_batch_audit.csv`
 - `import_summary.md`
 
+如果你手里没有官方候选排名表，但希望先基于公开口径重建一版边界样本，也可以运行：
+
+```bash
+index-inclusion-reconstruct-hs300-rdd \
+  --announce-date 2024-05-31 \
+  --output data/raw/hs300_rdd_candidates.reconstructed.csv \
+  --force
+```
+
+这条路径会用当前 CSI300 成分股、后续真实调样批次回滚、以及公开价格/总股本代理口径重建 `cutoff=300` 两侧的边界样本。它适合课程论文、方法复现和公开数据版本的稳健性补充，但不应表述为中证官方历史候选排名表。
+
 ### 3. 清洗事件样本
 
 ```bash
@@ -399,9 +410,10 @@ index-inclusion-demand-curve
 index-inclusion-identification
 index-inclusion-hs300-rdd
 index-inclusion-prepare-hs300-rdd
+index-inclusion-reconstruct-hs300-rdd
 ```
 
-其中前三个研究主线入口仍对应价格压力、需求曲线和制度识别；后两个分别对应 HS300 RDD 运行与候选样本导入，适合不再直接调用旧脚本时使用。
+其中前三个研究主线入口仍对应价格压力、需求曲线和制度识别；后面三个分别对应 HS300 RDD 运行、候选样本导入和公开口径重建，适合不再直接调用旧脚本时使用。
 
 ## 开发与验证
 
