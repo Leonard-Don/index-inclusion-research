@@ -1,12 +1,19 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 from pathlib import Path
 
 from index_inclusion_research import dashboard_figures
 from index_inclusion_research import dashboard_metrics
 from index_inclusion_research import dashboard_presenters
 from index_inclusion_research import dashboard_tracks
+from index_inclusion_research.dashboard_types import (
+    AnalysisCache,
+    AnalysesConfig,
+    FigureEntry,
+    SecondarySection,
+    TrackDisplaySection,
+    TrackResult,
+)
 
 from index_inclusion_research.dashboard_track_content_runtime import DashboardTrackContentRuntime
 from index_inclusion_research.dashboard_track_support_runtime import DashboardTrackSupportRuntime
@@ -17,8 +24,8 @@ class DashboardTrackDisplayRuntime:
         self,
         *,
         root: Path,
-        analyses: Mapping[str, Mapping[str, object]],
-        run_cache: dict[str, dict[str, object]],
+        analyses: AnalysesConfig,
+        run_cache: AnalysisCache,
         support: DashboardTrackSupportRuntime,
         content: DashboardTrackContentRuntime,
     ) -> None:
@@ -28,13 +35,13 @@ class DashboardTrackDisplayRuntime:
         self.support = support
         self.content = content
 
-    def create_price_pressure_figures(self) -> list[dict[str, str]]:
+    def create_price_pressure_figures(self) -> list[FigureEntry]:
         return dashboard_figures.create_price_pressure_figures(
             self.root,
             to_relative=self.support.safe_relative,
         )
 
-    def create_identification_figures(self) -> list[dict[str, str]]:
+    def create_identification_figures(self) -> list[FigureEntry]:
         return dashboard_figures.create_identification_figures(
             self.root,
             load_rdd_status=self.content.load_rdd_status,
@@ -52,7 +59,7 @@ class DashboardTrackDisplayRuntime:
             load_supplement_result=self.content.load_supplement_result,
         )
 
-    def run_and_cache_analysis(self, analysis_id: str) -> dict[str, object]:
+    def run_and_cache_analysis(self, analysis_id: str) -> TrackResult:
         return dashboard_tracks.run_and_cache_analysis(
             analysis_id,
             analyses=self.analyses,
@@ -61,7 +68,7 @@ class DashboardTrackDisplayRuntime:
             attach_project_track_context=self.content.attach_project_track_context,
         )
 
-    def load_or_build_track_section(self, analysis_id: str) -> dict[str, object]:
+    def load_or_build_track_section(self, analysis_id: str) -> TrackResult:
         return dashboard_tracks.load_or_build_track_section(
             analysis_id,
             analyses=self.analyses,
@@ -73,10 +80,10 @@ class DashboardTrackDisplayRuntime:
 
     def prepare_track_display(
         self,
-        section: dict[str, object],
+        section: TrackDisplaySection,
         analysis_id: str,
         demo_mode: bool,
-    ) -> dict[str, object]:
+    ) -> TrackDisplaySection:
         return dashboard_tracks.prepare_track_display(
             self.root,
             section,
@@ -91,14 +98,14 @@ class DashboardTrackDisplayRuntime:
             create_identification_figures=self.create_identification_figures,
         )
 
-    def prepare_framework_display(self, section: dict[str, object], demo_mode: bool) -> dict[str, object]:
+    def prepare_framework_display(self, section: SecondarySection, demo_mode: bool) -> SecondarySection:
         del demo_mode
         return dashboard_presenters.prepare_framework_display(
             section,
             summary_cards=dashboard_metrics.build_framework_summary_cards(),
         )
 
-    def prepare_supplement_display(self, section: dict[str, object], demo_mode: bool) -> dict[str, object]:
+    def prepare_supplement_display(self, section: SecondarySection, demo_mode: bool) -> SecondarySection:
         del demo_mode
         return dashboard_presenters.prepare_supplement_display(
             section,

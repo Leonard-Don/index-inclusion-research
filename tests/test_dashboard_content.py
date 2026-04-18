@@ -20,6 +20,13 @@ def test_compact_author_label_handles_single_pair_and_group_authors() -> None:
     assert dashboard_content.compact_author_label("A Alpha; B Beta; C Gamma") == "Alpha 等"
 
 
+def test_paper_brief_title_uses_expected_record_keys() -> None:
+    assert (
+        dashboard_content.paper_brief_title({"authors": "Lawrence Harris; Eitan Gurel", "year_label": "1986"})
+        == "Harris、Gurel（1986）"
+    )
+
+
 def test_load_literature_library_result_keeps_cards_and_docs_tables() -> None:
     result = dashboard_content.load_literature_library_result(
         render_table=_render_table_stub,
@@ -76,7 +83,10 @@ def test_load_paper_detail_result_builds_navigation_and_actions() -> None:
     assert result["primary_actions"] == [
         {"label": "打开原文 PDF", "href": "/paper/harris_gurel_1986/pdf", "target": "_blank"}
     ]
+    assert "·" in result["subtitle"]
+    assert result["hero_aside_title"]
     assert any(item["label"] == "研究主线" for item in result["hero_meta_items"])
+    assert any(card["title"] for card in result["summary_cards"])
 
 
 def test_load_paper_detail_result_returns_none_for_unknown_paper() -> None:

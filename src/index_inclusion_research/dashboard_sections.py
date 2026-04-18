@@ -1,19 +1,34 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from pathlib import Path
 
 import pandas as pd
 
 from index_inclusion_research.results_snapshot import ResultsSnapshot
+from index_inclusion_research.dashboard_types import (
+    CsvFrameReader,
+    DashboardSection,
+    DisplayTableTierSplitter,
+    DisplayTableTiersAttacher,
+    DisplayTable,
+    FigureEntriesBuilder,
+    FormatPct,
+    FormatPValue,
+    FormatShare,
+    IdentificationScopeUpdater,
+    RobustnessSection,
+    SummaryCard,
+    TableRenderer,
+)
 
 
 def build_sample_design_cards(
     root: Path,
     *,
-    format_share: Callable[[float], str],
+    format_share: FormatShare,
     snapshot: ResultsSnapshot | None = None,
-) -> list[dict[str, str]]:
+) -> list[SummaryCard]:
     current_snapshot = snapshot or ResultsSnapshot(root)
     sample_scope = current_snapshot.csv("results", "real_tables", "sample_scope.csv")
     data_sources = current_snapshot.csv("results", "real_tables", "data_sources.csv")
@@ -54,11 +69,11 @@ def build_sample_design_cards(
 def build_sample_design_tables(
     root: Path,
     *,
-    render_table: Callable[..., str],
-    format_p_value: Callable[[float], str],
+    render_table: TableRenderer,
+    format_p_value: FormatPValue,
     value_labels: Mapping[object, object],
     snapshot: ResultsSnapshot | None = None,
-) -> list[dict[str, str]]:
+) -> list[DisplayTable]:
     current_snapshot = snapshot or ResultsSnapshot(root)
     event_counts = current_snapshot.csv("results", "real_tables", "event_counts.csv").copy()
     event_counts_by_year = current_snapshot.csv("results", "real_tables", "event_counts_by_year.csv").copy()
@@ -136,14 +151,14 @@ def build_sample_design_section(
     root: Path,
     *,
     demo_mode: bool,
-    render_table: Callable[..., str],
-    attach_display_tiers: Callable[[list[dict[str, object]]], list[dict[str, object]]],
-    split_items_by_tier: Callable[[list[dict[str, object]]], tuple[list[dict[str, object]], list[dict[str, object]]]],
-    create_sample_design_figures: Callable[[], list[dict[str, str]]],
-    format_share: Callable[[float], str],
-    format_p_value: Callable[[float], str],
+    render_table: TableRenderer,
+    attach_display_tiers: DisplayTableTiersAttacher,
+    split_items_by_tier: DisplayTableTierSplitter,
+    create_sample_design_figures: FigureEntriesBuilder,
+    format_share: FormatShare,
+    format_p_value: FormatPValue,
     value_labels: Mapping[object, object],
-) -> dict[str, object]:
+) -> DashboardSection:
     snapshot = ResultsSnapshot(root)
     tables = attach_display_tiers(
         build_sample_design_tables(
@@ -170,14 +185,14 @@ def build_sample_design_section(
 def build_robustness_section(
     root: Path,
     *,
-    read_csv_if_exists: Callable[[str | Path], pd.DataFrame],
-    render_table: Callable[..., str],
-    attach_display_tiers: Callable[[list[dict[str, object]]], list[dict[str, object]]],
-    split_items_by_tier: Callable[[list[dict[str, object]]], tuple[list[dict[str, object]], list[dict[str, object]]]],
-    format_share: Callable[[float], str],
-    format_pct: Callable[[float], str],
+    read_csv_if_exists: CsvFrameReader,
+    render_table: TableRenderer,
+    attach_display_tiers: DisplayTableTiersAttacher,
+    split_items_by_tier: DisplayTableTierSplitter,
+    format_share: FormatShare,
+    format_pct: FormatPct,
     snapshot: ResultsSnapshot | None = None,
-) -> dict[str, object]:
+) -> RobustnessSection:
     del read_csv_if_exists
     current_snapshot = snapshot or ResultsSnapshot(root)
     robustness_events = current_snapshot.optional_csv("results", "real_tables", "robustness_event_study_summary.csv")
@@ -276,13 +291,13 @@ def build_robustness_section(
 def build_limits_section(
     root: Path,
     *,
-    apply_live_rdd_status_to_identification_scope: Callable[[pd.DataFrame], pd.DataFrame],
-    render_table: Callable[..., str],
-    attach_display_tiers: Callable[[list[dict[str, object]]], list[dict[str, object]]],
-    split_items_by_tier: Callable[[list[dict[str, object]]], tuple[list[dict[str, object]], list[dict[str, object]]]],
-    format_share: Callable[[float], str],
+    apply_live_rdd_status_to_identification_scope: IdentificationScopeUpdater,
+    render_table: TableRenderer,
+    attach_display_tiers: DisplayTableTiersAttacher,
+    split_items_by_tier: DisplayTableTierSplitter,
+    format_share: FormatShare,
     snapshot: ResultsSnapshot | None = None,
-) -> dict[str, object]:
+) -> DashboardSection:
     current_snapshot = snapshot or ResultsSnapshot(root)
     identification_scope = apply_live_rdd_status_to_identification_scope(
         current_snapshot.csv("results", "real_tables", "identification_scope.csv")

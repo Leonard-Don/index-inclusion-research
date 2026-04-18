@@ -1,9 +1,27 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 
+from index_inclusion_research.dashboard_types import (
+    AbstractPoint,
+    DisplayTable,
+    DisplayTier,
+    FigureEntry,
+    ModeName,
+    ModeTab,
+    ModeTabUrlBuilder,
+    NavSection,
+    NoteItem,
+    RenderedTable,
+    ResultCard,
+    SecondarySection,
+    StatusPanel,
+    SummaryCard,
+    TrackDisplaySection,
+    TrackNote,
+)
 
-def nav_sections_for_mode(mode: str) -> list[dict[str, str]]:
+def nav_sections_for_mode(mode: ModeName) -> list[NavSection]:
     items = [
         {"anchor": "overview", "label": "总览"},
         {"anchor": "design", "label": "样本与设计"},
@@ -22,7 +40,7 @@ def nav_sections_for_mode(mode: str) -> list[dict[str, str]]:
     return items
 
 
-def available_hashes_for_mode(mode: str) -> list[str]:
+def available_hashes_for_mode(mode: ModeName) -> list[str]:
     hashes = ["#overview", "#design", "#tracks", "#limits"]
     if mode != "brief":
         hashes.extend(["#framework", "#supplement"])
@@ -39,9 +57,9 @@ def available_hashes_for_mode(mode: str) -> list[str]:
 
 
 def mode_tabs_for_mode(
-    mode: str,
-    url_builder: Callable[[str, str | None], str],
-) -> list[dict[str, object]]:
+    mode: ModeName,
+    url_builder: ModeTabUrlBuilder,
+) -> list[ModeTab]:
     labels = {
         "brief": "3 分钟汇报",
         "demo": "展示版",
@@ -52,7 +70,7 @@ def mode_tabs_for_mode(
         "demo": "#overview",
         "full": "#overview",
     }
-    tabs: list[dict[str, object]] = []
+    tabs: list[ModeTab] = []
     for tab_mode in ("brief", "demo", "full"):
         tabs.append(
             {
@@ -90,7 +108,7 @@ def table_layout_for_label(label: str) -> str:
     return "wide" if label in wide_labels else ""
 
 
-def table_tier_for_label(label: str) -> str:
+def table_tier_for_label(label: str) -> DisplayTier:
     primary_labels = {
         "A 股与美股并列总结",
         "样本范围总表",
@@ -112,7 +130,7 @@ def table_tier_for_label(label: str) -> str:
     return "primary" if label in primary_labels else "detail"
 
 
-def decorate_display_tables(tables: list[tuple[str, str]]) -> list[dict[str, str]]:
+def decorate_display_tables(tables: list[RenderedTable]) -> list[DisplayTable]:
     return [
         {
             "label": label,
@@ -124,20 +142,20 @@ def decorate_display_tables(tables: list[tuple[str, str]]) -> list[dict[str, str
     ]
 
 
-def attach_display_tiers(items: list[dict[str, object]]) -> list[dict[str, object]]:
-    enriched: list[dict[str, object]] = []
+def attach_display_tiers(items: list[DisplayTable]) -> list[DisplayTable]:
+    enriched: list[DisplayTable] = []
     for item in items:
-        row = dict(item)
+        row: DisplayTable = dict(item)
         row.setdefault("tier", table_tier_for_label(str(row.get("label", ""))))
         enriched.append(row)
     return enriched
 
 
 def split_items_by_tier(
-    items: list[dict[str, object]],
-) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
-    primary: list[dict[str, object]] = []
-    detail: list[dict[str, object]] = []
+    items: list[DisplayTable],
+) -> tuple[list[DisplayTable], list[DisplayTable]]:
+    primary: list[DisplayTable] = []
+    detail: list[DisplayTable] = []
     for item in attach_display_tiers(items):
         if item.get("tier") == "detail":
             detail.append(item)
@@ -147,16 +165,16 @@ def split_items_by_tier(
 
 
 def prepare_track_display(
-    section: dict[str, object],
+    section: TrackDisplaySection,
     analysis_id: str,
     demo_mode: bool,
     *,
     fallback_summary: str,
-    result_cards_by_analysis: Mapping[str, list[dict[str, str]]],
-    curated_tables_by_analysis: Mapping[str, list[tuple[str, str]]],
-    extra_figures_by_analysis: Mapping[str, list[dict[str, str]]],
-    status_panel: dict[str, object] | None = None,
-) -> dict[str, object]:
+    result_cards_by_analysis: Mapping[str, list[ResultCard]],
+    curated_tables_by_analysis: Mapping[str, list[RenderedTable]],
+    extra_figures_by_analysis: Mapping[str, list[FigureEntry]],
+    status_panel: StatusPanel | None = None,
+) -> TrackDisplaySection:
     curated_summary = {
         "price_pressure_track": "这条主线集中展示短窗口 CAR、公告日与生效日差异，以及交易活跃度变化。当前样本表明，美国市场的公告日效应更强；中国 A 股更值得关注的是生效阶段长期窗口中的调入/调出分化。",
         "demand_curve_track": "这条主线关注价格冲击是否只在短期出现，还是会在更长窗口中保留。阅读时应重点比较保留率、长窗口 CAR，以及短长窗口之间的差异。",
@@ -168,7 +186,7 @@ def prepare_track_display(
         "identification_china_track": "中国市场证据不仅取决于现象本身，还取决于识别设计；匹配回归与 RDD 的并置展示正好体现了这一点。",
     }
 
-    display = dict(section)
+    display: TrackDisplaySection = dict(section)
     display["display_summary"] = curated_summary.get(analysis_id, fallback_summary)
     if demo_mode and "详细稳健性结果见完整材料。" not in str(display["display_summary"]):
         display["display_summary"] = f'{display["display_summary"]} 详细稳健性结果见完整材料。'
@@ -185,11 +203,11 @@ def prepare_track_display(
 
 
 def prepare_framework_display(
-    section: dict[str, object],
+    section: SecondarySection,
     *,
-    summary_cards: list[dict[str, str]],
-) -> dict[str, object]:
-    display = dict(section)
+    summary_cards: list[SummaryCard],
+) -> SecondarySection:
+    display: SecondarySection = dict(section)
     display["display_summary"] = "这里把 16 篇文献组织成一条可以直接讲述的研究史：从 1986 年的经典对决，到现代市场里指数效应的弱化，再到 RDD 方法与中国市场证据的扩展。"
     raw_tables = {label: html for label, html in display.get("rendered_tables", [])}
     ordered_tables = [
@@ -207,11 +225,11 @@ def prepare_framework_display(
 
 
 def prepare_supplement_display(
-    section: dict[str, object],
+    section: SecondarySection,
     *,
-    summary_cards: list[dict[str, str]],
-) -> dict[str, object]:
-    display = dict(section)
+    summary_cards: list[SummaryCard],
+) -> SecondarySection:
+    display: SecondarySection = dict(section)
     display["display_summary"] = "这部分把事件研究背后的交易逻辑整理成更便于讨论的解释框架，重点在于说明资金何时进场、冲击为何形成，以及价格与流动性如何在不同阶段调整。"
     raw_tables = {label: html for label, html in display.get("rendered_tables", [])}
     ordered_tables = [
@@ -230,7 +248,7 @@ def prepare_supplement_display(
     return display
 
 
-def track_notes_for_analysis(analysis_id: str) -> list[dict[str, str]]:
+def track_notes_for_analysis(analysis_id: str) -> list[TrackNote]:
     if analysis_id == "price_pressure_track":
         return [
             {"name": "主问题", "copy": "这条主线专门回答指数调入后的上涨是不是主要来自短期交易冲击，而不是长期重估。"},
@@ -250,7 +268,7 @@ def track_notes_for_analysis(analysis_id: str) -> list[dict[str, str]]:
     ]
 
 
-def overview_notes() -> list[dict[str, str]]:
+def overview_notes() -> list[NoteItem]:
     return [
         {"title": "文献层", "copy": "16 篇文献既可按反方、中性、正方阅读，也可按五大阵营理解研究演进。"},
         {"title": "实证层", "copy": "三条研究主线均已接入真实样本、核心表格与可视化结果。"},
@@ -259,7 +277,7 @@ def overview_notes() -> list[dict[str, str]]:
     ]
 
 
-def overview_notes_for_mode(mode: str) -> list[dict[str, str]]:
+def overview_notes_for_mode(mode: ModeName) -> list[NoteItem]:
     if mode == "brief":
         return [
             {"title": "样本层", "copy": "首页先交代真实样本覆盖、事件窗口口径与跨市场比较的基本范围。"},
@@ -277,7 +295,7 @@ def overview_summary() -> str:
     )
 
 
-def overview_summary_for_mode(mode: str) -> str:
+def overview_summary_for_mode(mode: ModeName) -> str:
     if mode == "brief":
         return (
             "页面将真实样本、三条研究主线与研究边界压缩为一套适合快速汇报的展示材料，"
@@ -286,7 +304,7 @@ def overview_summary_for_mode(mode: str) -> str:
     return overview_summary()
 
 
-def cta_copy_for_mode(mode: str) -> str:
+def cta_copy_for_mode(mode: ModeName) -> str:
     if mode == "brief":
         return "页面以压缩方式呈现样本、主线与研究边界，适合在较短时间内完成问题提出、证据展示与边界交代。"
     return "页面同步呈现主线结果、文献框架与机制补充，便于在同一叙述中完成现象、机制与识别三个层面的展示。"
@@ -299,7 +317,7 @@ def abstract_lead() -> str:
     )
 
 
-def abstract_points() -> list[dict[str, str]]:
+def abstract_points() -> list[AbstractPoint]:
     return [
         {
             "title": "现象层",

@@ -95,18 +95,33 @@ def test_refresh_status_payload_reports_duration_error_and_redirect() -> None:
             "started_ts": 100.0,
             "finished_ts": 160.0,
             "error": "boom",
+            "snapshot_label": "",
+            "snapshot_copy": "",
+            "snapshot_source_path": "",
+            "snapshot_source_count": 0,
+            "updated_artifacts": [],
+            "baseline_artifact_mtimes": {},
         },
         mode="demo",
         anchor="overview",
         open_panels=None,
-        snapshot_meta={"label": "2026-04-17 10:02", "copy": "snapshot"},
+        snapshot_meta={
+            "label": "2026-04-17 10:02",
+            "copy": "snapshot",
+            "source_path": "results/real_tables/event_study_summary.csv",
+            "source_count": 1,
+        },
         redirect_url_builder=lambda mode, anchor, open_panels: f"/?mode={mode}#{anchor}",
         now_ts=170.0,
     )
 
     assert failed_payload["duration_seconds"] == 60
+    assert failed_payload["accepted"] is True
     assert failed_payload["message"].endswith("boom")
     assert failed_payload["redirect_url"] == ""
+    assert failed_payload["snapshot_source_path"] == "results/real_tables/event_study_summary.csv"
+    assert failed_payload["snapshot_source_count"] == 1
+    assert failed_payload["updated_artifacts"] == []
 
     success_payload = dashboard_refresh.refresh_status_payload(
         {
@@ -119,11 +134,22 @@ def test_refresh_status_payload_reports_duration_error_and_redirect() -> None:
             "started_ts": 100.0,
             "finished_ts": 160.0,
             "error": "",
+            "snapshot_label": "",
+            "snapshot_copy": "",
+            "snapshot_source_path": "",
+            "snapshot_source_count": 0,
+            "updated_artifacts": [],
+            "baseline_artifact_mtimes": {},
         },
         mode="demo",
         anchor="framework",
         open_panels="demo-design-detail-tables",
-        snapshot_meta={"label": "2026-04-17 10:02", "copy": "snapshot"},
+        snapshot_meta={
+            "label": "2026-04-17 10:02",
+            "copy": "snapshot",
+            "source_path": "results/real_tables/event_study_summary.csv",
+            "source_count": 1,
+        },
         redirect_url_builder=lambda mode, anchor, open_panels: f"/?mode={mode}&open={open_panels}#{anchor}",
         now_ts=170.0,
     )
@@ -146,12 +172,20 @@ def test_queue_refresh_job_sets_running_state_and_blocks_parallel_runs() -> None
         scope_key="all",
         started_at="2026-04-17 10:00",
         started_ts=100.0,
+        snapshot_meta={
+            "label": "2026-04-17 10:00",
+            "copy": "snapshot copy",
+            "source_path": "results/real_tables/event_study_summary.csv",
+            "source_count": 1,
+        },
+        baseline_artifact_mtimes={},
         spawn_refresh_worker=_spawn,
     )
 
     assert queued is True
     assert refresh_state["status"] == "running"
     assert refresh_state["scope_key"] == "all"
+    assert refresh_state["snapshot_source_path"] == "results/real_tables/event_study_summary.csv"
     assert spawned == [("全部材料", "all")]
 
     blocked = dashboard_refresh.queue_refresh_job(
@@ -162,6 +196,13 @@ def test_queue_refresh_job_sets_running_state_and_blocks_parallel_runs() -> None
         scope_key="price_pressure_track",
         started_at="2026-04-17 10:01",
         started_ts=101.0,
+        snapshot_meta={
+            "label": "2026-04-17 10:01",
+            "copy": "snapshot copy",
+            "source_path": "results/real_tables/event_study_summary.csv",
+            "source_count": 1,
+        },
+        baseline_artifact_mtimes={},
         spawn_refresh_worker=_spawn,
     )
 

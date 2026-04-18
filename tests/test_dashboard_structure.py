@@ -26,6 +26,12 @@ def _reset_refresh_state() -> None:
                 "started_ts": 0.0,
                 "finished_ts": 0.0,
                 "error": "",
+                "snapshot_label": "",
+                "snapshot_copy": "",
+                "snapshot_source_path": "",
+                "snapshot_source_count": 0,
+                "updated_artifacts": [],
+                "baseline_artifact_mtimes": {},
             }
         )
 
@@ -131,6 +137,9 @@ def test_home_dashboard_demo_mode_collapses_secondary_material_and_marks_lazy_me
     assert 'data-refresh-status-url="/refresh/status"' in html
     assert 'data-refresh-form' in html
     assert 'data-refresh-panel' in html
+    assert 'data-refresh-state-label' in html
+    assert 'data-refresh-scope-label' in html
+    assert 'data-refresh-artifact-list' in html
     assert "只刷新本主线" in html
     assert 'data-details-key="demo-design-detail-figures"' in html
     assert 'data-details-key="demo-framework-detail-tables"' in html
@@ -209,6 +218,7 @@ def test_home_dashboard_async_refresh_returns_json_status(monkeypatch) -> None:
 
     payload = response.get_json()
     assert response.status_code == 202
+    assert payload["accepted"] is True
     assert payload["status"] == "running"
     assert payload["redirect_url"] == ""
     assert payload["scope_key"] == "all"
@@ -237,6 +247,7 @@ def test_track_level_async_refresh_returns_analysis_scope(monkeypatch) -> None:
 
     payload = response.get_json()
     assert response.status_code == 202
+    assert payload["accepted"] is True
     assert payload["status"] == "running"
     assert payload["scope_label"] == "短期价格压力与效应减弱"
     assert payload["scope_key"] == "price_pressure_track"
@@ -268,6 +279,17 @@ def test_refresh_status_exposes_redirect_after_success() -> None:
                 "started_ts": 100.0,
                 "finished_ts": 160.0,
                 "error": "",
+                "snapshot_label": "2026-04-16 10:01",
+                "snapshot_copy": "copy",
+                "snapshot_source_path": "results/real_tables/event_study_summary.csv",
+                "snapshot_source_count": 1,
+                "updated_artifacts": [
+                    {
+                        "path": "results/real_tables/event_study_summary.csv",
+                        "modified_at": "2026-04-16 10:01",
+                    }
+                ],
+                "baseline_artifact_mtimes": {},
             }
         )
 
@@ -277,6 +299,7 @@ def test_refresh_status_exposes_redirect_after_success() -> None:
     assert payload["status"] == "succeeded"
     assert payload["redirect_url"].endswith("/?mode=demo#supplement")
     assert payload["duration_seconds"] == 60
+    assert payload["updated_artifacts"][0]["path"] == "results/real_tables/event_study_summary.csv"
     _reset_refresh_state()
 
 
@@ -294,6 +317,12 @@ def test_refresh_status_slows_polling_for_long_running_jobs(monkeypatch) -> None
                 "started_ts": 100.0,
                 "finished_ts": 0.0,
                 "error": "",
+                "snapshot_label": "2026-04-16 09:59",
+                "snapshot_copy": "copy",
+                "snapshot_source_path": "results/real_tables/event_study_summary.csv",
+                "snapshot_source_count": 1,
+                "updated_artifacts": [],
+                "baseline_artifact_mtimes": {},
             }
         )
 

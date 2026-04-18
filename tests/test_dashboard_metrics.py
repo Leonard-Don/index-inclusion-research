@@ -88,6 +88,27 @@ def test_identification_status_panel_handles_missing_and_real_modes() -> None:
     assert dashboard_metrics.build_identification_status_panel({"mode": "real"}) is None
 
 
+def test_identification_status_panel_includes_candidate_audit_copy_when_available() -> None:
+    panel = dashboard_metrics.build_identification_status_panel(
+        {
+            "mode": "demo",
+            "evidence_status": "方法展示",
+            "message": "当前处于显式 --demo 模式。",
+            "candidate_batches": 2,
+            "treated_rows": 3,
+            "control_rows": 4,
+            "crossing_batches": 2,
+            "validation_error": "",
+            "audit_file": "results/literature/hs300_rdd/candidate_batch_audit.csv",
+        }
+    )
+
+    assert panel is not None
+    assert panel["title"] == "方法展示"
+    assert "2 个候选批次" in panel["meta"][0]["value"]
+    assert "candidate_batch_audit.csv" in panel["meta"][2]["value"]
+
+
 def test_track_metric_tables_return_expected_labels() -> None:
     price_tables = dashboard_metrics.build_price_pressure_tables(ROOT, render_table=_render_table_stub)
     demand_tables = dashboard_metrics.build_demand_curve_tables(ROOT, render_table=_render_table_stub)

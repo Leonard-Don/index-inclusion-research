@@ -1,36 +1,57 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
 from pathlib import Path
 
 from index_inclusion_research import dashboard_metrics
 from index_inclusion_research import dashboard_presenters
+from index_inclusion_research.dashboard_types import (
+    AnalysisCache,
+    AnalysesConfig,
+    AnalysisDefinition,
+    FigureEntriesBuilder,
+    FormatPct,
+    FormatPValue,
+    FrameworkResultLoader,
+    RawAnalysisResult,
+    SavedTrackResultLoader,
+    SupplementResultLoader,
+    TableRenderer,
+    TextCleaner,
+    TrackAnalysisRunner,
+    TrackContextAttacher,
+    TrackDisplaySection,
+    TrackLibraryResultLoader,
+    TrackResultNormalizer,
+    TrackReviewResultLoader,
+    TrackResult,
+    RddStatusLoader,
+)
 
 
 def finalize_track_result(
-    raw: Mapping[str, object],
-    config: Mapping[str, object],
+    raw: RawAnalysisResult,
+    config: AnalysisDefinition,
     *,
-    normalize_result: Callable[[dict[str, object]], dict[str, object]],
-    attach_project_track_context: Callable[[dict[str, object], dict[str, object]], dict[str, object]],
+    normalize_result: TrackResultNormalizer,
+    attach_project_track_context: TrackContextAttacher,
     analysis_id: str,
-) -> dict[str, object]:
-    current = normalize_result(dict(raw))
+) -> TrackResult:
+    current = normalize_result(raw)
     current["id"] = config.get("project_module", analysis_id)
     current["title"] = config["title"]
     current["description"] = raw.get("description", config["description_zh"])
     current["subtitle"] = config["subtitle"]
-    return attach_project_track_context(current, dict(config))
+    return attach_project_track_context(current, config)
 
 
 def run_and_cache_analysis(
     analysis_id: str,
     *,
-    analyses: Mapping[str, Mapping[str, object]],
-    run_cache: dict[str, dict[str, object]],
-    normalize_result: Callable[[dict[str, object]], dict[str, object]],
-    attach_project_track_context: Callable[[dict[str, object], dict[str, object]], dict[str, object]],
-) -> dict[str, object]:
+    analyses: AnalysesConfig,
+    run_cache: AnalysisCache,
+    normalize_result: TrackResultNormalizer,
+    attach_project_track_context: TrackContextAttacher,
+) -> TrackResult:
     config = analyses[analysis_id]
     raw = config["runner"](verbose=False)
     current = finalize_track_result(
@@ -47,14 +68,14 @@ def run_and_cache_analysis(
 def load_or_build_track_section(
     analysis_id: str,
     *,
-    analyses: Mapping[str, Mapping[str, object]],
-    run_cache: dict[str, dict[str, object]],
-    load_saved_track_result: Callable[[str, dict[str, object]], dict[str, object] | None],
-    normalize_result: Callable[[dict[str, object]], dict[str, object]],
-    attach_project_track_context: Callable[[dict[str, object], dict[str, object]], dict[str, object]],
-) -> dict[str, object]:
+    analyses: AnalysesConfig,
+    run_cache: AnalysisCache,
+    load_saved_track_result: SavedTrackResultLoader,
+    normalize_result: TrackResultNormalizer,
+    attach_project_track_context: TrackContextAttacher,
+) -> TrackResult:
     current = run_cache.get(analysis_id)
-    config = dict(analyses[analysis_id])
+    config = analyses[analysis_id]
     if current is None:
         current = load_saved_track_result(analysis_id, config)
         if current is not None:
@@ -74,13 +95,13 @@ def load_or_build_track_section(
 
 def run_and_cache_all(
     *,
-    analyses: Mapping[str, Mapping[str, object]],
-    run_cache: dict[str, dict[str, object]],
-    run_and_cache_analysis: Callable[[str], dict[str, object]],
-    load_literature_library_result: Callable[[], dict[str, object]],
-    load_literature_review_result: Callable[[], dict[str, object]],
-    load_literature_framework_result: Callable[[], dict[str, object]],
-    load_supplement_result: Callable[[], dict[str, object]],
+    analyses: AnalysesConfig,
+    run_cache: AnalysisCache,
+    run_and_cache_analysis: TrackAnalysisRunner,
+    load_literature_library_result: TrackLibraryResultLoader,
+    load_literature_review_result: TrackReviewResultLoader,
+    load_literature_framework_result: FrameworkResultLoader,
+    load_supplement_result: SupplementResultLoader,
 ) -> None:
     for analysis_id in analyses:
         run_and_cache_analysis(analysis_id)
@@ -92,18 +113,18 @@ def run_and_cache_all(
 
 def prepare_track_display(
     root: Path,
-    section: dict[str, object],
+    section: TrackDisplaySection,
     analysis_id: str,
     demo_mode: bool,
     *,
-    load_rdd_status: Callable[[], dict[str, object]],
-    clean_display_text: Callable[[str], str],
-    render_table: Callable[..., str],
-    format_pct: Callable[[float], str],
-    format_p_value: Callable[[float], str],
-    create_price_pressure_figures: Callable[[], list[dict[str, str]]],
-    create_identification_figures: Callable[[], list[dict[str, str]]],
-) -> dict[str, object]:
+    load_rdd_status: RddStatusLoader,
+    clean_display_text: TextCleaner,
+    render_table: TableRenderer,
+    format_pct: FormatPct,
+    format_p_value: FormatPValue,
+    create_price_pressure_figures: FigureEntriesBuilder,
+    create_identification_figures: FigureEntriesBuilder,
+) -> TrackDisplaySection:
     identification_status = load_rdd_status() if analysis_id == "identification_china_track" else None
     return dashboard_presenters.prepare_track_display(
         section,

@@ -14,6 +14,12 @@ from index_inclusion_research.dashboard_route_bindings import (
 )
 
 
+def _runtime_stub() -> SimpleNamespace:
+    return SimpleNamespace(
+        build_home_context=lambda **kwargs: {"mode": kwargs["display_mode"]},
+    )
+
+
 def test_build_home_url_builder_targets_home_endpoint() -> None:
     app = Flask(__name__)
     app.add_url_rule("/", endpoint="home", view_func=lambda: "ok")
@@ -30,15 +36,32 @@ def test_build_dashboard_route_views_uses_live_namespace_callables() -> None:
 
     services = SimpleNamespace(
         request_proxy=request,
-        runtime=object(),
+        runtime=_runtime_stub(),
         dashboard_mode=lambda: "demo",
         normalize_open_panels=lambda raw: raw or "",
         mode_tabs_for_mode=lambda mode, open_panels=None: [],
         refresh_status_payload=lambda mode, anchor, open_panels=None: {
+            "accepted": True,
             "status": "idle",
+            "message": "",
+            "error": "",
             "mode": mode,
             "anchor": anchor,
             "open_panels": open_panels,
+            "scope_label": "全部材料",
+            "scope_key": "all",
+            "started_at": "",
+            "finished_at": "",
+            "started_ts": 0.0,
+            "finished_ts": 0.0,
+            "duration_seconds": None,
+            "poll_after_ms": 1200,
+            "redirect_url": "",
+            "snapshot_label": "snapshot",
+            "snapshot_copy": "",
+            "snapshot_source_path": "results/real_tables/event_study_summary.csv",
+            "snapshot_source_count": 1,
+            "updated_artifacts": [],
         },
         normalize_anchor_for_mode=lambda mode, anchor: anchor or "overview",
         wants_async_refresh=lambda: False,
@@ -78,11 +101,30 @@ def test_build_dashboard_route_dependencies_and_factory_remain_explicit() -> Non
 
     services = SimpleNamespace(
         request_proxy=request,
-        runtime=object(),
+        runtime=_runtime_stub(),
         dashboard_mode=lambda: "demo",
         normalize_open_panels=lambda raw: raw or "",
         mode_tabs_for_mode=lambda mode, open_panels=None: [],
-        refresh_status_payload=lambda mode, anchor, open_panels=None: {"status": "idle"},
+        refresh_status_payload=lambda mode, anchor, open_panels=None: {
+            "accepted": True,
+            "status": "idle",
+            "message": "",
+            "error": "",
+            "scope_label": "全部材料",
+            "scope_key": "all",
+            "started_at": "",
+            "finished_at": "",
+            "started_ts": 0.0,
+            "finished_ts": 0.0,
+            "duration_seconds": None,
+            "poll_after_ms": 1200,
+            "redirect_url": "",
+            "snapshot_label": "snapshot",
+            "snapshot_copy": "",
+            "snapshot_source_path": "results/real_tables/event_study_summary.csv",
+            "snapshot_source_count": 1,
+            "updated_artifacts": [],
+        },
         normalize_anchor_for_mode=lambda mode, anchor: anchor or "overview",
         wants_async_refresh=lambda: False,
         queue_refresh_job=lambda runner, scope_label, scope_key: None,

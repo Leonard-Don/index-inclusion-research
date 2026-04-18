@@ -4,6 +4,15 @@ from index_inclusion_research import dashboard_figures
 from index_inclusion_research import dashboard_home
 from index_inclusion_research import dashboard_sections
 from index_inclusion_research.dashboard_page_outline_runtime import DashboardPageOutlineRuntime
+from index_inclusion_research.dashboard_types import (
+    DashboardSection,
+    FigureEntry,
+    HomeContext,
+    ModeName,
+    ModeTabsBuilder,
+    RefreshStatusPayloadBuilder,
+    RobustnessSection,
+)
 
 
 class DashboardPageSectionsRuntime:
@@ -11,7 +20,7 @@ class DashboardPageSectionsRuntime:
         self.track = track_runtime
         self.outline = outline
 
-    def create_sample_design_figures(self) -> list[dict[str, str]]:
+    def create_sample_design_figures(self) -> list[FigureEntry]:
         return dashboard_figures.create_sample_design_figures(
             self.track.root,
             to_relative=self.track.support.safe_relative,
@@ -19,7 +28,7 @@ class DashboardPageSectionsRuntime:
             format_share=self.track.support.format_share,
         )
 
-    def build_sample_design_section(self, demo_mode: bool = False) -> dict[str, object]:
+    def build_sample_design_section(self, demo_mode: bool = False) -> DashboardSection:
         return dashboard_sections.build_sample_design_section(
             self.track.root,
             demo_mode=demo_mode,
@@ -32,7 +41,7 @@ class DashboardPageSectionsRuntime:
             value_labels=self.track.support.value_labels,
         )
 
-    def build_robustness_section(self) -> dict[str, object]:
+    def build_robustness_section(self) -> RobustnessSection:
         return dashboard_sections.build_robustness_section(
             self.track.root,
             read_csv_if_exists=self.track.content.read_csv_if_exists,
@@ -43,7 +52,7 @@ class DashboardPageSectionsRuntime:
             format_pct=self.track.support.format_pct,
         )
 
-    def build_limits_section(self) -> dict[str, object]:
+    def build_limits_section(self) -> DashboardSection:
         return dashboard_sections.build_limits_section(
             self.track.root,
             apply_live_rdd_status_to_identification_scope=self.track.content.apply_live_rdd_status_to_identification_scope,
@@ -56,12 +65,12 @@ class DashboardPageSectionsRuntime:
     def build_home_context(
         self,
         *,
-        display_mode: str,
+        display_mode: ModeName,
         current_open_panels: str | None,
-        mode_tabs_for_mode,
-        refresh_status_payload,
+        mode_tabs_for_mode: ModeTabsBuilder,
+        refresh_status_payload: RefreshStatusPayloadBuilder,
         refresh_status_url: str,
-    ) -> dict[str, object]:
+    ) -> HomeContext:
         return dashboard_home.DashboardHomeContextBuilder(
             root=self.track.root,
             analyses=self.track.analyses,

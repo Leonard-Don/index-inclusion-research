@@ -3,21 +3,23 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from index_inclusion_research.dashboard_refresh_coordinator import DashboardRefreshCoordinator
-from index_inclusion_research.dashboard_runtime import DashboardRuntime
 from index_inclusion_research.dashboard_types import (
-    AnalysisResult,
+    DashboardRuntimeLike,
     HomeUrlBuilder,
+    ModeName,
     ModeTab,
     PaperDetailResult,
+    RefreshRunner,
     RefreshStatusPayload,
     RequestProxyLike,
     TimeModuleLike,
+    TrackResult,
 )
 
 
 @dataclass
 class DashboardServices:
-    runtime: DashboardRuntime
+    runtime: DashboardRuntimeLike
     refresh_coordinator: DashboardRefreshCoordinator
     request_proxy: RequestProxyLike
     time_module: TimeModuleLike
@@ -27,16 +29,16 @@ class DashboardServices:
     def refresh_timestamp(self) -> str:
         return self.refresh_coordinator.refresh_timestamp()
 
-    def dashboard_mode(self) -> str:
+    def dashboard_mode(self) -> ModeName:
         return self.refresh_coordinator.resolve_dashboard_mode(self.request_proxy.args.get("mode", "demo"))
 
     def normalize_open_panels(self, raw: str | None) -> str:
         return self.refresh_coordinator.normalize_open_panels(raw)
 
-    def normalize_anchor_for_mode(self, mode: str, anchor: str | None) -> str:
+    def normalize_anchor_for_mode(self, mode: ModeName, anchor: str | None) -> str:
         return self.refresh_coordinator.normalize_anchor_for_mode(mode, anchor)
 
-    def refresh_redirect_url(self, mode: str, anchor: str, open_panels: str | None = None) -> str:
+    def refresh_redirect_url(self, mode: ModeName, anchor: str, open_panels: str | None = None) -> str:
         return self.refresh_coordinator.refresh_redirect_url(
             mode,
             anchor,
@@ -61,7 +63,7 @@ class DashboardServices:
 
     def refresh_status_payload(
         self,
-        mode: str,
+        mode: ModeName,
         anchor: str,
         open_panels: str | None = None,
     ) -> RefreshStatusPayload:
@@ -90,7 +92,7 @@ class DashboardServices:
             finished_ts=self.time_module.time(),
         )
 
-    def run_refresh_job(self, runner, scope_label: str, scope_key: str) -> None:
+    def run_refresh_job(self, runner: RefreshRunner, scope_label: str, scope_key: str) -> None:
         self.refresh_coordinator.run_refresh_job(
             runner,
             scope_label,
@@ -99,7 +101,7 @@ class DashboardServices:
             mark_refresh_failed=self.mark_refresh_failed,
         )
 
-    def spawn_refresh_worker(self, runner, scope_label: str, scope_key: str) -> None:
+    def spawn_refresh_worker(self, runner: RefreshRunner, scope_label: str, scope_key: str) -> None:
         self.refresh_coordinator.spawn_refresh_worker(
             runner,
             scope_label,
@@ -107,7 +109,7 @@ class DashboardServices:
             run_refresh_job=self.run_refresh_job,
         )
 
-    def queue_refresh_job(self, runner, scope_label: str, scope_key: str) -> bool:
+    def queue_refresh_job(self, runner: RefreshRunner, scope_label: str, scope_key: str) -> bool:
         return self.refresh_coordinator.queue_refresh_job(
             runner=runner,
             scope_label=scope_label,
@@ -120,7 +122,7 @@ class DashboardServices:
     def wants_async_refresh(self) -> bool:
         return self.refresh_coordinator.wants_async_refresh(self.request_proxy.headers)
 
-    def mode_tabs_for_mode(self, mode: str, open_panels: str | None = None) -> list[ModeTab]:
+    def mode_tabs_for_mode(self, mode: ModeName, open_panels: str | None = None) -> list[ModeTab]:
         return self.runtime.mode_tabs_for_mode(
             mode,
             lambda tab_mode, anchor=None: (
@@ -148,7 +150,7 @@ class DashboardServices:
     def run_and_cache_all(self) -> None:
         self.runtime.run_and_cache_all()
 
-    def run_and_cache_analysis(self, analysis_id: str) -> AnalysisResult:
+    def run_and_cache_analysis(self, analysis_id: str) -> TrackResult:
         return self.runtime.run_and_cache_analysis(analysis_id)
 
     def load_paper_detail_result(self, paper_id: str) -> PaperDetailResult | None:
@@ -157,7 +159,7 @@ class DashboardServices:
 
 def build_dashboard_services(
     *,
-    runtime: DashboardRuntime,
+    runtime: DashboardRuntimeLike,
     refresh_coordinator: DashboardRefreshCoordinator,
     request_proxy: RequestProxyLike,
     time_module: TimeModuleLike,

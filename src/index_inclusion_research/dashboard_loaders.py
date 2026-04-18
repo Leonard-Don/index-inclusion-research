@@ -1,9 +1,30 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from pathlib import Path
+from typing import cast
 
 import pandas as pd
+
+from index_inclusion_research.dashboard_types import (
+    AnalysesConfig,
+    AnalysisDefinition,
+    CsvFrameReader,
+    FigureEntry,
+    FigureCaptionBuilder,
+    LabelTranslator,
+    RawAnalysisResult,
+    RawFigureEntry,
+    RelativePathBuilder,
+    RddStatus,
+    RddStatusLoader,
+    RenderedTable,
+    SavedTablesLoader,
+    TableRenderer,
+    TrackContextAttacher,
+    TrackResult,
+    TrackResultLoader,
+)
 
 
 def translate_label(label: str, table_labels: Mapping[str, str]) -> str:
@@ -72,23 +93,25 @@ def build_figure_caption(
 
 
 def normalize_result(
-    raw: dict[str, object],
+    raw: RawAnalysisResult,
     *,
-    translate_label: Callable[[str], str],
-    render_table: Callable[..., str],
-    to_relative: Callable[[Path], str],
-    build_figure_caption: Callable[..., str],
-) -> dict[str, object]:
+    translate_label: LabelTranslator,
+    render_table: TableRenderer,
+    to_relative: RelativePathBuilder,
+    build_figure_caption: FigureCaptionBuilder,
+) -> TrackResult:
     summary_path = raw.get("summary_path")
     summary_text = raw.get("summary_text", "") if isinstance(raw.get("summary_text"), str) else ""
     if isinstance(summary_path, Path) and summary_path.exists():
         summary_text = summary_path.read_text(encoding="utf-8")
-    tables = []
-    for label, frame in raw.get("tables", {}).items():
-        if frame is None:
-            continue
-        tables.append((translate_label(label), render_table(frame)))
-    figure_paths = []
+    tables: list[RenderedTable] = []
+    table_frames = raw.get("tables", {})
+    if isinstance(table_frames, Mapping):
+        for label, frame in table_frames.items():
+            if frame is None:
+                continue
+            tables.append((translate_label(str(label)), render_table(frame)))
+    figure_paths: list[FigureEntry] = []
     for item in raw.get("figures", []):
         if isinstance(item, Path):
             figure_paths.append(
@@ -98,13 +121,14 @@ def normalize_result(
                 }
             )
         elif isinstance(item, dict) and isinstance(item.get("path"), Path):
+            figure_item = cast(RawFigureEntry, item)
             figure_paths.append(
                 {
-                    "path": to_relative(item["path"]),
+                    "path": to_relative(figure_item["path"]),
                     "caption": build_figure_caption(
-                        item["path"],
-                        custom_caption=item.get("caption"),
-                        prefix=item.get("prefix"),
+                        figure_item["path"],
+                        custom_caption=figure_item.get("caption"),
+                        prefix=figure_item.get("prefix"),
                     ),
                 }
             )
@@ -124,12 +148,12 @@ def normalize_result(
 def load_saved_tables(
     output_dir: Path,
     *,
-    translate_label: Callable[[str], str],
-    render_table: Callable[..., str],
+    translate_label: LabelTranslator,
+    render_table: TableRenderer,
     max_tables: int = 6,
-) -> list[tuple[str, str]]:
+) -> list[RenderedTable]:
     csv_files = sorted(output_dir.rglob("*.csv"))
-    tables: list[tuple[str, str]] = []
+    tables: list[RenderedTable] = []
     seen: set[str] = set()
     preferred_order = [
         "event_study_summary.csv",
@@ -162,7 +186,7 @@ def load_saved_tables(
     return tables
 
 
-def load_single_csv(output_dir: Path, filename: str):
+def load_single_csv(output_dir: Path, filename: str) -> pd.DataFrame | None:
     path = next(output_dir.rglob(filename), None)
     if path is None:
         return None
@@ -196,8 +220,8 @@ def load_rdd_status(
     root: Path,
     *,
     output_dir: Path | None = None,
-    read_csv_if_exists: Callable[[str | Path], pd.DataFrame] = read_csv_if_exists,
-) -> dict[str, object]:
+    read_csv_if_exists: CsvFrameReader = read_csv_if_exists,
+) -> RddStatus:
     rdd_dir = output_dir or rdd_output_dir(root)
     status_path = rdd_dir / "rdd_status.csv"
     if status_path.exists():
@@ -278,30 +302,30 @@ def saved_output_dir_for_analysis(root: Path, analysis_id: str) -> Path | None:
 
 def load_identification_china_saved_result(
     root: Path,
-    analyses: Mapping[str, Mapping[str, object]],
+    analyses: AnalysesConfig,
     *,
-    load_rdd_status: Callable[..., dict[str, object]],
-    load_saved_tables: Callable[..., list[tuple[str, str]]],
-    to_relative: Callable[[Path], str],
-    build_figure_caption: Callable[..., str],
-) -> dict[str, object]:
+    load_rdd_status: RddStatusLoader,
+    load_saved_tables: SavedTablesLoader,
+    to_relative: RelativePathBuilder,
+    build_figure_caption: FigureCaptionBuilder,
+) -> TrackResult:
     style_dir = root / "results" / "literature" / "hs300_style"
     rdd_dir = rdd_output_dir(root)
-    rdd_status = load_rdd_status(root, output_dir=rdd_dir)
+    rdd_status = load_rdd_status()
 
     style_summary_path = style_dir / "summary.md"
     rdd_summary_path = rdd_dir / "summary.md"
     style_summary = style_summary_path.read_text(encoding="utf-8").strip() if style_summary_path.exists() else "暂无风格识别摘要。"
     rdd_summary = rdd_summary_path.read_text(encoding="utf-8").strip() if rdd_summary_path.exists() else rdd_status["message"]
 
-    combined_tables: list[tuple[str, str]] = []
+    combined_tables: list[RenderedTable] = []
     for label, html_table in load_saved_tables(style_dir):
         combined_tables.append((f"风格识别：{label}", html_table))
     if rdd_status["mode"] == "real":
         for label, html_table in load_saved_tables(rdd_dir):
             combined_tables.append((f"断点回归：{label}", html_table))
 
-    figure_paths = []
+    figure_paths: list[FigureEntry] = []
     for path in sorted(style_dir.rglob("*.png")):
         figure_paths.append({"path": to_relative(path), "caption": build_figure_caption(path, prefix="风格识别")})
     if rdd_status["mode"] == "real":
@@ -338,24 +362,24 @@ def load_identification_china_saved_result(
 def load_saved_track_result(
     root: Path,
     analysis_id: str,
-    config: Mapping[str, object],
+    config: AnalysisDefinition,
     *,
-    load_identification_china_saved_result: Callable[[], dict[str, object]],
-    attach_project_track_context: Callable[[dict[str, object], dict[str, object]], dict[str, object]],
-    load_saved_tables: Callable[[Path], list[tuple[str, str]]],
-    to_relative: Callable[[Path], str],
-    build_figure_caption: Callable[..., str],
-) -> dict[str, object] | None:
+    load_identification_china_saved_result: TrackResultLoader,
+    attach_project_track_context: TrackContextAttacher,
+    load_saved_tables: SavedTablesLoader,
+    to_relative: RelativePathBuilder,
+    build_figure_caption: FigureCaptionBuilder,
+) -> TrackResult | None:
     if analysis_id == "identification_china_track":
         current = load_identification_china_saved_result()
-        return attach_project_track_context(current, dict(config))
+        return attach_project_track_context(current, config)
     output_dir = saved_output_dir_for_analysis(root, analysis_id)
     if output_dir is None:
         return None
     summary_path = output_dir / "summary.md"
     if not summary_path.exists():
         return None
-    current = {
+    current: TrackResult = {
         "id": config.get("project_module", analysis_id),
         "title": config["title"],
         "description": config["description_zh"],
@@ -371,4 +395,4 @@ def load_saved_track_result(
         ],
         "output_dir": to_relative(output_dir),
     }
-    return attach_project_track_context(current, dict(config))
+    return attach_project_track_context(current, config)

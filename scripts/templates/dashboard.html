@@ -60,10 +60,70 @@
             {% endfor %}
           </div>
           <div class="refresh-status hero-status" data-refresh-panel data-state="{{ refresh_meta.status }}">
-            <div class="refresh-status-label">结果快照</div>
-            <div class="refresh-status-value" data-refresh-snapshot-label>{{ snapshot_meta.label }}</div>
-            <div class="refresh-status-copy" data-refresh-snapshot-copy>{{ snapshot_meta["copy"] }}</div>
+            <div class="refresh-status-head">
+              <div>
+                <div class="refresh-status-label">结果快照</div>
+                <div class="refresh-status-value" data-refresh-snapshot-label>{{ refresh_meta.snapshot_label }}</div>
+              </div>
+              <div class="refresh-status-pill" data-refresh-state-label>
+                {% if refresh_meta.status == "running" %}
+                刷新中
+                {% elif refresh_meta.status == "succeeded" %}
+                已完成
+                {% elif refresh_meta.status == "failed" %}
+                刷新失败
+                {% else %}
+                已就绪
+                {% endif %}
+              </div>
+            </div>
+            <div class="refresh-status-copy" data-refresh-snapshot-copy>{{ refresh_meta.snapshot_copy }}</div>
             <div class="refresh-status-note" data-refresh-note aria-live="polite" role="status">{{ refresh_meta.message }}</div>
+            <div class="refresh-status-grid">
+              <div class="refresh-status-meta-card">
+                <div class="refresh-status-meta-label">当前范围</div>
+                <div class="refresh-status-meta-value" data-refresh-scope-label>{{ refresh_meta.scope_label }}</div>
+              </div>
+              <div class="refresh-status-meta-card">
+                <div class="refresh-status-meta-label">开始时间</div>
+                <div class="refresh-status-meta-value" data-refresh-started-at>{{ refresh_meta.started_at or "—" }}</div>
+              </div>
+              <div class="refresh-status-meta-card">
+                <div class="refresh-status-meta-label">结束时间</div>
+                <div class="refresh-status-meta-value" data-refresh-finished-at>{{ refresh_meta.finished_at or "—" }}</div>
+              </div>
+              <div class="refresh-status-meta-card">
+                <div class="refresh-status-meta-label">运行时长</div>
+                <div class="refresh-status-meta-value" data-refresh-duration>
+                  {% if refresh_meta.duration_seconds is not none %}
+                  {{ refresh_meta.duration_seconds }} 秒
+                  {% else %}
+                  —
+                  {% endif %}
+                </div>
+              </div>
+              <div class="refresh-status-meta-card refresh-status-meta-card-wide">
+                <div class="refresh-status-meta-label">快照来源</div>
+                <div class="refresh-status-meta-value" data-refresh-snapshot-source>
+                  {% if refresh_meta.snapshot_source_path %}
+                  {{ refresh_meta.snapshot_source_path }} · {{ refresh_meta.snapshot_source_count }} 个核心文件
+                  {% else %}
+                  —
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            <div class="refresh-status-artifacts" data-refresh-artifacts {% if not refresh_meta.updated_artifacts %}hidden{% endif %}>
+              <div class="refresh-status-artifacts-label">最近更新</div>
+              <ul class="refresh-status-artifact-list" data-refresh-artifact-list>
+                {% for item in refresh_meta.updated_artifacts %}
+                <li class="refresh-status-artifact-item">
+                  <span>{{ item.path }}</span>
+                  <time>{{ item.modified_at }}</time>
+                </li>
+                {% endfor %}
+              </ul>
+            </div>
           </div>
         </div>
       </div>

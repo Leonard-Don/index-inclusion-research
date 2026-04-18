@@ -12,8 +12,9 @@ from index_inclusion_research.dashboard_types import (
     AnalysesConfig,
     AnalysisRunner,
     DashboardCard,
+    DashboardRuntimeLike,
     DashboardRouteRegistrationMap,
-    RouteHandler,
+    RouteView,
 )
 
 
@@ -27,7 +28,7 @@ class DashboardShell:
     project_module_display: dict[str, str]
     details_query_param: str
     details_panel_keys: frozenset[str]
-    runtime: DashboardRuntime
+    runtime: DashboardRuntimeLike
     refresh_coordinator: DashboardRefreshCoordinator
     app: Flask
 
@@ -58,12 +59,14 @@ def build_refresh_coordinator(
     details_query_param: str,
     allowed_keys: frozenset[str],
     track_anchors: frozenset[str],
-    runtime: DashboardRuntime,
+    runtime: DashboardRuntimeLike,
 ) -> DashboardRefreshCoordinator:
     return DashboardRefreshCoordinator(
         details_query_param=details_query_param,
         allowed_keys=allowed_keys,
         track_anchors=track_anchors,
+        dashboard_snapshot_sources=runtime.dashboard_snapshot_sources,
+        to_relative=runtime.safe_relative,
         build_dashboard_snapshot_meta=runtime.build_dashboard_snapshot_meta,
         nav_sections_for_mode=runtime.nav_sections_for_mode,
     )
@@ -141,19 +144,19 @@ def build_dashboard_shell(
 def register_dashboard_routes(
     app: Flask,
     *,
-    favicon_view: RouteHandler,
-    home_view: RouteHandler,
-    refresh_dashboard_view: RouteHandler,
-    refresh_status_view: RouteHandler,
-    run_analysis_view: RouteHandler,
-    show_library_view: RouteHandler,
-    show_review_view: RouteHandler,
-    show_framework_view: RouteHandler,
-    show_supplement_view: RouteHandler,
-    show_analysis_view: RouteHandler,
-    serve_result_file_view: RouteHandler,
-    show_paper_brief_view: RouteHandler,
-    serve_library_pdf_view: RouteHandler,
+    favicon_view: RouteView,
+    home_view: RouteView,
+    refresh_dashboard_view: RouteView,
+    refresh_status_view: RouteView,
+    run_analysis_view: RouteView,
+    show_library_view: RouteView,
+    show_review_view: RouteView,
+    show_framework_view: RouteView,
+    show_supplement_view: RouteView,
+    show_analysis_view: RouteView,
+    serve_result_file_view: RouteView,
+    show_paper_brief_view: RouteView,
+    serve_library_pdf_view: RouteView,
 ) -> Flask:
     app.add_url_rule("/favicon.ico", endpoint="favicon", view_func=favicon_view, methods=["GET"])
     app.add_url_rule("/", endpoint="home", view_func=home_view, methods=["GET"])

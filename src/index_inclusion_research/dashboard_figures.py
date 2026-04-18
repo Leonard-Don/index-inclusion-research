@@ -1,9 +1,16 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from pathlib import Path
 
 import pandas as pd
+
+from index_inclusion_research.dashboard_types import (
+    FigureEntry,
+    FormatPValue,
+    FormatShare,
+    RddStatusLoader,
+    RelativePathBuilder,
+)
 
 
 def dashboard_figure_dir(root: Path) -> Path:
@@ -32,7 +39,7 @@ def significance_stars(p_value: float) -> str:
     return ""
 
 
-def _price_pressure_figure_entry(path: Path, to_relative: Callable[[Path], str]) -> dict[str, str]:
+def _price_pressure_figure_entry(path: Path, to_relative: RelativePathBuilder) -> FigureEntry:
     return {
         "label": "短窗口 CAR 时间变化图",
         "caption": "图意：按公告年份追踪调入事件的 CAR[-1,+1]。阅读重点：观察美股公告日效应是否随时间减弱，以及中国样本是否呈现不同的阶段性变化。",
@@ -44,8 +51,8 @@ def _price_pressure_figure_entry(path: Path, to_relative: Callable[[Path], str])
 def create_price_pressure_figures(
     root: Path,
     *,
-    to_relative: Callable[[Path], str],
-) -> list[dict[str, str]]:
+    to_relative: RelativePathBuilder,
+) -> list[FigureEntry]:
     import matplotlib
 
     matplotlib.use("Agg")
@@ -107,9 +114,9 @@ def create_price_pressure_figures(
 def create_identification_figures(
     root: Path,
     *,
-    load_rdd_status: Callable[[], dict[str, object]],
-    to_relative: Callable[[Path], str],
-) -> list[dict[str, str]]:
+    load_rdd_status: RddStatusLoader,
+    to_relative: RelativePathBuilder,
+) -> list[FigureEntry]:
     import numpy as np
     import matplotlib
 
@@ -200,7 +207,7 @@ def create_identification_figures(
     ]
 
 
-def _sample_design_figure_entries(target_dir: Path, to_relative: Callable[[Path], str]) -> list[dict[str, str]]:
+def _sample_design_figure_entries(target_dir: Path, to_relative: RelativePathBuilder) -> list[FigureEntry]:
     timeline_path = target_dir / "sample_event_timeline.png"
     heatmap_path = target_dir / "sample_car_heatmap.png"
     main_path = target_dir / "main_regression_coefficients.png"
@@ -243,10 +250,10 @@ def _sample_design_figure_entries(target_dir: Path, to_relative: Callable[[Path]
 def create_sample_design_figures(
     root: Path,
     *,
-    to_relative: Callable[[Path], str],
-    format_p_value: Callable[[float], str],
-    format_share: Callable[[float], str],
-) -> list[dict[str, str]]:
+    to_relative: RelativePathBuilder,
+    format_p_value: FormatPValue,
+    format_share: FormatShare,
+) -> list[FigureEntry]:
     import matplotlib
 
     matplotlib.use("Agg")

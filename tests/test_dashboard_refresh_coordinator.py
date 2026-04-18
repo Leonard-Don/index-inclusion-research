@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from index_inclusion_research import dashboard_refresh
 from index_inclusion_research.dashboard_refresh_coordinator import DashboardRefreshCoordinator
 
 
@@ -8,7 +9,14 @@ def _build_coordinator() -> DashboardRefreshCoordinator:
         details_query_param="open",
         allowed_keys=frozenset({"demo-design-detail-tables"}),
         track_anchors=frozenset({"price_pressure_track"}),
-        build_dashboard_snapshot_meta=lambda: {"label": "snapshot", "copy": "copy"},
+        dashboard_snapshot_sources=lambda: [],
+        to_relative=str,
+        build_dashboard_snapshot_meta=lambda snapshot_files=None: {
+            "label": "snapshot",
+            "copy": "copy",
+            "source_path": "results/real_tables/event_study_summary.csv",
+            "source_count": 1 if snapshot_files is None else len(snapshot_files),
+        },
         nav_sections_for_mode=lambda mode: [{"anchor": "overview", "label": "总览"}],
     )
 
@@ -45,6 +53,7 @@ def test_refresh_coordinator_builds_redirect_and_status_payload() -> None:
     )
 
     assert payload["snapshot_label"] == "snapshot"
+    assert payload["accepted"] is True
     assert payload["status"] == "idle"
     assert payload["redirect_url"] == ""
 
@@ -64,6 +73,7 @@ def test_refresh_coordinator_queue_and_mark_success() -> None:
 
     assert queued is True
     assert spawned == [("全部材料", "all")]
+    assert coordinator.state["snapshot_source_path"] == "results/real_tables/event_study_summary.csv"
 
     coordinator.mark_refresh_succeeded(
         "全部材料",
@@ -74,3 +84,36 @@ def test_refresh_coordinator_queue_and_mark_success() -> None:
 
     assert coordinator.state["status"] == "succeeded"
     assert coordinator.state["scope_key"] == "all"
+    assert coordinator.state["updated_artifacts"] == []
+
+
+def test_refresh_coordinator_delegates_refresh_job_and_worker_helpers(monkeypatch) -> None:
+    coordinator = _build_coordinator()
+    events: list[tuple[str, str]] = []
+
+    monkeypatch.setattr(
+        dashboard_refresh,
+        "run_refresh_job",
+        lambda runner, scope_label, scope_key, **kwargs: kwargs["mark_refresh_succeeded"](scope_label, scope_key),
+    )
+    coordinator.run_refresh_job(
+        lambda: None,
+        "全部材料",
+        "all",
+        mark_refresh_succeeded=lambda scope_label, scope_key: events.append(("success", scope_key)),
+        mark_refresh_failed=lambda scope_label, scope_key, exc: events.append(("failed", scope_key)),
+    )
+
+    monkeypatch.setattr(
+        dashboard_refresh,
+        "spawn_refresh_worker",
+        lambda runner, scope_label, scope_key, **kwargs: kwargs["run_refresh_job"](runner, scope_label, scope_key),
+    )
+    coordinator.spawn_refresh_worker(
+        lambda: None,
+        "全部材料",
+        "all",
+        run_refresh_job=lambda runner, scope_label, scope_key: events.append(("spawn", scope_key)),
+    )
+
+    assert events == [("success", "all"), ("spawn", "all")]
