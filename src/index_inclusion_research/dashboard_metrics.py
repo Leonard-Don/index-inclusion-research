@@ -236,7 +236,7 @@ def build_identification_cards(
     current_rdd_status = dict(rdd_status) if rdd_status is not None else dashboard_loaders.load_rdd_status(root)
     rdd = (
         dashboard_loaders.load_single_csv(dashboard_loaders.rdd_output_dir(root), "rdd_summary.csv")
-        if current_rdd_status["mode"] == "real"
+        if current_rdd_status["mode"] in {"real", "reconstructed"}
         else None
     )
     cards: list[ResultCard] = []
@@ -288,24 +288,39 @@ def build_identification_status_panel(rdd_status: RddStatus) -> StatusPanel | No
         sample_overview = "尚未读到通过校验的候选样本文件；当前中国主线的正式结果仍以事件研究与匹配回归为主。"
     if rdd_status.get("validation_error"):
         sample_overview = f"{sample_overview} 最近一次校验失败原因：{rdd_status['validation_error']}。"
-    next_step_copy = (
-        f"先运行 {_hs300_rdd_prepare_check_command()} 验收原始候选名单；"
-        f"通过后再运行 {_hs300_rdd_prepare_import_command()} 写入正式样本。"
-    )
+    if rdd_status["mode"] == "reconstructed":
+        next_step_copy = (
+            "当前已经基于公开重建样本生成 RDD 结果；"
+            f"如果要升级到官方口径，再运行 {_hs300_rdd_prepare_check_command()} 和 {_hs300_rdd_prepare_import_command()}。"
+        )
+    else:
+        next_step_copy = (
+            f"先运行 {_hs300_rdd_prepare_check_command()} 验收原始候选名单；"
+            f"通过后再运行 {_hs300_rdd_prepare_import_command()} 写入正式样本。"
+        )
     contract_copy = (
         "模板文件为 data/raw/hs300_rdd_candidates.template.csv；"
         "必需列已固定为 batch_id、announce_date、running_variable、cutoff、inclusion 等字段。"
     )
     if rdd_status.get("audit_file"):
         contract_copy = f"{contract_copy} 当前已生成候选样本审计：{rdd_status['audit_file']}。"
+    if rdd_status["mode"] == "reconstructed":
+        panel_copy = (
+            f"{rdd_status['message']} 当前这版 RDD 已进入公开数据版证据链，但应明确标注为公开重建样本，"
+            "而不是中证官方历史候选排名表。"
+        )
+        entry_condition = "当前已进入公开数据版证据链；如需升级为官方口径，请提供正式候选样本文件并通过校验。"
+    else:
+        panel_copy = f"{rdd_status['message']} 只有在提供并通过校验的真实候选样本文件后，断点结果才会进入正式证据链。"
+        entry_condition = "提供正式候选样本文件并通过字段与日期校验。"
     return {
         "kicker": "方法状态",
         "title": str(rdd_status["evidence_status"]),
-        "copy": f"{rdd_status['message']} 只有在提供并通过校验的真实候选样本文件后，断点结果才会进入正式证据链。",
+        "copy": panel_copy,
         "meta": [
             {"label": "当前状态", "value": sample_overview},
             {"label": "推荐下一步", "value": next_step_copy},
-            {"label": "进入条件", "value": "提供正式候选样本文件并通过字段与日期校验。"},
+            {"label": "进入条件", "value": entry_condition},
             {"label": "数据契约", "value": contract_copy},
         ],
     }
@@ -407,7 +422,7 @@ def build_identification_tables(
     current_rdd_status = dict(rdd_status) if rdd_status is not None else dashboard_loaders.load_rdd_status(root)
     rdd = (
         dashboard_loaders.load_single_csv(dashboard_loaders.rdd_output_dir(root), "rdd_summary.csv")
-        if current_rdd_status["mode"] == "real"
+        if current_rdd_status["mode"] in {"real", "reconstructed"}
         else None
     )
     if rdd is not None:

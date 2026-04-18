@@ -49,13 +49,15 @@ def _infer_rdd_mode(summary_note_path: str | Path | None) -> str:
         status_frame = _read_csv_if_exists(status_path)
         if not status_frame.empty and "status" in status_frame.columns:
             status = str(status_frame.iloc[0]["status"]).strip().lower()
-            if status in {"real", "demo", "missing"}:
+            if status in {"real", "reconstructed", "demo", "missing"}:
                 return status
 
     if note_path.exists():
         note_text = note_path.read_text(encoding="utf-8")
         if "显式 `--demo` 模式" in note_text or "demo 伪排名数据" in note_text:
             return "demo"
+        if "当前正在使用公开数据重建的候选样本文件" in note_text:
+            return "reconstructed"
         if "当前正在使用你提供的真实候选排名文件" in note_text:
             return "real"
         if "等待真实候选样本文件" in note_text:

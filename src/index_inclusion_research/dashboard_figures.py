@@ -127,7 +127,7 @@ def create_identification_figures(
     plt.rcParams["axes.unicode_minus"] = False
 
     rdd_status = load_rdd_status()
-    if rdd_status["mode"] != "real":
+    if rdd_status["mode"] not in {"real", "reconstructed"}:
         return []
 
     rdd_dir = root / "results" / "literature" / "hs300_rdd" / "figures"

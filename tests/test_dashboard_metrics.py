@@ -111,6 +111,28 @@ def test_identification_status_panel_includes_candidate_audit_copy_when_availabl
     assert "candidate_batch_audit.csv" in panel["meta"][3]["value"]
 
 
+def test_identification_status_panel_marks_reconstructed_mode_as_public_proxy() -> None:
+    panel = dashboard_metrics.build_identification_status_panel(
+        {
+            "mode": "reconstructed",
+            "evidence_status": "公开重建样本",
+            "message": "当前正在使用公开数据重建的候选样本文件。",
+            "candidate_batches": 1,
+            "treated_rows": 299,
+            "control_rows": 12,
+            "crossing_batches": 1,
+            "validation_error": "",
+            "audit_file": "results/literature/hs300_rdd/candidate_batch_audit.csv",
+        }
+    )
+
+    assert panel is not None
+    assert panel["title"] == "公开重建样本"
+    assert "公开重建样本" in panel["copy"]
+    assert "升级到官方口径" in panel["meta"][1]["value"]
+    assert "公开数据版证据链" in panel["meta"][2]["value"]
+
+
 def test_track_metric_tables_return_expected_labels() -> None:
     price_tables = dashboard_metrics.build_price_pressure_tables(ROOT, render_table=_render_table_stub)
     demand_tables = dashboard_metrics.build_demand_curve_tables(ROOT, render_table=_render_table_stub)

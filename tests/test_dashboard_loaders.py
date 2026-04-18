@@ -88,6 +88,17 @@ def test_load_rdd_status_detects_demo_summary(tmp_path: Path) -> None:
     assert status["evidence_status"] == "方法展示"
 
 
+def test_load_rdd_status_detects_reconstructed_summary(tmp_path: Path) -> None:
+    summary_path = tmp_path / "summary.md"
+    summary_path.write_text("当前正在使用公开数据重建的候选样本文件：`hs300_rdd_candidates.reconstructed.csv`。", encoding="utf-8")
+
+    status = dashboard_loaders.load_rdd_status(ROOT, output_dir=tmp_path)
+
+    assert status["mode"] == "reconstructed"
+    assert status["evidence_status"] == "公开重建样本"
+    assert status["input_file"] == "data/raw/hs300_rdd_candidates.reconstructed.csv"
+
+
 def test_load_rdd_status_reads_status_csv_audit_and_validation_fields(tmp_path: Path) -> None:
     (tmp_path / "rdd_status.csv").write_text(
         "\n".join(
@@ -231,3 +242,50 @@ def test_load_identification_china_saved_result_keeps_formal_rdd_outputs_when_st
             "caption": "断点回归:car_m1_p1_rdd_main.png",
         },
     ]
+
+
+def test_load_identification_china_saved_result_keeps_rdd_outputs_when_status_reconstructed(tmp_path: Path) -> None:
+    style_dir = tmp_path / "results" / "literature" / "hs300_style"
+    rdd_dir = tmp_path / "results" / "literature" / "hs300_rdd"
+    style_dir.mkdir(parents=True)
+    rdd_dir.mkdir(parents=True)
+    (style_dir / "summary.md").write_text("style summary", encoding="utf-8")
+    (rdd_dir / "summary.md").write_text("rdd summary", encoding="utf-8")
+    (style_dir / "sample_event_timeline.png").write_bytes(b"fake")
+    (rdd_dir / "car_m1_p1_rdd_main.png").write_bytes(b"fake")
+
+    result = dashboard_loaders.load_identification_china_saved_result(
+        tmp_path,
+        {
+            "identification_china_track": {
+                "title": "制度识别与中国市场证据",
+                "subtitle": "Identification",
+                "description_zh": "desc",
+                "project_module": "沪深300论文复现",
+                "runner": lambda verbose=False: {},
+            }
+        },
+        load_rdd_status=lambda: {
+            "mode": "reconstructed",
+            "evidence_status": "公开重建样本",
+            "message": "reconstructed",
+            "note": "",
+            "input_file": "",
+            "audit_file": "",
+            "candidate_rows": None,
+            "candidate_batches": None,
+            "treated_rows": None,
+            "control_rows": None,
+            "crossing_batches": None,
+            "validation_error": "",
+        },
+        load_saved_tables=lambda output_dir: [("表格", output_dir.name)],
+        to_relative=lambda path: path.relative_to(tmp_path).as_posix(),
+        build_figure_caption=lambda path, custom_caption=None, prefix=None: f"{prefix or 'none'}:{path.name}",
+    )
+
+    assert result["rendered_tables"] == [
+        ("风格识别：表格", "hs300_style"),
+        ("断点回归：表格", "hs300_rdd"),
+    ]
+    assert result["figure_paths"][-1]["caption"] == "断点回归:car_m1_p1_rdd_main.png"
