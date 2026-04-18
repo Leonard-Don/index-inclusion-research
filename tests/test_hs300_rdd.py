@@ -167,7 +167,7 @@ def test_run_analysis_records_validation_error_without_demo_fallback(tmp_path: P
     assert "running_variable" in summary
     assert "index-inclusion-prepare-hs300-rdd --input /path/to/raw_candidates.xlsx --sheet 0 --check-only" in summary
     assert "--output data/raw/hs300_rdd_candidates.csv --force" in summary
-    assert "index-inclusion-reconstruct-hs300-rdd --announce-date 2024-05-31" in summary
+    assert "index-inclusion-reconstruct-hs300-rdd --all-batches" in summary
     assert not (output_dir / "rdd_summary.csv").exists()
     assert not (output_dir / "event_level_with_running.csv").exists()
     assert not (output_dir / "figures").exists()

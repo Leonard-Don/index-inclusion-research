@@ -300,12 +300,12 @@ python3 scripts/prepare_hs300_rdd_candidates.py \
 
 ```bash
 index-inclusion-reconstruct-hs300-rdd \
-  --announce-date 2024-05-31 \
+  --all-batches \
   --output data/raw/hs300_rdd_candidates.reconstructed.csv \
   --force
 ```
 
-这条路径会用当前 CSI300 成分股、后续真实调样批次回滚、以及公开价格/总股本代理口径重建 `cutoff=300` 两侧的边界样本。它适合课程论文、方法复现和公开数据版本的稳健性补充，但不应表述为中证官方历史候选排名表。
+这条路径会用当前 CSI300 成分股、后续真实调样批次回滚、以及公开价格/总股本代理口径，优先重建当前事件源里“可以稳定回滚”的连续批次后缀；如果只想做单批次，也可以改用 `--announce-date 2024-05-31`。它适合课程论文、方法复现和公开数据版本的稳健性补充，但不应表述为中证官方历史候选排名表。
 
 ### 3. 清洗事件样本
 

@@ -166,15 +166,26 @@ def load_cached_proxy_market_caps(
     day_prices = prices.loc[
         (prices["market"].astype(str).str.upper() == "CN")
         & (prices["ticker"].isin(tickers))
-        & (prices["date"] == pd.Timestamp(target_date))
-        & prices["mkt_cap"].notna(),
-        ["ticker", "mkt_cap"],
+        & (prices["date"] <= pd.Timestamp(target_date))
+        ,
+        ["ticker", "date", "close", "mkt_cap"],
     ].copy()
     if day_prices.empty:
         return pd.DataFrame(columns=["ticker", "proxy_market_cap"])
+    day_prices = (
+        day_prices.sort_values(["ticker", "date"])
+        .drop_duplicates(subset=["ticker"], keep="last")
+        .copy()
+    )
 
     metadata = pd.read_csv(metadata_path, dtype={"ticker": str}, usecols=["ticker", "shares_outstanding"])
     metadata["ticker"] = metadata["ticker"].astype(str).str.zfill(6)
     merged = day_prices.merge(metadata, on="ticker", how="left")
-    merged["proxy_market_cap"] = pd.to_numeric(merged["mkt_cap"], errors="coerce")
+    merged["mkt_cap"] = pd.to_numeric(merged["mkt_cap"], errors="coerce")
+    merged["close"] = pd.to_numeric(merged["close"], errors="coerce")
+    merged["shares_outstanding"] = pd.to_numeric(merged["shares_outstanding"], errors="coerce")
+    merged["proxy_market_cap"] = merged["mkt_cap"].where(
+        merged["mkt_cap"].notna(),
+        merged["close"] * merged["shares_outstanding"],
+    )
     return merged.loc[:, ["ticker", "proxy_market_cap"]].dropna().copy()
