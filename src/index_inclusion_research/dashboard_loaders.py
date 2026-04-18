@@ -6,6 +6,7 @@ from typing import cast
 
 import pandas as pd
 
+from index_inclusion_research.rdd_evidence import rdd_evidence_tier, rdd_evidence_tier_from_status
 from index_inclusion_research.dashboard_types import (
     AnalysesConfig,
     AnalysisDefinition,
@@ -228,9 +229,15 @@ def load_rdd_status(
         status_frame = read_csv_if_exists(status_path)
         if not status_frame.empty:
             row = status_frame.iloc[0]
+            mode = str(row.get("status", "missing"))
+            evidence_status = str(row.get("evidence_status", "待补正式样本"))
+            evidence_tier = ("" if pd.isna(row.get("evidence_tier")) else str(row.get("evidence_tier"))) or rdd_evidence_tier(mode)
+            if evidence_tier == "—":
+                evidence_tier = rdd_evidence_tier_from_status(evidence_status)
             return {
-                "mode": str(row.get("status", "missing")),
-                "evidence_status": str(row.get("evidence_status", "待补正式样本")),
+                "mode": mode,
+                "evidence_tier": evidence_tier,
+                "evidence_status": evidence_status,
                 "message": str(row.get("message", "等待真实候选样本文件。")),
                 "note": str(row.get("note", "等待正式候选样本、公开重建样本，或修复文件校验错误后，RDD 才能进入 L2/L3 证据等级。")),
                 "input_file": "" if pd.isna(row.get("input_file")) else str(row.get("input_file")),
@@ -249,6 +256,7 @@ def load_rdd_status(
         if "显式 `--demo` 模式" in summary_text or "demo 伪排名数据" in summary_text:
             return {
                 "mode": "demo",
+                "evidence_tier": rdd_evidence_tier("demo"),
                 "evidence_status": "方法展示",
                 "message": "当前为显式 demo 模式，只用于方法展示。",
                 "note": "当前为显式 demo 模式，只用于方法展示，不进入正式证据链。",
@@ -264,6 +272,7 @@ def load_rdd_status(
         if "当前正在使用公开数据重建的候选样本文件" in summary_text:
             return {
                 "mode": "reconstructed",
+                "evidence_tier": rdd_evidence_tier("reconstructed"),
                 "evidence_status": "公开重建样本",
                 "message": "当前正在使用公开数据重建的候选样本文件。",
                 "note": "基于公开数据重建的边界样本，可进入公开数据版证据链，但不应表述为中证官方历史候选排名表。",
@@ -279,6 +288,7 @@ def load_rdd_status(
         if "当前正在使用你提供的真实候选排名文件" in summary_text:
             return {
                 "mode": "real",
+                "evidence_tier": rdd_evidence_tier("real"),
                 "evidence_status": "正式边界样本",
                 "message": "当前正在使用你提供的真实候选排名文件。",
                 "note": "基于真实候选排名变量，可作为更强识别证据。",
@@ -293,6 +303,7 @@ def load_rdd_status(
             }
     return {
         "mode": "missing",
+        "evidence_tier": rdd_evidence_tier("missing"),
         "evidence_status": "待补正式样本",
         "message": "等待正式或公开重建候选样本文件：data/raw/hs300_rdd_candidates.csv 或 data/raw/hs300_rdd_candidates.reconstructed.csv。",
         "note": "等待正式候选样本、公开重建样本，或修复文件校验错误后，RDD 才能进入 L2/L3 证据等级。",

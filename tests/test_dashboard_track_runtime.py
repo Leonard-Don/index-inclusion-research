@@ -56,6 +56,7 @@ def test_apply_live_rdd_status_updates_evidence_tier_column(monkeypatch) -> None
         "load_rdd_status",
         lambda output_dir=None: {
             "mode": "reconstructed",
+            "evidence_tier": "L2",
             "evidence_status": "公开重建样本",
             "message": "",
             "note": "public proxy",

@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from index_inclusion_research import dashboard_loaders
-from index_inclusion_research import dashboard_metrics
 from index_inclusion_research.results_snapshot import ResultsSnapshot, require_first_row
 from index_inclusion_research.dashboard_types import (
     AbstractLeadBuilder,
@@ -35,16 +34,17 @@ from index_inclusion_research.dashboard_types import (
     TrackSectionLoader,
     RddStatus,
 )
+from index_inclusion_research.rdd_evidence import rdd_evidence_tier
 
 
 def _overview_rdd_metric(rdd_status: RddStatus) -> OverviewMetric:
     if rdd_status["mode"] == "real":
-        return {"value": dashboard_metrics.rdd_evidence_tier(rdd_status["mode"]), "label": "中国 RDD 已进入正式边界样本", "tone": "official"}
+        return {"value": str(rdd_status.get("evidence_tier", "")) or rdd_evidence_tier(rdd_status["mode"]), "label": "中国 RDD 已进入正式边界样本", "tone": "official"}
     if rdd_status["mode"] == "reconstructed":
-        return {"value": dashboard_metrics.rdd_evidence_tier(rdd_status["mode"]), "label": "中国 RDD 当前为公开重建样本", "tone": "reconstructed"}
+        return {"value": str(rdd_status.get("evidence_tier", "")) or rdd_evidence_tier(rdd_status["mode"]), "label": "中国 RDD 当前为公开重建样本", "tone": "reconstructed"}
     if rdd_status["mode"] == "demo":
-        return {"value": dashboard_metrics.rdd_evidence_tier(rdd_status["mode"]), "label": "中国 RDD 当前仅为方法展示", "tone": "demo"}
-    return {"value": dashboard_metrics.rdd_evidence_tier(rdd_status["mode"]), "label": "中国 RDD 仍待补正式样本", "tone": "missing"}
+        return {"value": str(rdd_status.get("evidence_tier", "")) or rdd_evidence_tier(rdd_status["mode"]), "label": "中国 RDD 当前仅为方法展示", "tone": "demo"}
+    return {"value": str(rdd_status.get("evidence_tier", "")) or rdd_evidence_tier(rdd_status["mode"]), "label": "中国 RDD 仍待补正式样本", "tone": "missing"}
 
 
 def build_overview_metrics(

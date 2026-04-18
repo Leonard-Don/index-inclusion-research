@@ -22,6 +22,7 @@ from index_inclusion_research.analysis.rdd_candidates import (
 )
 from index_inclusion_research.loaders import save_dataframe
 from index_inclusion_research.pipeline import build_event_sample, build_matched_sample
+from index_inclusion_research.rdd_evidence import rdd_evidence_tier
 
 REAL_INPUT = ROOT / "data" / "raw" / "hs300_rdd_candidates.csv"
 RECONSTRUCTED_INPUT = ROOT / "data" / "raw" / "hs300_rdd_candidates.reconstructed.csv"
@@ -219,6 +220,7 @@ def _write_status(
         [
             {
                 "status": mode,
+                "evidence_tier": rdd_evidence_tier(mode),
                 "evidence_status": evidence_status,
                 "message": message,
                 "note": default_note,
@@ -255,6 +257,7 @@ def _write_summary(
         "",
         "当前状态：",
         f"- 模式：`{row['status']}`",
+        f"- 证据等级：`{row['evidence_tier']}`",
         f"- 证据状态：`{row['evidence_status']}`",
         f"- 当前口径：{row['note']}",
         f"- 候选样本路径：`{row['input_file']}`",
