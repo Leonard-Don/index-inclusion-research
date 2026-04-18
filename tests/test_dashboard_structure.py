@@ -101,6 +101,7 @@ def test_home_dashboard_renders_single_frontend_sections() -> None:
     response = client.get("/")
     assert response.status_code == 200
     html = response.get_data(as_text=True)
+    status = dashboard.runtime.load_rdd_status()
     assert "16 篇文献、真实样本与识别设计：指数纳入效应的综合证据" in html
     assert "三条主线，对应三类核心问题" in html
     assert "16 篇文献在同一条研究链条中的位置" in html
@@ -114,6 +115,8 @@ def test_home_dashboard_renders_single_frontend_sections() -> None:
     assert "结果快照" in html
     assert "当前识别层级" in html
     assert dashboard.runtime.load_rdd_status()["evidence_status"] in html
+    assert "中国 RDD" in html
+    assert f"L{3 if status['mode'] == 'real' else 2 if status['mode'] == 'reconstructed' else 1 if status['mode'] == 'demo' else 0}" in html
     assert "built-in method copy of dict object" not in html
 
 

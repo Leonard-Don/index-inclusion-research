@@ -30,9 +30,10 @@ class TrackNote(TypedDict):
     copy: str
 
 
-class OverviewMetric(TypedDict):
+class OverviewMetric(TypedDict, total=False):
     value: str
     label: str
+    tone: str
 
 
 class NoteItem(TypedDict):
