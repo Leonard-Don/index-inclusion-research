@@ -6,7 +6,7 @@ import tomllib
 
 from index_inclusion_research import cli
 from index_inclusion_research.dashboard_bootstrap import bootstrap_dashboard_paths
-from index_inclusion_research.dashboard_cli import parse_dashboard_args
+from index_inclusion_research.dashboard_cli import parse_dashboard_args, run_dashboard_app
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,6 +31,21 @@ def test_parse_dashboard_args_accepts_host_and_port() -> None:
 
     assert args.host == "0.0.0.0"
     assert args.port == 5012
+
+
+def test_run_dashboard_app_prints_localhost_tip_and_forwards_host_port(capsys) -> None:
+    calls: list[dict[str, object]] = []
+
+    class DummyApp:
+        def run(self, **kwargs) -> None:
+            calls.append(kwargs)
+
+    run_dashboard_app(DummyApp(), ["--host", "127.0.0.1", "--port", "5013"])
+
+    captured = capsys.readouterr().out
+    assert "http://localhost:5013" in captured
+    assert "Firefox 对 localhost 的兼容性更稳定" in captured
+    assert calls == [{"host": "127.0.0.1", "port": 5013, "debug": False}]
 
 
 def test_project_metadata_declares_flask_and_console_scripts() -> None:

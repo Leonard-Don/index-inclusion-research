@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
 
-import pandas as pd
 
 from _literature_runner import (
     ROOT,
     ensure_real_data,
-    filter_events,
     prepare_clean_events,
     prepare_panel,
     print_frame,
