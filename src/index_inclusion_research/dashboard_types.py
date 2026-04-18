@@ -109,11 +109,15 @@ class DisplayTable(TypedDict, total=False):
     tier: DisplayTier
 
 
-class StatusPanel(TypedDict):
+class StatusPanel(TypedDict, total=False):
     kicker: str
     title: str
     copy: str
     meta: list[MetaItem]
+    tone: str
+    signal_label: str
+    signal_value: str
+    signal_copy: str
 
 
 class SnapshotMeta(TypedDict):

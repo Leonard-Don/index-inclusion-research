@@ -364,12 +364,20 @@
         </div>
         {% endif %}
         {% if section.status_panel %}
-        <div class="status-panel">
+        <div class="status-panel status-panel-{{ section.status_panel.tone if section.status_panel.tone else 'default' }}">
+          <div class="status-panel-band">
+            <div class="status-band-copy">
+              <div class="status-band-label">{{ section.status_panel.signal_label }}</div>
+              <div class="status-band-value">{{ section.status_panel.signal_value }}</div>
+            </div>
+            <div class="status-pill">{{ section.status_panel.title }}</div>
+          </div>
           <div class="status-panel-head">
             <div class="status-kicker">{{ section.status_panel.kicker }}</div>
             <h4 class="status-title">{{ section.status_panel.title }}</h4>
             <div class="status-copy">{{ section.status_panel["copy"] }}</div>
           </div>
+          <div class="status-signal-copy">{{ section.status_panel.signal_copy }}</div>
           <div class="status-meta-grid">
             {% for item in section.status_panel.meta %}
             <div class="status-meta-card">

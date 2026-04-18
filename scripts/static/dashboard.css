@@ -1200,21 +1200,100 @@
       line-height: 1.65;
     }
     .status-panel {
+      --status-accent: 166, 119, 71;
+      --status-accent-strong: #7b6344;
+      --status-panel-start: rgba(251,246,239,0.95);
+      --status-panel-end: rgba(246,238,226,0.88);
       display: grid;
       gap: 16px;
       margin-top: 18px;
       padding: 18px 20px;
       border-radius: 22px;
-      background: linear-gradient(180deg, rgba(251,246,239,0.95), rgba(246,238,226,0.88));
-      border: 1px solid rgba(166, 119, 71, 0.18);
+      background: linear-gradient(180deg, var(--status-panel-start), var(--status-panel-end));
+      border: 1px solid rgba(var(--status-accent), 0.18);
       box-shadow: 0 16px 32px rgba(36,53,69,0.06);
+      position: relative;
+      overflow: hidden;
+    }
+    .status-panel::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 7px;
+      background: linear-gradient(180deg, rgba(var(--status-accent), 0.92), rgba(var(--status-accent), 0.45));
+      border-radius: 22px 0 0 22px;
+    }
+    .status-panel-official {
+      --status-accent: 29, 111, 93;
+      --status-accent-strong: #1f5f50;
+      --status-panel-start: rgba(235, 247, 242, 0.96);
+      --status-panel-end: rgba(220, 241, 233, 0.9);
+    }
+    .status-panel-reconstructed {
+      --status-accent: 166, 119, 71;
+      --status-accent-strong: #7b6344;
+      --status-panel-start: rgba(251, 246, 239, 0.95);
+      --status-panel-end: rgba(246, 238, 226, 0.88);
+    }
+    .status-panel-demo {
+      --status-accent: 68, 104, 142;
+      --status-accent-strong: #2f587d;
+      --status-panel-start: rgba(239, 245, 252, 0.96);
+      --status-panel-end: rgba(228, 237, 248, 0.9);
+    }
+    .status-panel-missing {
+      --status-accent: 140, 91, 74;
+      --status-accent-strong: #764b3c;
+      --status-panel-start: rgba(252, 242, 238, 0.96);
+      --status-panel-end: rgba(246, 231, 225, 0.9);
+    }
+    .status-panel-band {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.62);
+      border: 1px solid rgba(var(--status-accent), 0.16);
+    }
+    .status-band-copy {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+    .status-band-label {
+      color: var(--status-accent-strong);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .status-band-value {
+      color: #203545;
+      font-family: "Songti SC", "STSong", "Noto Serif CJK SC", "Iowan Old Style", serif;
+      font-size: clamp(20px, 2.1vw, 28px);
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      text-wrap: balance;
+    }
+    .status-pill {
+      flex-shrink: 0;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(var(--status-accent), 0.12);
+      color: var(--status-accent-strong);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
     .status-panel-head {
       display: grid;
       gap: 8px;
     }
     .status-kicker {
-      color: #8d7450;
+      color: var(--status-accent-strong);
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.10em;
@@ -1235,20 +1314,30 @@
       line-height: 1.72;
       max-width: 72ch;
     }
+    .status-signal-copy {
+      padding: 12px 14px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.56);
+      border: 1px dashed rgba(var(--status-accent), 0.24);
+      color: #243545;
+      font-size: 14px;
+      line-height: 1.65;
+      max-width: 72ch;
+    }
     .status-meta-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 12px;
     }
     .status-meta-card {
       padding: 12px 13px;
       border-radius: 16px;
       background: rgba(255,255,255,0.72);
-      border: 1px solid rgba(24,33,43,0.06);
+      border: 1px solid rgba(var(--status-accent), 0.1);
       min-width: 0;
     }
     .status-meta-label {
-      color: #7b6344;
+      color: var(--status-accent-strong);
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.08em;

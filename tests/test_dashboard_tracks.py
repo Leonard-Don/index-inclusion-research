@@ -123,7 +123,7 @@ def test_prepare_track_display_hides_formal_rdd_tables_when_status_missing() -> 
     assert display["display_figures"] == [{"path": "id.png", "caption": "identification"}]
 
 
-def test_prepare_track_display_keeps_real_rdd_outputs_and_hides_status_panel(monkeypatch) -> None:
+def test_prepare_track_display_keeps_real_rdd_outputs_and_surfaces_official_status_panel(monkeypatch) -> None:
     monkeypatch.setattr(dashboard_tracks.dashboard_metrics, "build_price_pressure_cards", lambda *args, **kwargs: [])
     monkeypatch.setattr(dashboard_tracks.dashboard_metrics, "build_demand_curve_cards", lambda *args, **kwargs: [])
     monkeypatch.setattr(
@@ -166,9 +166,12 @@ def test_prepare_track_display_keeps_real_rdd_outputs_and_hides_status_panel(mon
         create_identification_figures=lambda: [{"path": "id.png", "caption": "identification"}],
     )
 
-    assert display["status_panel"] is None
+    assert display["status_panel"] is not None
+    assert display["status_panel"]["title"] == "正式边界样本"
+    assert display["status_panel"]["tone"] == "official"
     assert [item["label"] for item in display["display_tables"]] == ["RDD 摘要"]
     assert display["result_cards"] == [{"label": "RDD 断点效应", "value": "0.1234", "copy": "p=0.010"}]
+    assert display["badge"] == "证据等级 · 正式边界样本"
     assert display["display_figures"] == [
         {"path": "id.png", "caption": "identification"},
         {"path": "saved.png", "caption": "saved"},
@@ -221,5 +224,7 @@ def test_prepare_track_display_keeps_reconstructed_rdd_outputs_and_retains_statu
 
     assert display["status_panel"] is not None
     assert display["status_panel"]["title"] == "公开重建样本"
+    assert display["status_panel"]["tone"] == "reconstructed"
     assert [item["label"] for item in display["display_tables"]] == ["RDD 摘要"]
     assert display["result_cards"] == [{"label": "RDD 断点效应", "value": "0.1234", "copy": "p=0.010"}]
+    assert display["badge"] == "证据等级 · 公开重建样本"

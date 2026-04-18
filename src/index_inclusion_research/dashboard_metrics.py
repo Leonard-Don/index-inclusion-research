@@ -276,19 +276,22 @@ def build_identification_cards(
 
 
 def build_identification_status_panel(rdd_status: RddStatus) -> StatusPanel | None:
-    if rdd_status["mode"] == "real":
-        return None
+    mode = rdd_status["mode"]
     if rdd_status.get("candidate_batches"):
         sample_overview = (
             f"当前已识别 {rdd_status['candidate_batches']} 个候选批次、"
             f"{rdd_status['treated_rows']} 个调入样本和 {rdd_status['control_rows']} 个对照候选；"
             f"其中 {rdd_status['crossing_batches']} 个批次已经覆盖 cutoff 两侧。"
         )
+    elif mode == "real":
+        sample_overview = "正式候选样本文件已通过校验；当前中国主线可以把事件研究、匹配回归与 RDD 并列纳入正式证据链。"
     else:
         sample_overview = "尚未读到通过校验的候选样本文件；当前中国主线的正式结果仍以事件研究与匹配回归为主。"
     if rdd_status.get("validation_error"):
         sample_overview = f"{sample_overview} 最近一次校验失败原因：{rdd_status['validation_error']}。"
-    if rdd_status["mode"] == "reconstructed":
+    if mode == "real":
+        next_step_copy = "当前已经进入正式证据链；后续刷新时重点关注候选样本审计、RDD 摘要和图表是否与最新快照保持一致。"
+    elif mode == "reconstructed":
         next_step_copy = (
             "当前已经基于公开重建样本生成 RDD 结果；"
             f"如果要升级到官方口径，再运行 {_hs300_rdd_prepare_check_command()} 和 {_hs300_rdd_prepare_import_command()}。"
@@ -304,18 +307,40 @@ def build_identification_status_panel(rdd_status: RddStatus) -> StatusPanel | No
     )
     if rdd_status.get("audit_file"):
         contract_copy = f"{contract_copy} 当前已生成候选样本审计：{rdd_status['audit_file']}。"
-    if rdd_status["mode"] == "reconstructed":
+    if mode == "real":
+        tone = "official"
+        signal_value = "L3 · 正式边界样本"
+        signal_copy = "正式候选样本已经通过校验，这里的 RDD 可以按官方口径直接纳入主结论。"
+        panel_copy = f"{rdd_status['message']} 当前这版 RDD 已进入正式证据链，可与事件研究和匹配回归并列作为更强识别证据。"
+        entry_condition = "已满足：正式候选样本文件已通过字段与日期校验。"
+    elif mode == "reconstructed":
+        tone = "reconstructed"
+        signal_value = "L2 · 公开重建样本"
+        signal_copy = "当前已经有可读的边界样本结果，但必须明确标注为公开重建口径，不能写成官方候选排名表。"
         panel_copy = (
             f"{rdd_status['message']} 当前这版 RDD 已进入公开数据版证据链，但应明确标注为公开重建样本，"
             "而不是中证官方历史候选排名表。"
         )
         entry_condition = "当前已进入公开数据版证据链；如需升级为官方口径，请提供正式候选样本文件并通过校验。"
+    elif mode == "demo":
+        tone = "demo"
+        signal_value = "L1 · 方法展示"
+        signal_copy = "当前只用于展示识别框架、字段契约和运行链路，不进入正式证据链。"
+        panel_copy = f"{rdd_status['message']} 只有在提供并通过校验的真实候选样本文件后，断点结果才会进入正式证据链。"
+        entry_condition = "退出 demo 模式，并提供正式候选样本文件通过字段与日期校验。"
     else:
+        tone = "missing"
+        signal_value = "L0 · 待补正式样本"
+        signal_copy = "当前首页只能展示事件研究与匹配回归；RDD 还没有进入正式或公开重建证据链。"
         panel_copy = f"{rdd_status['message']} 只有在提供并通过校验的真实候选样本文件后，断点结果才会进入正式证据链。"
         entry_condition = "提供正式候选样本文件并通过字段与日期校验。"
     return {
-        "kicker": "方法状态",
+        "kicker": "证据等级",
         "title": str(rdd_status["evidence_status"]),
+        "tone": tone,
+        "signal_label": "当前识别层级",
+        "signal_value": signal_value,
+        "signal_copy": signal_copy,
         "copy": panel_copy,
         "meta": [
             {"label": "当前状态", "value": sample_overview},
