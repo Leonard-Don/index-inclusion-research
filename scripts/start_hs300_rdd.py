@@ -15,6 +15,11 @@ from _literature_runner import (
     write_markdown,
 )
 from index_inclusion_research.analysis import compute_event_level_metrics, plot_rdd_bins, run_rdd_suite
+from index_inclusion_research.analysis.rdd_candidates import (
+    build_candidate_batch_audit as _build_candidate_batch_audit,
+    summarize_candidate_audit as _summarize_candidate_audit,
+    validate_candidate_frame as _validate_candidate_frame,
+)
 from index_inclusion_research.loaders import save_dataframe
 from index_inclusion_research.pipeline import build_event_sample, build_matched_sample
 
@@ -23,26 +28,7 @@ DEMO_INPUT = ROOT / "data" / "raw" / "hs300_rdd_demo.csv"
 TEMPLATE_INPUT = ROOT / "data" / "raw" / "hs300_rdd_candidates.template.csv"
 OUTPUT_DIR = ROOT / "results" / "literature" / "hs300_rdd"
 STATUS_FILE = OUTPUT_DIR / "rdd_status.csv"
-
-REQUIRED_COLUMNS = [
-    "batch_id",
-    "market",
-    "index_name",
-    "ticker",
-    "security_name",
-    "announce_date",
-    "effective_date",
-    "running_variable",
-    "cutoff",
-    "inclusion",
-]
-OPTIONAL_COLUMNS = [
-    "event_type",
-    "source",
-    "source_url",
-    "note",
-    "sector",
-]
+AUDIT_FILE = OUTPUT_DIR / "candidate_batch_audit.csv"
 
 
 def _generate_demo_candidates() -> pd.DataFrame:
@@ -113,48 +99,6 @@ def _normalize_demo_frame(frame: pd.DataFrame) -> pd.DataFrame:
     return work
 
 
-def _validate_candidate_frame(frame: pd.DataFrame) -> pd.DataFrame:
-    if frame.empty:
-        raise ValueError("RDD candidate file is empty.")
-
-    missing_columns = [column for column in REQUIRED_COLUMNS if column not in frame.columns]
-    if missing_columns:
-        raise ValueError(f"RDD candidate file is missing required columns: {', '.join(missing_columns)}")
-
-    work = frame.copy()
-    string_columns = ["batch_id", "market", "index_name", "ticker", "security_name"]
-    for column in string_columns:
-        work[column] = work[column].astype("string").str.strip()
-        if work[column].isna().any() or (work[column] == "").any():
-            raise ValueError(f"RDD candidate file contains empty values in required column: {column}")
-
-    for column in ["announce_date", "effective_date"]:
-        work[column] = pd.to_datetime(work[column], errors="coerce", format="mixed")
-        if work[column].isna().any():
-            raise ValueError(f"RDD candidate file contains invalid dates in required column: {column}")
-
-    for column in ["running_variable", "cutoff"]:
-        work[column] = pd.to_numeric(work[column], errors="coerce")
-        if work[column].isna().any():
-            raise ValueError(f"RDD candidate file contains non-numeric values in required column: {column}")
-
-    work["inclusion"] = pd.to_numeric(work["inclusion"], errors="coerce")
-    if work["inclusion"].isna().any():
-        raise ValueError("RDD candidate file contains non-numeric values in required column: inclusion")
-    unique_inclusion = set(work["inclusion"].astype(int).unique())
-    if not unique_inclusion.issubset({0, 1}):
-        raise ValueError("RDD candidate file must encode inclusion as 0/1.")
-    work["inclusion"] = work["inclusion"].astype(int)
-
-    if "event_type" not in work.columns:
-        work["event_type"] = "inclusion_rdd"
-    else:
-        work["event_type"] = work["event_type"].astype("string").fillna("inclusion_rdd").str.strip().replace("", "inclusion_rdd")
-
-    ordered_columns = [*REQUIRED_COLUMNS, *OPTIONAL_COLUMNS]
-    return work.loc[:, [column for column in ordered_columns if column in work.columns]].copy()
-
-
 def _load_candidate_file(*, allow_demo: bool, strict_validation: bool) -> tuple[pd.DataFrame, str, str]:
     if REAL_INPUT.exists():
         try:
@@ -179,11 +123,18 @@ def _load_candidate_file(*, allow_demo: bool, strict_validation: bool) -> tuple[
 
 
 def _clear_rdd_outputs(output_dir: Path) -> None:
-    for filename in ["rdd_summary.csv", "event_level_with_running.csv"]:
+    for filename in ["rdd_summary.csv", "event_level_with_running.csv", AUDIT_FILE.name]:
         (output_dir / filename).unlink(missing_ok=True)
     figures_dir = output_dir / "figures"
     if figures_dir.exists():
         shutil.rmtree(figures_dir)
+
+
+def _validation_error_from_message(message: str) -> str:
+    prefix = "真实候选样本文件校验失败："
+    if message.startswith(prefix):
+        return message.removeprefix(prefix).strip()
+    return ""
 
 
 def _status_display(mode: str) -> tuple[str, str]:
@@ -202,12 +153,14 @@ def _write_status(
     input_file: Path,
     used_demo: bool,
     candidate_rows: int | None = None,
+    audit: pd.DataFrame | None = None,
     validation_error: str = "",
 ) -> pd.DataFrame:
     try:
         input_path = str(input_file.relative_to(ROOT))
     except ValueError:
         input_path = str(input_file)
+    audit_summary = _summarize_candidate_audit(audit if audit is not None else pd.DataFrame())
     evidence_status, default_note = _status_display(mode)
     status_frame = pd.DataFrame(
         [
@@ -220,6 +173,11 @@ def _write_status(
                 "input_exists": input_file.exists(),
                 "used_demo": used_demo,
                 "candidate_rows": candidate_rows if candidate_rows is not None else pd.NA,
+                "candidate_batches": audit_summary["candidate_batches"] if audit_summary["candidate_batches"] is not None else pd.NA,
+                "treated_rows": audit_summary["treated_rows"] if audit_summary["treated_rows"] is not None else pd.NA,
+                "control_rows": audit_summary["control_rows"] if audit_summary["control_rows"] is not None else pd.NA,
+                "crossing_batches": audit_summary["crossing_batches"] if audit_summary["crossing_batches"] is not None else pd.NA,
+                "audit_file": str(AUDIT_FILE.relative_to(ROOT)) if audit is not None and not audit.empty else pd.NA,
                 "validation_error": validation_error or pd.NA,
             }
         ]
@@ -234,6 +192,7 @@ def _write_summary(
     mode: str,
     message: str,
     status_frame: pd.DataFrame,
+    audit: pd.DataFrame | None = None,
 ) -> None:
     row = status_frame.iloc[0]
     lines = [
@@ -269,6 +228,20 @@ def _write_summary(
         f"模板文件：`{TEMPLATE_INPUT.relative_to(ROOT)}`",
         f"数据契约说明：`{(ROOT / 'docs' / 'hs300_rdd_data_contract.md').relative_to(ROOT)}`",
     ]
+
+    if audit is not None and not audit.empty:
+        audit_summary = _summarize_candidate_audit(audit)
+        lines.extend(
+            [
+                "",
+                "候选样本审计：",
+                f"- 批次数：`{audit_summary['candidate_batches']}`",
+                f"- 调入样本数：`{audit_summary['treated_rows']}`",
+                f"- 对照候选数：`{audit_summary['control_rows']}`",
+                f"- 覆盖断点的批次数：`{audit_summary['crossing_batches']}`",
+                f"- 批次审计表：`{AUDIT_FILE.relative_to(ROOT)}`",
+            ]
+        )
 
     if mode == "real":
         lines.extend(
@@ -343,12 +316,14 @@ def run_analysis(
             input_file=REAL_INPUT,
             used_demo=False,
             candidate_rows=None,
+            audit=None,
             validation_error=validation_error,
         )
-        _write_summary(OUTPUT_DIR, mode="missing", message=status_frame.iloc[0]["message"], status_frame=status_frame)
+        _write_summary(OUTPUT_DIR, mode="missing", message=status_frame.iloc[0]["message"], status_frame=status_frame, audit=None)
         raise
 
     if mode == "missing":
+        validation_error = _validation_error_from_message(message)
         _clear_rdd_outputs(OUTPUT_DIR)
         status_frame = _write_status(
             OUTPUT_DIR,
@@ -357,9 +332,10 @@ def run_analysis(
             input_file=REAL_INPUT,
             used_demo=False,
             candidate_rows=None,
+            audit=None,
             validation_error=validation_error,
         )
-        _write_summary(OUTPUT_DIR, mode="missing", message=message, status_frame=status_frame)
+        _write_summary(OUTPUT_DIR, mode="missing", message=message, status_frame=status_frame, audit=None)
         result = {
             "id": "hs300_rdd",
             "title": "制度识别与中国市场证据：断点回归",
@@ -377,8 +353,10 @@ def run_analysis(
             print(message)
         return result
 
+    candidate_audit = _build_candidate_batch_audit(candidates)
     event_level = _prepare_rdd_event_level(candidates)
     _clear_rdd_outputs(OUTPUT_DIR)
+    save_dataframe(candidate_audit, AUDIT_FILE)
     save_dataframe(event_level, OUTPUT_DIR / "event_level_with_running.csv")
 
     outcome_cols = ["car_m1_p1", "car_m3_p3", "turnover_change", "volume_change"]
@@ -400,8 +378,9 @@ def run_analysis(
         input_file=input_file,
         used_demo=mode == "demo",
         candidate_rows=len(candidates),
+        audit=candidate_audit,
     )
-    _write_summary(OUTPUT_DIR, mode=mode, message=message, status_frame=status_frame)
+    _write_summary(OUTPUT_DIR, mode=mode, message=message, status_frame=status_frame, audit=candidate_audit)
 
     figures = sorted((OUTPUT_DIR / "figures").glob("*.png"))
     result = {
@@ -410,6 +389,7 @@ def run_analysis(
         "output_dir": OUTPUT_DIR,
         "summary_path": OUTPUT_DIR / "summary.md",
         "tables": {
+            "候选样本批次审计": candidate_audit,
             "RDD 汇总": rdd_summary,
             "事件层数据": event_level,
         },
@@ -422,6 +402,19 @@ def run_analysis(
         print("\nHS300 RDD startup script completed.")
         print(f"Output directory: {OUTPUT_DIR}")
         print(message)
+        print_frame(
+            "Candidate audit",
+            candidate_audit,
+            columns=[
+                "batch_id",
+                "n_candidates",
+                "n_included",
+                "n_excluded",
+                "n_left_of_cutoff",
+                "n_right_of_cutoff",
+                "has_cutoff_crossing",
+            ],
+        )
         print_frame(
             "RDD summary",
             rdd_summary,
