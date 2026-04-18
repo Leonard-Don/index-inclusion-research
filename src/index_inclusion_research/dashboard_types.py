@@ -291,6 +291,7 @@ class PaperDetailResult(BaseResult, total=False):
 
 class RddStatus(TypedDict):
     mode: RddStatusMode
+    evidence_tier: str
     evidence_status: str
     message: str
     note: str

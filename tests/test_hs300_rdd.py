@@ -152,9 +152,11 @@ def test_run_analysis_records_validation_error_without_demo_fallback(tmp_path: P
     status_frame = pd.read_csv(output_dir / "rdd_status.csv")
     row = status_frame.iloc[0]
     assert row["status"] == "missing"
+    assert row["evidence_tier"] == "L0"
     assert "running_variable" in str(row["validation_error"])
     assert row["used_demo"] in (False, 0)
     summary = (output_dir / "summary.md").read_text(encoding="utf-8")
+    assert "证据等级：`L0`" in summary
     assert "校验失败原因" in summary
     assert "running_variable" in summary
     assert "index-inclusion-prepare-hs300-rdd --input /path/to/raw_candidates.xlsx --sheet 0 --check-only" in summary
@@ -219,9 +221,11 @@ def test_run_analysis_records_reconstructed_status_when_public_candidate_file_is
     status_frame = pd.read_csv(output_dir / "rdd_status.csv")
     row = status_frame.iloc[0]
     assert row["status"] == "reconstructed"
+    assert row["evidence_tier"] == "L2"
     assert row["input_file"] == str(reconstructed_path)
     assert row["used_demo"] in (False, 0)
     summary = (output_dir / "summary.md").read_text(encoding="utf-8")
+    assert "证据等级：`L2`" in summary
     assert "公开数据重建的边界样本" in summary
     assert "中证官方历史候选排名表" in summary
 

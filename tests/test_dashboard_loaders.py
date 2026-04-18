@@ -85,6 +85,7 @@ def test_load_rdd_status_detects_demo_summary(tmp_path: Path) -> None:
     status = dashboard_loaders.load_rdd_status(ROOT, output_dir=tmp_path)
 
     assert status["mode"] == "demo"
+    assert status["evidence_tier"] == "L1"
     assert status["evidence_status"] == "方法展示"
 
 
@@ -95,6 +96,7 @@ def test_load_rdd_status_detects_reconstructed_summary(tmp_path: Path) -> None:
     status = dashboard_loaders.load_rdd_status(ROOT, output_dir=tmp_path)
 
     assert status["mode"] == "reconstructed"
+    assert status["evidence_tier"] == "L2"
     assert status["evidence_status"] == "公开重建样本"
     assert status["input_file"] == "data/raw/hs300_rdd_candidates.reconstructed.csv"
 
@@ -103,6 +105,7 @@ def test_load_rdd_status_defaults_missing_state_to_dual_input_paths(tmp_path: Pa
     status = dashboard_loaders.load_rdd_status(ROOT, output_dir=tmp_path)
 
     assert status["mode"] == "missing"
+    assert status["evidence_tier"] == "L0"
     assert "hs300_rdd_candidates.csv" in status["message"]
     assert "hs300_rdd_candidates.reconstructed.csv" in status["message"]
     assert "L2/L3" in status["note"]
@@ -123,6 +126,7 @@ def test_load_rdd_status_reads_status_csv_audit_and_validation_fields(tmp_path: 
     status = dashboard_loaders.load_rdd_status(ROOT, output_dir=tmp_path)
 
     assert status["mode"] == "missing"
+    assert status["evidence_tier"] == "L0"
     assert status["audit_file"] == "results/literature/hs300_rdd/candidate_batch_audit.csv"
     assert status["candidate_rows"] == 2
     assert status["candidate_batches"] == 1

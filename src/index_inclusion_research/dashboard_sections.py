@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pandas as pd
 
-from index_inclusion_research import dashboard_metrics
 from index_inclusion_research.results_snapshot import ResultsSnapshot
 from index_inclusion_research.dashboard_types import (
     CsvFrameReader,
@@ -22,6 +21,7 @@ from index_inclusion_research.dashboard_types import (
     SummaryCard,
     TableRenderer,
 )
+from index_inclusion_research.rdd_evidence import rdd_evidence_tier_from_status
 
 
 def build_sample_design_cards(
@@ -304,7 +304,7 @@ def build_limits_section(
         current_snapshot.csv("results", "real_tables", "identification_scope.csv")
     )
     if not identification_scope.empty and "证据状态" in identification_scope.columns:
-        derived_tier = identification_scope["证据状态"].astype(str).map(dashboard_metrics.rdd_evidence_tier_from_status)
+        derived_tier = identification_scope["证据状态"].astype(str).map(rdd_evidence_tier_from_status)
         if "证据等级" in identification_scope.columns:
             identification_scope["证据等级"] = identification_scope["证据等级"].where(
                 identification_scope["证据等级"].notna() & (identification_scope["证据等级"].astype(str) != ""),
@@ -323,7 +323,7 @@ def build_limits_section(
     matched_row = sample_scope.loc[sample_scope["样本层"] == "匹配回归面板"].iloc[0]
     short_id_row = identification_scope.loc[identification_scope["分析层"] == "短窗口事件研究"].iloc[0]
     rdd_row = identification_scope.loc[identification_scope["分析层"] == "中国 RDD 扩展"].iloc[0]
-    rdd_tier = str(rdd_row.get("证据等级", "")) or dashboard_metrics.rdd_evidence_tier_from_status(str(rdd_row["证据状态"]))
+    rdd_tier = str(rdd_row.get("证据等级", "")) or rdd_evidence_tier_from_status(str(rdd_row["证据状态"]))
     matched_rate = (diagnostics["status"] == "matched").mean()
     sector_relaxed_rate = diagnostics["sector_relaxed"].where(diagnostics["sector_relaxed"].notna(), False).astype(bool).mean()
 
