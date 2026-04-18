@@ -2,7 +2,12 @@ __pycache__/
 .pytest_cache/
 .playwright-cli/
 .venv/
+*.egg-info/
 *.pyc
+.DS_Store
+.coverage
+output/
+tmp/
 
 data/processed/*
 !data/processed/.gitkeep

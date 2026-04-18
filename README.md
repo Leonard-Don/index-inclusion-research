@@ -19,12 +19,15 @@
 
 1. 看 [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)
    这里解释 16 篇文献如何统一映射到当前项目。
-2. 启动界面：
+2. 如果你要继续维护 dashboard 主干，先看：
+   [docs/dashboard_architecture.md](docs/dashboard_architecture.md)
+   和 [docs/dashboard_commit_boundary.md](docs/dashboard_commit_boundary.md)
+3. 启动界面：
    ```bash
    python3 scripts/start_literature_dashboard.py
    ```
-   然后打开 <http://127.0.0.1:5001>
-3. 在界面里先看首页 `/`：
+   然后打开 <http://localhost:5001>
+4. 在界面里先看首页 `/`：
     - `3 分钟汇报`：只保留开场结论、样本摘要、三条主线核心证据和研究边界，适合直接给教授讲
     - `展示版`：默认模式，适合课堂展示和研究讨论
     - `完整材料`：显示更多表格、图表和支撑材料，适合自己检查细节
@@ -154,6 +157,19 @@ python3 scripts/start_hs300_rdd.py --demo
 ```
 
 正式字段模板见 [data/raw/hs300_rdd_candidates.template.csv](data/raw/hs300_rdd_candidates.template.csv)，数据契约见 [docs/hs300_rdd_data_contract.md](docs/hs300_rdd_data_contract.md)。
+如果你拿到的是原始候选名单表（CSV / Excel，列名不一定标准），推荐先运行：
+
+```bash
+python3 scripts/prepare_hs300_rdd_candidates.py \
+  --input /path/to/raw_candidates.xlsx \
+  --sheet 0 \
+  --announce-date 2024-11-29 \
+  --effective-date 2024-12-16 \
+  --source CSIndex \
+  --source-url https://www.csindex.com.cn/
+```
+
+它会先把原始列名规范化成项目要求的字段，再输出标准候选文件、批次审计表和导入摘要；如果只想先验收而不落盘，可以加 `--check-only`。
 
 ## 文献相关文件
 
@@ -239,6 +255,30 @@ python3 scripts/download_real_data.py
 - `sample_scope.csv`
 - `identification_scope.csv`
 
+### HS300 RDD 候选样本导入
+
+当你拿到沪深 300 调样候选名单后，推荐先用导入脚本做标准化和校验：
+
+```bash
+python3 scripts/prepare_hs300_rdd_candidates.py \
+  --input /path/to/raw_candidates.csv \
+  --check-only
+```
+
+确认通过后，再写入正式候选文件：
+
+```bash
+python3 scripts/prepare_hs300_rdd_candidates.py \
+  --input /path/to/raw_candidates.csv \
+  --output data/raw/hs300_rdd_candidates.csv \
+  --force
+```
+
+脚本默认会补 `market=CN`、`index_name=CSI300`、`cutoff=300`，并在 `results/literature/hs300_rdd_import/` 下生成：
+
+- `candidate_batch_audit.csv`
+- `import_summary.md`
+
 ### 3. 清洗事件样本
 
 ```bash
@@ -303,6 +343,12 @@ python3 scripts/generate_research_report.py
 python3 scripts/start_literature_dashboard.py
 ```
 
+如果你已经安装了项目，也可以直接用包内 CLI：
+
+```bash
+index-inclusion-dashboard
+```
+
 这就是当前项目唯一推荐的前端启动方式。
 首页默认进入 `展示版`，更适合汇报和展示；需要更短的口头汇报可切到 `3 分钟汇报`，需要更多表格时可切到 `完整材料`。
 
@@ -321,6 +367,55 @@ python3 scripts/start_literature_dashboard.py
 - `/supplement` 会重定向到 `/#supplement`
 - `/analysis/<analysis_id>` 会重定向到首页对应研究主线锚点
 
+如果你需要避免占用默认端口，也可以显式指定：
+
+```bash
+python3 scripts/start_literature_dashboard.py --port 5002
+```
+
+安装后的 CLI 入口目前包括：
+
+```bash
+index-inclusion-dashboard
+index-inclusion-price-pressure
+index-inclusion-demand-curve
+index-inclusion-identification
+```
+
+其中后三个分别对应三条研究主线的包内入口，适合不再直接调用旧脚本时使用。
+
+## 开发与验证
+
+如果你要继续开发这个项目，推荐先装上开发依赖：
+
+```bash
+python3 -m pip install -e ".[dev]"
+```
+
+日常回归：
+
+```bash
+python3 -m ruff check .
+pytest -q
+```
+
+浏览器 smoke test 默认不会在本地 `pytest` 里自动跑；需要时可以显式执行：
+
+```bash
+python3 -m playwright install chromium
+RUN_BROWSER_SMOKE=1 pytest -q tests/test_dashboard_browser_smoke.py
+```
+
+仓库里的 GitHub Actions 也会按这个思路分成两步：
+
+- `ruff` lint + 常规单元测试
+- 安装 Chromium 后再跑 dashboard 浏览器 smoke test
+
+如果你准备继续改 dashboard 主干，推荐先看：
+
+- [docs/dashboard_architecture.md](docs/dashboard_architecture.md)
+- [docs/dashboard_commit_boundary.md](docs/dashboard_commit_boundary.md)
+
 ### 10. 直接运行三条研究主线
 
 ```bash
@@ -335,6 +430,8 @@ python3 scripts/start_identification_china_track.py
 
 - [README.md](README.md)
 - [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)
+- [docs/dashboard_architecture.md](docs/dashboard_architecture.md)
+- [docs/dashboard_commit_boundary.md](docs/dashboard_commit_boundary.md)
 - [docs/literature_review_author_year_cn.md](docs/literature_review_author_year_cn.md)
 - [scripts/start_literature_dashboard.py](scripts/start_literature_dashboard.py)
 - [src/index_inclusion_research/literature_catalog.py](src/index_inclusion_research/literature_catalog.py)
