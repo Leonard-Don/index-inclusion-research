@@ -24,11 +24,19 @@ from index_inclusion_research.loaders import save_dataframe
 from index_inclusion_research.pipeline import build_event_sample, build_matched_sample
 
 REAL_INPUT = ROOT / "data" / "raw" / "hs300_rdd_candidates.csv"
+RECONSTRUCTED_INPUT = ROOT / "data" / "raw" / "hs300_rdd_candidates.reconstructed.csv"
 DEMO_INPUT = ROOT / "data" / "raw" / "hs300_rdd_demo.csv"
 TEMPLATE_INPUT = ROOT / "data" / "raw" / "hs300_rdd_candidates.template.csv"
 OUTPUT_DIR = ROOT / "results" / "literature" / "hs300_rdd"
 STATUS_FILE = OUTPUT_DIR / "rdd_status.csv"
 AUDIT_FILE = OUTPUT_DIR / "candidate_batch_audit.csv"
+
+
+def _display_path(path: Path) -> str:
+    try:
+        return path.resolve().relative_to(ROOT.resolve()).as_posix()
+    except ValueError:
+        return str(path)
 
 
 def _prepare_candidate_command(*, packaged: bool, check_only: bool) -> str:
@@ -109,16 +117,43 @@ def _normalize_demo_frame(frame: pd.DataFrame) -> pd.DataFrame:
     return work
 
 
+def _load_validated_candidate_source(
+    path: Path,
+    *,
+    mode: str,
+    success_message: str,
+    failure_prefix: str,
+    strict_validation: bool,
+) -> tuple[pd.DataFrame, str, str]:
+    try:
+        frame = pd.read_csv(path, low_memory=False)
+        validated = _validate_candidate_frame(frame)
+        return validated, mode, success_message
+    except Exception as exc:
+        error = ValueError(f"{failure_prefix}：{exc}")
+        if strict_validation:
+            raise error
+        return pd.DataFrame(), "missing", str(error)
+
+
 def _load_candidate_file(*, allow_demo: bool, strict_validation: bool) -> tuple[pd.DataFrame, str, str]:
     if REAL_INPUT.exists():
-        try:
-            frame = pd.read_csv(REAL_INPUT, low_memory=False)
-            validated = _validate_candidate_frame(frame)
-            return validated, "real", f"当前正在使用你提供的真实候选排名文件：`{REAL_INPUT.name}`。"
-        except Exception as exc:
-            if strict_validation:
-                raise
-            return pd.DataFrame(), "missing", f"真实候选样本文件校验失败：{exc}"
+        return _load_validated_candidate_source(
+            REAL_INPUT,
+            mode="real",
+            success_message=f"当前正在使用你提供的真实候选排名文件：`{REAL_INPUT.name}`。",
+            failure_prefix="真实候选样本文件校验失败",
+            strict_validation=strict_validation,
+        )
+
+    if RECONSTRUCTED_INPUT.exists():
+        return _load_validated_candidate_source(
+            RECONSTRUCTED_INPUT,
+            mode="reconstructed",
+            success_message=f"当前正在使用公开数据重建的候选样本文件：`{RECONSTRUCTED_INPUT.name}`。公开重建样本可进入公开数据版证据链，但不应表述为中证官方历史候选排名表。",
+            failure_prefix="公开重建候选样本文件校验失败",
+            strict_validation=strict_validation,
+        )
 
     if allow_demo:
         demo_frame = pd.read_csv(DEMO_INPUT, low_memory=False) if DEMO_INPUT.exists() else _generate_demo_candidates()
@@ -141,15 +176,17 @@ def _clear_rdd_outputs(output_dir: Path) -> None:
 
 
 def _validation_error_from_message(message: str) -> str:
-    prefix = "真实候选样本文件校验失败："
-    if message.startswith(prefix):
-        return message.removeprefix(prefix).strip()
+    for prefix in ("真实候选样本文件校验失败：", "公开重建候选样本文件校验失败："):
+        if message.startswith(prefix):
+            return message.removeprefix(prefix).strip()
     return ""
 
 
 def _status_display(mode: str) -> tuple[str, str]:
     if mode == "real":
         return "正式边界样本", "基于真实候选排名变量，可作为更强识别证据。"
+    if mode == "reconstructed":
+        return "公开重建样本", "基于公开数据重建的边界样本，可进入公开数据版证据链，但不应表述为中证官方历史候选排名表。"
     if mode == "demo":
         return "方法展示", "当前为显式 demo 模式，只用于方法展示，不进入正式证据链。"
     return "待补正式样本", "等待真实候选样本文件或修复文件校验错误后，RDD 才进入正式证据链。"
@@ -166,10 +203,7 @@ def _write_status(
     audit: pd.DataFrame | None = None,
     validation_error: str = "",
 ) -> pd.DataFrame:
-    try:
-        input_path = str(input_file.relative_to(ROOT))
-    except ValueError:
-        input_path = str(input_file)
+    input_path = _display_path(input_file)
     audit_summary = _summarize_candidate_audit(audit if audit is not None else pd.DataFrame())
     evidence_status, default_note = _status_display(mode)
     status_frame = pd.DataFrame(
@@ -187,7 +221,7 @@ def _write_status(
                 "treated_rows": audit_summary["treated_rows"] if audit_summary["treated_rows"] is not None else pd.NA,
                 "control_rows": audit_summary["control_rows"] if audit_summary["control_rows"] is not None else pd.NA,
                 "crossing_batches": audit_summary["crossing_batches"] if audit_summary["crossing_batches"] is not None else pd.NA,
-                "audit_file": str(AUDIT_FILE.relative_to(ROOT)) if audit is not None and not audit.empty else pd.NA,
+                "audit_file": _display_path(AUDIT_FILE) if audit is not None and not audit.empty else pd.NA,
                 "validation_error": validation_error or pd.NA,
             }
         ]
@@ -235,8 +269,8 @@ def _write_summary(
         "- note",
         "- sector",
         "",
-        f"模板文件：`{TEMPLATE_INPUT.relative_to(ROOT)}`",
-        f"数据契约说明：`{(ROOT / 'docs' / 'hs300_rdd_data_contract.md').relative_to(ROOT)}`",
+        f"模板文件：`{_display_path(TEMPLATE_INPUT)}`",
+        f"数据契约说明：`{_display_path(ROOT / 'docs' / 'hs300_rdd_data_contract.md')}`",
         "",
         "推荐下一步：",
         f"- 先验收原始候选名单：`{_prepare_candidate_command(packaged=True, check_only=True)}`",
@@ -254,7 +288,7 @@ def _write_summary(
                 f"- 调入样本数：`{audit_summary['treated_rows']}`",
                 f"- 对照候选数：`{audit_summary['control_rows']}`",
                 f"- 覆盖断点的批次数：`{audit_summary['crossing_batches']}`",
-                f"- 批次审计表：`{AUDIT_FILE.relative_to(ROOT)}`",
+                f"- 批次审计表：`{_display_path(AUDIT_FILE)}`",
             ]
         )
 
@@ -262,9 +296,19 @@ def _write_summary(
         lines.extend(
             [
                 "",
-                f"RDD 汇总文件：`{(output_dir / 'rdd_summary.csv').relative_to(ROOT)}`",
-                f"事件层文件：`{(output_dir / 'event_level_with_running.csv').relative_to(ROOT)}`",
-                f"图表目录：`{(output_dir / 'figures').relative_to(ROOT)}`",
+                f"RDD 汇总文件：`{_display_path(output_dir / 'rdd_summary.csv')}`",
+                f"事件层文件：`{_display_path(output_dir / 'event_level_with_running.csv')}`",
+                f"图表目录：`{_display_path(output_dir / 'figures')}`",
+            ]
+        )
+    elif mode == "reconstructed":
+        lines.extend(
+            [
+                "",
+                "当前正在使用公开数据重建的边界样本。该结果可以进入公开数据版证据链，但应明确标注为公开重建口径，而不是中证官方历史候选排名表。",
+                f"RDD 汇总文件：`{_display_path(output_dir / 'rdd_summary.csv')}`",
+                f"事件层文件：`{_display_path(output_dir / 'event_level_with_running.csv')}`",
+                f"图表目录：`{_display_path(output_dir / 'figures')}`",
             ]
         )
     elif mode == "demo":
@@ -324,11 +368,12 @@ def run_analysis(
     except Exception as exc:
         validation_error = str(exc)
         _clear_rdd_outputs(OUTPUT_DIR)
+        error_input_file = RECONSTRUCTED_INPUT if str(exc).startswith("公开重建候选样本文件校验失败：") else REAL_INPUT
         status_frame = _write_status(
             OUTPUT_DIR,
             mode="missing",
-            message=f"真实候选样本文件校验失败：{exc}",
-            input_file=REAL_INPUT,
+            message=str(exc),
+            input_file=error_input_file,
             used_demo=False,
             candidate_rows=None,
             audit=None,
@@ -340,11 +385,12 @@ def run_analysis(
     if mode == "missing":
         validation_error = _validation_error_from_message(message)
         _clear_rdd_outputs(OUTPUT_DIR)
+        missing_input_file = RECONSTRUCTED_INPUT if message.startswith("公开重建候选样本文件校验失败：") else REAL_INPUT
         status_frame = _write_status(
             OUTPUT_DIR,
             mode="missing",
             message=message,
-            input_file=REAL_INPUT,
+            input_file=missing_input_file,
             used_demo=False,
             candidate_rows=None,
             audit=None,
@@ -385,7 +431,7 @@ def run_analysis(
             output_path=OUTPUT_DIR / "figures" / f"{outcome_col}_rdd_bins.png",
         )
 
-    input_file = REAL_INPUT if mode == "real" else DEMO_INPUT
+    input_file = REAL_INPUT if mode == "real" else RECONSTRUCTED_INPUT if mode == "reconstructed" else DEMO_INPUT
     status_frame = _write_status(
         OUTPUT_DIR,
         mode=mode,

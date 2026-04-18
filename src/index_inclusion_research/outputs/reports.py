@@ -323,6 +323,9 @@ def build_identification_scope_table(
     if rdd_mode == "real":
         rdd_status = "正式边界样本"
         rdd_note = "基于真实候选排名变量，可作为更强识别证据。"
+    if rdd_mode == "reconstructed":
+        rdd_status = "公开重建样本"
+        rdd_note = "当前使用公开数据重建的边界样本，适合公开数据版 RDD 复现，但不应表述为中证官方历史候选排名表。"
     if rdd_mode == "demo":
         rdd_status = "方法展示"
         rdd_note = "当前使用 demo 伪排名变量，展示的是断点回归方法框架，不应与正式实证结果混用。"

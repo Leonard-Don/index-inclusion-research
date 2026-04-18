@@ -261,6 +261,21 @@ def load_rdd_status(
                 "crossing_batches": None,
                 "validation_error": "",
             }
+        if "当前正在使用公开数据重建的候选样本文件" in summary_text:
+            return {
+                "mode": "reconstructed",
+                "evidence_status": "公开重建样本",
+                "message": "当前正在使用公开数据重建的候选样本文件。",
+                "note": "基于公开数据重建的边界样本，可进入公开数据版证据链，但不应表述为中证官方历史候选排名表。",
+                "input_file": "data/raw/hs300_rdd_candidates.reconstructed.csv",
+                "audit_file": "",
+                "candidate_rows": None,
+                "candidate_batches": None,
+                "treated_rows": None,
+                "control_rows": None,
+                "crossing_batches": None,
+                "validation_error": "",
+            }
         if "当前正在使用你提供的真实候选排名文件" in summary_text:
             return {
                 "mode": "real",
@@ -321,14 +336,14 @@ def load_identification_china_saved_result(
     combined_tables: list[RenderedTable] = []
     for label, html_table in load_saved_tables(style_dir):
         combined_tables.append((f"风格识别：{label}", html_table))
-    if rdd_status["mode"] == "real":
+    if rdd_status["mode"] in {"real", "reconstructed"}:
         for label, html_table in load_saved_tables(rdd_dir):
             combined_tables.append((f"断点回归：{label}", html_table))
 
     figure_paths: list[FigureEntry] = []
     for path in sorted(style_dir.rglob("*.png")):
         figure_paths.append({"path": to_relative(path), "caption": build_figure_caption(path, prefix="风格识别")})
-    if rdd_status["mode"] == "real":
+    if rdd_status["mode"] in {"real", "reconstructed"}:
         for path in sorted(rdd_dir.rglob("*.png")):
             figure_paths.append({"path": to_relative(path), "caption": build_figure_caption(path, prefix="断点回归")})
 

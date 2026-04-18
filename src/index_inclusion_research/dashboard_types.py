@@ -10,7 +10,7 @@ import pandas as pd
 
 ModeName: TypeAlias = Literal["brief", "demo", "full"]
 RefreshStatus: TypeAlias = Literal["idle", "running", "succeeded", "failed"]
-RddStatusMode: TypeAlias = Literal["real", "demo", "missing"]
+RddStatusMode: TypeAlias = Literal["real", "reconstructed", "demo", "missing"]
 DisplayTier: TypeAlias = Literal["primary", "detail"]
 
 

@@ -174,3 +174,52 @@ def test_prepare_track_display_keeps_real_rdd_outputs_and_hides_status_panel(mon
         {"path": "saved.png", "caption": "saved"},
     ]
     assert isinstance(display, dict)
+
+
+def test_prepare_track_display_keeps_reconstructed_rdd_outputs_and_retains_status_panel(monkeypatch) -> None:
+    monkeypatch.setattr(dashboard_tracks.dashboard_metrics, "build_price_pressure_cards", lambda *args, **kwargs: [])
+    monkeypatch.setattr(dashboard_tracks.dashboard_metrics, "build_demand_curve_cards", lambda *args, **kwargs: [])
+    monkeypatch.setattr(
+        dashboard_tracks.dashboard_metrics,
+        "build_identification_cards",
+        lambda *args, **kwargs: [{"label": "RDD 断点效应", "value": "0.1234", "copy": "p=0.010"}],
+    )
+    monkeypatch.setattr(dashboard_tracks.dashboard_metrics, "build_price_pressure_tables", lambda *args, **kwargs: [])
+    monkeypatch.setattr(dashboard_tracks.dashboard_metrics, "build_demand_curve_tables", lambda *args, **kwargs: [])
+    monkeypatch.setattr(
+        dashboard_tracks.dashboard_metrics,
+        "build_identification_tables",
+        lambda *args, **kwargs: [("RDD 摘要", "<table rows=1 compact=True></table>")],
+    )
+
+    display = dashboard_tracks.prepare_track_display(
+        ROOT,
+        {"summary_text": "# 标题\n原始摘要", "figure_paths": [{"path": "saved.png", "caption": "saved"}]},
+        "identification_china_track",
+        False,
+        load_rdd_status=lambda: {
+            "mode": "reconstructed",
+            "evidence_status": "公开重建样本",
+            "message": "ok",
+            "note": "",
+            "input_file": "",
+            "audit_file": "",
+            "candidate_rows": 311,
+            "candidate_batches": 1,
+            "treated_rows": 299,
+            "control_rows": 12,
+            "crossing_batches": 1,
+            "validation_error": "",
+        },
+        clean_display_text=lambda text: text.replace("# 标题", "").strip(),
+        render_table=lambda frame, compact=False: f"<table rows={len(frame)} compact={compact}></table>",
+        format_pct=lambda value: f"{value:.2%}",
+        format_p_value=lambda value: f"p={value:.3f}",
+        create_price_pressure_figures=lambda: [],
+        create_identification_figures=lambda: [{"path": "id.png", "caption": "identification"}],
+    )
+
+    assert display["status_panel"] is not None
+    assert display["status_panel"]["title"] == "公开重建样本"
+    assert [item["label"] for item in display["display_tables"]] == ["RDD 摘要"]
+    assert display["result_cards"] == [{"label": "RDD 断点效应", "value": "0.1234", "copy": "p=0.010"}]
