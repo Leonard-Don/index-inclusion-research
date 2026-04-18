@@ -1,7 +1,7 @@
 # HS300 RDD 正式数据契约
 
 `start_hs300_rdd.py` 现在默认走“正式候选样本文件”模式。  
-只有当 [data/raw/hs300_rdd_candidates.csv](/Users/leonardodon/index-inclusion-research/data/raw/hs300_rdd_candidates.csv) 存在且通过校验时，`RDD` 才会进入正式证据链。
+当 [data/raw/hs300_rdd_candidates.csv](/Users/leonardodon/index-inclusion-research/data/raw/hs300_rdd_candidates.csv) 存在且通过校验时，`RDD` 会进入 `L3` 正式边界样本；当 [data/raw/hs300_rdd_candidates.reconstructed.csv](/Users/leonardodon/index-inclusion-research/data/raw/hs300_rdd_candidates.reconstructed.csv) 存在且通过校验时，`RDD` 会进入 `L2` 公开重建样本。
 
 如果文件缺失或不合法：
 - 脚本默认写出 `missing` 状态

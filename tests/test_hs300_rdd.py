@@ -75,7 +75,8 @@ def test_load_candidate_file_returns_missing_when_real_input_absent(tmp_path: Pa
 
     assert frame.empty
     assert mode == "missing"
-    assert "等待真实候选样本文件" in message
+    assert "等待正式或公开重建候选样本文件" in message
+    assert "hs300_rdd_candidates.reconstructed.csv" in message
 
 
 def test_load_candidate_file_uses_demo_only_when_explicit(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -158,6 +159,7 @@ def test_run_analysis_records_validation_error_without_demo_fallback(tmp_path: P
     assert "running_variable" in summary
     assert "index-inclusion-prepare-hs300-rdd --input /path/to/raw_candidates.xlsx --sheet 0 --check-only" in summary
     assert "--output data/raw/hs300_rdd_candidates.csv --force" in summary
+    assert "index-inclusion-reconstruct-hs300-rdd --announce-date 2024-05-31" in summary
     assert not (output_dir / "rdd_summary.csv").exists()
     assert not (output_dir / "event_level_with_running.csv").exists()
     assert not (output_dir / "figures").exists()
