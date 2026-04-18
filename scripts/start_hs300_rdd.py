@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import shutil
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -22,7 +23,12 @@ from index_inclusion_research.analysis.rdd_candidates import (
 )
 from index_inclusion_research.loaders import save_dataframe
 from index_inclusion_research.pipeline import build_event_sample, build_matched_sample
-from index_inclusion_research.rdd_evidence import rdd_evidence_tier
+from index_inclusion_research.rdd_evidence import (
+    rdd_coverage_note,
+    rdd_evidence_tier,
+    rdd_source_kind,
+    rdd_source_label,
+)
 
 REAL_INPUT = ROOT / "data" / "raw" / "hs300_rdd_candidates.csv"
 RECONSTRUCTED_INPUT = ROOT / "data" / "raw" / "hs300_rdd_candidates.reconstructed.csv"
@@ -202,6 +208,32 @@ def _status_display(mode: str) -> tuple[str, str]:
     return "待补正式样本", "等待正式候选样本、公开重建样本，或修复文件校验错误后，RDD 才能进入 L2/L3 证据等级。"
 
 
+def _status_generated_at() -> str:
+    return datetime.now().astimezone().replace(microsecond=0).isoformat()
+
+
+def _status_as_of_date(candidates: pd.DataFrame | None) -> str:
+    if candidates is None or candidates.empty or "announce_date" not in candidates.columns:
+        return ""
+    values = sorted({str(value) for value in candidates["announce_date"].dropna().astype(str) if str(value).strip()})
+    if not values:
+        return ""
+    if len(values) == 1:
+        return values[0]
+    return f"{values[0]} 至 {values[-1]}"
+
+
+def _status_batch_label(candidates: pd.DataFrame | None) -> str:
+    if candidates is None or candidates.empty or "batch_id" not in candidates.columns:
+        return ""
+    values = sorted({str(value) for value in candidates["batch_id"].dropna().astype(str) if str(value).strip()})
+    if not values:
+        return ""
+    if len(values) == 1:
+        return values[0]
+    return f"{len(values)} 个批次（{values[0]} 至 {values[-1]}）"
+
+
 def _write_status(
     output_dir: Path,
     *,
@@ -209,6 +241,7 @@ def _write_status(
     message: str,
     input_file: Path,
     used_demo: bool,
+    candidates: pd.DataFrame | None = None,
     candidate_rows: int | None = None,
     audit: pd.DataFrame | None = None,
     validation_error: str = "",
@@ -216,12 +249,32 @@ def _write_status(
     input_path = _display_path(input_file)
     audit_summary = _summarize_candidate_audit(audit if audit is not None else pd.DataFrame())
     evidence_status, default_note = _status_display(mode)
+    source_file = input_path
+    generated_at = _status_generated_at()
+    as_of_date = _status_as_of_date(candidates)
+    batch_label = _status_batch_label(candidates)
+    coverage_note = rdd_coverage_note(
+        mode,
+        candidate_rows=candidate_rows,
+        candidate_batches=audit_summary["candidate_batches"],
+        treated_rows=audit_summary["treated_rows"],
+        control_rows=audit_summary["control_rows"],
+        crossing_batches=audit_summary["crossing_batches"],
+        validation_error=validation_error,
+    )
     status_frame = pd.DataFrame(
         [
             {
                 "status": mode,
                 "evidence_tier": rdd_evidence_tier(mode),
                 "evidence_status": evidence_status,
+                "source_kind": rdd_source_kind(mode),
+                "source_label": rdd_source_label(mode),
+                "source_file": source_file,
+                "generated_at": generated_at,
+                "as_of_date": as_of_date or pd.NA,
+                "batch_label": batch_label or pd.NA,
+                "coverage_note": coverage_note,
                 "message": message,
                 "note": default_note,
                 "input_file": input_path,
@@ -259,6 +312,12 @@ def _write_summary(
         f"- 模式：`{row['status']}`",
         f"- 证据等级：`{row['evidence_tier']}`",
         f"- 证据状态：`{row['evidence_status']}`",
+        f"- 来源类型：`{row['source_kind']}` · {row['source_label']}",
+        f"- 来源文件：`{row['source_file']}`",
+        f"- 状态生成时间：`{row['generated_at']}`",
+        f"- 批次标签：`{row['batch_label'] if pd.notna(row['batch_label']) else '—'}`",
+        f"- 对应公告日：`{row['as_of_date'] if pd.notna(row['as_of_date']) else '—'}`",
+        f"- 覆盖说明：{row['coverage_note']}",
         f"- 当前口径：{row['note']}",
         f"- 候选样本路径：`{row['input_file']}`",
         "",
@@ -388,6 +447,7 @@ def run_analysis(
             message=str(exc),
             input_file=error_input_file,
             used_demo=False,
+            candidates=None,
             candidate_rows=None,
             audit=None,
             validation_error=validation_error,
@@ -405,6 +465,7 @@ def run_analysis(
             message=message,
             input_file=missing_input_file,
             used_demo=False,
+            candidates=None,
             candidate_rows=None,
             audit=None,
             validation_error=validation_error,
@@ -451,6 +512,7 @@ def run_analysis(
         message=message,
         input_file=input_file,
         used_demo=mode == "demo",
+        candidates=candidates,
         candidate_rows=len(candidates),
         audit=candidate_audit,
     )

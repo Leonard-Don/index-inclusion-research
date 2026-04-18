@@ -58,6 +58,13 @@ def test_apply_live_rdd_status_updates_evidence_tier_column(monkeypatch) -> None
             "mode": "reconstructed",
             "evidence_tier": "L2",
             "evidence_status": "公开重建样本",
+            "source_kind": "reconstructed",
+            "source_label": "公开重建候选样本文件",
+            "source_file": "data/raw/hs300_rdd_candidates.reconstructed.csv",
+            "generated_at": "2026-04-18T10:00:00+08:00",
+            "as_of_date": "2024-05-31",
+            "batch_label": "2024-05-31",
+            "coverage_note": "311 条候选；1 个批次；1 个批次覆盖 cutoff 两侧。",
             "message": "",
             "note": "public proxy",
             "input_file": "",
@@ -77,3 +84,4 @@ def test_apply_live_rdd_status_updates_evidence_tier_column(monkeypatch) -> None
     assert rdd_row["证据等级"] == "L2"
     assert rdd_row["证据状态"] == "公开重建样本"
     assert rdd_row["当前口径"] == "public proxy"
+    assert "公开重建候选样本文件" in rdd_row["来源摘要"]

@@ -19,7 +19,11 @@ from index_inclusion_research.dashboard_types import (
     SupplementResult,
     TrackResult,
 )
-from index_inclusion_research.rdd_evidence import rdd_evidence_tier, rdd_evidence_tier_from_status
+from index_inclusion_research.rdd_evidence import (
+    rdd_evidence_tier,
+    rdd_evidence_tier_from_status,
+    rdd_provenance_summary,
+)
 from index_inclusion_research.literature_catalog import (
     build_project_track_frame,
     build_project_track_markdown,
@@ -112,6 +116,7 @@ class DashboardTrackContentRuntime:
         tier = str(status.get("evidence_tier", "")) or rdd_evidence_tier(str(status["mode"]))
         if tier == "—":
             tier = rdd_evidence_tier_from_status(str(status["evidence_status"]))
+        provenance = rdd_provenance_summary(status)
         if "证据等级" in updated.columns:
             updated.loc[mask, "证据等级"] = tier
         else:
@@ -120,6 +125,12 @@ class DashboardTrackContentRuntime:
             updated.loc[mask, "证据等级"] = tier
         updated.loc[mask, "证据状态"] = status["evidence_status"]
         updated.loc[mask, "当前口径"] = status["note"]
+        if "来源摘要" in updated.columns:
+            updated.loc[mask, "来源摘要"] = provenance
+        else:
+            insert_at = updated.columns.get_loc("当前口径") + 1 if "当前口径" in updated.columns else len(updated.columns)
+            updated.insert(insert_at, "来源摘要", pd.NA)
+            updated.loc[mask, "来源摘要"] = provenance
         return updated
 
     def load_identification_china_saved_result(self) -> TrackResult:

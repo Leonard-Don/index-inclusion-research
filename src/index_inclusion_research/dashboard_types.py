@@ -34,6 +34,7 @@ class OverviewMetric(TypedDict, total=False):
     value: str
     label: str
     tone: str
+    meta: str
 
 
 class NoteItem(TypedDict):
@@ -293,6 +294,13 @@ class RddStatus(TypedDict):
     mode: RddStatusMode
     evidence_tier: str
     evidence_status: str
+    source_kind: str
+    source_label: str
+    source_file: str
+    generated_at: str
+    as_of_date: str
+    batch_label: str
+    coverage_note: str
     message: str
     note: str
     input_file: str

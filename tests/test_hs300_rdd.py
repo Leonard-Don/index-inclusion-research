@@ -153,10 +153,16 @@ def test_run_analysis_records_validation_error_without_demo_fallback(tmp_path: P
     row = status_frame.iloc[0]
     assert row["status"] == "missing"
     assert row["evidence_tier"] == "L0"
+    assert row["source_kind"] == "missing"
+    assert row["source_label"] == "待补候选样本"
+    assert "最近一次校验失败" in row["coverage_note"]
+    assert str(row["generated_at"]).startswith("20")
     assert "running_variable" in str(row["validation_error"])
     assert row["used_demo"] in (False, 0)
     summary = (output_dir / "summary.md").read_text(encoding="utf-8")
     assert "证据等级：`L0`" in summary
+    assert "来源类型：`missing`" in summary
+    assert "覆盖说明：" in summary
     assert "校验失败原因" in summary
     assert "running_variable" in summary
     assert "index-inclusion-prepare-hs300-rdd --input /path/to/raw_candidates.xlsx --sheet 0 --check-only" in summary
@@ -222,10 +228,18 @@ def test_run_analysis_records_reconstructed_status_when_public_candidate_file_is
     row = status_frame.iloc[0]
     assert row["status"] == "reconstructed"
     assert row["evidence_tier"] == "L2"
+    assert row["source_kind"] == "reconstructed"
+    assert row["source_label"] == "公开重建候选样本文件"
+    assert row["source_file"] == str(reconstructed_path)
+    assert row["as_of_date"] == "2024-11-29"
+    assert row["batch_label"] == "2024-11-29"
+    assert "2 条候选" in row["coverage_note"]
     assert row["input_file"] == str(reconstructed_path)
     assert row["used_demo"] in (False, 0)
     summary = (output_dir / "summary.md").read_text(encoding="utf-8")
     assert "证据等级：`L2`" in summary
+    assert "来源类型：`reconstructed`" in summary
+    assert "批次标签：`2024-11-29`" in summary
     assert "公开数据重建的边界样本" in summary
     assert "中证官方历史候选排名表" in summary
 

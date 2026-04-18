@@ -15,7 +15,7 @@ from index_inclusion_research.dashboard_types import (
     TableRenderer,
 )
 from index_inclusion_research.literature_catalog import build_camp_summary_frame
-from index_inclusion_research.rdd_evidence import rdd_evidence_tier
+from index_inclusion_research.rdd_evidence import rdd_evidence_tier, rdd_provenance_summary
 from index_inclusion_research.supplementary import (
     build_case_playbook_frame,
     build_event_clock_frame,
@@ -315,6 +315,14 @@ def build_identification_status_panel(rdd_status: RddStatus) -> StatusPanel | No
     )
     if rdd_status.get("audit_file"):
         contract_copy = f"{contract_copy} 当前已生成候选样本审计：{rdd_status['audit_file']}。"
+    provenance_summary = rdd_provenance_summary(rdd_status)
+    source_meta = provenance_summary or str(rdd_status.get("source_label", "")) or "待补候选样本"
+    source_file = str(rdd_status.get("source_file", "")) or str(rdd_status.get("input_file", ""))
+    if source_file:
+        source_meta = f"{source_meta} · 文件 {source_file}"
+    if rdd_status.get("generated_at"):
+        source_meta = f"{source_meta} · 生成于 {rdd_status['generated_at']}"
+    coverage_meta = str(rdd_status.get("coverage_note", "")).strip() or sample_overview
     tier = str(rdd_status.get("evidence_tier", "")) or rdd_evidence_tier(mode)
     if mode == "real":
         tone = "official"
@@ -358,6 +366,8 @@ def build_identification_status_panel(rdd_status: RddStatus) -> StatusPanel | No
         "signal_copy": signal_copy,
         "copy": panel_copy,
         "meta": [
+            {"label": "样本来源", "value": source_meta},
+            {"label": "覆盖说明", "value": coverage_meta},
             {"label": "当前状态", "value": sample_overview},
             {"label": "推荐下一步", "value": next_step_copy},
             {"label": "进入条件", "value": entry_condition},
