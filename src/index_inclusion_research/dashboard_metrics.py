@@ -34,6 +34,26 @@ def _hs300_rdd_prepare_import_command() -> str:
     )
 
 
+def rdd_evidence_tier(mode: str) -> str:
+    return {
+        "real": "L3",
+        "reconstructed": "L2",
+        "demo": "L1",
+        "missing": "L0",
+    }.get(mode, "—")
+
+
+def rdd_evidence_tier_from_status(status: str) -> str:
+    return {
+        "正式样本": "L3",
+        "正式边界样本": "L3",
+        "公开重建样本": "L2",
+        "方法展示": "L1",
+        "待补正式样本": "L0",
+        "未生成": "—",
+    }.get(status, "—")
+
+
 def build_library_summary_cards() -> list[SummaryCard]:
     return [
         {
@@ -309,13 +329,13 @@ def build_identification_status_panel(rdd_status: RddStatus) -> StatusPanel | No
         contract_copy = f"{contract_copy} 当前已生成候选样本审计：{rdd_status['audit_file']}。"
     if mode == "real":
         tone = "official"
-        signal_value = "L3 · 正式边界样本"
+        signal_value = f"{rdd_evidence_tier(mode)} · 正式边界样本"
         signal_copy = "正式候选样本已经通过校验，这里的 RDD 可以按官方口径直接纳入主结论。"
         panel_copy = f"{rdd_status['message']} 当前这版 RDD 已进入正式证据链，可与事件研究和匹配回归并列作为更强识别证据。"
         entry_condition = "已满足：正式候选样本文件已通过字段与日期校验。"
     elif mode == "reconstructed":
         tone = "reconstructed"
-        signal_value = "L2 · 公开重建样本"
+        signal_value = f"{rdd_evidence_tier(mode)} · 公开重建样本"
         signal_copy = "当前已经有可读的边界样本结果，但必须明确标注为公开重建口径，不能写成官方候选排名表。"
         panel_copy = (
             f"{rdd_status['message']} 当前这版 RDD 已进入公开数据版证据链，但应明确标注为公开重建样本，"
@@ -324,13 +344,13 @@ def build_identification_status_panel(rdd_status: RddStatus) -> StatusPanel | No
         entry_condition = "当前已进入公开数据版证据链；如需升级为官方口径，请提供正式候选样本文件并通过校验。"
     elif mode == "demo":
         tone = "demo"
-        signal_value = "L1 · 方法展示"
+        signal_value = f"{rdd_evidence_tier(mode)} · 方法展示"
         signal_copy = "当前只用于展示识别框架、字段契约和运行链路，不进入正式证据链。"
         panel_copy = f"{rdd_status['message']} 只有在提供并通过校验的真实候选样本文件后，断点结果才会进入正式证据链。"
         entry_condition = "退出 demo 模式，并提供正式候选样本文件通过字段与日期校验。"
     else:
         tone = "missing"
-        signal_value = "L0 · 待补正式样本"
+        signal_value = f"{rdd_evidence_tier(mode)} · 待补正式样本"
         signal_copy = "当前首页只能展示事件研究与匹配回归；RDD 还没有进入正式或公开重建证据链。"
         panel_copy = f"{rdd_status['message']} 只有在提供并通过校验的真实候选样本文件后，断点结果才会进入正式证据链。"
         entry_condition = "提供正式候选样本文件并通过字段与日期校验。"

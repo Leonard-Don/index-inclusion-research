@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from index_inclusion_research import dashboard_metrics
 from index_inclusion_research.results_snapshot import ResultsSnapshot
 from index_inclusion_research.dashboard_types import (
     CsvFrameReader,
@@ -302,6 +303,16 @@ def build_limits_section(
     identification_scope = apply_live_rdd_status_to_identification_scope(
         current_snapshot.csv("results", "real_tables", "identification_scope.csv")
     )
+    if not identification_scope.empty and "证据状态" in identification_scope.columns:
+        derived_tier = identification_scope["证据状态"].astype(str).map(dashboard_metrics.rdd_evidence_tier_from_status)
+        if "证据等级" in identification_scope.columns:
+            identification_scope["证据等级"] = identification_scope["证据等级"].where(
+                identification_scope["证据等级"].notna() & (identification_scope["证据等级"].astype(str) != ""),
+                derived_tier,
+            )
+        else:
+            insert_at = identification_scope.columns.get_loc("证据状态")
+            identification_scope.insert(insert_at, "证据等级", derived_tier)
     data_sources = current_snapshot.csv("results", "real_tables", "data_sources.csv")
     sample_scope = current_snapshot.csv("results", "real_tables", "sample_scope.csv")
     diagnostics = current_snapshot.csv("results", "real_regressions", "match_diagnostics.csv")
@@ -312,6 +323,7 @@ def build_limits_section(
     matched_row = sample_scope.loc[sample_scope["样本层"] == "匹配回归面板"].iloc[0]
     short_id_row = identification_scope.loc[identification_scope["分析层"] == "短窗口事件研究"].iloc[0]
     rdd_row = identification_scope.loc[identification_scope["分析层"] == "中国 RDD 扩展"].iloc[0]
+    rdd_tier = str(rdd_row.get("证据等级", "")) or dashboard_metrics.rdd_evidence_tier_from_status(str(rdd_row["证据状态"]))
     matched_rate = (diagnostics["status"] == "matched").mean()
     sector_relaxed_rate = diagnostics["sector_relaxed"].where(diagnostics["sector_relaxed"].notna(), False).astype(bool).mean()
 
@@ -326,9 +338,9 @@ def build_limits_section(
         {
             "kicker": "识别范围",
             "title": "事件研究、匹配回归与 RDD 分别回答不同问题",
-            "meta": f"匹配成功率 {format_share(matched_rate)}",
+            "meta": f"匹配成功率 {format_share(matched_rate)} · 中国 RDD {rdd_tier}",
             "copy": str(short_id_row["当前口径"]),
-            "foot": f'当前匹配回归面板共 {int(matched_row["观测值"]):,} 条观测值；中国 RDD 扩展目前的证据状态为“{rdd_row["证据状态"]}”。',
+            "foot": f'当前匹配回归面板共 {int(matched_row["观测值"]):,} 条观测值；中国 RDD 扩展目前的证据等级为“{rdd_tier} · {rdd_row["证据状态"]}”。',
         },
         {
             "kicker": "数据口径",
@@ -345,7 +357,7 @@ def build_limits_section(
             {"模块": "价格数据", "范围": f'{price_row["起始日期"]} 至 {price_row["结束日期"]}', "说明": "用于构造事件窗口、异常收益与机制变量。"},
             {"模块": "基准指数数据", "范围": f'{benchmark_row["起始日期"]} 至 {benchmark_row["结束日期"]}', "说明": "用于市场调整收益与异常收益计算。"},
             {"模块": "匹配回归", "范围": f"匹配成功率 {format_share(matched_rate)}", "说明": "对照组构造总体稳定，但仍存在少量无法匹配的事件。"},
-            {"模块": "RDD 扩展", "范围": str(rdd_row["证据状态"]), "说明": str(rdd_row["当前口径"])},
+            {"模块": "RDD 扩展", "范围": f"{rdd_tier} · {rdd_row['证据状态']}", "说明": str(rdd_row["当前口径"])},
         ]
     )
 

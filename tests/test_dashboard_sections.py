@@ -75,5 +75,37 @@ def test_build_limits_section_returns_scope_and_identification_tables() -> None:
     )
 
     assert len(section["summary_cards"]) == 3
+    assert "中国 RDD L" in section["summary_cards"][1]["meta"]
+    assert "证据等级为" in section["summary_cards"][1]["foot"]
     assert [table["label"] for table in section["primary_tables"]] == ["样本与数据范围"]
     assert [table["label"] for table in section["detail_tables"]] == ["识别范围说明"]
+
+
+def test_build_limits_section_derives_live_rdd_tier_for_summary_cards_and_scope_table() -> None:
+    captured_tables: list[pd.DataFrame] = []
+
+    def _capture_table(frame: pd.DataFrame, compact: bool = False) -> str:
+        captured_tables.append(frame.copy())
+        return f"<table rows={len(frame)} compact={compact}></table>"
+
+    def _apply_live_status(frame: pd.DataFrame) -> pd.DataFrame:
+        updated = frame.copy()
+        mask = updated["分析层"] == "中国 RDD 扩展"
+        updated.loc[mask, "证据状态"] = "公开重建样本"
+        updated.loc[mask, "当前口径"] = "当前使用公开数据重建的边界样本。"
+        return updated
+
+    section = dashboard_sections.build_limits_section(
+        ROOT,
+        apply_live_rdd_status_to_identification_scope=_apply_live_status,
+        render_table=_capture_table,
+        attach_display_tiers=dashboard_presenters.attach_display_tiers,
+        split_items_by_tier=dashboard_presenters.split_items_by_tier,
+        format_share=lambda value: f"{value:.1%}",
+    )
+
+    assert "中国 RDD L2" in section["summary_cards"][1]["meta"]
+    assert "L2 · 公开重建样本" in section["summary_cards"][1]["foot"]
+    identification_scope = next(frame for frame in captured_tables if "分析层" in frame.columns)
+    rdd_row = identification_scope.loc[identification_scope["分析层"] == "中国 RDD 扩展"].iloc[0]
+    assert rdd_row["证据等级"] == "L2"
