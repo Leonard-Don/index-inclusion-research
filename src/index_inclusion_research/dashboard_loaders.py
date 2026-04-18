@@ -232,7 +232,7 @@ def load_rdd_status(
                 "mode": str(row.get("status", "missing")),
                 "evidence_status": str(row.get("evidence_status", "待补正式样本")),
                 "message": str(row.get("message", "等待真实候选样本文件。")),
-                "note": str(row.get("note", "等待真实候选样本文件或修复文件校验错误后，RDD 才进入正式证据链。")),
+                "note": str(row.get("note", "等待正式候选样本、公开重建样本，或修复文件校验错误后，RDD 才能进入 L2/L3 证据等级。")),
                 "input_file": "" if pd.isna(row.get("input_file")) else str(row.get("input_file")),
                 "audit_file": "" if pd.isna(row.get("audit_file")) else str(row.get("audit_file")),
                 "candidate_rows": _optional_int(row.get("candidate_rows")),
@@ -294,8 +294,8 @@ def load_rdd_status(
     return {
         "mode": "missing",
         "evidence_status": "待补正式样本",
-        "message": "等待真实候选样本文件：data/raw/hs300_rdd_candidates.csv。",
-        "note": "等待真实候选样本文件或修复文件校验错误后，RDD 才进入正式证据链。",
+        "message": "等待正式或公开重建候选样本文件：data/raw/hs300_rdd_candidates.csv 或 data/raw/hs300_rdd_candidates.reconstructed.csv。",
+        "note": "等待正式候选样本、公开重建样本，或修复文件校验错误后，RDD 才能进入 L2/L3 证据等级。",
         "input_file": "data/raw/hs300_rdd_candidates.csv",
         "audit_file": "",
         "candidate_rows": None,
@@ -351,7 +351,7 @@ def load_identification_china_saved_result(
         [
             "# 制度识别与中国市场证据结果包",
             "",
-            "这个页面把中国市场识别主线下的风格识别结果与 RDD 状态放在同一页中，用于区分“现象是否存在”和“更强识别是否已进入正式证据链”。",
+            "这个页面把中国市场识别主线下的风格识别结果与 RDD 状态放在同一页中，用于区分“现象是否存在”和“更强识别目前处于 L0-L3 的哪个层级”。",
             "",
             "## 第一部分：风格识别",
             style_summary,

@@ -150,7 +150,7 @@ tests/
 - `scripts/start_hs300_rdd.py`
 
 其中 `RDD` 默认不再自动回退 demo。  
-只有当 [data/raw/hs300_rdd_candidates.csv](data/raw/hs300_rdd_candidates.csv) 存在且通过校验时，`RDD` 才会进入正式证据链；如需开发演示，请显式运行：
+当 [data/raw/hs300_rdd_candidates.csv](data/raw/hs300_rdd_candidates.csv) 存在且通过校验时，`RDD` 会进入 `L3` 正式边界样本；当 [data/raw/hs300_rdd_candidates.reconstructed.csv](data/raw/hs300_rdd_candidates.reconstructed.csv) 存在且通过校验时，`RDD` 会进入 `L2` 公开重建样本。如需开发演示，请显式运行：
 
 ```bash
 python3 scripts/start_hs300_rdd.py --demo

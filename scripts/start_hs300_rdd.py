@@ -49,6 +49,15 @@ def _prepare_candidate_command(*, packaged: bool, check_only: bool) -> str:
     return f"{command} --input /path/to/raw_candidates.xlsx --sheet 0{suffix}"
 
 
+def _reconstruct_candidate_command(*, packaged: bool) -> str:
+    command = (
+        "index-inclusion-reconstruct-hs300-rdd"
+        if packaged
+        else "python3 scripts/reconstruct_hs300_rdd_candidates.py"
+    )
+    return f"{command} --announce-date 2024-05-31 --output data/raw/hs300_rdd_candidates.reconstructed.csv --force"
+
+
 def _generate_demo_candidates() -> pd.DataFrame:
     events, prices, _ = ensure_real_data()
     clean_events = prepare_clean_events(events)
@@ -163,7 +172,7 @@ def _load_candidate_file(*, allow_demo: bool, strict_validation: bool) -> tuple[
     return (
         pd.DataFrame(),
         "missing",
-        "等待真实候选样本文件：`data/raw/hs300_rdd_candidates.csv`。当前中国主线的正式证据仅来自事件研究与匹配回归。",
+        "等待正式或公开重建候选样本文件：`data/raw/hs300_rdd_candidates.csv` 或 `data/raw/hs300_rdd_candidates.reconstructed.csv`。当前中国主线的正式证据仅来自事件研究与匹配回归。",
     )
 
 
@@ -189,7 +198,7 @@ def _status_display(mode: str) -> tuple[str, str]:
         return "公开重建样本", "基于公开数据重建的边界样本，可进入公开数据版证据链，但不应表述为中证官方历史候选排名表。"
     if mode == "demo":
         return "方法展示", "当前为显式 demo 模式，只用于方法展示，不进入正式证据链。"
-    return "待补正式样本", "等待真实候选样本文件或修复文件校验错误后，RDD 才进入正式证据链。"
+    return "待补正式样本", "等待正式候选样本、公开重建样本，或修复文件校验错误后，RDD 才能进入 L2/L3 证据等级。"
 
 
 def _write_status(
@@ -273,9 +282,10 @@ def _write_summary(
         f"数据契约说明：`{_display_path(ROOT / 'docs' / 'hs300_rdd_data_contract.md')}`",
         "",
         "推荐下一步：",
-        f"- 先验收原始候选名单：`{_prepare_candidate_command(packaged=True, check_only=True)}`",
+        f"- 如果已经拿到原始候选名单，先验收：`{_prepare_candidate_command(packaged=True, check_only=True)}`",
         f"- 验收通过后写入正式候选文件：`{_prepare_candidate_command(packaged=True, check_only=False)}`",
-        f"- 如果尚未安装包内 CLI，可改用脚本：`{_prepare_candidate_command(packaged=False, check_only=True)}`",
+        f"- 如果手头没有官方名单，可先重建公开样本：`{_reconstruct_candidate_command(packaged=True)}`",
+        f"- 如果尚未安装包内 CLI，可改用脚本：`{_prepare_candidate_command(packaged=False, check_only=True)}` 或 `{_reconstruct_candidate_command(packaged=False)}`",
     ]
 
     if audit is not None and not audit.empty:
@@ -315,7 +325,7 @@ def _write_summary(
         lines.extend(
             [
                 "",
-                "当前显式启用了 demo 模式。即使生成了系数、图表与摘要，也只用于开发验证，不应用于正式主结论。",
+                "当前显式启用了 demo 模式。即使生成了系数、图表与摘要，也只用于开发验证，不应用于正式主结论；如需退出方法展示，可改用上面的正式导入或公开重建路径。",
             ]
         )
     elif pd.notna(row["validation_error"]):

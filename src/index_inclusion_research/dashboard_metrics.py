@@ -34,6 +34,13 @@ def _hs300_rdd_prepare_import_command() -> str:
     )
 
 
+def _hs300_rdd_reconstruct_command() -> str:
+    return (
+        "index-inclusion-reconstruct-hs300-rdd --announce-date 2024-05-31 "
+        "--output data/raw/hs300_rdd_candidates.reconstructed.csv --force"
+    )
+
+
 def rdd_evidence_tier(mode: str) -> str:
     return {
         "real": "L3",
@@ -318,8 +325,8 @@ def build_identification_status_panel(rdd_status: RddStatus) -> StatusPanel | No
         )
     else:
         next_step_copy = (
-            f"先运行 {_hs300_rdd_prepare_check_command()} 验收原始候选名单；"
-            f"通过后再运行 {_hs300_rdd_prepare_import_command()} 写入正式样本。"
+            f"如果已经拿到原始候选名单，先运行 {_hs300_rdd_prepare_check_command()} 验收，再用 {_hs300_rdd_prepare_import_command()} 写入正式样本；"
+            f"如果手头没有官方名单，也可以先运行 {_hs300_rdd_reconstruct_command()} 生成公开重建样本，进入 L2 证据等级。"
         )
     contract_copy = (
         "模板文件为 data/raw/hs300_rdd_candidates.template.csv；"
@@ -346,14 +353,20 @@ def build_identification_status_panel(rdd_status: RddStatus) -> StatusPanel | No
         tone = "demo"
         signal_value = f"{rdd_evidence_tier(mode)} · 方法展示"
         signal_copy = "当前只用于展示识别框架、字段契约和运行链路，不进入正式证据链。"
-        panel_copy = f"{rdd_status['message']} 只有在提供并通过校验的真实候选样本文件后，断点结果才会进入正式证据链。"
-        entry_condition = "退出 demo 模式，并提供正式候选样本文件通过字段与日期校验。"
+        panel_copy = (
+            f"{rdd_status['message']} 退出 demo 模式后，可以通过正式候选样本进入 L3，"
+            "也可以先通过公开重建样本进入 L2。"
+        )
+        entry_condition = "退出 demo 模式，并提供正式候选样本通过校验，或先生成公开重建样本文件。"
     else:
         tone = "missing"
         signal_value = f"{rdd_evidence_tier(mode)} · 待补正式样本"
         signal_copy = "当前首页只能展示事件研究与匹配回归；RDD 还没有进入正式或公开重建证据链。"
-        panel_copy = f"{rdd_status['message']} 只有在提供并通过校验的真实候选样本文件后，断点结果才会进入正式证据链。"
-        entry_condition = "提供正式候选样本文件并通过字段与日期校验。"
+        panel_copy = (
+            f"{rdd_status['message']} 当前还没有进入可读的边界证据；"
+            "后续可以通过正式候选样本进入 L3，或先通过公开重建样本进入 L2。"
+        )
+        entry_condition = "提供正式候选样本文件并通过字段与日期校验，或先生成公开重建样本文件。"
     return {
         "kicker": "证据等级",
         "title": str(rdd_status["evidence_status"]),
