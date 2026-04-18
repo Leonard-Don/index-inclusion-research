@@ -1,7 +1,7 @@
 # HS300 RDD 正式数据契约
 
 `start_hs300_rdd.py` 现在默认走“正式候选样本文件”模式。  
-只有当 [data/raw/hs300_rdd_candidates.csv](/Users/leonardodon/paper/data/raw/hs300_rdd_candidates.csv) 存在且通过校验时，`RDD` 才会进入正式证据链。
+只有当 [data/raw/hs300_rdd_candidates.csv](/Users/leonardodon/index-inclusion-research/data/raw/hs300_rdd_candidates.csv) 存在且通过校验时，`RDD` 才会进入正式证据链。
 
 如果文件缺失或不合法：
 - 脚本默认写出 `missing` 状态
@@ -14,10 +14,31 @@
 python3 scripts/start_hs300_rdd.py --demo
 ```
 
+如果你拿到的是原始候选名单 Excel / CSV，推荐先用导入脚本做标准化、字段补齐和批次审计：
+
+```bash
+python3 scripts/prepare_hs300_rdd_candidates.py \
+  --input /path/to/raw_candidates.xlsx \
+  --sheet 0 \
+  --announce-date 2024-11-29 \
+  --effective-date 2024-12-16 \
+  --source CSIndex \
+  --source-url https://www.csindex.com.cn/
+```
+
+如果只想先检查、不覆盖正式候选文件，可以改用：
+
+```bash
+python3 scripts/prepare_hs300_rdd_candidates.py \
+  --input /path/to/raw_candidates.xlsx \
+  --check-only
+```
+
 ## 正式文件路径
 
 - 真实候选样本：`data/raw/hs300_rdd_candidates.csv`
 - 字段模板：`data/raw/hs300_rdd_candidates.template.csv`
+- 导入脚本：`scripts/prepare_hs300_rdd_candidates.py`
 
 ## 必需列
 
@@ -85,18 +106,25 @@ batch_id,market,index_name,ticker,security_name,announce_date,effective_date,run
 
 - 命令行直接运行时：明确报错，不回退 demo
 - 仪表盘刷新或研究主线联动时：写出 `missing` 状态，保留方法说明，但不展示正式 `RDD` 系数
+- 导入脚本运行时：会先报告列映射、默认补入字段和 cutoff 两侧覆盖情况；未通过校验时不会写入正式候选文件
 
 ## 正式输出
 
-当真实文件通过校验时，会在 [results/literature/hs300_rdd](/Users/leonardodon/paper/results/literature/hs300_rdd) 下生成：
+当真实文件通过校验时，会在 [results/literature/hs300_rdd](/Users/leonardodon/index-inclusion-research/results/literature/hs300_rdd) 下生成：
 
 - `rdd_status.csv`
 - `summary.md`
+- `candidate_batch_audit.csv`
 - `event_level_with_running.csv`
 - `rdd_summary.csv`
 - `figures/*.png`
 
 其中 `rdd_status.csv` 是前端和主结果层读取的正式状态源。
+
+导入脚本默认会把前置验收结果写到 `results/literature/hs300_rdd_import/`：
+
+- `candidate_batch_audit.csv`
+- `import_summary.md`
 
 ## 缺文件或无效文件时
 
