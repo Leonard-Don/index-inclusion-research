@@ -103,6 +103,7 @@ def test_build_identification_scope_marks_demo_rdd_as_method_only() -> None:
 
     scope = build_identification_scope_table(events, panel, rdd_summary=rdd_summary, rdd_mode="demo")
     rdd_row = scope.loc[scope["分析层"] == "中国 RDD 扩展"].iloc[0]
+    assert rdd_row["证据等级"] == "L1"
     assert rdd_row["证据状态"] == "方法展示"
     assert "不应与正式实证结果混用" in rdd_row["当前口径"]
 
@@ -118,6 +119,7 @@ def test_build_identification_scope_marks_missing_rdd_as_pending_formal_input() 
 
     scope = build_identification_scope_table(events, panel, rdd_summary=pd.DataFrame(), rdd_mode="missing")
     rdd_row = scope.loc[scope["分析层"] == "中国 RDD 扩展"].iloc[0]
+    assert rdd_row["证据等级"] == "L0"
     assert rdd_row["证据状态"] == "待补正式样本"
     assert "hs300_rdd_candidates.csv" in rdd_row["当前口径"]
 
@@ -134,6 +136,7 @@ def test_build_identification_scope_marks_reconstructed_rdd_as_public_proxy() ->
 
     scope = build_identification_scope_table(events, panel, rdd_summary=rdd_summary, rdd_mode="reconstructed")
     rdd_row = scope.loc[scope["分析层"] == "中国 RDD 扩展"].iloc[0]
+    assert rdd_row["证据等级"] == "L2"
     assert rdd_row["证据状态"] == "公开重建样本"
     assert "官方历史候选排名表" in rdd_row["当前口径"]
 

@@ -14,6 +14,7 @@ from index_inclusion_research.analysis import (
     summarize_event_level_metrics,
     winsorize_event_level_metrics,
 )
+from index_inclusion_research import dashboard_metrics
 from index_inclusion_research.literature import compute_retention_summary
 
 plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
@@ -319,18 +320,23 @@ def build_identification_scope_table(
     rdd_n_obs = _safe_int(rdd_summary["n_obs"].max()) if not rdd_summary.empty and "n_obs" in rdd_summary.columns else pd.NA
 
     rdd_status = "待补正式样本"
+    rdd_tier = dashboard_metrics.rdd_evidence_tier("missing")
     rdd_note = "尚未提供有效的 hs300_rdd_candidates.csv，当前中国主线的正式证据仍以事件研究与匹配回归为主。"
     if rdd_mode == "real":
         rdd_status = "正式边界样本"
+        rdd_tier = dashboard_metrics.rdd_evidence_tier("real")
         rdd_note = "基于真实候选排名变量，可作为更强识别证据。"
     if rdd_mode == "reconstructed":
         rdd_status = "公开重建样本"
+        rdd_tier = dashboard_metrics.rdd_evidence_tier("reconstructed")
         rdd_note = "当前使用公开数据重建的边界样本，适合公开数据版 RDD 复现，但不应表述为中证官方历史候选排名表。"
     if rdd_mode == "demo":
         rdd_status = "方法展示"
+        rdd_tier = dashboard_metrics.rdd_evidence_tier("demo")
         rdd_note = "当前使用 demo 伪排名变量，展示的是断点回归方法框架，不应与正式实证结果混用。"
     elif rdd_mode == "unavailable":
         rdd_status = "未生成"
+        rdd_tier = dashboard_metrics.rdd_evidence_tier("unavailable")
         rdd_note = "尚未生成 RDD 扩展结果。"
 
     rows = [
@@ -339,6 +345,7 @@ def build_identification_scope_table(
             "市场范围": "中国 A 股 + 美国",
             "样本基础": f"{_display_value(event_count)} 个真实调入/调出事件、{_display_value(panel_windows)} 个事件相位窗口",
             "主要输出": "CAR[-1,+1]、CAR[-3,+3]、CAR[-5,+5]、平均路径图",
+            "证据等级": "L3",
             "证据状态": "正式样本",
             "当前口径": "直接回答事件附近是否存在显著超额收益。",
         },
@@ -347,6 +354,7 @@ def build_identification_scope_table(
             "市场范围": "中国 A 股 + 美国",
             "样本基础": "沿用真实事件窗口面板",
             "主要输出": "CAR[0,+5]、CAR[0,+20]、CAR[0,+60]、CAR[0,+120]、retention ratio",
+            "证据等级": "L3",
             "证据状态": "正式样本",
             "当前口径": "用于区分短期价格压力与部分永久性需求曲线效应。",
         },
@@ -355,6 +363,7 @@ def build_identification_scope_table(
             "市场范围": "中国 A 股 + 美国",
             "样本基础": f"{_display_value(matched_rows)} 条匹配面板观测值",
             "主要输出": "主回归处理组系数、换手率/成交量/波动率机制回归",
+            "证据等级": "L3",
             "证据状态": "正式样本",
             "当前口径": "在市值与纳入前收益控制下，对事件研究结果进行进一步识别。",
         },
@@ -363,6 +372,7 @@ def build_identification_scope_table(
             "市场范围": "中国 A 股（沪深300）",
             "样本基础": f"{_display_value(rdd_n_obs)} 个断点附近观测值",
             "主要输出": "local linear RD 系数、断点主图与分箱图",
+            "证据等级": rdd_tier,
             "证据状态": rdd_status,
             "当前口径": rdd_note,
         },
