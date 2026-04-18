@@ -84,10 +84,32 @@ def test_identification_status_panel_handles_missing_and_real_modes() -> None:
 
     assert panel is not None
     assert panel["title"] == "待补正式样本"
-    assert panel["kicker"] == "方法状态"
+    assert panel["kicker"] == "证据等级"
+    assert panel["tone"] == "missing"
+    assert panel["signal_value"] == "L0 · 待补正式样本"
     assert "index-inclusion-prepare-hs300-rdd" in panel["meta"][1]["value"]
     assert "data/raw/hs300_rdd_candidates.template.csv" in panel["meta"][3]["value"]
-    assert dashboard_metrics.build_identification_status_panel({"mode": "real"}) is None
+
+    real_panel = dashboard_metrics.build_identification_status_panel(
+        {
+            "mode": "real",
+            "evidence_status": "正式边界样本",
+            "message": "当前正在使用你提供的真实候选排名文件。",
+            "candidate_batches": 1,
+            "treated_rows": 299,
+            "control_rows": 12,
+            "crossing_batches": 1,
+            "validation_error": "",
+            "audit_file": "results/literature/hs300_rdd/candidate_batch_audit.csv",
+        }
+    )
+
+    assert real_panel is not None
+    assert real_panel["title"] == "正式边界样本"
+    assert real_panel["tone"] == "official"
+    assert real_panel["signal_value"] == "L3 · 正式边界样本"
+    assert "正式证据链" in real_panel["copy"]
+    assert "已满足" in real_panel["meta"][2]["value"]
 
 
 def test_identification_status_panel_includes_candidate_audit_copy_when_available() -> None:
@@ -107,6 +129,7 @@ def test_identification_status_panel_includes_candidate_audit_copy_when_availabl
 
     assert panel is not None
     assert panel["title"] == "方法展示"
+    assert panel["tone"] == "demo"
     assert "2 个候选批次" in panel["meta"][0]["value"]
     assert "candidate_batch_audit.csv" in panel["meta"][3]["value"]
 
@@ -128,7 +151,9 @@ def test_identification_status_panel_marks_reconstructed_mode_as_public_proxy() 
 
     assert panel is not None
     assert panel["title"] == "公开重建样本"
+    assert panel["tone"] == "reconstructed"
     assert "公开重建样本" in panel["copy"]
+    assert "L2 · 公开重建样本" == panel["signal_value"]
     assert "升级到官方口径" in panel["meta"][1]["value"]
     assert "公开数据版证据链" in panel["meta"][2]["value"]
 

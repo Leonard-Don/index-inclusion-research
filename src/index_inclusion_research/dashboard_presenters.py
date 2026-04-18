@@ -196,7 +196,11 @@ def prepare_track_display(
     display["display_figures"] = all_figures[: (3 if demo_mode else 6)]
     display["display_tables"] = decorate_display_tables(curated_tables_by_analysis.get(analysis_id, []))
     display["primary_tables"], display["detail_tables"] = split_items_by_tier(display["display_tables"])
-    display["badge"] = "核心结果" if demo_mode else "完整结果"
+    default_badge = "核心结果" if demo_mode else "完整结果"
+    if analysis_id == "identification_china_track" and status_panel is not None:
+        display["badge"] = f"证据等级 · {status_panel['title']}"
+    else:
+        display["badge"] = default_badge
     display["takeaway"] = takeaways.get(analysis_id, "")
     display["status_panel"] = status_panel
     return display
