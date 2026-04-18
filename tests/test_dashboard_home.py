@@ -76,6 +76,7 @@ def test_build_overview_metrics_uses_real_event_count() -> None:
     assert metrics[4]["value"] == "L2"
     assert metrics[4]["label"] == "中国 RDD 当前为公开重建样本"
     assert metrics[4]["tone"] == "reconstructed"
+    assert "公开重建候选样本文件" in metrics[4]["meta"]
 
 
 def test_build_highlights_keeps_current_cn_effective_discussion() -> None:
@@ -104,6 +105,7 @@ def test_build_highlights_keeps_current_cn_effective_discussion() -> None:
     assert "且统计显著。这说明 A 股市场不能机械套用美股的经典指数纳入叙事。" not in discussion["copy"]
     assert method["headline"] == "中国 RDD 已进入公开数据版证据链。"
     assert "公开重建口径" in method["copy"]
+    assert "当前来源为 公开重建候选样本文件" in method["copy"]
 
 
 def test_build_home_context_full_mode_assembles_and_caches_sections() -> None:

@@ -15,7 +15,7 @@ from index_inclusion_research.analysis import (
     winsorize_event_level_metrics,
 )
 from index_inclusion_research.literature import compute_retention_summary
-from index_inclusion_research.rdd_evidence import rdd_evidence_tier
+from index_inclusion_research.rdd_evidence import rdd_evidence_tier, rdd_source_label
 
 plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
 plt.rcParams["axes.unicode_minus"] = False
@@ -322,22 +322,27 @@ def build_identification_scope_table(
     rdd_status = "待补正式样本"
     rdd_tier = rdd_evidence_tier("missing")
     rdd_note = "尚未提供有效的 hs300_rdd_candidates.csv，当前中国主线的正式证据仍以事件研究与匹配回归为主。"
+    rdd_source = rdd_source_label("missing")
     if rdd_mode == "real":
         rdd_status = "正式边界样本"
         rdd_tier = rdd_evidence_tier("real")
         rdd_note = "基于真实候选排名变量，可作为更强识别证据。"
+        rdd_source = rdd_source_label("real")
     if rdd_mode == "reconstructed":
         rdd_status = "公开重建样本"
         rdd_tier = rdd_evidence_tier("reconstructed")
         rdd_note = "当前使用公开数据重建的边界样本，适合公开数据版 RDD 复现，但不应表述为中证官方历史候选排名表。"
+        rdd_source = rdd_source_label("reconstructed")
     if rdd_mode == "demo":
         rdd_status = "方法展示"
         rdd_tier = rdd_evidence_tier("demo")
         rdd_note = "当前使用 demo 伪排名变量，展示的是断点回归方法框架，不应与正式实证结果混用。"
+        rdd_source = rdd_source_label("demo")
     elif rdd_mode == "unavailable":
         rdd_status = "未生成"
         rdd_tier = rdd_evidence_tier("unavailable")
         rdd_note = "尚未生成 RDD 扩展结果。"
+        rdd_source = "尚未生成 RDD 结果"
 
     rows = [
         {
@@ -375,6 +380,7 @@ def build_identification_scope_table(
             "证据等级": rdd_tier,
             "证据状态": rdd_status,
             "当前口径": rdd_note,
+            "来源摘要": rdd_source,
         },
     ]
     return pd.DataFrame(rows)

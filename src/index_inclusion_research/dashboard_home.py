@@ -34,17 +34,38 @@ from index_inclusion_research.dashboard_types import (
     TrackSectionLoader,
     RddStatus,
 )
-from index_inclusion_research.rdd_evidence import rdd_evidence_tier
+from index_inclusion_research.rdd_evidence import rdd_evidence_tier, rdd_provenance_summary
 
 
 def _overview_rdd_metric(rdd_status: RddStatus) -> OverviewMetric:
+    meta = rdd_provenance_summary(rdd_status)
     if rdd_status["mode"] == "real":
-        return {"value": str(rdd_status.get("evidence_tier", "")) or rdd_evidence_tier(rdd_status["mode"]), "label": "中国 RDD 已进入正式边界样本", "tone": "official"}
+        return {
+            "value": str(rdd_status.get("evidence_tier", "")) or rdd_evidence_tier(rdd_status["mode"]),
+            "label": "中国 RDD 已进入正式边界样本",
+            "tone": "official",
+            "meta": meta,
+        }
     if rdd_status["mode"] == "reconstructed":
-        return {"value": str(rdd_status.get("evidence_tier", "")) or rdd_evidence_tier(rdd_status["mode"]), "label": "中国 RDD 当前为公开重建样本", "tone": "reconstructed"}
+        return {
+            "value": str(rdd_status.get("evidence_tier", "")) or rdd_evidence_tier(rdd_status["mode"]),
+            "label": "中国 RDD 当前为公开重建样本",
+            "tone": "reconstructed",
+            "meta": meta,
+        }
     if rdd_status["mode"] == "demo":
-        return {"value": str(rdd_status.get("evidence_tier", "")) or rdd_evidence_tier(rdd_status["mode"]), "label": "中国 RDD 当前仅为方法展示", "tone": "demo"}
-    return {"value": str(rdd_status.get("evidence_tier", "")) or rdd_evidence_tier(rdd_status["mode"]), "label": "中国 RDD 仍待补正式样本", "tone": "missing"}
+        return {
+            "value": str(rdd_status.get("evidence_tier", "")) or rdd_evidence_tier(rdd_status["mode"]),
+            "label": "中国 RDD 当前仅为方法展示",
+            "tone": "demo",
+            "meta": meta,
+        }
+    return {
+        "value": str(rdd_status.get("evidence_tier", "")) or rdd_evidence_tier(rdd_status["mode"]),
+        "label": "中国 RDD 仍待补正式样本",
+        "tone": "missing",
+        "meta": meta,
+    }
 
 
 def build_overview_metrics(
@@ -136,6 +157,9 @@ def build_highlights(
             "事件研究说明现象，匹配回归帮助控制样本差异；RDD 识别框架已经搭好，"
             "但还需要正式候选样本或公开重建样本，才能进入可读的边界证据。"
         )
+    provenance_summary = rdd_provenance_summary(current_rdd_status)
+    if provenance_summary:
+        method_copy = f"{method_copy} 当前来源为 {provenance_summary}。"
     return [
         {
             "label": "最强结论",

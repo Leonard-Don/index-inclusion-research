@@ -6,7 +6,13 @@ from typing import cast
 
 import pandas as pd
 
-from index_inclusion_research.rdd_evidence import rdd_evidence_tier, rdd_evidence_tier_from_status
+from index_inclusion_research.rdd_evidence import (
+    rdd_coverage_note,
+    rdd_evidence_tier,
+    rdd_evidence_tier_from_status,
+    rdd_source_kind,
+    rdd_source_label,
+)
 from index_inclusion_research.dashboard_types import (
     AnalysesConfig,
     AnalysisDefinition,
@@ -217,6 +223,12 @@ def _optional_int(value) -> int | None:
         return None
 
 
+def _optional_text(value) -> str:
+    if pd.isna(value):
+        return ""
+    return str(value)
+
+
 def load_rdd_status(
     root: Path,
     *,
@@ -234,20 +246,44 @@ def load_rdd_status(
             evidence_tier = ("" if pd.isna(row.get("evidence_tier")) else str(row.get("evidence_tier"))) or rdd_evidence_tier(mode)
             if evidence_tier == "—":
                 evidence_tier = rdd_evidence_tier_from_status(evidence_status)
+            candidate_rows = _optional_int(row.get("candidate_rows"))
+            candidate_batches = _optional_int(row.get("candidate_batches"))
+            treated_rows = _optional_int(row.get("treated_rows"))
+            control_rows = _optional_int(row.get("control_rows"))
+            crossing_batches = _optional_int(row.get("crossing_batches"))
+            validation_error = _optional_text(row.get("validation_error"))
+            input_file = _optional_text(row.get("input_file"))
+            source_file = _optional_text(row.get("source_file")) or input_file
+            coverage_note = _optional_text(row.get("coverage_note")) or rdd_coverage_note(
+                mode,
+                candidate_rows=candidate_rows,
+                candidate_batches=candidate_batches,
+                treated_rows=treated_rows,
+                control_rows=control_rows,
+                crossing_batches=crossing_batches,
+                validation_error=validation_error,
+            )
             return {
                 "mode": mode,
                 "evidence_tier": evidence_tier,
                 "evidence_status": evidence_status,
+                "source_kind": _optional_text(row.get("source_kind")) or rdd_source_kind(mode),
+                "source_label": _optional_text(row.get("source_label")) or rdd_source_label(mode),
+                "source_file": source_file,
+                "generated_at": _optional_text(row.get("generated_at")),
+                "as_of_date": _optional_text(row.get("as_of_date")),
+                "batch_label": _optional_text(row.get("batch_label")),
+                "coverage_note": coverage_note,
                 "message": str(row.get("message", "等待真实候选样本文件。")),
                 "note": str(row.get("note", "等待正式候选样本、公开重建样本，或修复文件校验错误后，RDD 才能进入 L2/L3 证据等级。")),
-                "input_file": "" if pd.isna(row.get("input_file")) else str(row.get("input_file")),
-                "audit_file": "" if pd.isna(row.get("audit_file")) else str(row.get("audit_file")),
-                "candidate_rows": _optional_int(row.get("candidate_rows")),
-                "candidate_batches": _optional_int(row.get("candidate_batches")),
-                "treated_rows": _optional_int(row.get("treated_rows")),
-                "control_rows": _optional_int(row.get("control_rows")),
-                "crossing_batches": _optional_int(row.get("crossing_batches")),
-                "validation_error": "" if pd.isna(row.get("validation_error")) else str(row.get("validation_error")),
+                "input_file": input_file,
+                "audit_file": _optional_text(row.get("audit_file")),
+                "candidate_rows": candidate_rows,
+                "candidate_batches": candidate_batches,
+                "treated_rows": treated_rows,
+                "control_rows": control_rows,
+                "crossing_batches": crossing_batches,
+                "validation_error": validation_error,
             }
 
     summary_path = rdd_dir / "summary.md"
@@ -258,6 +294,13 @@ def load_rdd_status(
                 "mode": "demo",
                 "evidence_tier": rdd_evidence_tier("demo"),
                 "evidence_status": "方法展示",
+                "source_kind": rdd_source_kind("demo"),
+                "source_label": rdd_source_label("demo"),
+                "source_file": "",
+                "generated_at": "",
+                "as_of_date": "",
+                "batch_label": "",
+                "coverage_note": rdd_coverage_note("demo"),
                 "message": "当前为显式 demo 模式，只用于方法展示。",
                 "note": "当前为显式 demo 模式，只用于方法展示，不进入正式证据链。",
                 "input_file": "",
@@ -274,6 +317,13 @@ def load_rdd_status(
                 "mode": "reconstructed",
                 "evidence_tier": rdd_evidence_tier("reconstructed"),
                 "evidence_status": "公开重建样本",
+                "source_kind": rdd_source_kind("reconstructed"),
+                "source_label": rdd_source_label("reconstructed"),
+                "source_file": "data/raw/hs300_rdd_candidates.reconstructed.csv",
+                "generated_at": "",
+                "as_of_date": "",
+                "batch_label": "",
+                "coverage_note": rdd_coverage_note("reconstructed"),
                 "message": "当前正在使用公开数据重建的候选样本文件。",
                 "note": "基于公开数据重建的边界样本，可进入公开数据版证据链，但不应表述为中证官方历史候选排名表。",
                 "input_file": "data/raw/hs300_rdd_candidates.reconstructed.csv",
@@ -290,6 +340,13 @@ def load_rdd_status(
                 "mode": "real",
                 "evidence_tier": rdd_evidence_tier("real"),
                 "evidence_status": "正式边界样本",
+                "source_kind": rdd_source_kind("real"),
+                "source_label": rdd_source_label("real"),
+                "source_file": "",
+                "generated_at": "",
+                "as_of_date": "",
+                "batch_label": "",
+                "coverage_note": rdd_coverage_note("real"),
                 "message": "当前正在使用你提供的真实候选排名文件。",
                 "note": "基于真实候选排名变量，可作为更强识别证据。",
                 "input_file": "",
@@ -305,6 +362,13 @@ def load_rdd_status(
         "mode": "missing",
         "evidence_tier": rdd_evidence_tier("missing"),
         "evidence_status": "待补正式样本",
+        "source_kind": rdd_source_kind("missing"),
+        "source_label": rdd_source_label("missing"),
+        "source_file": "data/raw/hs300_rdd_candidates.csv",
+        "generated_at": "",
+        "as_of_date": "",
+        "batch_label": "",
+        "coverage_note": rdd_coverage_note("missing"),
         "message": "等待正式或公开重建候选样本文件：data/raw/hs300_rdd_candidates.csv 或 data/raw/hs300_rdd_candidates.reconstructed.csv。",
         "note": "等待正式候选样本、公开重建样本，或修复文件校验错误后，RDD 才能进入 L2/L3 证据等级。",
         "input_file": "data/raw/hs300_rdd_candidates.csv",

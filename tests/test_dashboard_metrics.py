@@ -87,9 +87,11 @@ def test_identification_status_panel_handles_missing_and_real_modes() -> None:
     assert panel["kicker"] == "证据等级"
     assert panel["tone"] == "missing"
     assert panel["signal_value"] == "L0 · 待补正式样本"
-    assert "index-inclusion-prepare-hs300-rdd" in panel["meta"][1]["value"]
-    assert "index-inclusion-reconstruct-hs300-rdd" in panel["meta"][1]["value"]
-    assert "data/raw/hs300_rdd_candidates.template.csv" in panel["meta"][3]["value"]
+    assert panel["meta"][0]["label"] == "样本来源"
+    assert panel["meta"][1]["label"] == "覆盖说明"
+    assert "index-inclusion-prepare-hs300-rdd" in panel["meta"][3]["value"]
+    assert "index-inclusion-reconstruct-hs300-rdd" in panel["meta"][3]["value"]
+    assert "data/raw/hs300_rdd_candidates.template.csv" in panel["meta"][5]["value"]
 
     real_panel = dashboard_metrics.build_identification_status_panel(
         {
@@ -110,7 +112,8 @@ def test_identification_status_panel_handles_missing_and_real_modes() -> None:
     assert real_panel["tone"] == "official"
     assert real_panel["signal_value"] == "L3 · 正式边界样本"
     assert "正式证据链" in real_panel["copy"]
-    assert "已满足" in real_panel["meta"][2]["value"]
+    assert "正式候选样本文件" in real_panel["meta"][0]["value"]
+    assert "已满足" in real_panel["meta"][4]["value"]
 
 
 def test_identification_status_panel_includes_candidate_audit_copy_when_available() -> None:
@@ -131,9 +134,10 @@ def test_identification_status_panel_includes_candidate_audit_copy_when_availabl
     assert panel is not None
     assert panel["title"] == "方法展示"
     assert panel["tone"] == "demo"
-    assert "2 个候选批次" in panel["meta"][0]["value"]
-    assert "index-inclusion-reconstruct-hs300-rdd" in panel["meta"][1]["value"]
-    assert "candidate_batch_audit.csv" in panel["meta"][3]["value"]
+    assert "demo 伪排名样本" in panel["meta"][0]["value"]
+    assert "2 个候选批次" in panel["meta"][1]["value"]
+    assert "index-inclusion-reconstruct-hs300-rdd" in panel["meta"][3]["value"]
+    assert "candidate_batch_audit.csv" in panel["meta"][5]["value"]
 
 
 def test_identification_status_panel_marks_reconstructed_mode_as_public_proxy() -> None:
@@ -156,8 +160,9 @@ def test_identification_status_panel_marks_reconstructed_mode_as_public_proxy() 
     assert panel["tone"] == "reconstructed"
     assert "公开重建样本" in panel["copy"]
     assert "L2 · 公开重建样本" == panel["signal_value"]
-    assert "升级到官方口径" in panel["meta"][1]["value"]
-    assert "公开数据版证据链" in panel["meta"][2]["value"]
+    assert "公开重建候选样本文件" in panel["meta"][0]["value"]
+    assert "升级到官方口径" in panel["meta"][3]["value"]
+    assert "公开数据版证据链" in panel["meta"][4]["value"]
 
 
 def test_track_metric_tables_return_expected_labels() -> None:

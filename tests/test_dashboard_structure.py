@@ -115,6 +115,7 @@ def test_home_dashboard_renders_single_frontend_sections() -> None:
     assert "结果快照" in html
     assert "当前识别层级" in html
     assert dashboard.runtime.load_rdd_status()["evidence_status"] in html
+    assert dashboard.runtime.load_rdd_status()["source_label"] in html
     assert "中国 RDD" in html
     assert f"L{3 if status['mode'] == 'real' else 2 if status['mode'] == 'reconstructed' else 1 if status['mode'] == 'demo' else 0}" in html
     assert "built-in method copy of dict object" not in html

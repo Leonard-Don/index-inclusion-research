@@ -130,6 +130,18 @@ batch_id,market,index_name,ticker,security_name,announce_date,effective_date,run
 
 其中 `rdd_status.csv` 是前端和主结果层读取的正式状态源。
 
+当前 `rdd_status.csv` 除了 `status / evidence_tier / evidence_status` 之外，还会固定写出一组 provenance 字段，用来回答“当前这版 RDD 到底来自哪份样本”：
+
+- `source_kind`
+- `source_label`
+- `source_file`
+- `generated_at`
+- `as_of_date`
+- `batch_label`
+- `coverage_note`
+
+这组字段会被首页 KPI、识别状态卡和研究边界页同时消费，避免页面各自猜测来源口径。
+
 导入脚本默认会把前置验收结果写到 `results/literature/hs300_rdd_import/`：
 
 - `candidate_batch_audit.csv`

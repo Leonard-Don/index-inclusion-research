@@ -119,7 +119,7 @@ def test_prepare_track_display_hides_formal_rdd_tables_when_status_missing() -> 
     assert "RDD 摘要" not in labels
     assert display["status_panel"] is not None
     assert display["status_panel"]["title"] == "待补正式样本"
-    assert display["status_panel"]["meta"][0]["label"] == "当前状态"
+    assert display["status_panel"]["meta"][0]["label"] == "样本来源"
     assert display["display_figures"] == [{"path": "id.png", "caption": "identification"}]
 
 

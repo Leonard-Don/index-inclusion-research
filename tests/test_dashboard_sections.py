@@ -93,6 +93,7 @@ def test_build_limits_section_derives_live_rdd_tier_for_summary_cards_and_scope_
         mask = updated["分析层"] == "中国 RDD 扩展"
         updated.loc[mask, "证据状态"] = "公开重建样本"
         updated.loc[mask, "当前口径"] = "当前使用公开数据重建的边界样本。"
+        updated.loc[mask, "来源摘要"] = "公开重建候选样本文件 · 批次 2024-05-31 · 311 条候选"
         return updated
 
     section = dashboard_sections.build_limits_section(
@@ -106,6 +107,7 @@ def test_build_limits_section_derives_live_rdd_tier_for_summary_cards_and_scope_
 
     assert "中国 RDD L2" in section["summary_cards"][1]["meta"]
     assert "L2 · 公开重建样本" in section["summary_cards"][1]["foot"]
+    assert "公开重建候选样本文件" in section["summary_cards"][1]["foot"]
     identification_scope = next(frame for frame in captured_tables if "分析层" in frame.columns)
     rdd_row = identification_scope.loc[identification_scope["分析层"] == "中国 RDD 扩展"].iloc[0]
     assert rdd_row["证据等级"] == "L2"

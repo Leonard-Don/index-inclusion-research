@@ -324,6 +324,7 @@ def build_limits_section(
     short_id_row = identification_scope.loc[identification_scope["分析层"] == "短窗口事件研究"].iloc[0]
     rdd_row = identification_scope.loc[identification_scope["分析层"] == "中国 RDD 扩展"].iloc[0]
     rdd_tier = str(rdd_row.get("证据等级", "")) or rdd_evidence_tier_from_status(str(rdd_row["证据状态"]))
+    rdd_source = str(rdd_row.get("来源摘要", "")).strip()
     matched_rate = (diagnostics["status"] == "matched").mean()
     sector_relaxed_rate = diagnostics["sector_relaxed"].where(diagnostics["sector_relaxed"].notna(), False).astype(bool).mean()
 
@@ -340,7 +341,11 @@ def build_limits_section(
             "title": "事件研究、匹配回归与 RDD 分别回答不同问题",
             "meta": f"匹配成功率 {format_share(matched_rate)} · 中国 RDD {rdd_tier}",
             "copy": str(short_id_row["当前口径"]),
-            "foot": f'当前匹配回归面板共 {int(matched_row["观测值"]):,} 条观测值；中国 RDD 扩展目前的证据等级为“{rdd_tier} · {rdd_row["证据状态"]}”。',
+            "foot": (
+                f'当前匹配回归面板共 {int(matched_row["观测值"]):,} 条观测值；'
+                f'中国 RDD 扩展目前的证据等级为“{rdd_tier} · {rdd_row["证据状态"]}”'
+                f'{f"，来源为“{rdd_source}”" if rdd_source else ""}。'
+            ),
         },
         {
             "kicker": "数据口径",

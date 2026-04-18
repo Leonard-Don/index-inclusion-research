@@ -87,6 +87,8 @@ def test_load_rdd_status_detects_demo_summary(tmp_path: Path) -> None:
     assert status["mode"] == "demo"
     assert status["evidence_tier"] == "L1"
     assert status["evidence_status"] == "方法展示"
+    assert status["source_kind"] == "demo"
+    assert status["source_label"] == "demo 伪排名样本"
 
 
 def test_load_rdd_status_detects_reconstructed_summary(tmp_path: Path) -> None:
@@ -98,7 +100,9 @@ def test_load_rdd_status_detects_reconstructed_summary(tmp_path: Path) -> None:
     assert status["mode"] == "reconstructed"
     assert status["evidence_tier"] == "L2"
     assert status["evidence_status"] == "公开重建样本"
+    assert status["source_kind"] == "reconstructed"
     assert status["input_file"] == "data/raw/hs300_rdd_candidates.reconstructed.csv"
+    assert status["source_file"] == "data/raw/hs300_rdd_candidates.reconstructed.csv"
 
 
 def test_load_rdd_status_defaults_missing_state_to_dual_input_paths(tmp_path: Path) -> None:
@@ -106,6 +110,8 @@ def test_load_rdd_status_defaults_missing_state_to_dual_input_paths(tmp_path: Pa
 
     assert status["mode"] == "missing"
     assert status["evidence_tier"] == "L0"
+    assert status["source_kind"] == "missing"
+    assert status["source_label"] == "待补候选样本"
     assert "hs300_rdd_candidates.csv" in status["message"]
     assert "hs300_rdd_candidates.reconstructed.csv" in status["message"]
     assert "L2/L3" in status["note"]
@@ -115,8 +121,8 @@ def test_load_rdd_status_reads_status_csv_audit_and_validation_fields(tmp_path: 
     (tmp_path / "rdd_status.csv").write_text(
         "\n".join(
             [
-                "status,evidence_status,message,note,input_file,audit_file,candidate_rows,candidate_batches,treated_rows,control_rows,crossing_batches,validation_error",
-                "missing,待补正式样本,真实候选样本文件校验失败：running_variable 缺失,等待修复,data/raw/hs300_rdd_candidates.csv,results/literature/hs300_rdd/candidate_batch_audit.csv,2,1,1,1,1,running_variable 缺失",
+                "status,evidence_tier,evidence_status,source_kind,source_label,source_file,generated_at,as_of_date,batch_label,coverage_note,message,note,input_file,audit_file,candidate_rows,candidate_batches,treated_rows,control_rows,crossing_batches,validation_error",
+                "missing,L0,待补正式样本,missing,待补候选样本,data/raw/hs300_rdd_candidates.csv,2026-04-18T10:00:00+08:00,,,最近一次校验失败：running_variable 缺失。,真实候选样本文件校验失败：running_variable 缺失,等待修复,data/raw/hs300_rdd_candidates.csv,results/literature/hs300_rdd/candidate_batch_audit.csv,2,1,1,1,1,running_variable 缺失",
             ]
         )
         + "\n",
@@ -127,6 +133,10 @@ def test_load_rdd_status_reads_status_csv_audit_and_validation_fields(tmp_path: 
 
     assert status["mode"] == "missing"
     assert status["evidence_tier"] == "L0"
+    assert status["source_kind"] == "missing"
+    assert status["source_file"] == "data/raw/hs300_rdd_candidates.csv"
+    assert status["generated_at"] == "2026-04-18T10:00:00+08:00"
+    assert status["coverage_note"] == "最近一次校验失败：running_variable 缺失。"
     assert status["audit_file"] == "results/literature/hs300_rdd/candidate_batch_audit.csv"
     assert status["candidate_rows"] == 2
     assert status["candidate_batches"] == 1
