@@ -51,21 +51,59 @@ def _refresh_payload(mode: str, anchor: str, open_panels: str | None) -> Refresh
 
 
 def test_build_overview_metrics_uses_real_event_count() -> None:
-    metrics = dashboard_home.build_overview_metrics(ROOT)
+    metrics = dashboard_home.build_overview_metrics(
+        ROOT,
+        rdd_status={
+            "mode": "reconstructed",
+            "evidence_status": "公开重建样本",
+            "message": "当前正在使用公开数据重建的候选样本文件。",
+            "note": "",
+            "input_file": "",
+            "audit_file": "",
+            "candidate_rows": 311,
+            "candidate_batches": 1,
+            "treated_rows": 299,
+            "control_rows": 12,
+            "crossing_batches": 1,
+            "validation_error": "",
+        },
+    )
     event_counts = pd.read_csv(ROOT / "results" / "real_tables" / "event_counts.csv")
 
     assert [item["value"] for item in metrics[:3]] == ["16", "3", "5"]
     assert metrics[3]["value"] == str(int(event_counts["n_events"].sum()))
     assert metrics[3]["label"] == "个真实调入/调出事件，构成默认样本"
+    assert metrics[4]["value"] == "L2"
+    assert metrics[4]["label"] == "中国 RDD 当前为公开重建样本"
+    assert metrics[4]["tone"] == "reconstructed"
 
 
 def test_build_highlights_keeps_current_cn_effective_discussion() -> None:
-    highlights = dashboard_home.build_highlights(ROOT)
+    highlights = dashboard_home.build_highlights(
+        ROOT,
+        rdd_status={
+            "mode": "reconstructed",
+            "evidence_status": "公开重建样本",
+            "message": "当前正在使用公开数据重建的候选样本文件。",
+            "note": "",
+            "input_file": "",
+            "audit_file": "",
+            "candidate_rows": 311,
+            "candidate_batches": 1,
+            "treated_rows": 299,
+            "control_rows": 12,
+            "crossing_batches": 1,
+            "validation_error": "",
+        },
+    )
     discussion = next(item for item in highlights if item["label"] == "最值得讨论")
+    method = next(item for item in highlights if item["label"] == "方法含义")
 
     assert "但统计上并不显著" in discussion["copy"]
     assert "[0,+120] 窗口下调入与调出的 CAR 差异达到" in discussion["copy"]
     assert "且统计显著。这说明 A 股市场不能机械套用美股的经典指数纳入叙事。" not in discussion["copy"]
+    assert method["headline"] == "中国 RDD 已进入公开数据版证据链。"
+    assert "公开重建口径" in method["copy"]
 
 
 def test_build_home_context_full_mode_assembles_and_caches_sections() -> None:

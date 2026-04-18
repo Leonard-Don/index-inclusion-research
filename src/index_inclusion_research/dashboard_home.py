@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from index_inclusion_research import dashboard_loaders
 from index_inclusion_research.results_snapshot import ResultsSnapshot, require_first_row
 from index_inclusion_research.dashboard_types import (
     AbstractLeadBuilder,
@@ -31,25 +32,49 @@ from index_inclusion_research.dashboard_types import (
     TrackDisplaySection,
     TrackNotesBuilder,
     TrackSectionLoader,
+    RddStatus,
 )
 
 
-def build_overview_metrics(root: Path, *, snapshot: ResultsSnapshot | None = None) -> list[OverviewMetric]:
+def _overview_rdd_metric(rdd_status: RddStatus) -> OverviewMetric:
+    if rdd_status["mode"] == "real":
+        return {"value": "L3", "label": "中国 RDD 已进入正式边界样本", "tone": "official"}
+    if rdd_status["mode"] == "reconstructed":
+        return {"value": "L2", "label": "中国 RDD 当前为公开重建样本", "tone": "reconstructed"}
+    if rdd_status["mode"] == "demo":
+        return {"value": "L1", "label": "中国 RDD 当前仅为方法展示", "tone": "demo"}
+    return {"value": "L0", "label": "中国 RDD 仍待补正式样本", "tone": "missing"}
+
+
+def build_overview_metrics(
+    root: Path,
+    *,
+    snapshot: ResultsSnapshot | None = None,
+    rdd_status: RddStatus | None = None,
+) -> list[OverviewMetric]:
     current_snapshot = snapshot or ResultsSnapshot(root)
     event_counts = current_snapshot.csv("results", "real_tables", "event_counts.csv")
     total_events = int(event_counts["n_events"].sum())
+    current_rdd_status = dict(rdd_status) if rdd_status is not None else dashboard_loaders.load_rdd_status(root)
     return [
         {"value": "16", "label": "篇核心文献，构成理论基础"},
         {"value": "3", "label": "条研究主线，对应主要实证模块"},
         {"value": "5", "label": "个研究阵营，构成文献演进框架"},
         {"value": str(total_events), "label": "个真实调入/调出事件，构成默认样本"},
+        _overview_rdd_metric(current_rdd_status),
     ]
 
 
-def build_highlights(root: Path, *, snapshot: ResultsSnapshot | None = None) -> list[HighlightItem]:
+def build_highlights(
+    root: Path,
+    *,
+    snapshot: ResultsSnapshot | None = None,
+    rdd_status: RddStatus | None = None,
+) -> list[HighlightItem]:
     current_snapshot = snapshot or ResultsSnapshot(root)
     summary = current_snapshot.csv("results", "real_tables", "event_study_summary.csv")
     asymmetry = current_snapshot.csv("results", "real_tables", "asymmetry_summary.csv")
+    current_rdd_status = dict(rdd_status) if rdd_status is not None else dashboard_loaders.load_rdd_status(root)
     us_announce = require_first_row(
         summary.loc[
             (summary["market"] == "US")
@@ -86,6 +111,30 @@ def build_highlights(root: Path, *, snapshot: ResultsSnapshot | None = None) -> 
             f"{cn_effective_asymmetry['asymmetry_car_p0_p120']:.2%}。"
             "这说明中国市场的关键分化更多体现在生效后的长期路径，而不是简单复制美股的短期公告效应。"
         )
+    if current_rdd_status["mode"] == "real":
+        method_headline = "中国 RDD 已进入正式边界样本口径。"
+        method_copy = (
+            "当前首页里的识别层已经不是纯方法框架。正式候选样本通过校验后，"
+            "RDD 可以和事件研究、匹配回归并列进入主结论，作为更强识别证据。"
+        )
+    elif current_rdd_status["mode"] == "reconstructed":
+        method_headline = "中国 RDD 已进入公开数据版证据链。"
+        method_copy = (
+            "当前首页展示的不再只是方法框架。公开重建样本已经能支撑一版可读的边界识别结果，"
+            "但必须明确标注为公开重建口径，不能写成中证官方历史候选排名表。"
+        )
+    elif current_rdd_status["mode"] == "demo":
+        method_headline = "中国 RDD 当前仍停留在方法展示层。"
+        method_copy = (
+            "事件研究说明现象，匹配回归帮助控制样本差异；RDD 当前只用于展示识别结构、"
+            "字段契约和运行链路，还没有进入正式证据链。"
+        )
+    else:
+        method_headline = "中国 RDD 当前仍待补正式样本。"
+        method_copy = (
+            "事件研究说明现象，匹配回归帮助控制样本差异；RDD 识别框架已经搭好，"
+            "但还需要正式候选样本或公开重建样本，才能进入可读的边界证据。"
+        )
     return [
         {
             "label": "最强结论",
@@ -99,8 +148,8 @@ def build_highlights(root: Path, *, snapshot: ResultsSnapshot | None = None) -> 
         },
         {
             "label": "方法含义",
-            "headline": "研究价值不仅在于涨跌，更在于识别。",
-            "copy": "事件研究说明现象，匹配回归帮助控制样本差异，RDD 提供更严格的识别框架。将三者并置展示，有助于更清楚地讨论结论的可信度。",
+            "headline": method_headline,
+            "copy": method_copy,
         },
     ]
 
