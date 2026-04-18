@@ -37,7 +37,7 @@ def _hs300_rdd_prepare_import_command() -> str:
 
 def _hs300_rdd_reconstruct_command() -> str:
     return (
-        "index-inclusion-reconstruct-hs300-rdd --announce-date 2024-05-31 "
+        "index-inclusion-reconstruct-hs300-rdd --all-batches "
         "--output data/raw/hs300_rdd_candidates.reconstructed.csv --force"
     )
 

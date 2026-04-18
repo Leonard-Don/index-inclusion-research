@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pandas as pd
 
 from index_inclusion_research.analysis.rdd_reconstruction import (
     ReconstructionBatch,
     build_reconstructed_candidate_frame,
+    load_cached_proxy_market_caps,
     load_cn_reconstruction_batches,
     reconstruct_batch_membership,
 )
@@ -86,3 +89,32 @@ def test_build_reconstructed_candidate_frame_ranks_and_marks_post_review_members
     assert frame["inclusion"].tolist() == [1, 1, 0]
     assert frame.loc[0, "event_type"] == "reconstructed_post_member"
     assert frame.loc[2, "event_type"] == "reconstructed_pre_only_member"
+
+
+def test_load_cached_proxy_market_caps_uses_latest_value_on_or_before_target_date(tmp_path: Path) -> None:
+    prices_path = tmp_path / "prices.csv"
+    metadata_path = tmp_path / "metadata.csv"
+    pd.DataFrame(
+        [
+            {"market": "CN", "ticker": "1", "date": "2024-05-29", "close": 10.0, "mkt_cap": 100.0},
+            {"market": "CN", "ticker": "1", "date": "2024-05-30", "close": 11.0, "mkt_cap": 110.0},
+            {"market": "CN", "ticker": "2", "date": "2024-05-28", "close": 20.0, "mkt_cap": None},
+            {"market": "CN", "ticker": "2", "date": "2024-06-03", "close": 22.0, "mkt_cap": 220.0},
+        ]
+    ).to_csv(prices_path, index=False)
+    pd.DataFrame(
+        [
+            {"ticker": "1", "shares_outstanding": 1000},
+            {"ticker": "2", "shares_outstanding": 10},
+        ]
+    ).to_csv(metadata_path, index=False)
+
+    caps = load_cached_proxy_market_caps(
+        prices_path,
+        metadata_path,
+        tickers={"000001", "000002"},
+        target_date="2024-05-31",
+    )
+
+    assert caps.sort_values("ticker")["ticker"].tolist() == ["000001", "000002"]
+    assert caps.sort_values("ticker")["proxy_market_cap"].tolist() == [110.0, 200.0]

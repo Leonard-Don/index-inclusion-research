@@ -62,7 +62,7 @@ def _reconstruct_candidate_command(*, packaged: bool) -> str:
         if packaged
         else "python3 scripts/reconstruct_hs300_rdd_candidates.py"
     )
-    return f"{command} --announce-date 2024-05-31 --output data/raw/hs300_rdd_candidates.reconstructed.csv --force"
+    return f"{command} --all-batches --output data/raw/hs300_rdd_candidates.reconstructed.csv --force"
 
 
 def _generate_demo_candidates() -> pd.DataFrame:
