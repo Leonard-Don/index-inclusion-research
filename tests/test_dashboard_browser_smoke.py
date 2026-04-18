@@ -129,6 +129,9 @@ def test_dashboard_browser_smoke() -> None:
         page.wait_for_load_state("networkidle")
         assert "16 篇文献" in page.locator("h1").inner_text()
         assert page.locator("a.skip-link").get_attribute("href") == "#main-content"
+        assert page.locator("[data-refresh-state-label]").inner_text().strip() == "已就绪"
+        assert page.locator("[data-refresh-scope-label]").inner_text().strip() == "全部材料"
+        assert "核心文件" in page.locator("[data-refresh-snapshot-source]").inner_text()
         page.get_by_role("button", name="紧凑").click()
         assert page.locator("body").get_attribute("data-table-density") == "compact"
         design_details = page.locator("[data-details-key='demo-design-detail-tables']")

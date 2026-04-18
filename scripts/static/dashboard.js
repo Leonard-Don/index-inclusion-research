@@ -6,9 +6,17 @@
       const refreshButtons = Array.from(document.querySelectorAll("[data-refresh-button]"));
       const detailsOpenInputs = Array.from(document.querySelectorAll("[data-open-input]"));
       const refreshPanel = document.querySelector("[data-refresh-panel]");
+      const refreshStateLabel = document.querySelector("[data-refresh-state-label]");
       const refreshSnapshotLabel = document.querySelector("[data-refresh-snapshot-label]");
       const refreshSnapshotCopy = document.querySelector("[data-refresh-snapshot-copy]");
       const refreshNote = document.querySelector("[data-refresh-note]");
+      const refreshScopeLabel = document.querySelector("[data-refresh-scope-label]");
+      const refreshStartedAt = document.querySelector("[data-refresh-started-at]");
+      const refreshFinishedAt = document.querySelector("[data-refresh-finished-at]");
+      const refreshDuration = document.querySelector("[data-refresh-duration]");
+      const refreshSnapshotSource = document.querySelector("[data-refresh-snapshot-source]");
+      const refreshArtifacts = document.querySelector("[data-refresh-artifacts]");
+      const refreshArtifactList = document.querySelector("[data-refresh-artifact-list]");
       const detailsPanels = Array.from(document.querySelectorAll("[data-details-key]"));
       const waypointElements = Array.from(document.querySelectorAll("[data-waypoint]"));
       const waypointDock = document.querySelector("[data-waypoint-dock]");
@@ -163,6 +171,58 @@
           return `${message} 总耗时约 ${formatDuration(durationSeconds)}。`;
         }
         return message;
+      }
+
+      function refreshStateText(payload) {
+        const status = (payload && payload.status) || "idle";
+        if (status === "running") {
+          return "刷新中";
+        }
+        if (status === "succeeded") {
+          return "已完成";
+        }
+        if (status === "failed") {
+          return "刷新失败";
+        }
+        return "已就绪";
+      }
+
+      function refreshDurationText(payload) {
+        const durationSeconds = payload && payload.duration_seconds;
+        if (durationSeconds == null) {
+          return "—";
+        }
+        return formatDuration(durationSeconds);
+      }
+
+      function refreshSnapshotSourceText(payload) {
+        const sourcePath = (payload && payload.snapshot_source_path) || "";
+        const sourceCount = Number((payload && payload.snapshot_source_count) || 0);
+        if (!sourcePath) {
+          return sourceCount > 0 ? `${sourceCount} 个核心文件` : "—";
+        }
+        return `${sourcePath} · ${sourceCount} 个核心文件`;
+      }
+
+      function renderRefreshArtifacts(payload) {
+        if (!refreshArtifacts || !refreshArtifactList) {
+          return;
+        }
+        const artifacts = Array.isArray(payload && payload.updated_artifacts)
+          ? payload.updated_artifacts
+          : [];
+        refreshArtifactList.textContent = "";
+        artifacts.forEach((artifact) => {
+          const item = document.createElement("li");
+          item.className = "refresh-status-artifact-item";
+          const path = document.createElement("span");
+          path.textContent = artifact && artifact.path ? artifact.path : "";
+          const time = document.createElement("time");
+          time.textContent = artifact && artifact.modified_at ? artifact.modified_at : "";
+          item.append(path, time);
+          refreshArtifactList.append(item);
+        });
+        refreshArtifacts.hidden = artifacts.length === 0;
       }
 
       function stopRefreshRuntimeTimer() {
@@ -593,8 +653,12 @@
         const status = (payload && payload.status) || "idle";
         lastRefreshPayload = payload || null;
         const scopeKey = (payload && payload.scope_key) || "all";
+        const accepted = !(payload && payload.accepted === false);
         if (refreshPanel) {
           refreshPanel.dataset.state = status;
+        }
+        if (refreshStateLabel) {
+          refreshStateLabel.textContent = refreshStateText(payload);
         }
         if (refreshSnapshotLabel && payload && payload.snapshot_label) {
           refreshSnapshotLabel.textContent = payload.snapshot_label;
@@ -602,6 +666,22 @@
         if (refreshSnapshotCopy && payload && payload.snapshot_copy) {
           refreshSnapshotCopy.textContent = payload.snapshot_copy;
         }
+        if (refreshScopeLabel) {
+          refreshScopeLabel.textContent = (payload && payload.scope_label) || "全部材料";
+        }
+        if (refreshStartedAt) {
+          refreshStartedAt.textContent = (payload && payload.started_at) || "—";
+        }
+        if (refreshFinishedAt) {
+          refreshFinishedAt.textContent = (payload && payload.finished_at) || "—";
+        }
+        if (refreshDuration) {
+          refreshDuration.textContent = refreshDurationText(payload);
+        }
+        if (refreshSnapshotSource) {
+          refreshSnapshotSource.textContent = refreshSnapshotSourceText(payload);
+        }
+        renderRefreshArtifacts(payload);
         if (refreshNote) {
           refreshNote.textContent = refreshRuntimeCopy(payload);
         }
@@ -618,7 +698,15 @@
           button.disabled = running;
           const buttonScopeKey = button.dataset.scopeKey || "all";
           const isActiveButton = running && buttonScopeKey === scopeKey;
-          button.textContent = isActiveButton ? (button.dataset.runningLabel || "刷新中…") : button.dataset.defaultLabel;
+          if (isActiveButton) {
+            button.textContent = button.dataset.runningLabel || "刷新中…";
+            return;
+          }
+          if (running && !accepted) {
+            button.textContent = "已有刷新在进行";
+            return;
+          }
+          button.textContent = button.dataset.defaultLabel;
         });
       }
 
@@ -698,7 +786,7 @@
               },
               credentials: "same-origin",
             });
-            if (!response.ok) {
+            if (!response.ok && response.status !== 409) {
               throw new Error(`refresh ${response.status}`);
             }
             const payload = await response.json();

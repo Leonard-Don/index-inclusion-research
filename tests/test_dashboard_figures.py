@@ -83,6 +83,33 @@ def test_create_identification_figures_skips_when_rdd_not_real(tmp_path: Path) -
     assert figures == []
 
 
+def test_create_identification_figures_returns_cached_metadata_for_real_mode(tmp_path: Path) -> None:
+    source = _write(
+        tmp_path / "results" / "literature" / "hs300_rdd" / "event_level_with_running.csv",
+        "event_phase,distance_to_cutoff,car_m1_p1\nannounce,-0.1,0.01\nannounce,0.1,0.02\n",
+    )
+    target = _write(
+        tmp_path / "results" / "literature" / "hs300_rdd" / "figures" / "car_m1_p1_rdd_main.png",
+        b"png",
+    )
+    now = time.time()
+    _set_mtime(source, now - 50)
+    _set_mtime(target, now - 10)
+
+    figures = dashboard_figures.create_identification_figures(
+        tmp_path,
+        load_rdd_status=lambda: {"mode": "real"},
+        to_relative=lambda path: path.relative_to(tmp_path).as_posix(),
+    )
+
+    assert figures == [
+        {
+            "path": "results/literature/hs300_rdd/figures/car_m1_p1_rdd_main.png",
+            "caption": "中国样本 RDD 主图。图意：以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。阅读重点：聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
+        }
+    ]
+
+
 def test_create_sample_design_figures_returns_cached_metadata(tmp_path: Path) -> None:
     source_paths = [
         _write(tmp_path / "results" / "real_tables" / "event_study_summary.csv", "x\n1\n"),

@@ -1,13 +1,40 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
 from index_inclusion_research.results_snapshot import ResultsSnapshot, require_first_row
+from index_inclusion_research.dashboard_types import (
+    AbstractLeadBuilder,
+    AbstractPointsBuilder,
+    AnalysisCache,
+    AnalysesConfig,
+    CtaCopyBuilder,
+    DashboardSectionBuilder,
+    DemoModeSectionBuilder,
+    HighlightItem,
+    HomeContext,
+    ModeName,
+    ModeTabsBuilder,
+    NavSectionsBuilder,
+    OverviewNotesBuilder,
+    OverviewMetric,
+    OverviewSummaryBuilder,
+    RefreshStatusPayloadBuilder,
+    RobustnessSection,
+    RobustnessSectionBuilder,
+    SecondarySection,
+    SecondarySectionLoader,
+    SecondarySectionPreparer,
+    SnapshotMetaBuilder,
+    TrackDisplayPreparer,
+    TrackDisplaySection,
+    TrackNotesBuilder,
+    TrackSectionLoader,
+)
 
 
-def build_overview_metrics(root: Path, *, snapshot: ResultsSnapshot | None = None) -> list[dict[str, str]]:
+def build_overview_metrics(root: Path, *, snapshot: ResultsSnapshot | None = None) -> list[OverviewMetric]:
     current_snapshot = snapshot or ResultsSnapshot(root)
     event_counts = current_snapshot.csv("results", "real_tables", "event_counts.csv")
     total_events = int(event_counts["n_events"].sum())
@@ -19,7 +46,7 @@ def build_overview_metrics(root: Path, *, snapshot: ResultsSnapshot | None = Non
     ]
 
 
-def build_highlights(root: Path, *, snapshot: ResultsSnapshot | None = None) -> list[dict[str, str]]:
+def build_highlights(root: Path, *, snapshot: ResultsSnapshot | None = None) -> list[HighlightItem]:
     current_snapshot = snapshot or ResultsSnapshot(root)
     summary = current_snapshot.csv("results", "real_tables", "event_study_summary.csv")
     asymmetry = current_snapshot.csv("results", "real_tables", "asymmetry_summary.csv")
@@ -81,40 +108,40 @@ def build_highlights(root: Path, *, snapshot: ResultsSnapshot | None = None) -> 
 @dataclass
 class DashboardHomeContextBuilder:
     root: Path
-    analyses: Mapping[str, Mapping[str, object]]
-    run_cache: dict[str, dict[str, object]]
-    nav_sections_for_mode: Callable[[str], list[dict[str, str]]]
-    mode_tabs_for_mode: Callable[[str, str | None], list[dict[str, object]]]
-    build_dashboard_snapshot_meta: Callable[[], dict[str, object]]
-    refresh_status_payload: Callable[[str, str, str | None], dict[str, object]]
-    overview_notes_for_mode: Callable[[str], list[dict[str, str]]]
-    overview_summary_for_mode: Callable[[str], str]
-    cta_copy_for_mode: Callable[[str], str]
-    abstract_lead: Callable[[], str]
-    abstract_points: Callable[[], list[dict[str, str]]]
-    load_or_build_track_section: Callable[[str], dict[str, object]]
-    build_track_notes: Callable[[str], list[dict[str, str]]]
-    prepare_track_display: Callable[[dict[str, object], str, bool], dict[str, object]]
-    load_literature_framework_result: Callable[[], dict[str, object]]
-    prepare_framework_display: Callable[[dict[str, object], bool], dict[str, object]]
-    load_supplement_result: Callable[[], dict[str, object]]
-    prepare_supplement_display: Callable[[dict[str, object], bool], dict[str, object]]
-    build_sample_design_section: Callable[[bool], dict[str, object]]
-    build_robustness_section: Callable[[], dict[str, object]]
-    build_limits_section: Callable[[], dict[str, object]]
+    analyses: AnalysesConfig
+    run_cache: AnalysisCache
+    nav_sections_for_mode: NavSectionsBuilder
+    mode_tabs_for_mode: ModeTabsBuilder
+    build_dashboard_snapshot_meta: SnapshotMetaBuilder
+    refresh_status_payload: RefreshStatusPayloadBuilder
+    overview_notes_for_mode: OverviewNotesBuilder
+    overview_summary_for_mode: OverviewSummaryBuilder
+    cta_copy_for_mode: CtaCopyBuilder
+    abstract_lead: AbstractLeadBuilder
+    abstract_points: AbstractPointsBuilder
+    load_or_build_track_section: TrackSectionLoader
+    build_track_notes: TrackNotesBuilder
+    prepare_track_display: TrackDisplayPreparer
+    load_literature_framework_result: SecondarySectionLoader
+    prepare_framework_display: SecondarySectionPreparer
+    load_supplement_result: SecondarySectionLoader
+    prepare_supplement_display: SecondarySectionPreparer
+    build_sample_design_section: DemoModeSectionBuilder
+    build_robustness_section: RobustnessSectionBuilder
+    build_limits_section: DashboardSectionBuilder
 
     @staticmethod
-    def _empty_secondary_section() -> dict[str, object]:
+    def _empty_secondary_section() -> SecondarySection:
         return {"display_summary": "", "display_tables": [], "summary_cards": []}
 
     @staticmethod
-    def _empty_robustness_section() -> dict[str, object]:
+    def _empty_robustness_section() -> RobustnessSection:
         return {"summary": "", "summary_cards": [], "tables": []}
 
-    def _build_track_sections(self, *, demo_mode: bool) -> list[dict[str, object]]:
-        track_sections: list[dict[str, object]] = []
+    def _build_track_sections(self, *, demo_mode: bool) -> list[TrackDisplaySection]:
+        track_sections: list[TrackDisplaySection] = []
         for analysis_id in self.analyses:
-            section = self.load_or_build_track_section(analysis_id)
+            section: TrackDisplaySection = dict(self.load_or_build_track_section(analysis_id))
             section["anchor"] = analysis_id
             section["notes"] = self.build_track_notes(analysis_id)
             section = self.prepare_track_display(section, analysis_id, demo_mode)
@@ -125,10 +152,10 @@ class DashboardHomeContextBuilder:
         self,
         *,
         cache_key: str,
-        loader: Callable[[], dict[str, object]],
-        preparer: Callable[[dict[str, object], bool], dict[str, object]],
+        loader: SecondarySectionLoader,
+        preparer: SecondarySectionPreparer,
         demo_mode: bool,
-    ) -> dict[str, object]:
+    ) -> SecondarySection:
         section = self.run_cache.get(cache_key) or loader()
         section = preparer(section, demo_mode)
         self.run_cache[cache_key] = section
@@ -137,9 +164,9 @@ class DashboardHomeContextBuilder:
     def _build_secondary_sections(
         self,
         *,
-        display_mode: str,
+        display_mode: ModeName,
         demo_mode: bool,
-    ) -> tuple[dict[str, object], dict[str, object]]:
+    ) -> tuple[SecondarySection, SecondarySection]:
         if display_mode == "brief":
             return (
                 self._empty_secondary_section(),
@@ -162,10 +189,10 @@ class DashboardHomeContextBuilder:
     def build(
         self,
         *,
-        display_mode: str,
+        display_mode: ModeName,
         current_open_panels: str | None,
         refresh_status_url: str,
-    ) -> dict[str, object]:
+    ) -> HomeContext:
         demo_mode = display_mode != "full"
         snapshot = ResultsSnapshot(self.root)
         framework_section, supplement_section = self._build_secondary_sections(
@@ -203,31 +230,31 @@ class DashboardHomeContextBuilder:
 def build_home_context(
     *,
     root: Path,
-    display_mode: str,
+    display_mode: ModeName,
     current_open_panels: str | None,
-    analyses: Mapping[str, Mapping[str, object]],
-    run_cache: dict[str, dict[str, object]],
-    nav_sections_for_mode: Callable[[str], list[dict[str, str]]],
-    mode_tabs_for_mode: Callable[[str, str | None], list[dict[str, object]]],
-    build_dashboard_snapshot_meta: Callable[[], dict[str, object]],
-    refresh_status_payload: Callable[[str, str, str | None], dict[str, object]],
-    overview_notes_for_mode: Callable[[str], list[dict[str, str]]],
-    overview_summary_for_mode: Callable[[str], str],
-    cta_copy_for_mode: Callable[[str], str],
-    abstract_lead: Callable[[], str],
-    abstract_points: Callable[[], list[dict[str, str]]],
-    load_or_build_track_section: Callable[[str], dict[str, object]],
-    build_track_notes: Callable[[str], list[dict[str, str]]],
-    prepare_track_display: Callable[[dict[str, object], str, bool], dict[str, object]],
-    load_literature_framework_result: Callable[[], dict[str, object]],
-    prepare_framework_display: Callable[[dict[str, object], bool], dict[str, object]],
-    load_supplement_result: Callable[[], dict[str, object]],
-    prepare_supplement_display: Callable[[dict[str, object], bool], dict[str, object]],
-    build_sample_design_section: Callable[[bool], dict[str, object]],
-    build_robustness_section: Callable[[], dict[str, object]],
-    build_limits_section: Callable[[], dict[str, object]],
+    analyses: AnalysesConfig,
+    run_cache: AnalysisCache,
+    nav_sections_for_mode: NavSectionsBuilder,
+    mode_tabs_for_mode: ModeTabsBuilder,
+    build_dashboard_snapshot_meta: SnapshotMetaBuilder,
+    refresh_status_payload: RefreshStatusPayloadBuilder,
+    overview_notes_for_mode: OverviewNotesBuilder,
+    overview_summary_for_mode: OverviewSummaryBuilder,
+    cta_copy_for_mode: CtaCopyBuilder,
+    abstract_lead: AbstractLeadBuilder,
+    abstract_points: AbstractPointsBuilder,
+    load_or_build_track_section: TrackSectionLoader,
+    build_track_notes: TrackNotesBuilder,
+    prepare_track_display: TrackDisplayPreparer,
+    load_literature_framework_result: SecondarySectionLoader,
+    prepare_framework_display: SecondarySectionPreparer,
+    load_supplement_result: SecondarySectionLoader,
+    prepare_supplement_display: SecondarySectionPreparer,
+    build_sample_design_section: DemoModeSectionBuilder,
+    build_robustness_section: RobustnessSectionBuilder,
+    build_limits_section: DashboardSectionBuilder,
     refresh_status_url: str,
-) -> dict[str, object]:
+) -> HomeContext:
     return DashboardHomeContextBuilder(
         root=root,
         analyses=analyses,

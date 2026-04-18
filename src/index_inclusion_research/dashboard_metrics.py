@@ -1,10 +1,19 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
 from pathlib import Path
 
 from index_inclusion_research import dashboard_loaders
 from index_inclusion_research.results_snapshot import ResultsSnapshot
+from index_inclusion_research.dashboard_types import (
+    FormatPct,
+    FormatPValue,
+    ResultCard,
+    RenderedTable,
+    RddStatus,
+    StatusPanel,
+    SummaryCard,
+    TableRenderer,
+)
 from index_inclusion_research.literature_catalog import build_camp_summary_frame
 from index_inclusion_research.supplementary import (
     build_case_playbook_frame,
@@ -14,7 +23,7 @@ from index_inclusion_research.supplementary import (
 )
 
 
-def build_library_summary_cards() -> list[dict[str, str]]:
+def build_library_summary_cards() -> list[SummaryCard]:
     return [
         {
             "kicker": "文献目录",
@@ -31,9 +40,9 @@ def build_library_summary_cards() -> list[dict[str, str]]:
     ]
 
 
-def build_framework_summary_cards() -> list[dict[str, str]]:
+def build_framework_summary_cards() -> list[SummaryCard]:
     frame = build_camp_summary_frame()
-    cards: list[dict[str, str]] = []
+    cards: list[SummaryCard] = []
     for row in frame.to_dict("records"):
         cards.append(
             {
@@ -47,7 +56,7 @@ def build_framework_summary_cards() -> list[dict[str, str]]:
     return cards
 
 
-def build_review_summary_cards() -> list[dict[str, str]]:
+def build_review_summary_cards() -> list[SummaryCard]:
     return [
         {
             "kicker": "反方文献",
@@ -70,7 +79,7 @@ def build_review_summary_cards() -> list[dict[str, str]]:
     ]
 
 
-def build_supplement_summary_cards() -> list[dict[str, str]]:
+def build_supplement_summary_cards() -> list[SummaryCard]:
     event = build_event_clock_frame().iloc[1]
     mechanism = build_mechanism_chain_frame().iloc[0]
     impact = build_impact_formula_frame().iloc[2]
@@ -110,14 +119,14 @@ def build_supplement_summary_cards() -> list[dict[str, str]]:
 def build_price_pressure_cards(
     root: Path,
     *,
-    format_pct: Callable[[float], str],
-    format_p_value: Callable[[float], str],
+    format_pct: FormatPct,
+    format_p_value: FormatPValue,
     snapshot: ResultsSnapshot | None = None,
-) -> list[dict[str, str]]:
+) -> list[ResultCard]:
     current_snapshot = snapshot or ResultsSnapshot(root)
     event = current_snapshot.csv("results", "real_tables", "event_study_summary.csv")
     mechanism = dashboard_loaders.load_single_csv(root / "results" / "literature" / "harris_gurel", "mechanism_summary.csv")
-    cards: list[dict[str, str]] = []
+    cards: list[ResultCard] = []
     if event is not None:
         us_announce = event.loc[
             (event["market"] == "US")
@@ -156,14 +165,14 @@ def build_price_pressure_cards(
 def build_demand_curve_cards(
     root: Path,
     *,
-    format_pct: Callable[[float], str],
-    format_p_value: Callable[[float], str],
+    format_pct: FormatPct,
+    format_p_value: FormatPValue,
     snapshot: ResultsSnapshot | None = None,
-) -> list[dict[str, str]]:
+) -> list[ResultCard]:
     current_snapshot = snapshot or ResultsSnapshot(root)
     event = current_snapshot.csv("results", "real_tables", "long_window_event_study_summary.csv")
     retention = current_snapshot.csv("results", "real_tables", "retention_summary.csv")
-    cards: list[dict[str, str]] = []
+    cards: list[ResultCard] = []
     if retention is not None:
         us_announce = retention.loc[
             (retention["market"] == "US") & (retention["event_phase"] == "announce") & (retention["inclusion"] == 1)
@@ -202,11 +211,11 @@ def build_demand_curve_cards(
 def build_identification_cards(
     root: Path,
     *,
-    format_pct: Callable[[float], str],
-    format_p_value: Callable[[float], str],
-    rdd_status: Mapping[str, object] | None = None,
+    format_pct: FormatPct,
+    format_p_value: FormatPValue,
+    rdd_status: RddStatus | None = None,
     snapshot: ResultsSnapshot | None = None,
-) -> list[dict[str, str]]:
+) -> list[ResultCard]:
     style_dir = root / "results" / "literature" / "hs300_style"
     current_snapshot = snapshot or ResultsSnapshot(root)
     event = current_snapshot.csv("results", "real_tables", "event_study_summary.csv")
@@ -219,7 +228,7 @@ def build_identification_cards(
         if current_rdd_status["mode"] == "real"
         else None
     )
-    cards: list[dict[str, str]] = []
+    cards: list[ResultCard] = []
     announce = event.loc[
         (event["market"] == "CN")
         & (event["event_phase"] == "announce")
@@ -255,7 +264,7 @@ def build_identification_cards(
     return cards[:4]
 
 
-def build_identification_status_panel(rdd_status: Mapping[str, object]) -> dict[str, object] | None:
+def build_identification_status_panel(rdd_status: RddStatus) -> StatusPanel | None:
     if rdd_status["mode"] == "real":
         return None
     if rdd_status.get("candidate_batches"):
@@ -286,10 +295,10 @@ def build_identification_status_panel(rdd_status: Mapping[str, object]) -> dict[
 def build_price_pressure_tables(
     root: Path,
     *,
-    render_table: Callable[..., str],
+    render_table: TableRenderer,
     snapshot: ResultsSnapshot | None = None,
-) -> list[tuple[str, str]]:
-    tables: list[tuple[str, str]] = []
+) -> list[RenderedTable]:
+    tables: list[RenderedTable] = []
     current_snapshot = snapshot or ResultsSnapshot(root)
     event = current_snapshot.csv("results", "real_tables", "event_study_summary.csv")
     if event is not None:
@@ -317,10 +326,10 @@ def build_price_pressure_tables(
 def build_demand_curve_tables(
     root: Path,
     *,
-    render_table: Callable[..., str],
+    render_table: TableRenderer,
     snapshot: ResultsSnapshot | None = None,
-) -> list[tuple[str, str]]:
-    tables: list[tuple[str, str]] = []
+) -> list[RenderedTable]:
+    tables: list[RenderedTable] = []
     current_snapshot = snapshot or ResultsSnapshot(root)
     event = current_snapshot.csv("results", "real_tables", "long_window_event_study_summary.csv")
     if event is not None:
@@ -342,12 +351,12 @@ def build_demand_curve_tables(
 def build_identification_tables(
     root: Path,
     *,
-    render_table: Callable[..., str],
-    rdd_status: Mapping[str, object] | None = None,
+    render_table: TableRenderer,
+    rdd_status: RddStatus | None = None,
     snapshot: ResultsSnapshot | None = None,
-) -> list[tuple[str, str]]:
+) -> list[RenderedTable]:
     style_dir = root / "results" / "literature" / "hs300_style"
-    tables: list[tuple[str, str]] = []
+    tables: list[RenderedTable] = []
     current_snapshot = snapshot or ResultsSnapshot(root)
     event = current_snapshot.csv("results", "real_tables", "event_study_summary.csv")
     if event is not None:

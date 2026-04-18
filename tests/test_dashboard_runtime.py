@@ -61,6 +61,7 @@ def test_dashboard_runtime_exposes_explicit_facade_methods(monkeypatch) -> None:
     assert runtime.load_literature_library_result()["id"] == "paper_library"
     assert runtime.load_literature_framework_result()["id"] == "paper_framework"
     assert runtime.load_supplement_result()["id"] == "project_supplement"
+    assert runtime.track.build_figure_caption(Path("/tmp/sample_event_timeline.png"), prefix="图").startswith("图：")
     assert runtime.build_highlights() == expected_highlights
 
 

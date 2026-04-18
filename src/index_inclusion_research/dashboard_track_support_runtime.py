@@ -5,6 +5,7 @@ from pathlib import Path
 from index_inclusion_research import dashboard_formatting
 from index_inclusion_research import dashboard_presenters
 from index_inclusion_research import dashboard_refresh
+from index_inclusion_research.dashboard_types import DisplayTable, RenderedTable, SnapshotMeta
 
 
 class DashboardTrackSupportRuntime:
@@ -32,7 +33,7 @@ class DashboardTrackSupportRuntime:
     def dashboard_snapshot_sources(self) -> list[Path]:
         return dashboard_refresh.dashboard_snapshot_sources(self.root)
 
-    def build_dashboard_snapshot_meta(self, snapshot_files: list[Path] | None = None) -> dict[str, object]:
+    def build_dashboard_snapshot_meta(self, snapshot_files: list[Path] | None = None) -> SnapshotMeta:
         return dashboard_refresh.build_dashboard_snapshot_meta(
             self.root,
             to_relative=self.safe_relative,
@@ -75,16 +76,16 @@ class DashboardTrackSupportRuntime:
     def table_tier_for_label(self, label: str) -> str:
         return dashboard_presenters.table_tier_for_label(label)
 
-    def decorate_display_tables(self, tables: list[tuple[str, str]]) -> list[dict[str, str]]:
+    def decorate_display_tables(self, tables: list[RenderedTable]) -> list[DisplayTable]:
         return dashboard_presenters.decorate_display_tables(tables)
 
-    def attach_display_tiers(self, items: list[dict[str, object]]) -> list[dict[str, object]]:
+    def attach_display_tiers(self, items: list[DisplayTable]) -> list[DisplayTable]:
         return dashboard_presenters.attach_display_tiers(items)
 
     def split_items_by_tier(
         self,
-        items: list[dict[str, object]],
-    ) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+        items: list[DisplayTable],
+    ) -> tuple[list[DisplayTable], list[DisplayTable]]:
         return dashboard_presenters.split_items_by_tier(items)
 
     def strip_markdown_title(self, text: str) -> str:

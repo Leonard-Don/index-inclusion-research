@@ -1,10 +1,27 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
+from typing import cast
 
 import pandas as pd
 
 from index_inclusion_research import dashboard_metrics
+from index_inclusion_research.dashboard_types import (
+    DashboardCard,
+    EvolutionNavGroup,
+    EvolutionNavView,
+    FrameworkResult,
+    MetaItem,
+    PaperCatalogRecord,
+    PaperDashboardRecord,
+    PaperDetailResult,
+    PaperBriefRecord,
+    PaperNavCard,
+    SummaryCard,
+    SupplementResult,
+    TableRenderer,
+    TrackResult,
+)
 from index_inclusion_research.literature_catalog import (
     build_camp_summary_frame,
     build_grouped_literature_frame,
@@ -30,9 +47,9 @@ from index_inclusion_research.supplementary import (
 
 def load_literature_library_result(
     *,
-    render_table: Callable[..., str],
-    library_card: Mapping[str, str],
-) -> dict[str, object]:
+    render_table: TableRenderer,
+    library_card: DashboardCard | Mapping[str, str],
+) -> TrackResult:
     return {
         "id": "paper_library",
         "title": library_card["title"],
@@ -51,9 +68,9 @@ def load_literature_library_result(
 
 def load_literature_review_result(
     *,
-    render_table: Callable[..., str],
-    review_card: Mapping[str, str],
-) -> dict[str, object]:
+    render_table: TableRenderer,
+    review_card: DashboardCard | Mapping[str, str],
+) -> TrackResult:
     return {
         "id": "paper_review",
         "title": review_card["title"],
@@ -73,9 +90,9 @@ def load_literature_review_result(
 
 def load_literature_framework_result(
     *,
-    render_table: Callable[..., str],
-    framework_card: Mapping[str, str],
-) -> dict[str, object]:
+    render_table: TableRenderer,
+    framework_card: DashboardCard | Mapping[str, str],
+) -> FrameworkResult:
     return {
         "id": "paper_framework",
         "title": framework_card["title"],
@@ -110,7 +127,7 @@ def compact_author_label(authors: str) -> str:
     return f"{families[0]} 等"
 
 
-def paper_brief_title(record: Mapping[str, object]) -> str:
+def paper_brief_title(record: PaperBriefRecord) -> str:
     return f"{compact_author_label(str(record.get('authors', '')))}（{record.get('year_label', '')}）"
 
 
@@ -122,8 +139,8 @@ def project_module_display(
     return project_module_display_map.get(project_module, project_module)
 
 
-def group_evolution_cards(cards: list[dict[str, object]], key: str) -> list[dict[str, object]]:
-    groups: dict[str, list[dict[str, object]]] = {}
+def group_evolution_cards(cards: list[PaperNavCard], key: str) -> list[EvolutionNavGroup]:
+    groups: dict[str, list[PaperNavCard]] = {}
     for card in cards:
         label = str(card.get(key, ""))
         groups.setdefault(label, []).append(card)
@@ -138,12 +155,20 @@ def group_evolution_cards(cards: list[dict[str, object]], key: str) -> list[dict
     ]
 
 
+def _catalog_record(row: pd.Series) -> PaperCatalogRecord:
+    return cast(PaperCatalogRecord, row.to_dict())
+
+
+def _dashboard_record(row: pd.Series) -> PaperDashboardRecord:
+    return cast(PaperDashboardRecord, row.to_dict())
+
+
 def load_paper_detail_result(
     paper_id: str,
     *,
-    render_table: Callable[..., str],
+    render_table: TableRenderer,
     project_module_display_map: Mapping[str, str],
-) -> dict[str, object] | None:
+) -> PaperDetailResult | None:
     paper = get_literature_paper(paper_id)
     if paper is None:
         return None
@@ -153,13 +178,13 @@ def load_paper_detail_result(
     if current_rows.empty:
         return None
     current_index = int(current_rows.index[0])
-    current_catalog_record = current_rows.iloc[0].to_dict()
+    current_catalog_record = _catalog_record(current_rows.iloc[0])
 
     catalog = build_literature_dashboard_frame()
     row = catalog.loc[catalog["PDF"].str.contains(f'/paper/{paper_id}"', regex=False)].head(1)
     if row.empty:
         return None
-    record = row.iloc[0].to_dict()
+    record = _dashboard_record(row.iloc[0])
 
     authors = [part.strip() for part in paper.authors.split(";") if part.strip()]
     short_authors = authors[0] if len(authors) == 1 else f"{authors[0]} 等"
@@ -188,7 +213,7 @@ def load_paper_detail_result(
             {"分析维度": "研究中的作用", "内容": record.get("研究中的作用", "")},
         ]
     )
-    summary_cards = [
+    summary_cards: list[SummaryCard] = [
         {
             "kicker": "识别对象",
             "title": str(record.get("识别对象", "")),
@@ -221,9 +246,9 @@ def load_paper_detail_result(
     ]
     summary_text = " ".join(summary_paragraphs)
 
-    sequence_cards: list[dict[str, object]] = []
-    prev_row = catalog_full.iloc[current_index - 1].to_dict() if current_index > 0 else None
-    next_row = catalog_full.iloc[current_index + 1].to_dict() if current_index < len(catalog_full) - 1 else None
+    sequence_cards: list[PaperNavCard] = []
+    prev_row = _catalog_record(catalog_full.iloc[current_index - 1]) if current_index > 0 else None
+    next_row = _catalog_record(catalog_full.iloc[current_index + 1]) if current_index < len(catalog_full) - 1 else None
 
     if prev_row is not None:
         sequence_cards.append(
@@ -290,7 +315,7 @@ def load_paper_detail_result(
     recommended_cards = [
         {
             "kicker": "推荐下一篇",
-            "title": paper_brief_title(rec.to_dict()),
+            "title": paper_brief_title(_catalog_record(rec)),
             "year_label": str(rec["year_label"]),
             "camp": str(rec["camp"]),
             "meta": f"{rec['camp']} · {rec['project_module']} · {rec['method_focus']}",
@@ -302,7 +327,7 @@ def load_paper_detail_result(
     evolution_nav_cards = [
         {
             "kicker": f"{idx + 1:02d} · {row['stance']}",
-            "title": paper_brief_title(row.to_dict()),
+            "title": paper_brief_title(_catalog_record(row)),
             "year_label": str(row["year_label"]),
             "camp": str(row["camp"]),
             "stance": str(row["stance"]),
@@ -317,7 +342,19 @@ def load_paper_detail_result(
         }
         for idx, (_, row) in enumerate(catalog_full.iterrows())
     ]
-    evolution_nav_views = [
+    hero_meta_items: list[MetaItem] = [
+        {"label": "年份", "value": paper.year_label},
+        {"label": "阵营", "value": str(record.get("阵营", ""))},
+        {"label": "立场", "value": str(record.get("立场", ""))},
+        {
+            "label": "研究主线",
+            "value": project_module_display(
+                paper.project_module,
+                project_module_display_map=project_module_display_map,
+            ),
+        },
+    ]
+    evolution_nav_views: list[EvolutionNavView] = [
         {"id": "camp", "groups": group_evolution_cards(evolution_nav_cards, "camp")},
         {"id": "track", "groups": group_evolution_cards(evolution_nav_cards, "track_label")},
         {"id": "stance", "groups": group_evolution_cards(evolution_nav_cards, "stance")},
@@ -329,18 +366,7 @@ def load_paper_detail_result(
         "description": paper.title,
         "subtitle": f"{record.get('阵营', '')} · {record.get('方法 / 关键词', '')}",
         "hero_aside_title": str(record.get("一句话定位", "")),
-        "hero_meta_items": [
-            {"label": "年份", "value": paper.year_label},
-            {"label": "阵营", "value": str(record.get("阵营", ""))},
-            {"label": "立场", "value": str(record.get("立场", ""))},
-            {
-                "label": "研究主线",
-                "value": project_module_display(
-                    paper.project_module,
-                    project_module_display_map=project_module_display_map,
-                ),
-            },
-        ],
+        "hero_meta_items": hero_meta_items,
         "hero_aside_copy": str(record.get("研究中的作用", "")),
         "summary_text": summary_text,
         "summary_paragraphs": summary_paragraphs,
@@ -361,9 +387,9 @@ def load_paper_detail_result(
 
 def load_supplement_result(
     *,
-    render_table: Callable[..., str],
-    supplement_card: Mapping[str, str],
-) -> dict[str, object]:
+    render_table: TableRenderer,
+    supplement_card: DashboardCard | Mapping[str, str],
+) -> SupplementResult:
     return {
         "id": "project_supplement",
         "title": supplement_card["title"],

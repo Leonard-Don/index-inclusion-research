@@ -7,49 +7,47 @@ from typing import Any, Protocol
 from index_inclusion_research import dashboard_routes
 from index_inclusion_research.dashboard_types import (
     AnalysesConfig,
-    AnalysisResult,
+    DashboardRuntimeLike,
     DashboardRouteRegistrationMap,
     EndpointUrlBuilder,
     HomeAnchorUrlBuilder,
     HomeUrlBuilder,
     LiteraturePaperLookup,
+    ModeName,
     ModeTab,
     PaperDetailResult,
+    RefreshRunner,
     RefreshStatusPayload,
     RefreshStatusUrlBuilder,
     RequestProxyLike,
-    RouteHandler,
+    RouteView,
+    TrackResult,
 )
 
 
 class DashboardRouteServices(Protocol):
     request_proxy: RequestProxyLike
-    runtime: object
+    runtime: DashboardRuntimeLike
 
-    def dashboard_mode(self) -> str: ...
+    def dashboard_mode(self) -> ModeName: ...
 
     def normalize_open_panels(self, raw: str | None) -> str: ...
 
-    def mode_tabs_for_mode(self, mode: str, open_panels: str | None = None) -> list[ModeTab]: ...
+    def mode_tabs_for_mode(self, mode: ModeName, open_panels: str | None = None) -> list[ModeTab]: ...
 
-    def refresh_status_payload(
-        self,
-        mode: str,
-        anchor: str,
-        open_panels: str | None = None,
-    ) -> RefreshStatusPayload: ...
+    def refresh_status_payload(self, mode: ModeName, anchor: str, open_panels: str | None = None) -> RefreshStatusPayload: ...
 
-    def normalize_anchor_for_mode(self, mode: str, anchor: str | None) -> str: ...
+    def normalize_anchor_for_mode(self, mode: ModeName, anchor: str | None) -> str: ...
 
     def wants_async_refresh(self) -> bool: ...
 
-    def queue_refresh_job(self, runner: RouteHandler, scope_label: str, scope_key: str) -> bool: ...
+    def queue_refresh_job(self, runner: RefreshRunner, scope_label: str, scope_key: str) -> bool: ...
 
     def run_and_cache_all(self) -> None: ...
 
-    def run_and_cache_analysis(self, analysis_id: str) -> AnalysisResult: ...
+    def run_and_cache_analysis(self, analysis_id: str) -> TrackResult: ...
 
-    def refresh_redirect_url(self, mode: str, anchor: str, open_panels: str | None = None) -> str: ...
+    def refresh_redirect_url(self, mode: ModeName, anchor: str, open_panels: str | None = None) -> str: ...
 
     def load_paper_detail_result(self, paper_id: str) -> PaperDetailResult | None: ...
 
@@ -57,42 +55,37 @@ class DashboardRouteServices(Protocol):
 @dataclass(frozen=True)
 class DashboardRouteDependencies:
     request_proxy: RequestProxyLike
-    runtime: object
+    runtime: DashboardRuntimeLike
     services: DashboardRouteServices
 
-    def dashboard_mode(self) -> str:
+    def dashboard_mode(self) -> ModeName:
         return self.services.dashboard_mode()
 
     def normalize_open_panels(self, raw: str | None) -> str:
         return self.services.normalize_open_panels(raw)
 
-    def mode_tabs_for_mode(self, mode: str, open_panels: str | None = None) -> list[ModeTab]:
+    def mode_tabs_for_mode(self, mode: ModeName, open_panels: str | None = None) -> list[ModeTab]:
         return self.services.mode_tabs_for_mode(mode, open_panels)
 
-    def refresh_status_payload(
-        self,
-        mode: str,
-        anchor: str,
-        open_panels: str | None = None,
-    ) -> RefreshStatusPayload:
+    def refresh_status_payload(self, mode: ModeName, anchor: str, open_panels: str | None = None) -> RefreshStatusPayload:
         return self.services.refresh_status_payload(mode, anchor, open_panels)
 
-    def normalize_anchor_for_mode(self, mode: str, anchor: str | None) -> str:
+    def normalize_anchor_for_mode(self, mode: ModeName, anchor: str | None) -> str:
         return self.services.normalize_anchor_for_mode(mode, anchor)
 
     def wants_async_refresh(self) -> bool:
         return self.services.wants_async_refresh()
 
-    def queue_refresh_job(self, runner: RouteHandler, scope_label: str, scope_key: str) -> bool:
+    def queue_refresh_job(self, runner: RefreshRunner, scope_label: str, scope_key: str) -> bool:
         return self.services.queue_refresh_job(runner, scope_label, scope_key)
 
     def run_and_cache_all(self) -> None:
         self.services.run_and_cache_all()
 
-    def run_and_cache_analysis(self, analysis_id: str) -> AnalysisResult:
+    def run_and_cache_analysis(self, analysis_id: str) -> TrackResult:
         return self.services.run_and_cache_analysis(analysis_id)
 
-    def refresh_redirect_url(self, mode: str, anchor: str, open_panels: str | None = None) -> str:
+    def refresh_redirect_url(self, mode: ModeName, anchor: str, open_panels: str | None = None) -> str:
         return self.services.refresh_redirect_url(mode, anchor, open_panels)
 
     def load_paper_detail_result(self, paper_id: str) -> PaperDetailResult | None:
@@ -101,21 +94,21 @@ class DashboardRouteDependencies:
 
 @dataclass(frozen=True)
 class DashboardRouteViews:
-    favicon: RouteHandler
-    home: RouteHandler
-    refresh_dashboard: RouteHandler
-    refresh_status: RouteHandler
-    run_analysis: RouteHandler
-    show_library: RouteHandler
-    show_review: RouteHandler
-    show_framework: RouteHandler
-    show_supplement: RouteHandler
-    show_analysis: RouteHandler
-    serve_result_file: RouteHandler
-    show_paper_brief: RouteHandler
-    serve_library_pdf: RouteHandler
+    favicon: RouteView
+    home: RouteView
+    refresh_dashboard: RouteView
+    refresh_status: RouteView
+    run_analysis: RouteView
+    show_library: RouteView
+    show_review: RouteView
+    show_framework: RouteView
+    show_supplement: RouteView
+    show_analysis: RouteView
+    serve_result_file: RouteView
+    show_paper_brief: RouteView
+    serve_library_pdf: RouteView
 
-    def route_namespace(self) -> dict[str, RouteHandler]:
+    def route_namespace(self) -> dict[str, RouteView]:
         return {
             "favicon": self.favicon,
             "home": self.home,
@@ -239,7 +232,7 @@ class DashboardRouteFactory:
         )
 
 
-def empty_favicon():
+def empty_favicon() -> tuple[str, int]:
     return ("", 204)
 
 
@@ -293,5 +286,5 @@ def build_dashboard_route_views(
     ).build_views()
 
 
-def bind_dashboard_route_views(namespace: dict[str, RouteHandler], route_views: DashboardRouteViews) -> None:
+def bind_dashboard_route_views(namespace: dict[str, RouteView], route_views: DashboardRouteViews) -> None:
     namespace.update(route_views.route_namespace())

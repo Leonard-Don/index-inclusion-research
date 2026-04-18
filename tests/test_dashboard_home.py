@@ -6,9 +6,48 @@ import pandas as pd
 
 from index_inclusion_research import dashboard_home
 from index_inclusion_research.dashboard_home import DashboardHomeContextBuilder
+from index_inclusion_research.dashboard_types import (
+    AnalysisCache,
+    RefreshStatusPayload,
+    SnapshotMeta,
+    TrackDisplaySection,
+    TrackResult,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _snapshot_meta() -> SnapshotMeta:
+    return {
+        "label": "snapshot",
+        "copy": "copy",
+        "source_path": "results/real_tables/event_counts.csv",
+        "source_count": 1,
+    }
+
+
+def _refresh_payload(mode: str, anchor: str, open_panels: str | None) -> RefreshStatusPayload:
+    return {
+        "accepted": True,
+        "status": "idle",
+        "message": f"{mode}:{anchor}",
+        "error": "",
+        "scope_label": "全部刷新",
+        "scope_key": "all",
+        "started_at": "",
+        "finished_at": "",
+        "started_ts": 0.0,
+        "finished_ts": 0.0,
+        "duration_seconds": None,
+        "poll_after_ms": 1200,
+        "redirect_url": f"/?mode={mode}#{anchor}",
+        "snapshot_label": "snapshot",
+        "snapshot_copy": open_panels or "",
+        "snapshot_source_path": "results/real_tables/event_counts.csv",
+        "snapshot_source_count": 1,
+        "updated_artifacts": [],
+    }
 
 
 def test_build_overview_metrics_uses_real_event_count() -> None:
@@ -30,16 +69,16 @@ def test_build_highlights_keeps_current_cn_effective_discussion() -> None:
 
 
 def test_build_home_context_full_mode_assembles_and_caches_sections() -> None:
-    run_cache: dict[str, dict[str, object]] = {}
+    run_cache: AnalysisCache = {}
     analyses = {
         "price_pressure_track": {"title": "短期价格压力与效应减弱"},
         "demand_curve_track": {"title": "需求曲线与长期保留"},
     }
 
-    def _load_or_build_track_section(analysis_id: str) -> dict[str, object]:
+    def _load_or_build_track_section(analysis_id: str) -> TrackResult:
         return {"id": analysis_id, "summary_text": analysis_id}
 
-    def _prepare_track_display(section: dict[str, object], analysis_id: str, demo_mode: bool) -> dict[str, object]:
+    def _prepare_track_display(section: TrackDisplaySection, analysis_id: str, demo_mode: bool) -> TrackDisplaySection:
         display = dict(section)
         display["prepared"] = True
         display["demo_mode"] = demo_mode
@@ -53,8 +92,8 @@ def test_build_home_context_full_mode_assembles_and_caches_sections() -> None:
         run_cache=run_cache,
         nav_sections_for_mode=lambda mode: [{"anchor": "overview", "label": "总览"}],
         mode_tabs_for_mode=lambda mode, open_panels: [{"mode": mode, "open_panels": open_panels}],
-        build_dashboard_snapshot_meta=lambda: {"label": "snapshot", "copy": "copy"},
-        refresh_status_payload=lambda mode, anchor, open_panels: {"status": "idle", "anchor": anchor, "open": open_panels},
+        build_dashboard_snapshot_meta=_snapshot_meta,
+        refresh_status_payload=_refresh_payload,
         overview_notes_for_mode=lambda mode: [{"title": mode, "copy": "note"}],
         overview_summary_for_mode=lambda mode: f"{mode}-summary",
         cta_copy_for_mode=lambda mode: f"{mode}-cta",
@@ -74,6 +113,8 @@ def test_build_home_context_full_mode_assembles_and_caches_sections() -> None:
     )
 
     assert context["mode"] == "full"
+    assert context["snapshot_meta"]["source_count"] == 1
+    assert context["refresh_meta"]["redirect_url"] == "/?mode=full#overview"
     assert len(context["track_sections"]) == 2
     assert all(section["prepared"] is True for section in context["track_sections"])
     assert all(section["demo_mode"] is False for section in context["track_sections"])
@@ -95,8 +136,8 @@ def test_build_home_context_brief_mode_collapses_secondary_sections() -> None:
         run_cache={},
         nav_sections_for_mode=lambda mode: [{"anchor": "overview", "label": "总览"}],
         mode_tabs_for_mode=lambda mode, open_panels: [{"mode": mode}],
-        build_dashboard_snapshot_meta=lambda: {"label": "snapshot", "copy": "copy"},
-        refresh_status_payload=lambda mode, anchor, open_panels: {"status": "idle"},
+        build_dashboard_snapshot_meta=_snapshot_meta,
+        refresh_status_payload=_refresh_payload,
         overview_notes_for_mode=lambda mode: [{"title": mode, "copy": "note"}],
         overview_summary_for_mode=lambda mode: f"{mode}-summary",
         cta_copy_for_mode=lambda mode: f"{mode}-cta",
@@ -117,20 +158,21 @@ def test_build_home_context_brief_mode_collapses_secondary_sections() -> None:
 
     assert context["framework_section"] == {"display_summary": "", "display_tables": [], "summary_cards": []}
     assert context["supplement_section"] == {"display_summary": "", "display_tables": [], "summary_cards": []}
+    assert set(context["framework_section"]) == {"display_summary", "display_tables", "summary_cards"}
     assert context["design_section"]["demo_mode"] is False
     assert context["robustness_section"] == {"summary": "", "summary_cards": [], "tables": []}
 
 
 def test_dashboard_home_context_builder_builds_and_caches_secondary_sections() -> None:
-    run_cache: dict[str, dict[str, object]] = {}
+    run_cache: AnalysisCache = {}
     builder = DashboardHomeContextBuilder(
         root=ROOT,
         analyses={"price_pressure_track": {"title": "短期价格压力与效应减弱"}},
         run_cache=run_cache,
         nav_sections_for_mode=lambda mode: [{"anchor": "overview", "label": "总览"}],
         mode_tabs_for_mode=lambda mode, open_panels: [{"mode": mode, "open_panels": open_panels}],
-        build_dashboard_snapshot_meta=lambda: {"label": "snapshot", "copy": "copy"},
-        refresh_status_payload=lambda mode, anchor, open_panels: {"status": "idle", "anchor": anchor},
+        build_dashboard_snapshot_meta=_snapshot_meta,
+        refresh_status_payload=_refresh_payload,
         overview_notes_for_mode=lambda mode: [{"title": mode, "copy": "note"}],
         overview_summary_for_mode=lambda mode: f"{mode}-summary",
         cta_copy_for_mode=lambda mode: f"{mode}-cta",
@@ -157,5 +199,6 @@ def test_dashboard_home_context_builder_builds_and_caches_secondary_sections() -
     assert context["track_sections"][0]["prepared"] is True
     assert context["framework_section"]["prepared_framework"] is True
     assert context["supplement_section"]["prepared_supplement"] is True
+    assert context["refresh_meta"]["snapshot_label"] == "snapshot"
     assert run_cache["paper_framework"]["prepared_framework"] is True
     assert run_cache["project_supplement"]["prepared_supplement"] is True
