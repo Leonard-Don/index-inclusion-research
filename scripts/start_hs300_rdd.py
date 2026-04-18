@@ -31,6 +31,16 @@ STATUS_FILE = OUTPUT_DIR / "rdd_status.csv"
 AUDIT_FILE = OUTPUT_DIR / "candidate_batch_audit.csv"
 
 
+def _prepare_candidate_command(*, packaged: bool, check_only: bool) -> str:
+    command = (
+        "index-inclusion-prepare-hs300-rdd"
+        if packaged
+        else "python3 scripts/prepare_hs300_rdd_candidates.py"
+    )
+    suffix = " --check-only" if check_only else " --output data/raw/hs300_rdd_candidates.csv --force"
+    return f"{command} --input /path/to/raw_candidates.xlsx --sheet 0{suffix}"
+
+
 def _generate_demo_candidates() -> pd.DataFrame:
     events, prices, _ = ensure_real_data()
     clean_events = prepare_clean_events(events)
@@ -227,6 +237,11 @@ def _write_summary(
         "",
         f"模板文件：`{TEMPLATE_INPUT.relative_to(ROOT)}`",
         f"数据契约说明：`{(ROOT / 'docs' / 'hs300_rdd_data_contract.md').relative_to(ROOT)}`",
+        "",
+        "推荐下一步：",
+        f"- 先验收原始候选名单：`{_prepare_candidate_command(packaged=True, check_only=True)}`",
+        f"- 验收通过后写入正式候选文件：`{_prepare_candidate_command(packaged=True, check_only=False)}`",
+        f"- 如果尚未安装包内 CLI，可改用脚本：`{_prepare_candidate_command(packaged=False, check_only=True)}`",
     ]
 
     if audit is not None and not audit.empty:

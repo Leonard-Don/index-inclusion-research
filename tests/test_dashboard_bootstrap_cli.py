@@ -56,6 +56,11 @@ def test_project_metadata_declares_flask_and_console_scripts() -> None:
     assert project["scripts"]["index-inclusion-price-pressure"] == "index_inclusion_research.cli:run_price_pressure_track_main"
     assert project["scripts"]["index-inclusion-demand-curve"] == "index_inclusion_research.cli:run_demand_curve_track_main"
     assert project["scripts"]["index-inclusion-identification"] == "index_inclusion_research.cli:run_identification_china_track_main"
+    assert project["scripts"]["index-inclusion-hs300-rdd"] == "index_inclusion_research.cli:run_hs300_rdd_main"
+    assert (
+        project["scripts"]["index-inclusion-prepare-hs300-rdd"]
+        == "index_inclusion_research.cli:run_prepare_hs300_rdd_candidates_main"
+    )
 
 
 def test_track_console_wrappers_delegate_to_expected_script_modules(monkeypatch) -> None:
@@ -65,9 +70,13 @@ def test_track_console_wrappers_delegate_to_expected_script_modules(monkeypatch)
     cli.run_price_pressure_track_main()
     cli.run_demand_curve_track_main()
     cli.run_identification_china_track_main()
+    cli.run_hs300_rdd_main()
+    cli.run_prepare_hs300_rdd_candidates_main()
 
     assert calls == [
         "start_price_pressure_track",
         "start_demand_curve_track",
         "start_identification_china_track",
+        "start_hs300_rdd",
+        "prepare_hs300_rdd_candidates",
     ]

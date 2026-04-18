@@ -25,3 +25,11 @@ def run_demand_curve_track_main() -> None:
 
 def run_identification_china_track_main() -> None:
     _run_script_main("start_identification_china_track")
+
+
+def run_hs300_rdd_main() -> None:
+    _run_script_main("start_hs300_rdd")
+
+
+def run_prepare_hs300_rdd_candidates_main() -> None:
+    _run_script_main("prepare_hs300_rdd_candidates")

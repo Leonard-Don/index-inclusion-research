@@ -23,6 +23,17 @@ from index_inclusion_research.supplementary import (
 )
 
 
+def _hs300_rdd_prepare_check_command() -> str:
+    return "index-inclusion-prepare-hs300-rdd --input /path/to/raw_candidates.xlsx --sheet 0 --check-only"
+
+
+def _hs300_rdd_prepare_import_command() -> str:
+    return (
+        "index-inclusion-prepare-hs300-rdd --input /path/to/raw_candidates.xlsx "
+        "--sheet 0 --output data/raw/hs300_rdd_candidates.csv --force"
+    )
+
+
 def build_library_summary_cards() -> list[SummaryCard]:
     return [
         {
@@ -277,7 +288,14 @@ def build_identification_status_panel(rdd_status: RddStatus) -> StatusPanel | No
         sample_overview = "尚未读到通过校验的候选样本文件；当前中国主线的正式结果仍以事件研究与匹配回归为主。"
     if rdd_status.get("validation_error"):
         sample_overview = f"{sample_overview} 最近一次校验失败原因：{rdd_status['validation_error']}。"
-    contract_copy = "必需列已固定为 batch_id、announce_date、running_variable、cutoff、inclusion 等字段。"
+    next_step_copy = (
+        f"先运行 {_hs300_rdd_prepare_check_command()} 验收原始候选名单；"
+        f"通过后再运行 {_hs300_rdd_prepare_import_command()} 写入正式样本。"
+    )
+    contract_copy = (
+        "模板文件为 data/raw/hs300_rdd_candidates.template.csv；"
+        "必需列已固定为 batch_id、announce_date、running_variable、cutoff、inclusion 等字段。"
+    )
     if rdd_status.get("audit_file"):
         contract_copy = f"{contract_copy} 当前已生成候选样本审计：{rdd_status['audit_file']}。"
     return {
@@ -286,6 +304,7 @@ def build_identification_status_panel(rdd_status: RddStatus) -> StatusPanel | No
         "copy": f"{rdd_status['message']} 只有在提供并通过校验的真实候选样本文件后，断点结果才会进入正式证据链。",
         "meta": [
             {"label": "当前状态", "value": sample_overview},
+            {"label": "推荐下一步", "value": next_step_copy},
             {"label": "进入条件", "value": "提供正式候选样本文件并通过字段与日期校验。"},
             {"label": "数据契约", "value": contract_copy},
         ],
