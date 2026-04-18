@@ -85,6 +85,8 @@ def test_identification_status_panel_handles_missing_and_real_modes() -> None:
     assert panel is not None
     assert panel["title"] == "待补正式样本"
     assert panel["kicker"] == "方法状态"
+    assert "index-inclusion-prepare-hs300-rdd" in panel["meta"][1]["value"]
+    assert "data/raw/hs300_rdd_candidates.template.csv" in panel["meta"][3]["value"]
     assert dashboard_metrics.build_identification_status_panel({"mode": "real"}) is None
 
 
@@ -106,7 +108,7 @@ def test_identification_status_panel_includes_candidate_audit_copy_when_availabl
     assert panel is not None
     assert panel["title"] == "方法展示"
     assert "2 个候选批次" in panel["meta"][0]["value"]
-    assert "candidate_batch_audit.csv" in panel["meta"][2]["value"]
+    assert "candidate_batch_audit.csv" in panel["meta"][3]["value"]
 
 
 def test_track_metric_tables_return_expected_labels() -> None:

@@ -169,6 +169,15 @@ python3 scripts/prepare_hs300_rdd_candidates.py \
   --source-url https://www.csindex.com.cn/
 ```
 
+如果你已经安装了项目，也可以改用包内 CLI：
+
+```bash
+index-inclusion-prepare-hs300-rdd \
+  --input /path/to/raw_candidates.xlsx \
+  --sheet 0 \
+  --check-only
+```
+
 它会先把原始列名规范化成项目要求的字段，再输出标准候选文件、批次审计表和导入摘要；如果只想先验收而不落盘，可以加 `--check-only`。
 
 ## 文献相关文件
@@ -261,6 +270,14 @@ python3 scripts/download_real_data.py
 
 ```bash
 python3 scripts/prepare_hs300_rdd_candidates.py \
+  --input /path/to/raw_candidates.csv \
+  --check-only
+```
+
+如果你已经安装了项目，也可以直接运行：
+
+```bash
+index-inclusion-prepare-hs300-rdd \
   --input /path/to/raw_candidates.csv \
   --check-only
 ```
@@ -380,9 +397,11 @@ index-inclusion-dashboard
 index-inclusion-price-pressure
 index-inclusion-demand-curve
 index-inclusion-identification
+index-inclusion-hs300-rdd
+index-inclusion-prepare-hs300-rdd
 ```
 
-其中后三个分别对应三条研究主线的包内入口，适合不再直接调用旧脚本时使用。
+其中前三个研究主线入口仍对应价格压力、需求曲线和制度识别；后两个分别对应 HS300 RDD 运行与候选样本导入，适合不再直接调用旧脚本时使用。
 
 ## 开发与验证
 

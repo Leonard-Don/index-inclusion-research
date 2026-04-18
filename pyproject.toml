@@ -22,6 +22,8 @@ index-inclusion-dashboard = "index_inclusion_research.dashboard_app:main"
 index-inclusion-price-pressure = "index_inclusion_research.cli:run_price_pressure_track_main"
 index-inclusion-demand-curve = "index_inclusion_research.cli:run_demand_curve_track_main"
 index-inclusion-identification = "index_inclusion_research.cli:run_identification_china_track_main"
+index-inclusion-hs300-rdd = "index_inclusion_research.cli:run_hs300_rdd_main"
+index-inclusion-prepare-hs300-rdd = "index_inclusion_research.cli:run_prepare_hs300_rdd_candidates_main"
 
 [project.optional-dependencies]
 dev = [

@@ -136,6 +136,8 @@ def test_run_analysis_records_validation_error_without_demo_fallback(tmp_path: P
     summary = (output_dir / "summary.md").read_text(encoding="utf-8")
     assert "校验失败原因" in summary
     assert "running_variable" in summary
+    assert "index-inclusion-prepare-hs300-rdd --input /path/to/raw_candidates.xlsx --sheet 0 --check-only" in summary
+    assert "--output data/raw/hs300_rdd_candidates.csv --force" in summary
     assert not (output_dir / "rdd_summary.csv").exists()
     assert not (output_dir / "event_level_with_running.csv").exists()
     assert not (output_dir / "figures").exists()

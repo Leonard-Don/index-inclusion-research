@@ -26,6 +26,15 @@ python3 scripts/prepare_hs300_rdd_candidates.py \
   --source-url https://www.csindex.com.cn/
 ```
 
+如果已经安装了项目，也可以改用包内 CLI：
+
+```bash
+index-inclusion-prepare-hs300-rdd \
+  --input /path/to/raw_candidates.xlsx \
+  --sheet 0 \
+  --check-only
+```
+
 如果只想先检查、不覆盖正式候选文件，可以改用：
 
 ```bash
