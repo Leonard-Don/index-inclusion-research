@@ -7,6 +7,7 @@ import pandas as pd
 
 from index_inclusion_research import dashboard_content
 from index_inclusion_research import dashboard_loaders
+from index_inclusion_research import dashboard_metrics
 from index_inclusion_research.dashboard_types import (
     AnalysesConfig,
     AnalysisDefinition,
@@ -108,6 +109,13 @@ class DashboardTrackContentRuntime:
         if not mask.any():
             return updated
         status = self.load_rdd_status()
+        tier = dashboard_metrics.rdd_evidence_tier_from_status(str(status["evidence_status"]))
+        if "证据等级" in updated.columns:
+            updated.loc[mask, "证据等级"] = tier
+        else:
+            insert_at = updated.columns.get_loc("证据状态") if "证据状态" in updated.columns else len(updated.columns)
+            updated.insert(insert_at, "证据等级", pd.NA)
+            updated.loc[mask, "证据等级"] = tier
         updated.loc[mask, "证据状态"] = status["evidence_status"]
         updated.loc[mask, "当前口径"] = status["note"]
         return updated
