@@ -104,13 +104,56 @@ def build_report_text(
     return "\n".join(lines) + "\n"
 
 
+def _profile_paths(profile: str, *, root: Path = ROOT) -> dict[str, str]:
+    if profile == "real":
+        return {
+            "event_summary": str(root / "results" / "real_event_study" / "event_study_summary.csv"),
+            "regression_models": str(root / "results" / "real_regressions" / "regression_models.csv"),
+            "regression_coefficients": str(root / "results" / "real_regressions" / "regression_coefficients.csv"),
+            "output": str(root / "results" / "real_tables" / "research_summary.md"),
+        }
+    return {
+        "event_summary": str(root / "results" / "event_study" / "event_study_summary.csv"),
+        "regression_models": str(root / "results" / "regressions" / "regression_models.csv"),
+        "regression_coefficients": str(root / "results" / "regressions" / "regression_coefficients.csv"),
+        "output": str(root / "results" / "tables" / "research_summary.md"),
+    }
+
+
+def _detect_profile(*, root: Path = ROOT) -> str:
+    real_markers = [
+        root / "results" / "real_event_study" / "event_study_summary.csv",
+        root / "results" / "real_regressions" / "regression_models.csv",
+        root / "results" / "real_regressions" / "regression_coefficients.csv",
+    ]
+    return "real" if all(path.exists() for path in real_markers) else "sample"
+
+
+def _resolve_cli_args(args: argparse.Namespace, *, root: Path = ROOT) -> argparse.Namespace:
+    resolved = argparse.Namespace(**vars(args))
+    requested_profile = getattr(resolved, "profile", "auto")
+    profile = _detect_profile(root=root) if requested_profile == "auto" else requested_profile
+    defaults = _profile_paths(profile, root=root)
+    for key, value in defaults.items():
+        if not getattr(resolved, key):
+            setattr(resolved, key, value)
+    resolved.profile = profile
+    return resolved
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate a paper-ready markdown summary from model outputs.")
-    parser.add_argument("--event-summary", default="results/event_study/event_study_summary.csv", help="Event-study summary CSV.")
-    parser.add_argument("--regression-models", default="results/regressions/regression_models.csv", help="Regression model summary CSV.")
-    parser.add_argument("--regression-coefficients", default="results/regressions/regression_coefficients.csv", help="Regression coefficients CSV.")
-    parser.add_argument("--output", default="results/tables/research_summary.md", help="Markdown report output path.")
-    args = parser.parse_args()
+    parser.add_argument(
+        "--profile",
+        choices=["auto", "sample", "real"],
+        default="auto",
+        help="Report profile. Defaults to auto and prefers the real-data workflow when available.",
+    )
+    parser.add_argument("--event-summary", default="", help="Event-study summary CSV.")
+    parser.add_argument("--regression-models", default="", help="Regression model summary CSV.")
+    parser.add_argument("--regression-coefficients", default="", help="Regression coefficients CSV.")
+    parser.add_argument("--output", default="", help="Markdown report output path.")
+    args = _resolve_cli_args(parser.parse_args())
 
     event_summary = pd.read_csv(args.event_summary)
     regression_models = pd.read_csv(args.regression_models)
@@ -120,7 +163,7 @@ def main() -> None:
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(report_text, encoding="utf-8")
-    print(f"Saved markdown report to {output_path}")
+    print(f"Saved markdown report to {output_path} (profile: {args.profile})")
 
 
 if __name__ == "__main__":

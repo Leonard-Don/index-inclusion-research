@@ -307,50 +307,36 @@ index-inclusion-reconstruct-hs300-rdd \
 
 这条路径会用当前 CSI300 成分股、后续真实调样批次回滚、以及公开价格/总股本代理口径，优先重建当前事件源里“可以稳定回滚”的连续批次后缀；如果只想做单批次，也可以改用 `--announce-date 2024-05-31`。它适合课程论文、方法复现和公开数据版本的稳健性补充，但不应表述为中证官方历史候选排名表。
 
+从下面第 3 步开始，推荐优先使用包内 CLI。它们和脚本入口一样都支持 `--profile auto|sample|real`，默认会自动优先走 real 工作流；如果你想显式生成 sample 版本，可以在相应命令后加 `--profile sample`。
+
 ### 3. 清洗事件样本
 
 ```bash
-python3 scripts/build_event_sample.py \
-  --input data/raw/sample_events.csv \
-  --output data/processed/events_clean.csv
+index-inclusion-build-event-sample
 ```
 
 ### 4. 构建事件窗口面板
 
 ```bash
-python3 scripts/build_price_panel.py \
-  --events data/processed/events_clean.csv \
-  --prices data/raw/sample_prices.csv \
-  --benchmarks data/raw/sample_benchmarks.csv \
-  --output data/processed/event_panel.csv
+index-inclusion-build-price-panel
 ```
 
 ### 5. 运行事件研究
 
 ```bash
-python3 scripts/run_event_study.py \
-  --panel data/processed/event_panel.csv \
-  --output-dir results/event_study
+index-inclusion-run-event-study
 ```
 
 ### 6. 构建匹配样本并回归
 
 ```bash
-python3 scripts/match_controls.py \
-  --events data/processed/events_clean.csv \
-  --prices data/raw/sample_prices.csv \
-  --output-events data/processed/matched_events.csv \
-  --output-diagnostics results/regressions/match_diagnostics.csv
+index-inclusion-match-controls
 
-python3 scripts/build_price_panel.py \
-  --events data/processed/matched_events.csv \
-  --prices data/raw/sample_prices.csv \
-  --benchmarks data/raw/sample_benchmarks.csv \
-  --output data/processed/matched_event_panel.csv
+index-inclusion-build-price-panel \
+  --events data/processed/real_matched_events.csv \
+  --output data/processed/real_matched_event_panel.csv
 
-python3 scripts/run_regressions.py \
-  --panel data/processed/matched_event_panel.csv \
-  --output-dir results/regressions
+index-inclusion-run-regressions
 ```
 
 ### 7. 导出论文图表和表格
@@ -359,10 +345,22 @@ python3 scripts/run_regressions.py \
 python3 scripts/make_figures_tables.py
 ```
 
+这条命令现在会默认自动识别当前工作流：如果仓库里已经存在 `real_*` 数据与结果文件，就优先刷新 `results/real_figures/` 和 `results/real_tables/`，并把当前 `hs300_rdd` 状态一并写入 `identification_scope.csv`。如果你想显式回到旧的 sample 路径，可以改用：
+
+```bash
+python3 scripts/make_figures_tables.py --profile sample
+```
+
 ### 8. 自动生成论文结果摘要
 
 ```bash
 python3 scripts/generate_research_report.py
+```
+
+它也会沿用同样的自动识别逻辑：默认优先读取 `results/real_event_study/` 与 `results/real_regressions/`，并把摘要写到 `results/real_tables/research_summary.md`。如果你要显式生成 sample 版本，可以改用：
+
+```bash
+python3 scripts/generate_research_report.py --profile sample
 ```
 
 ### 9. 打开文献与结果仪表盘
@@ -404,6 +402,11 @@ python3 scripts/start_literature_dashboard.py --port 5002
 安装后的 CLI 入口目前包括：
 
 ```bash
+index-inclusion-build-event-sample
+index-inclusion-build-price-panel
+index-inclusion-match-controls
+index-inclusion-run-event-study
+index-inclusion-run-regressions
 index-inclusion-dashboard
 index-inclusion-price-pressure
 index-inclusion-demand-curve
@@ -413,7 +416,7 @@ index-inclusion-prepare-hs300-rdd
 index-inclusion-reconstruct-hs300-rdd
 ```
 
-其中前三个研究主线入口仍对应价格压力、需求曲线和制度识别；后面三个分别对应 HS300 RDD 运行、候选样本导入和公开口径重建，适合不再直接调用旧脚本时使用。
+前五个分别覆盖清洗事件、构面板、匹配对照、事件研究和回归；中间四个对应 dashboard 与三条研究主线；最后三个分别对应 HS300 RDD 运行、候选样本导入和公开口径重建。脚本入口仍然保留，但推荐把 CLI 当作默认调用面。
 
 ## 开发与验证
 

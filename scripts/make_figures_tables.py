@@ -65,18 +65,84 @@ def _infer_rdd_mode(summary_note_path: str | Path | None) -> str:
     return "missing"
 
 
+def _profile_paths(profile: str, *, root: Path = ROOT) -> dict[str, str]:
+    if profile == "real":
+        return {
+            "events": str(root / "data" / "processed" / "real_events_clean.csv"),
+            "panel": str(root / "data" / "processed" / "real_event_panel.csv"),
+            "prices": str(root / "data" / "raw" / "real_prices.csv"),
+            "benchmarks": str(root / "data" / "raw" / "real_benchmarks.csv"),
+            "metadata": str(root / "data" / "raw" / "real_metadata.csv"),
+            "matched_panel": str(root / "data" / "processed" / "real_matched_event_panel.csv"),
+            "average_paths": str(root / "results" / "real_event_study" / "average_paths.csv"),
+            "event_summary": str(root / "results" / "real_event_study" / "event_study_summary.csv"),
+            "regression_coefs": str(root / "results" / "real_regressions" / "regression_coefficients.csv"),
+            "regression_models": str(root / "results" / "real_regressions" / "regression_models.csv"),
+            "rdd_summary": str(root / "results" / "literature" / "hs300_rdd" / "rdd_summary.csv"),
+            "rdd_summary_note": str(root / "results" / "literature" / "hs300_rdd" / "summary.md"),
+            "long_window_output_dir": str(root / "results" / "real_event_study"),
+            "figures_dir": str(root / "results" / "real_figures"),
+            "tables_dir": str(root / "results" / "real_tables"),
+        }
+    return {
+        "events": str(root / "data" / "processed" / "events_clean.csv"),
+        "panel": str(root / "data" / "processed" / "event_panel.csv"),
+        "prices": "",
+        "benchmarks": "",
+        "metadata": "",
+        "matched_panel": "",
+        "average_paths": str(root / "results" / "event_study" / "average_paths.csv"),
+        "event_summary": str(root / "results" / "event_study" / "event_study_summary.csv"),
+        "regression_coefs": str(root / "results" / "regressions" / "regression_coefficients.csv"),
+        "regression_models": str(root / "results" / "regressions" / "regression_models.csv"),
+        "rdd_summary": "",
+        "rdd_summary_note": "",
+        "long_window_output_dir": "",
+        "figures_dir": str(root / "results" / "figures"),
+        "tables_dir": str(root / "results" / "tables"),
+    }
+
+
+def _detect_profile(*, root: Path = ROOT) -> str:
+    real_markers = [
+        root / "data" / "processed" / "real_events_clean.csv",
+        root / "data" / "processed" / "real_event_panel.csv",
+        root / "results" / "real_event_study" / "event_study_summary.csv",
+        root / "results" / "real_regressions" / "regression_coefficients.csv",
+    ]
+    return "real" if all(path.exists() for path in real_markers) else "sample"
+
+
+def _resolve_cli_args(args: argparse.Namespace, *, root: Path = ROOT) -> argparse.Namespace:
+    resolved = argparse.Namespace(**vars(args))
+    requested_profile = getattr(resolved, "profile", "auto")
+    profile = _detect_profile(root=root) if requested_profile == "auto" else requested_profile
+    defaults = _profile_paths(profile, root=root)
+    for key, value in defaults.items():
+        if not getattr(resolved, key):
+            setattr(resolved, key, value)
+    resolved.profile = profile
+    return resolved
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Create paper-ready figures and tables.")
-    parser.add_argument("--events", default="data/processed/events_clean.csv", help="Events CSV.")
-    parser.add_argument("--panel", default="data/processed/event_panel.csv", help="Event panel CSV.")
+    parser.add_argument(
+        "--profile",
+        choices=["auto", "sample", "real"],
+        default="auto",
+        help="Export profile. Defaults to auto and prefers the real-data workflow when available.",
+    )
+    parser.add_argument("--events", default="", help="Events CSV.")
+    parser.add_argument("--panel", default="", help="Event panel CSV.")
     parser.add_argument("--prices", default="", help="Raw prices CSV.")
     parser.add_argument("--benchmarks", default="", help="Raw benchmarks CSV.")
     parser.add_argument("--metadata", default="", help="Security metadata CSV.")
     parser.add_argument("--matched-panel", default="", help="Matched event panel CSV.")
-    parser.add_argument("--average-paths", default="results/event_study/average_paths.csv", help="Average paths CSV.")
-    parser.add_argument("--event-summary", default="results/event_study/event_study_summary.csv", help="Event-study summary CSV.")
-    parser.add_argument("--regression-coefs", default="results/regressions/regression_coefficients.csv", help="Regression coefficients CSV.")
-    parser.add_argument("--regression-models", default="results/regressions/regression_models.csv", help="Regression model stats CSV.")
+    parser.add_argument("--average-paths", default="", help="Average paths CSV.")
+    parser.add_argument("--event-summary", default="", help="Event-study summary CSV.")
+    parser.add_argument("--regression-coefs", default="", help="Regression coefficients CSV.")
+    parser.add_argument("--regression-models", default="", help="Regression model stats CSV.")
     parser.add_argument("--rdd-summary", default="", help="RDD summary CSV.")
     parser.add_argument("--rdd-summary-note", default="", help="RDD summary markdown path.")
     parser.add_argument(
@@ -84,9 +150,9 @@ def main() -> None:
         default="",
         help="Optional directory for long-window event-study outputs. Defaults to the event-summary directory.",
     )
-    parser.add_argument("--figures-dir", default="results/figures", help="Figure output directory.")
-    parser.add_argument("--tables-dir", default="results/tables", help="Table output directory.")
-    args = parser.parse_args()
+    parser.add_argument("--figures-dir", default="", help="Figure output directory.")
+    parser.add_argument("--tables-dir", default="", help="Table output directory.")
+    args = _resolve_cli_args(parser.parse_args())
 
     events = load_events(args.events) if Path(args.events).exists() else pd.DataFrame()
     panel = _read_csv_if_exists(args.panel, parse_dates=["event_date_raw", "mapped_market_date", "event_date", "date"])
@@ -234,7 +300,7 @@ def main() -> None:
         frames["identification_scope"] = identification_scope
 
     export_latex_tables(frames, args.tables_dir)
-    print(f"Saved figures to {args.figures_dir} and tables to {args.tables_dir}")
+    print(f"Saved figures to {args.figures_dir} and tables to {args.tables_dir} (profile: {args.profile})")
 
 
 if __name__ == "__main__":

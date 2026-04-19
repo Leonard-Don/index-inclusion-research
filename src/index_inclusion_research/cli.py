@@ -31,6 +31,26 @@ def run_hs300_rdd_main() -> None:
     _run_script_main("start_hs300_rdd")
 
 
+def run_build_event_sample_main() -> None:
+    _run_script_main("build_event_sample")
+
+
+def run_build_price_panel_main() -> None:
+    _run_script_main("build_price_panel")
+
+
+def run_match_controls_main() -> None:
+    _run_script_main("match_controls")
+
+
+def run_event_study_main() -> None:
+    _run_script_main("run_event_study")
+
+
+def run_regressions_main() -> None:
+    _run_script_main("run_regressions")
+
+
 def run_prepare_hs300_rdd_candidates_main() -> None:
     _run_script_main("prepare_hs300_rdd_candidates")
 

@@ -53,6 +53,11 @@ def test_project_metadata_declares_flask_and_console_scripts() -> None:
 
     assert "flask>=3.0" in project["dependencies"]
     assert project["scripts"]["index-inclusion-dashboard"] == "index_inclusion_research.dashboard_app:main"
+    assert project["scripts"]["index-inclusion-build-event-sample"] == "index_inclusion_research.cli:run_build_event_sample_main"
+    assert project["scripts"]["index-inclusion-build-price-panel"] == "index_inclusion_research.cli:run_build_price_panel_main"
+    assert project["scripts"]["index-inclusion-match-controls"] == "index_inclusion_research.cli:run_match_controls_main"
+    assert project["scripts"]["index-inclusion-run-event-study"] == "index_inclusion_research.cli:run_event_study_main"
+    assert project["scripts"]["index-inclusion-run-regressions"] == "index_inclusion_research.cli:run_regressions_main"
     assert project["scripts"]["index-inclusion-price-pressure"] == "index_inclusion_research.cli:run_price_pressure_track_main"
     assert project["scripts"]["index-inclusion-demand-curve"] == "index_inclusion_research.cli:run_demand_curve_track_main"
     assert project["scripts"]["index-inclusion-identification"] == "index_inclusion_research.cli:run_identification_china_track_main"
@@ -71,6 +76,11 @@ def test_track_console_wrappers_delegate_to_expected_script_modules(monkeypatch)
     calls: list[str] = []
     monkeypatch.setattr(cli, "_run_script_main", lambda module_name: calls.append(module_name))
 
+    cli.run_build_event_sample_main()
+    cli.run_build_price_panel_main()
+    cli.run_match_controls_main()
+    cli.run_event_study_main()
+    cli.run_regressions_main()
     cli.run_price_pressure_track_main()
     cli.run_demand_curve_track_main()
     cli.run_identification_china_track_main()
@@ -79,6 +89,11 @@ def test_track_console_wrappers_delegate_to_expected_script_modules(monkeypatch)
     cli.run_reconstruct_hs300_rdd_candidates_main()
 
     assert calls == [
+        "build_event_sample",
+        "build_price_panel",
+        "match_controls",
+        "run_event_study",
+        "run_regressions",
         "start_price_pressure_track",
         "start_demand_curve_track",
         "start_identification_china_track",
