@@ -2,6 +2,7 @@ from __future__ import annotations
 
 
 from _literature_runner import (
+    display_path,
     ROOT,
     ensure_real_data,
     prepare_clean_events,
@@ -31,9 +32,9 @@ def run_analysis(verbose: bool = True) -> dict[str, object]:
             "这条研究主线重点展示长窗口累计异常收益、保留效应和部分反转。",
             "",
             "关键输出文件：",
-            f"- 事件研究汇总：`{output_dir / 'event_study_summary.csv'}`",
-            f"- 保留率汇总：`{output_dir / 'retention_summary.csv'}`",
-            f"- 图表目录：`{output_dir / 'figures'}`",
+            f"- 事件研究汇总：`{display_path(output_dir / 'event_study_summary.csv')}`",
+            f"- 保留率汇总：`{display_path(output_dir / 'retention_summary.csv')}`",
+            f"- 图表目录：`{display_path(output_dir / 'figures')}`",
             "",
             "解释提示：",
             "- 如果长窗口 CAR 在初始上涨后仍保持为正，那么更支持向下倾斜的需求曲线。",

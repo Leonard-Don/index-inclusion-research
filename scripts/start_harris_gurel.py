@@ -3,6 +3,7 @@ from __future__ import annotations
 
 
 from _literature_runner import (
+    display_path,
     ROOT,
     ensure_real_data,
     prepare_clean_events,
@@ -34,9 +35,9 @@ def run_analysis(verbose: bool = True) -> dict[str, object]:
             "这条研究主线重点展示短窗口事件研究结果，以及事件前后交易活跃度变化。",
             "",
             "关键输出文件：",
-            f"- 事件研究汇总：`{output_dir / 'event_study_summary.csv'}`",
-            f"- 机制变量汇总：`{output_dir / 'mechanism_summary.csv'}`",
-            f"- 图表目录：`{output_dir / 'figures'}`",
+            f"- 事件研究汇总：`{display_path(output_dir / 'event_study_summary.csv')}`",
+            f"- 机制变量汇总：`{display_path(output_dir / 'mechanism_summary.csv')}`",
+            f"- 图表目录：`{display_path(output_dir / 'figures')}`",
             "",
             "解释提示：",
             "- 如果短窗口 CAR 为正，但后续路径很快走平或回落，那么结果更接近短期价格压力。",
