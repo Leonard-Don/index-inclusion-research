@@ -9,6 +9,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from _workflow_profiles import add_profile_argument, resolve_profile_args
 from index_inclusion_research import load_project_config
 from index_inclusion_research.loaders import load_benchmarks, load_events, load_prices, save_dataframe
 from index_inclusion_research.pipeline import build_event_panel
@@ -16,12 +17,13 @@ from index_inclusion_research.pipeline import build_event_panel
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build event-window price panel.")
-    parser.add_argument("--events", default="data/processed/events_clean.csv", help="Cleaned events CSV.")
-    parser.add_argument("--prices", default="data/raw/sample_prices.csv", help="Daily prices CSV.")
-    parser.add_argument("--benchmarks", default="data/raw/sample_benchmarks.csv", help="Benchmark returns CSV.")
-    parser.add_argument("--output", default="data/processed/event_panel.csv", help="Panel output CSV.")
+    add_profile_argument(parser)
+    parser.add_argument("--events", default="", help="Cleaned events CSV.")
+    parser.add_argument("--prices", default="", help="Daily prices CSV.")
+    parser.add_argument("--benchmarks", default="", help="Benchmark returns CSV.")
+    parser.add_argument("--output", default="", help="Panel output CSV.")
     parser.add_argument("--config", default="config/markets.yml", help="Project config path.")
-    args = parser.parse_args()
+    args = resolve_profile_args(parser.parse_args(), workflow="build_price_panel")
 
     config = load_project_config(args.config)
     defaults = config["defaults"]
@@ -36,7 +38,7 @@ def main() -> None:
         window_post=defaults["event_window_post"],
     )
     save_dataframe(panel, args.output)
-    print(f"Saved {len(panel)} panel rows to {args.output}")
+    print(f"Saved {len(panel)} panel rows to {args.output} (profile: {args.profile})")
 
 
 if __name__ == "__main__":

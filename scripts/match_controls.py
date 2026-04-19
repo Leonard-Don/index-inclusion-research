@@ -9,6 +9,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from _workflow_profiles import add_profile_argument, resolve_profile_args
 from index_inclusion_research import load_project_config
 from index_inclusion_research.loaders import load_events, load_prices, save_dataframe
 from index_inclusion_research.pipeline import build_matched_sample
@@ -16,16 +17,17 @@ from index_inclusion_research.pipeline import build_matched_sample
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build matched-control pseudo-events.")
-    parser.add_argument("--events", default="data/processed/events_clean.csv", help="Cleaned events CSV.")
-    parser.add_argument("--prices", default="data/raw/sample_prices.csv", help="Daily prices CSV.")
-    parser.add_argument("--output-events", default="data/processed/matched_events.csv", help="Output matched events CSV.")
+    add_profile_argument(parser)
+    parser.add_argument("--events", default="", help="Cleaned events CSV.")
+    parser.add_argument("--prices", default="", help="Daily prices CSV.")
+    parser.add_argument("--output-events", default="", help="Output matched events CSV.")
     parser.add_argument(
         "--output-diagnostics",
-        default="results/regressions/match_diagnostics.csv",
+        default="",
         help="Match diagnostics CSV.",
     )
     parser.add_argument("--config", default="config/markets.yml", help="Project config path.")
-    args = parser.parse_args()
+    args = resolve_profile_args(parser.parse_args(), workflow="match_controls")
 
     config = load_project_config(args.config)
     matching = config["defaults"]["matching"]
@@ -40,7 +42,7 @@ def main() -> None:
     )
     save_dataframe(matched_events, args.output_events)
     save_dataframe(diagnostics, args.output_diagnostics)
-    print(f"Saved {len(matched_events)} matched events to {args.output_events}")
+    print(f"Saved {len(matched_events)} matched events to {args.output_events} (profile: {args.profile})")
 
 
 if __name__ == "__main__":

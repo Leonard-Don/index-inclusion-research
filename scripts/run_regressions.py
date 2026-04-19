@@ -9,6 +9,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from _workflow_profiles import add_profile_argument, resolve_profile_args
 from index_inclusion_research import load_project_config
 from index_inclusion_research.analysis import build_regression_dataset, run_regressions
 from index_inclusion_research.loaders import save_dataframe
@@ -18,10 +19,11 @@ import pandas as pd
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run cross-market event-level regressions.")
-    parser.add_argument("--panel", default="data/processed/matched_event_panel.csv", help="Matched event panel CSV.")
-    parser.add_argument("--output-dir", default="results/regressions", help="Directory for regression outputs.")
+    add_profile_argument(parser)
+    parser.add_argument("--panel", default="", help="Matched event panel CSV.")
+    parser.add_argument("--output-dir", default="", help="Directory for regression outputs.")
     parser.add_argument("--config", default="config/markets.yml", help="Project config path.")
-    args = parser.parse_args()
+    args = resolve_profile_args(parser.parse_args(), workflow="run_regressions")
 
     config = load_project_config(args.config)
     panel = pd.read_csv(
@@ -35,7 +37,7 @@ def main() -> None:
     save_dataframe(dataset, output_dir / "regression_dataset.csv")
     save_dataframe(coefficients, output_dir / "regression_coefficients.csv")
     save_dataframe(model_stats, output_dir / "regression_models.csv")
-    print(f"Saved regression outputs to {output_dir}")
+    print(f"Saved regression outputs to {output_dir} (profile: {args.profile})")
 
 
 if __name__ == "__main__":
