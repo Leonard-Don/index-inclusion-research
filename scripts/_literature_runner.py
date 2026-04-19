@@ -137,6 +137,13 @@ def write_markdown(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def display_path(path: Path) -> str:
+    try:
+        return path.resolve().relative_to(ROOT.resolve()).as_posix()
+    except ValueError:
+        return str(path)
+
+
 def print_frame(title: str, frame: pd.DataFrame, columns: list[str] | None = None, max_rows: int = 12) -> None:
     print(f"\n=== {title} ===")
     if frame.empty:

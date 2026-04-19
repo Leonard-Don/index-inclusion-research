@@ -2,6 +2,7 @@ from __future__ import annotations
 
 
 from _literature_runner import (
+    display_path,
     ROOT,
     ensure_real_data,
     filter_events,
@@ -43,14 +44,14 @@ def run_analysis(verbose: bool = True) -> dict[str, object]:
             "",
             "这部分聚焦中国样本、匹配对照组和 DID 风格的前后变化比较。",
             "",
-            "重要限制：",
-            "- 这里是与文献风格一致的强化识别结果，不是完整的断点回归复现。",
-            "- 当前项目还没有纳入真实 RD 所需的候选样本排名 running variable。",
+            "重要边界：",
+            "- 这里是与文献风格一致的强化识别结果，不等于断点回归结果本身。",
+            "- 如果仓库同时生成了 `hs300_rdd` 结果包，RDD 的证据等级、来源口径和下一步命令以下方断点回归状态为准。",
             "",
             "关键输出文件：",
-            f"- 中国样本事件研究：`{output_dir / 'treated_only' / 'event_study_summary.csv'}`",
-            f"- DID 汇总：`{output_dir / 'did_summary.csv'}`",
-            f"- 匹配回归系数：`{output_dir / 'matched_regressions' / 'regression_coefficients.csv'}`",
+            f"- 中国样本事件研究：`{display_path(output_dir / 'treated_only' / 'event_study_summary.csv')}`",
+            f"- DID 汇总：`{display_path(output_dir / 'did_summary.csv')}`",
+            f"- 匹配回归系数：`{display_path(output_dir / 'matched_regressions' / 'regression_coefficients.csv')}`",
             "",
         ]
     )

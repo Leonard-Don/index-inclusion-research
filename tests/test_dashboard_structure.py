@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 import sys
 
+import pandas as pd
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -64,6 +66,37 @@ def test_dashboard_reads_live_rdd_status_and_exposes_outputs_consistently() -> N
     else:
         assert all(not label.startswith("断点回归：") for label in labels)
         assert all("hs300_rdd" not in figure["path"] for figure in saved["figure_paths"])
+
+
+def test_identification_summary_copy_stays_consistent_with_live_rdd_state() -> None:
+    status = dashboard.runtime.load_rdd_status()
+    saved = dashboard.runtime.load_identification_china_saved_result()
+
+    if status["mode"] in {"real", "reconstructed"}:
+        assert "当前项目还没有纳入真实 RD 所需的候选样本排名 running variable。" not in saved["summary_text"]
+        assert f"证据状态：`{status['evidence_status']}`" in saved["summary_text"]
+
+
+def test_exported_identification_scope_matches_live_rdd_status() -> None:
+    status = dashboard.runtime.load_rdd_status()
+    identification_scope = pd.read_csv(ROOT / "results" / "real_tables" / "identification_scope.csv")
+    rdd_row = identification_scope.loc[identification_scope["分析层"] == "中国 RDD 扩展"].iloc[0]
+
+    assert "证据等级" in identification_scope.columns
+    assert "来源摘要" in identification_scope.columns
+    assert rdd_row["证据状态"] == status["evidence_status"]
+    assert rdd_row["证据等级"] == status["evidence_tier"]
+
+
+def test_literature_result_package_summaries_use_repo_relative_paths() -> None:
+    summary_paths = [
+        ROOT / "results" / "literature" / "harris_gurel" / "summary.md",
+        ROOT / "results" / "literature" / "shleifer" / "summary.md",
+        ROOT / "results" / "literature" / "hs300_style" / "summary.md",
+    ]
+
+    for path in summary_paths:
+        assert str(ROOT) not in path.read_text(encoding="utf-8")
 
 
 def test_dashboard_exposes_framework_page() -> None:
