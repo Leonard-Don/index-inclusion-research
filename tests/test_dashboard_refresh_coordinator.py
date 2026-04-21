@@ -65,9 +65,9 @@ def test_refresh_coordinator_builds_redirect_and_status_payload() -> None:
     assert payload["accepted"] is True
     assert payload["status"] == "idle"
     assert payload["redirect_url"] == ""
-    assert payload["contract_status_label"] == "manifest 已同步"
-    assert payload["artifact_summary_label"] == "当前核心结果"
-    assert "结果契约：manifest 已同步" in payload["artifact_summary_copy"]
+    assert payload["contract_status_label"] == "结果状态已同步"
+    assert payload["artifact_summary_label"] == "最近结果概览"
+    assert "结果状态：结果状态已同步" in payload["artifact_summary_copy"]
 
 
 def test_refresh_coordinator_queue_and_mark_success() -> None:
@@ -96,7 +96,7 @@ def test_refresh_coordinator_queue_and_mark_success() -> None:
 
     assert coordinator.state["status"] == "succeeded"
     assert coordinator.state["scope_key"] == "all"
-    assert coordinator.state["contract_status_label"] == "manifest 已同步"
+    assert coordinator.state["contract_status_label"] == "结果状态已同步"
     assert coordinator.state["artifact_summary_label"] == "本次未发现新的核心产物"
     assert coordinator.state["updated_artifacts"] == []
 

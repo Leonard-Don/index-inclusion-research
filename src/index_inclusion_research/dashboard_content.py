@@ -188,6 +188,10 @@ def load_paper_detail_result(
 
     authors = [part.strip() for part in paper.authors.split(";") if part.strip()]
     short_authors = authors[0] if len(authors) == 1 else f"{authors[0]} 等"
+    display_project_module = project_module_display(
+        paper.project_module,
+        project_module_display_map=project_module_display_map,
+    )
 
     info_frame = pd.DataFrame(
         [
@@ -197,10 +201,10 @@ def load_paper_detail_result(
             {"项目": "立场", "内容": record.get("立场", "")},
             {"项目": "市场 / 指数", "内容": record.get("市场 / 指数", "")},
             {"项目": "方法 / 关键词", "内容": record.get("方法 / 关键词", "")},
-            {"项目": "研究主线", "内容": paper.project_module},
+            {"项目": "研究主线", "内容": display_project_module},
             {
                 "项目": "原文入口",
-                "内容": f'<a href="/paper/{paper_id}/pdf" target="_blank">打开原文 PDF</a>' if paper.exists else "PDF 不存在",
+                "内容": f'<a href="/paper/{paper_id}/pdf" target="_blank">查看原文 PDF</a>' if paper.exists else "PDF 不存在",
             },
         ]
     )
@@ -234,15 +238,15 @@ def load_paper_detail_result(
         },
         {
             "kicker": "本文用途",
-            "title": paper.project_module,
-            "meta": "在当前项目中的位置",
+            "title": display_project_module,
+            "meta": "在整条研究里的位置",
             "copy": str(record.get("研究中的作用", "")),
         },
     ]
     summary_paragraphs = [
         f"{short_authors}（{paper.year_label}）对应的原始论文题目为《{paper.title}》。",
-        f"这篇论文位于“{record.get('阵营', '')}”阵营，在当前项目中主要服务于“{paper.project_module}”这条主线。",
-        "阅读这页时，可先看识别对象与挑战的假设，再看它如何推动指数效应争论向前发展，最后再决定是否进入原文 PDF。",
+        f"这篇论文位于“{record.get('阵营', '')}”阵营，在这套研究里主要服务于“{display_project_module}”这条主线。",
+        "这页重点回答三个问题：它识别什么、挑战什么、把争论推进到哪里。",
     ]
     summary_text = " ".join(summary_paragraphs)
 
@@ -269,7 +273,7 @@ def load_paper_detail_result(
         )
     sequence_cards.append(
         {
-            "kicker": "当前位置",
+            "kicker": "当前这篇",
             "title": f"{short_authors}（{paper.year_label}）",
             "year_label": str(current_catalog_record.get("year_label", "")),
             "camp": str(current_catalog_record.get("camp", "")),
@@ -314,11 +318,15 @@ def load_paper_detail_result(
     ).drop_duplicates(subset=["paper_id"]).head(2)
     recommended_cards = [
         {
-            "kicker": "推荐下一篇",
+            "kicker": "相关论文",
             "title": paper_brief_title(_catalog_record(rec)),
             "year_label": str(rec["year_label"]),
             "camp": str(rec["camp"]),
-            "meta": f"{rec['camp']} · {rec['project_module']} · {rec['method_focus']}",
+            "meta": (
+                f"{rec['camp']} · "
+                f"{project_module_display(str(rec['project_module']), project_module_display_map=project_module_display_map)}"
+                f" · {rec['method_focus']}"
+            ),
             "copy": str(rec["practical_use"]),
             "href": f"/paper/{rec['paper_id']}",
         }
@@ -380,7 +388,7 @@ def load_paper_detail_result(
         "evolution_nav_cards": evolution_nav_cards,
         "evolution_nav_views": evolution_nav_views,
         "figure_paths": [],
-        "primary_actions": ([{"label": "打开原文 PDF", "href": f"/paper/{paper_id}/pdf", "target": "_blank"}] if paper.exists else []),
+        "primary_actions": ([{"label": "查看原文 PDF", "href": f"/paper/{paper_id}/pdf", "target": "_blank"}] if paper.exists else []),
         "output_dir": "",
     }
 

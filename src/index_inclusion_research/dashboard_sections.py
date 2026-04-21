@@ -21,6 +21,13 @@ from index_inclusion_research.dashboard_types import (
     SummaryCard,
     TableRenderer,
 )
+from index_inclusion_research.dashboard_view_models import (
+    build_sample_design_view,
+    build_section_head_view,
+    build_table_detail_view,
+    build_table_primary_view,
+    build_table_suite_section_view,
+)
 from index_inclusion_research.rdd_evidence import rdd_evidence_tier_from_status
 
 
@@ -180,6 +187,10 @@ def build_sample_design_section(
         "tables": tables,
         "primary_tables": primary_tables,
         "detail_tables": detail_tables,
+        "section_view": build_sample_design_view(
+            detail_figures_count=max(len(figures) - 1, 0),
+            detail_tables_count=len(detail_tables),
+        ),
     }
 
 
@@ -207,6 +218,30 @@ def build_robustness_section(
             "tables": [],
             "primary_tables": [],
             "detail_tables": [],
+            "section_view": build_table_suite_section_view(
+                head=build_section_head_view(
+                    section_id="robustness",
+                    waypoint_label="稳健性检查",
+                    kicker="稳健性检查",
+                    title="把主结论放回样本过滤、异常值处理与区间估计里重新检查。",
+                    intro="不增加新结论，只检查主结论是否依赖单一样本口径。",
+                    side_label="检验目的",
+                ),
+                primary=build_table_primary_view(
+                    key="demo-robustness-primary-tables",
+                    title="核心稳健性表",
+                    copy="样本过滤、事件研究和主回归三类稳健性表，最能判断主结论是否依赖单一样本口径。",
+                    container="library-panels",
+                    collapsed_copy="展示版默认只露出最关键的一张稳健性表，其余主表收进折叠层，让稳健性仍然服务于主结论，而不是喧宾夺主。",
+                ),
+                detail=build_table_detail_view(
+                    full_title="补充稳健性表",
+                    full_copy="长期保留的稳健性结果继续保留，但作为对主结论边界的补充阅读，而不是首要判断依据。",
+                    demo_key="demo-robustness-detail-tables",
+                    demo_title="展开稳健性补充表（0 张）",
+                    demo_copy="展示版默认只露出最关键的一张稳健性表，其余补充稳健性结果按需展开。",
+                ),
+            ),
         }
 
     nonoverlap_row = sample_filters.loc[sample_filters["sample_filter"] == "nonoverlap_120d"].iloc[0]
@@ -241,15 +276,15 @@ def build_robustness_section(
             "kicker": "异常值处理",
             "title": "1% 缩尾后，美股公告日短窗口方向保持一致",
             "meta": f'CAR[-1,+1] 范围 {(format_pct(float(short_min)) if pd.notna(short_min) else "NA")} 至 {(format_pct(float(short_max)) if pd.notna(short_max) else "NA")}',
-            "copy": "对事件级 CAR 做 1% / 99% winsorize 后，最核心的短窗口结果仍保持同向，说明主结论并不依赖极少数异常波动事件。",
-            "foot": "该口径不改变样本量，只改变事件级 CAR 的尾部取值。",
+            "copy": "对事件级异常收益（CAR）做 1% / 99% 缩尾后，最核心的短窗口结果仍保持同向，说明主结论并不依赖极少数异常波动事件。",
+            "foot": "该口径不改变样本量，只调整事件级异常收益（CAR）的尾部取值。",
         },
         {
             "kicker": "长期指标边界",
             "title": f"{len(invalid_retention):,} 组保留率因短窗口基数过小不作解释",
-            "meta": "避免在分母过小的组合上过度解释 retention ratio",
-            "copy": "长期保留分析继续保留，但当短窗口平均 CAR 绝对值过小、导致比率失真时，页面会明确标注“不可解释”，避免把机械比值误当成强结论。",
-            "foot": "默认阈值为 |短窗口平均 CAR| < 0.5%。",
+            "meta": "避免在分母过小的组合上过度解释长期保留率",
+            "copy": "长期保留分析继续保留，但当短窗口平均异常收益（CAR）绝对值过小、导致比率失真时，页面会明确标注“不可解释”，避免把机械比值误当成强结论。",
+            "foot": "默认阈值为 |短窗口平均异常收益（CAR）| < 0.5%。",
         },
     ]
 
@@ -286,6 +321,30 @@ def build_robustness_section(
         "tables": tables,
         "primary_tables": primary_tables,
         "detail_tables": detail_tables,
+        "section_view": build_table_suite_section_view(
+            head=build_section_head_view(
+                section_id="robustness",
+                waypoint_label="稳健性检查",
+                kicker="稳健性检查",
+                title="把主结论放回样本过滤、异常值处理与区间估计里重新检查。",
+                intro="不增加新结论，只检查主结论是否依赖单一样本口径。",
+                side_label="检验目的",
+            ),
+            primary=build_table_primary_view(
+                key="demo-robustness-primary-tables",
+                title="核心稳健性表",
+                copy="样本过滤、事件研究和主回归三类稳健性表，最能判断主结论是否依赖单一样本口径。",
+                container="library-panels",
+                collapsed_copy="展示版默认只露出最关键的一张稳健性表，其余主表收进折叠层，让稳健性仍然服务于主结论，而不是喧宾夺主。",
+            ),
+            detail=build_table_detail_view(
+                full_title="补充稳健性表",
+                full_copy="长期保留的稳健性结果继续保留，但作为对主结论边界的补充阅读，而不是首要判断依据。",
+                demo_key="demo-robustness-detail-tables",
+                demo_title=f"展开稳健性补充表（{len(detail_tables)} 张）",
+                demo_copy="展示版默认只露出最关键的一张稳健性表，其余补充稳健性结果按需展开。",
+            ),
+        ),
     }
 
 
@@ -380,4 +439,30 @@ def build_limits_section(
         "tables": tables,
         "primary_tables": primary_tables,
         "detail_tables": detail_tables,
+        "section_view": build_table_suite_section_view(
+            head=build_section_head_view(
+                section_id="limits",
+                waypoint_label="研究边界",
+                kicker="研究边界",
+                title="把结论放回样本期、识别范围与数据口径中理解。",
+                intro="边界说明用于校准表述，不是削弱主结论。",
+                side_label="边界提示",
+            ),
+            primary=build_table_primary_view(
+                key="demo-limits-primary-tables",
+                title="边界摘要表",
+                copy="样本与数据范围表先建立边界，识别范围说明再补足细节，可以避免把边界说明误读成结论本身。",
+                container="library-panels",
+                collapsed_copy="展示版默认只露出最关键的边界摘要表，其余主表按需展开，结尾会更利落。",
+            ),
+            detail=build_table_detail_view(
+                full_title="补充说明表",
+                full_copy="这张表保留更完整的识别范围与口径说明，适合在写作或答疑时回到方法边界逐项核对。",
+                demo_key="demo-limits-detail-tables",
+                demo_title=f"展开研究边界补充表（{len(detail_tables)} 张）",
+                demo_copy="展示版默认只保留最关键的边界摘要，完整识别范围说明按需展开，结尾更利落。",
+                container="library-panels",
+                kicker="补充说明",
+            ),
+        ),
     }

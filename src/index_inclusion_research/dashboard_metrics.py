@@ -99,19 +99,19 @@ def build_review_summary_cards() -> list[SummaryCard]:
     return [
         {
             "kicker": "反方文献",
-            "title": "先怀疑永久效应",
+            "title": "重新审视永久效应",
             "meta": "价格压力、动量错觉与效应弱化",
-            "copy": "先看反方文献如何把早期上涨重新解释为短期流动性冲击、纳入前强势表现或现代市场中的提前定价。",
+            "copy": "反方文献把早期上涨重新解释为短期流动性冲击、纳入前强势表现或现代市场中的提前定价。",
         },
         {
             "kicker": "中性文献",
-            "title": "再看争论如何转向识别",
+            "title": "争论如何转向识别",
             "meta": "制度差异、套利约束与价格发现",
             "copy": "中性文献的重要性不在于表态，而在于说明结论会随着指数制度、市场摩擦和识别设计而改变。",
         },
         {
             "kicker": "正方文献",
-            "title": "最后看哪些机制仍然成立",
+            "title": "哪些机制仍然成立",
             "meta": "需求曲线、长期保留与中国证据",
             "copy": "正方文献并不只是重复“会涨”，而是在更强设计下继续保留部分永久性、信息背书和中国市场不对称证据。",
         },
@@ -127,7 +127,7 @@ def build_supplement_summary_cards() -> list[SummaryCard]:
         {
             "kicker": "事件时钟",
             "title": str(event["阶段"]),
-            "meta": "先分清公告、生效与再平衡",
+            "meta": "分清公告、生效与再平衡",
             "copy": str(event["对应观察指标"]),
             "foot": str(event["最容易犯的误判"]),
         },
@@ -335,16 +335,16 @@ def _contract_field_label(field: str) -> str:
 
 def _contract_consistency_copy(contract_check: RddContractCheck | None) -> str:
     if contract_check is None:
-        return "当前未附加 results_manifest 校验；页面按照 live RDD 状态渲染。"
+        return "当前未附带结果状态校验；页面展示以当前识别状态为准。"
     manifest_path = contract_check["manifest_path"]
     if not contract_check["manifest_exists"]:
-        return f"未找到 {manifest_path}；页面当前按 live RDD 状态渲染。"
+        return f"未找到 {manifest_path}；页面展示以当前识别状态为准。"
     if contract_check["matches"]:
-        return f"已校验：{manifest_path} 与 live RDD 状态一致。"
+        return f"已校验：{manifest_path} 与当前识别状态一致。"
     mismatch_labels = "、".join(_contract_field_label(field) for field in contract_check["mismatched_fields"])
     return (
-        f"发现 {manifest_path} 与 live RDD 状态在 {mismatch_labels} 上不一致；"
-        "页面当前以 live RDD 状态为准，建议重跑 index-inclusion-make-figures-tables 和 "
+        f"发现 {manifest_path} 与当前识别状态在 {mismatch_labels} 上不一致；"
+        "页面展示仍以当前识别状态为准，建议重跑 index-inclusion-make-figures-tables 和 "
         "index-inclusion-generate-research-report。"
     )
 
@@ -431,15 +431,15 @@ def build_identification_status_panel(
         "kicker": "证据等级",
         "title": str(rdd_status["evidence_status"]),
         "tone": tone,
-        "signal_label": "当前识别层级",
+        "signal_label": "识别层级",
         "signal_value": signal_value,
         "signal_copy": signal_copy,
         "copy": panel_copy,
         "meta": [
             {"label": "样本来源", "value": source_meta},
-            {"label": "契约一致性", "value": _contract_consistency_copy(contract_check)},
+            {"label": "状态一致性", "value": _contract_consistency_copy(contract_check)},
             {"label": "覆盖说明", "value": coverage_meta},
-            {"label": "当前状态", "value": sample_overview},
+            {"label": "样本状态", "value": sample_overview},
             {"label": "推荐下一步", "value": next_step_copy},
             {"label": "进入条件", "value": entry_condition},
             {"label": "数据契约", "value": contract_copy},

@@ -203,6 +203,7 @@ class DashboardHomeContextBuilder:
     build_sample_design_section: DemoModeSectionBuilder
     build_robustness_section: RobustnessSectionBuilder
     build_limits_section: DashboardSectionBuilder
+    write_cache: AnalysisCache | None = None
 
     @staticmethod
     def _empty_secondary_section() -> SecondarySection:
@@ -233,6 +234,8 @@ class DashboardHomeContextBuilder:
         section = self.run_cache.get(cache_key) or loader()
         section = preparer(section, demo_mode)
         self.run_cache[cache_key] = section
+        if self.write_cache is not None and self.write_cache is not self.run_cache:
+            self.write_cache[cache_key] = section
         return section
 
     def _build_secondary_sections(
@@ -328,6 +331,7 @@ def build_home_context(
     build_robustness_section: RobustnessSectionBuilder,
     build_limits_section: DashboardSectionBuilder,
     refresh_status_url: str,
+    write_cache: AnalysisCache | None = None,
 ) -> HomeContext:
     return DashboardHomeContextBuilder(
         root=root,
@@ -352,6 +356,7 @@ def build_home_context(
         build_sample_design_section=build_sample_design_section,
         build_robustness_section=build_robustness_section,
         build_limits_section=build_limits_section,
+        write_cache=write_cache,
     ).build(
         display_mode=display_mode,
         current_open_panels=current_open_panels,
