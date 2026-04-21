@@ -14,6 +14,7 @@ from index_inclusion_research.dashboard_types import (
     FrameworkResult,
     PaperDetailResult,
     RawAnalysisResult,
+    RddContractCheck,
     RenderedTable,
     RddStatus,
     SupplementResult,
@@ -102,6 +103,20 @@ class DashboardTrackContentRuntime:
         return dashboard_loaders.load_rdd_status(
             self.root,
             output_dir=output_dir,
+            read_csv_if_exists=self.read_csv_if_exists,
+        )
+
+    def load_rdd_contract_check(
+        self,
+        output_dir: Path | None = None,
+        manifest_path: Path | None = None,
+        rdd_status: RddStatus | None = None,
+    ) -> RddContractCheck:
+        return dashboard_loaders.build_rdd_contract_check(
+            self.root,
+            rdd_status=rdd_status,
+            output_dir=output_dir,
+            manifest_path=manifest_path,
             read_csv_if_exists=self.read_csv_if_exists,
         )
 

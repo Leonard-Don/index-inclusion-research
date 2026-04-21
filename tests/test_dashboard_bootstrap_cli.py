@@ -52,7 +52,8 @@ def test_project_metadata_declares_flask_and_console_scripts() -> None:
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
 
     assert "flask>=3.0" in project["dependencies"]
-    assert project["scripts"]["index-inclusion-dashboard"] == "index_inclusion_research.dashboard_app:main"
+    assert "yfinance>=0.2" in project["dependencies"]
+    assert project["scripts"]["index-inclusion-dashboard"] == "index_inclusion_research.cli:run_dashboard_main"
     assert project["scripts"]["index-inclusion-build-event-sample"] == "index_inclusion_research.cli:run_build_event_sample_main"
     assert project["scripts"]["index-inclusion-build-price-panel"] == "index_inclusion_research.cli:run_build_price_panel_main"
     assert project["scripts"]["index-inclusion-match-controls"] == "index_inclusion_research.cli:run_match_controls_main"
@@ -70,34 +71,94 @@ def test_project_metadata_declares_flask_and_console_scripts() -> None:
         project["scripts"]["index-inclusion-reconstruct-hs300-rdd"]
         == "index_inclusion_research.cli:run_reconstruct_hs300_rdd_candidates_main"
     )
+    assert (
+        project["scripts"]["index-inclusion-generate-sample-data"]
+        == "index_inclusion_research.cli:run_generate_sample_data_main"
+    )
+    assert (
+        project["scripts"]["index-inclusion-download-real-data"]
+        == "index_inclusion_research.cli:run_download_real_data_main"
+    )
+    assert (
+        project["scripts"]["index-inclusion-make-figures-tables"]
+        == "index_inclusion_research.cli:run_make_figures_tables_main"
+    )
+    assert (
+        project["scripts"]["index-inclusion-generate-research-report"]
+        == "index_inclusion_research.cli:run_generate_research_report_main"
+    )
 
 
-def test_track_console_wrappers_delegate_to_expected_script_modules(monkeypatch) -> None:
+def test_track_console_wrappers_delegate_to_expected_package_modules(monkeypatch) -> None:
     calls: list[str] = []
-    monkeypatch.setattr(cli, "_run_script_main", lambda module_name: calls.append(module_name))
+    monkeypatch.setattr(cli, "_run_package_main", lambda module_name: calls.append(module_name))
 
     cli.run_build_event_sample_main()
     cli.run_build_price_panel_main()
     cli.run_match_controls_main()
     cli.run_event_study_main()
     cli.run_regressions_main()
-    cli.run_price_pressure_track_main()
-    cli.run_demand_curve_track_main()
-    cli.run_identification_china_track_main()
-    cli.run_hs300_rdd_main()
     cli.run_prepare_hs300_rdd_candidates_main()
     cli.run_reconstruct_hs300_rdd_candidates_main()
 
     assert calls == [
-        "build_event_sample",
-        "build_price_panel",
-        "match_controls",
-        "run_event_study",
-        "run_regressions",
-        "start_price_pressure_track",
-        "start_demand_curve_track",
-        "start_identification_china_track",
-        "start_hs300_rdd",
-        "prepare_hs300_rdd_candidates",
-        "reconstruct_hs300_rdd_candidates",
+        "index_inclusion_research.build_event_sample",
+        "index_inclusion_research.build_price_panel",
+        "index_inclusion_research.match_controls",
+        "index_inclusion_research.run_event_study",
+        "index_inclusion_research.run_regressions",
+        "index_inclusion_research.prepare_hs300_rdd_candidates",
+        "index_inclusion_research.reconstruct_hs300_rdd_candidates",
     ]
+
+
+def test_package_console_wrappers_delegate_to_expected_package_modules(monkeypatch) -> None:
+    calls: list[str] = []
+    monkeypatch.setattr(cli, "_run_package_main", lambda module_name: calls.append(module_name))
+
+    cli.run_dashboard_main()
+    cli.run_price_pressure_track_main()
+    cli.run_demand_curve_track_main()
+    cli.run_identification_china_track_main()
+    cli.run_hs300_rdd_main()
+    cli.run_generate_sample_data_main()
+    cli.run_download_real_data_main()
+    cli.run_make_figures_tables_main()
+    cli.run_generate_research_report_main()
+
+    assert calls == [
+        "index_inclusion_research.literature_dashboard",
+        "index_inclusion_research.price_pressure_track",
+        "index_inclusion_research.demand_curve_track",
+        "index_inclusion_research.identification_china_track",
+        "index_inclusion_research.hs300_rdd",
+        "index_inclusion_research.sample_data",
+        "index_inclusion_research.real_data",
+        "index_inclusion_research.figures_tables",
+        "index_inclusion_research.research_report",
+    ]
+
+
+def test_python_module_fallback_targets_are_directly_runnable() -> None:
+    module_files = [
+        "literature_dashboard.py",
+        "price_pressure_track.py",
+        "demand_curve_track.py",
+        "identification_china_track.py",
+        "hs300_rdd.py",
+        "build_event_sample.py",
+        "build_price_panel.py",
+        "match_controls.py",
+        "run_event_study.py",
+        "run_regressions.py",
+        "prepare_hs300_rdd_candidates.py",
+        "reconstruct_hs300_rdd_candidates.py",
+        "sample_data.py",
+        "real_data.py",
+        "figures_tables.py",
+        "research_report.py",
+    ]
+
+    for module_file in module_files:
+        source = (ROOT / "src" / "index_inclusion_research" / module_file).read_text(encoding="utf-8")
+        assert 'if __name__ == "__main__":' in source

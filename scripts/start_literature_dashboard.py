@@ -9,7 +9,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from index_inclusion_research.dashboard_app import main
+from index_inclusion_research.literature_dashboard import main
 
 
 if __name__ == "__main__":

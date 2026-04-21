@@ -5,18 +5,29 @@ from pathlib import Path
 import pandas as pd
 
 from index_inclusion_research import dashboard_loaders
+from index_inclusion_research import dashboard_media
+from index_inclusion_research.result_contract import build_results_manifest
 
 
 ROOT = Path(__file__).resolve().parents[1]
+TINY_PNG = (
+    b"\x89PNG\r\n\x1a\n"
+    b"\x00\x00\x00\rIHDR"
+    b"\x00\x00\x00\x02\x00\x00\x00\x01\x08\x02\x00\x00\x00"
+    b"\x7b@\xe8\xdd"
+    b"\x00\x00\x00\rIDATx\x9cc`\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00"
+    b"\xc9\xfe\x92\xef"
+    b"\x00\x00\x00\x00IEND\xaeB`\x82"
+)
 
 
 def test_normalize_result_reads_summary_tables_and_figures(tmp_path: Path) -> None:
     summary_path = tmp_path / "summary.md"
     summary_path.write_text("hello summary", encoding="utf-8")
     figure_path = tmp_path / "sample_event_timeline.png"
-    figure_path.write_bytes(b"fake")
+    figure_path.write_bytes(TINY_PNG)
     figure_entry_path = tmp_path / "main_regression_coefficients.png"
-    figure_entry_path.write_bytes(b"fake")
+    figure_entry_path.write_bytes(TINY_PNG)
     caption_calls: list[dict[str, str | None]] = []
 
     result = dashboard_loaders.normalize_result(
@@ -53,8 +64,22 @@ def test_normalize_result_reads_summary_tables_and_figures(tmp_path: Path) -> No
     assert result["summary_text"] == "hello summary"
     assert result["rendered_tables"] == [("label:event_study_summary", "rendered:1")]
     assert result["figure_paths"] == [
-        {"path": "sample_event_timeline.png", "caption": "caption:sample_event_timeline.png"},
-        {"path": "main_regression_coefficients.png", "caption": "caption:main_regression_coefficients.png"},
+        {
+            "path": "sample_event_timeline.png",
+            "caption": "caption:sample_event_timeline.png",
+            "caption_lead": "caption:sample_event_timeline.png",
+            "caption_focus": "",
+            "width": 2,
+            "height": 1,
+        },
+        {
+            "path": "main_regression_coefficients.png",
+            "caption": "caption:main_regression_coefficients.png",
+            "caption_lead": "caption:main_regression_coefficients.png",
+            "caption_focus": "",
+            "width": 2,
+            "height": 1,
+        },
     ]
     assert caption_calls == [
         {"path": "sample_event_timeline.png", "custom_caption": None, "prefix": None},
@@ -146,6 +171,100 @@ def test_load_rdd_status_reads_status_csv_audit_and_validation_fields(tmp_path: 
     assert status["validation_error"] == "running_variable 缺失"
 
 
+def test_build_rdd_contract_check_detects_matching_manifest(tmp_path: Path) -> None:
+    status = {
+        "mode": "reconstructed",
+        "evidence_tier": "L2",
+        "evidence_status": "公开重建样本",
+        "source_kind": "reconstructed",
+        "source_label": "公开重建候选样本文件",
+        "source_file": "data/raw/hs300_rdd_candidates.reconstructed.csv",
+        "generated_at": "",
+        "as_of_date": "",
+        "batch_label": "",
+        "coverage_note": "311 条候选；6 个批次；调入 6 / 对照 305。",
+        "message": "当前正在使用公开数据重建的候选样本文件。",
+        "note": "基于公开数据重建的边界样本，可进入公开数据版证据链。",
+        "input_file": "data/raw/hs300_rdd_candidates.reconstructed.csv",
+        "audit_file": "",
+        "candidate_rows": 311,
+        "candidate_batches": 6,
+        "treated_rows": 6,
+        "control_rows": 305,
+        "crossing_batches": 6,
+        "validation_error": "",
+    }
+    manifest_path = tmp_path / "results" / "real_tables" / "results_manifest.csv"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    build_results_manifest("real", status).to_csv(manifest_path, index=False)
+
+    contract = dashboard_loaders.build_rdd_contract_check(
+        ROOT,
+        rdd_status=status,
+        manifest_path=manifest_path,
+    )
+
+    assert contract["manifest_exists"] is True
+    assert contract["manifest_profile"] == "real"
+    assert contract["matches"] is True
+    assert contract["mismatched_fields"] == []
+    assert contract["manifest_path"].endswith("results/real_tables/results_manifest.csv")
+
+
+def test_build_rdd_contract_check_reports_mismatched_fields(tmp_path: Path) -> None:
+    status = {
+        "mode": "reconstructed",
+        "evidence_tier": "L2",
+        "evidence_status": "公开重建样本",
+        "source_kind": "reconstructed",
+        "source_label": "公开重建候选样本文件",
+        "source_file": "data/raw/hs300_rdd_candidates.reconstructed.csv",
+        "generated_at": "",
+        "as_of_date": "",
+        "batch_label": "",
+        "coverage_note": "311 条候选；6 个批次；调入 6 / 对照 305。",
+        "message": "当前正在使用公开数据重建的候选样本文件。",
+        "note": "基于公开数据重建的边界样本，可进入公开数据版证据链。",
+        "input_file": "data/raw/hs300_rdd_candidates.reconstructed.csv",
+        "audit_file": "",
+        "candidate_rows": 311,
+        "candidate_batches": 6,
+        "treated_rows": 6,
+        "control_rows": 305,
+        "crossing_batches": 6,
+        "validation_error": "",
+    }
+    manifest_path = tmp_path / "results" / "real_tables" / "results_manifest.csv"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    build_results_manifest(
+        "real",
+        {
+            **status,
+            "source_label": "待补候选样本",
+            "coverage_note": "最近一次校验失败。",
+        },
+    ).to_csv(manifest_path, index=False)
+
+    contract = dashboard_loaders.build_rdd_contract_check(
+        ROOT,
+        rdd_status=status,
+        manifest_path=manifest_path,
+    )
+
+    assert contract["manifest_exists"] is True
+    assert contract["matches"] is False
+    assert contract["mismatched_fields"] == ["source_label", "coverage_note"]
+
+
+def test_split_figure_caption_separates_lead_and_focus() -> None:
+    lead, focus = dashboard_media.split_figure_caption(
+        "中国样本 RDD 主图。图意：展示断点回归主图。阅读重点：观察 0 附近是否跳跃。"
+    )
+
+    assert lead == "中国样本 RDD 主图。展示断点回归主图。"
+    assert focus == "观察 0 附近是否跳跃。"
+
+
 def test_saved_output_dir_for_analysis_maps_known_modules() -> None:
     assert dashboard_loaders.saved_output_dir_for_analysis(ROOT, "price_pressure_track") == ROOT / "results" / "literature" / "harris_gurel"
     assert dashboard_loaders.saved_output_dir_for_analysis(ROOT, "demand_curve_track") == ROOT / "results" / "literature" / "shleifer"
@@ -202,6 +321,8 @@ def test_load_identification_china_saved_result_hides_formal_rdd_outputs_when_st
         {
             "path": "results/literature/hs300_style/sample_event_timeline.png",
             "caption": "风格识别:sample_event_timeline.png",
+            "caption_lead": "风格识别:sample_event_timeline.png",
+            "caption_focus": "",
         }
     ]
 
@@ -259,10 +380,14 @@ def test_load_identification_china_saved_result_keeps_formal_rdd_outputs_when_st
         {
             "path": "results/literature/hs300_style/sample_event_timeline.png",
             "caption": "风格识别:sample_event_timeline.png",
+            "caption_lead": "风格识别:sample_event_timeline.png",
+            "caption_focus": "",
         },
         {
             "path": "results/literature/hs300_rdd/car_m1_p1_rdd_main.png",
             "caption": "断点回归:car_m1_p1_rdd_main.png",
+            "caption_lead": "断点回归:car_m1_p1_rdd_main.png",
+            "caption_focus": "",
         },
     ]
 

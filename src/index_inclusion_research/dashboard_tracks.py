@@ -24,6 +24,7 @@ from index_inclusion_research.dashboard_types import (
     TrackResultNormalizer,
     TrackReviewResultLoader,
     TrackResult,
+    RddContractCheckLoader,
     RddStatusLoader,
 )
 
@@ -118,6 +119,7 @@ def prepare_track_display(
     demo_mode: bool,
     *,
     load_rdd_status: RddStatusLoader,
+    load_rdd_contract_check: RddContractCheckLoader | None = None,
     clean_display_text: TextCleaner,
     render_table: TableRenderer,
     format_pct: FormatPct,
@@ -126,6 +128,11 @@ def prepare_track_display(
     create_identification_figures: FigureEntriesBuilder,
 ) -> TrackDisplaySection:
     identification_status = load_rdd_status() if analysis_id == "identification_china_track" else None
+    identification_contract = (
+        load_rdd_contract_check()
+        if analysis_id == "identification_china_track" and load_rdd_contract_check is not None
+        else None
+    )
     return dashboard_presenters.prepare_track_display(
         section,
         analysis_id,
@@ -169,7 +176,10 @@ def prepare_track_display(
             "identification_china_track": create_identification_figures(),
         },
         status_panel=(
-            dashboard_metrics.build_identification_status_panel(identification_status)
+            dashboard_metrics.build_identification_status_panel(
+                identification_status,
+                contract_check=identification_contract,
+            )
             if identification_status is not None
             else None
         ),

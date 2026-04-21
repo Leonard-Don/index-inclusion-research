@@ -144,6 +144,60 @@ def test_build_identification_scope_marks_reconstructed_rdd_as_public_proxy() ->
     assert rdd_row["来源摘要"] == "公开重建候选样本文件"
 
 
+def test_build_identification_scope_prefers_structured_rdd_status_when_provided() -> None:
+    events = pd.DataFrame([{"market": "CN"}, {"market": "US"}])
+    panel = pd.DataFrame(
+        [
+            {"event_id": "e1", "event_phase": "announce"},
+            {"event_id": "e1", "event_phase": "effective"},
+        ]
+    )
+    rdd_summary = pd.DataFrame([{"n_obs": 311}])
+
+    scope = build_identification_scope_table(
+        events,
+        panel,
+        rdd_summary=rdd_summary,
+        rdd_status={
+            "mode": "reconstructed",
+            "evidence_tier": "L2",
+            "evidence_status": "公开重建样本",
+            "source_label": "公开重建候选样本文件",
+            "note": "基于公开数据重建的边界样本，可进入公开数据版证据链，但不应表述为中证官方历史候选排名表。",
+            "message": "当前正在使用公开数据重建的候选样本文件。",
+        },
+    )
+    rdd_row = scope.loc[scope["分析层"] == "中国 RDD 扩展"].iloc[0]
+    assert rdd_row["证据等级"] == "L2"
+    assert rdd_row["证据状态"] == "公开重建样本"
+    assert rdd_row["来源摘要"] == "公开重建候选样本文件"
+
+
+def test_build_identification_scope_populates_source_summary_for_all_rows() -> None:
+    events = pd.DataFrame([{"market": "CN"}, {"market": "US"}])
+    panel = pd.DataFrame(
+        [
+            {"event_id": "e1", "event_phase": "announce"},
+            {"event_id": "e1", "event_phase": "effective"},
+        ]
+    )
+    matched_panel = pd.DataFrame([{"event_id": "e1"}])
+    rdd_summary = pd.DataFrame([{"n_obs": 311}])
+
+    scope = build_identification_scope_table(
+        events,
+        panel,
+        matched_panel=matched_panel,
+        rdd_summary=rdd_summary,
+        rdd_mode="reconstructed",
+    )
+
+    assert scope["来源摘要"].notna().all()
+    assert scope.loc[scope["分析层"] == "短窗口事件研究", "来源摘要"].iloc[0] == "正式事件样本 + 短窗口事件面板"
+    assert scope.loc[scope["分析层"] == "长窗口保留分析", "来源摘要"].iloc[0] == "正式事件样本 + 长窗口保留面板"
+    assert scope.loc[scope["分析层"] == "匹配对照组回归", "来源摘要"].iloc[0] == "正式事件样本 + 匹配对照面板"
+
+
 def test_extended_output_tables_are_built_with_expected_columns() -> None:
     events = pd.DataFrame(
         [

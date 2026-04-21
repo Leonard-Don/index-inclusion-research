@@ -18,6 +18,7 @@ from index_inclusion_research.dashboard_types import (
     RefreshStatusPayload,
     RefreshWorkerSpawner,
     RelativePathBuilder,
+    RddContractCheckBuilder,
     SnapshotMetaBuilder,
     SnapshotSourcesBuilder,
 )
@@ -31,6 +32,7 @@ class DashboardRefreshCoordinator:
         allowed_keys: set[str] | frozenset[str],
         track_anchors: set[str] | frozenset[str],
         dashboard_snapshot_sources: SnapshotSourcesBuilder,
+        build_rdd_contract_check: RddContractCheckBuilder,
         to_relative: RelativePathBuilder,
         build_dashboard_snapshot_meta: SnapshotMetaBuilder,
         nav_sections_for_mode: NavSectionsBuilder,
@@ -39,6 +41,7 @@ class DashboardRefreshCoordinator:
         self.allowed_keys = allowed_keys
         self.track_anchors = track_anchors
         self.dashboard_snapshot_sources = dashboard_snapshot_sources
+        self.build_rdd_contract_check = build_rdd_contract_check
         self.to_relative = to_relative
         self.build_dashboard_snapshot_meta = build_dashboard_snapshot_meta
         self.nav_sections_for_mode = nav_sections_for_mode
@@ -115,6 +118,7 @@ class DashboardRefreshCoordinator:
             anchor=anchor,
             open_panels=open_panels,
             snapshot_meta=self.build_dashboard_snapshot_meta(),
+            contract_check=self.build_rdd_contract_check(),
             redirect_url_builder=redirect_url_builder,
             now_ts=now_ts,
         )
@@ -131,6 +135,7 @@ class DashboardRefreshCoordinator:
             baseline_artifact_mtimes = dict(self.state.get("baseline_artifact_mtimes", {}))
         snapshot_files = self.dashboard_snapshot_sources()
         snapshot_meta = self.build_dashboard_snapshot_meta(snapshot_files)
+        contract_check = self.build_rdd_contract_check()
         updated_artifacts = dashboard_refresh.build_updated_artifacts(
             snapshot_files,
             baseline_artifact_mtimes=baseline_artifact_mtimes,
@@ -142,6 +147,7 @@ class DashboardRefreshCoordinator:
             scope_label=scope_label,
             scope_key=scope_key,
             snapshot_meta=snapshot_meta,
+            contract_check=contract_check,
             updated_artifacts=updated_artifacts,
             finished_at=finished_at,
             finished_ts=finished_ts,

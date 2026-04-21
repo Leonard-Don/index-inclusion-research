@@ -6,15 +6,14 @@ from flask import request, url_for
 
 from index_inclusion_research.dashboard_application import build_dashboard_application
 from index_inclusion_research.dashboard_bootstrap import bootstrap_dashboard_paths
-from index_inclusion_research import dashboard_cli
 
 PATHS = bootstrap_dashboard_paths(__file__)
 ROOT = PATHS.root
 
-from start_demand_curve_track import run_analysis as run_demand_curve_track
-from start_identification_china_track import run_analysis as run_identification_china_track
-from start_price_pressure_track import run_analysis as run_price_pressure_track
+from index_inclusion_research.demand_curve_track import run_analysis as run_demand_curve_track
+from index_inclusion_research.identification_china_track import run_analysis as run_identification_china_track
 from index_inclusion_research.literature_catalog import get_literature_paper
+from index_inclusion_research.price_pressure_track import run_analysis as run_price_pressure_track
 
 dashboard_application = build_dashboard_application(
     import_name=__name__,
@@ -53,12 +52,3 @@ COLUMN_LABELS = runtime.column_labels
 VALUE_LABELS = runtime.value_labels
 
 app = shell.app
-parse_dashboard_args = dashboard_cli.parse_dashboard_args
-
-
-def main(argv: list[str] | None = None) -> None:
-    dashboard_cli.run_dashboard_app(app, argv)
-
-
-if __name__ == "__main__":
-    main()

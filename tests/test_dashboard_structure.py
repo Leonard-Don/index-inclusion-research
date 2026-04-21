@@ -13,6 +13,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 import index_inclusion_research.dashboard_app as dashboard
+from index_inclusion_research.literature_dashboard import parse_dashboard_args
 
 
 def _reset_refresh_state() -> None:
@@ -20,7 +21,7 @@ def _reset_refresh_state() -> None:
         dashboard.REFRESH_STATE.update(
             {
                 "status": "idle",
-                "message": "页面已就绪，可在不离开当前位置的情况下刷新最新结果。",
+                "message": "页面已就绪，结果速览会在刷新后自动更新。",
                 "scope_label": "全部材料",
                 "scope_key": "all",
                 "started_at": "",
@@ -32,6 +33,10 @@ def _reset_refresh_state() -> None:
                 "snapshot_copy": "",
                 "snapshot_source_path": "",
                 "snapshot_source_count": 0,
+                "contract_status_label": "",
+                "contract_status_copy": "",
+                "artifact_summary_label": "",
+                "artifact_summary_copy": "",
                 "updated_artifacts": [],
                 "baseline_artifact_mtimes": {},
             }
@@ -84,8 +89,18 @@ def test_exported_identification_scope_matches_live_rdd_status() -> None:
 
     assert "证据等级" in identification_scope.columns
     assert "来源摘要" in identification_scope.columns
+    assert identification_scope["来源摘要"].notna().all()
     assert rdd_row["证据状态"] == status["evidence_status"]
     assert rdd_row["证据等级"] == status["evidence_tier"]
+
+
+def test_results_manifest_matches_live_rdd_status() -> None:
+    contract = dashboard.runtime.load_rdd_contract_check()
+
+    assert contract["manifest_exists"] is True
+    assert contract["manifest_profile"] == "real"
+    assert contract["matches"] is True
+    assert contract["mismatched_fields"] == []
 
 
 def test_literature_result_package_summaries_use_repo_relative_paths() -> None:
@@ -117,7 +132,7 @@ def test_dashboard_exposes_supplement_page() -> None:
 
 
 def test_dashboard_cli_parser_accepts_host_and_port() -> None:
-    args = dashboard.parse_dashboard_args(["--host", "0.0.0.0", "--port", "5010"])
+    args = parse_dashboard_args(["--host", "0.0.0.0", "--port", "5010"])
     assert args.host == "0.0.0.0"
     assert args.port == 5010
 
@@ -146,9 +161,19 @@ def test_home_dashboard_renders_single_frontend_sections() -> None:
     assert "挑战的假设" in html
     assert "争论推进" in html
     assert "结果快照" in html
+    assert "结果速览" in html
+    assert "当前核心结果" in html
+    assert "更新明细" in html
     assert "当前识别层级" in html
+    assert "契约一致性" in html
+    assert "manifest 已同步" in html
     assert dashboard.runtime.load_rdd_status()["evidence_status"] in html
     assert dashboard.runtime.load_rdd_status()["source_label"] in html
+    assert "results/real_tables/results_manifest.csv" in html
+    assert 'width="1600"' not in html
+    assert 'height="1000"' not in html
+    assert 'width="2684"' in html
+    assert 'height="1056"' in html
     assert "中国 RDD" in html
     assert f"L{3 if status['mode'] == 'real' else 2 if status['mode'] == 'reconstructed' else 1 if status['mode'] == 'demo' else 0}" in html
     assert "built-in method copy of dict object" not in html
@@ -322,6 +347,10 @@ def test_refresh_status_exposes_redirect_after_success() -> None:
                 "snapshot_copy": "copy",
                 "snapshot_source_path": "results/real_tables/event_study_summary.csv",
                 "snapshot_source_count": 1,
+                "contract_status_label": "",
+                "contract_status_copy": "",
+                "artifact_summary_label": "",
+                "artifact_summary_copy": "",
                 "updated_artifacts": [
                     {
                         "path": "results/real_tables/event_study_summary.csv",
@@ -348,7 +377,7 @@ def test_refresh_status_slows_polling_for_long_running_jobs(monkeypatch) -> None
         dashboard.REFRESH_STATE.update(
             {
                 "status": "running",
-                "message": "正在后台刷新结果文件。",
+                "message": "正在刷新结果文件。",
                 "scope_label": "全部材料",
                 "scope_key": "all",
                 "started_at": "2026-04-16 10:00",
@@ -360,6 +389,10 @@ def test_refresh_status_slows_polling_for_long_running_jobs(monkeypatch) -> None
                 "snapshot_copy": "copy",
                 "snapshot_source_path": "results/real_tables/event_study_summary.csv",
                 "snapshot_source_count": 1,
+                "contract_status_label": "",
+                "contract_status_copy": "",
+                "artifact_summary_label": "",
+                "artifact_summary_copy": "",
                 "updated_artifacts": [],
                 "baseline_artifact_mtimes": {},
             }

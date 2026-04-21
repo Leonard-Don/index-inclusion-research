@@ -1,18 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-import sys
 
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[1]
-SCRIPTS = ROOT / "scripts"
-SRC = ROOT / "src"
-for path in [SCRIPTS, SRC]:
-    if str(path) not in sys.path:
-        sys.path.insert(0, str(path))
-
-import prepare_hs300_rdd_candidates as prepare_script
+from index_inclusion_research import prepare_hs300_rdd_candidates as prepare_script
 from index_inclusion_research.analysis.rdd_candidates import prepare_candidate_frame, validate_candidate_frame
 
 

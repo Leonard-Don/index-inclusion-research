@@ -8,17 +8,22 @@ version = "0.1.0"
 description = "Cross-market event-study toolkit for index inclusion papers."
 requires-python = ">=3.11"
 dependencies = [
+  "akshare>=1.16",
+  "beautifulsoup4>=4.12",
   "flask>=3.0",
+  "lxml>=5.0",
   "matplotlib>=3.8",
   "numpy>=1.26",
   "pandas>=2.2",
   "pyyaml>=6.0",
+  "requests>=2.31",
   "scipy>=1.12",
   "statsmodels>=0.14",
+  "yfinance>=0.2",
 ]
 
 [project.scripts]
-index-inclusion-dashboard = "index_inclusion_research.dashboard_app:main"
+index-inclusion-dashboard = "index_inclusion_research.cli:run_dashboard_main"
 index-inclusion-build-event-sample = "index_inclusion_research.cli:run_build_event_sample_main"
 index-inclusion-build-price-panel = "index_inclusion_research.cli:run_build_price_panel_main"
 index-inclusion-match-controls = "index_inclusion_research.cli:run_match_controls_main"
@@ -30,6 +35,10 @@ index-inclusion-identification = "index_inclusion_research.cli:run_identificatio
 index-inclusion-hs300-rdd = "index_inclusion_research.cli:run_hs300_rdd_main"
 index-inclusion-prepare-hs300-rdd = "index_inclusion_research.cli:run_prepare_hs300_rdd_candidates_main"
 index-inclusion-reconstruct-hs300-rdd = "index_inclusion_research.cli:run_reconstruct_hs300_rdd_candidates_main"
+index-inclusion-generate-sample-data = "index_inclusion_research.cli:run_generate_sample_data_main"
+index-inclusion-download-real-data = "index_inclusion_research.cli:run_download_real_data_main"
+index-inclusion-make-figures-tables = "index_inclusion_research.cli:run_make_figures_tables_main"
+index-inclusion-generate-research-report = "index_inclusion_research.cli:run_generate_research_report_main"
 
 [project.optional-dependencies]
 dev = [

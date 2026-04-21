@@ -34,9 +34,9 @@
 
 - 仪表盘里的 `短期价格压力与效应减弱`
 
-对应脚本：
+对应命令：
 
-- `scripts/start_price_pressure_track.py`
+- `index-inclusion-price-pressure`
 
 但要注意，这个脚本现在只是这条研究主线的底层实现之一，不再代表“项目本身只基于 Harris and Gurel”。
 
@@ -62,9 +62,9 @@
 
 - 仪表盘里的 `需求曲线与长期保留`
 
-对应脚本：
+对应命令：
 
-- `scripts/start_demand_curve_track.py`
+- `index-inclusion-demand-curve`
 
 同样，这个脚本现在只是“长窗口需求曲线主线”的一个实现名，而不是整个项目仍然以 Shleifer 单篇为中心。
 
@@ -90,9 +90,9 @@
 
 - 仪表盘里的 `制度识别与中国市场证据`
 
-对应脚本：
+对应命令：
 
-- `scripts/start_identification_china_track.py`
+- `index-inclusion-identification`
 
 现在仪表盘会把它们合并成同一条研究主线，而不是继续沿用旧的论文级拼接结构。
 
@@ -118,15 +118,15 @@
 
 这样你写论文时不需要先背“哪一篇属于哪一组”，而是先按研究问题进入，再回到文献。
 
-### 第三步：最后再回到底层脚本
+### 第三步：最后再回到底层命令
 
 只有在你需要单独调试时，才需要直接运行：
 
-- `scripts/start_price_pressure_track.py`
-- `scripts/start_demand_curve_track.py`
-- `scripts/start_identification_china_track.py`
+- `index-inclusion-price-pressure`
+- `index-inclusion-demand-curve`
+- `index-inclusion-identification`
 
-平时更推荐直接从仪表盘进入，因为仪表盘已经把这些底层脚本重新组织成了 16 篇文献驱动的三条主线。
+平时更推荐直接从仪表盘进入，因为仪表盘已经把这些底层命令重新组织成了 16 篇文献驱动的三条主线。
 
 ## 三、论文写作时怎么对应
 

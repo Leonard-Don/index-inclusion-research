@@ -75,8 +75,12 @@ class MetaItem(TypedDict):
 class FigureEntry(TypedDict, total=False):
     path: str
     caption: str
+    caption_lead: str
+    caption_focus: str
     label: str
     layout_class: str
+    width: int
+    height: int
 
 
 class RawFigureEntry(TypedDict, total=False):
@@ -148,6 +152,10 @@ class RefreshState(TypedDict):
     snapshot_copy: str
     snapshot_source_path: str
     snapshot_source_count: int
+    contract_status_label: str
+    contract_status_copy: str
+    artifact_summary_label: str
+    artifact_summary_copy: str
     updated_artifacts: list[RefreshArtifact]
     baseline_artifact_mtimes: dict[str, float]
 
@@ -170,6 +178,10 @@ class RefreshStatusPayload(TypedDict):
     snapshot_copy: str
     snapshot_source_path: str
     snapshot_source_count: int
+    contract_status_label: str
+    contract_status_copy: str
+    artifact_summary_label: str
+    artifact_summary_copy: str
     updated_artifacts: list[RefreshArtifact]
 
 
@@ -313,6 +325,16 @@ class RddStatus(TypedDict):
     validation_error: str
 
 
+class RddContractCheck(TypedDict):
+    manifest_exists: bool
+    manifest_path: str
+    manifest_profile: str
+    matches: bool
+    mismatched_fields: list[str]
+    live_status: RddStatus
+    manifest: dict[str, Any]
+
+
 class DashboardSection(TypedDict, total=False):
     summary: str
     display_summary: str
@@ -388,6 +410,7 @@ RouteResponse: TypeAlias = ResponseReturnValue
 TableRenderer: TypeAlias = Callable[..., str]
 SnapshotMetaBuilder: TypeAlias = Callable[[], SnapshotMeta]
 SnapshotSourcesBuilder: TypeAlias = Callable[[], list[Path]]
+RddContractCheckBuilder: TypeAlias = Callable[[], RddContractCheck]
 NavSectionsBuilder: TypeAlias = Callable[[ModeName], list[NavSection]]
 OverviewNotesBuilder: TypeAlias = Callable[[ModeName], list[NoteItem]]
 OverviewSummaryBuilder: TypeAlias = Callable[[ModeName], str]
@@ -438,6 +461,7 @@ TrackCardsBuilder: TypeAlias = Callable[[], list[ResultCard]]
 TrackTablesBuilder: TypeAlias = Callable[[], list[RenderedTable]]
 SavedTrackResultLoader: TypeAlias = Callable[[str, AnalysisDefinition], TrackResult | None]
 RddStatusLoader: TypeAlias = Callable[[], RddStatus]
+RddContractCheckLoader: TypeAlias = Callable[[], RddContractCheck]
 
 
 class RefreshRunner(Protocol):
@@ -465,6 +489,15 @@ class DashboardRuntimeLike(Protocol):
     def build_dashboard_snapshot_meta(self, snapshot_files: list[Path] | None = None) -> SnapshotMeta: ...
 
     def load_identification_china_saved_result(self) -> TrackResult: ...
+
+    def load_rdd_status(self, output_dir: Path | None = None) -> RddStatus: ...
+
+    def load_rdd_contract_check(
+        self,
+        output_dir: Path | None = None,
+        manifest_path: Path | None = None,
+        rdd_status: RddStatus | None = None,
+    ) -> RddContractCheck: ...
 
     def load_literature_library_result(self) -> TrackResult: ...
 

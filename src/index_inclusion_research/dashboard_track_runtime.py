@@ -18,6 +18,7 @@ from index_inclusion_research.dashboard_types import (
     FrameworkResult,
     PaperDetailResult,
     RawAnalysisResult,
+    RddContractCheck,
     RddStatus,
     RenderedTable,
     SecondarySection,
@@ -134,6 +135,18 @@ class DashboardTrackRuntime:
 
     def load_rdd_status(self, output_dir: Path | None = None) -> RddStatus:
         return self.content.load_rdd_status(output_dir)
+
+    def load_rdd_contract_check(
+        self,
+        output_dir: Path | None = None,
+        manifest_path: Path | None = None,
+        rdd_status: RddStatus | None = None,
+    ) -> RddContractCheck:
+        return self.content.load_rdd_contract_check(
+            output_dir=output_dir,
+            manifest_path=manifest_path,
+            rdd_status=rdd_status,
+        )
 
     def apply_live_rdd_status_to_identification_scope(self, frame: pd.DataFrame) -> pd.DataFrame:
         return self.content.apply_live_rdd_status_to_identification_scope(frame)

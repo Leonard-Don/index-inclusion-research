@@ -85,3 +85,19 @@ def test_apply_live_rdd_status_updates_evidence_tier_column(monkeypatch) -> None
     assert rdd_row["证据状态"] == "公开重建样本"
     assert rdd_row["当前口径"] == "public proxy"
     assert "公开重建候选样本文件" in rdd_row["来源摘要"]
+
+
+def test_load_rdd_contract_check_delegates_to_content(monkeypatch) -> None:
+    track = _build_track_runtime()
+    expected = {
+        "manifest_exists": True,
+        "manifest_path": "results/real_tables/results_manifest.csv",
+        "manifest_profile": "real",
+        "matches": True,
+        "mismatched_fields": [],
+        "live_status": {"mode": "reconstructed"},
+        "manifest": {"rdd_mode": "reconstructed"},
+    }
+    monkeypatch.setattr(track.content, "load_rdd_contract_check", lambda **kwargs: expected)
+
+    assert track.load_rdd_contract_check() is expected

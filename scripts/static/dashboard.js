@@ -10,17 +10,22 @@
       const refreshSnapshotLabel = document.querySelector("[data-refresh-snapshot-label]");
       const refreshSnapshotCopy = document.querySelector("[data-refresh-snapshot-copy]");
       const refreshNote = document.querySelector("[data-refresh-note]");
+      const refreshArtifactSummaryInline = document.querySelector("[data-refresh-artifact-summary-inline]");
+      const refreshContractSummary = document.querySelector("[data-refresh-contract-summary]");
       const refreshScopeLabel = document.querySelector("[data-refresh-scope-label]");
       const refreshStartedAt = document.querySelector("[data-refresh-started-at]");
       const refreshFinishedAt = document.querySelector("[data-refresh-finished-at]");
       const refreshDuration = document.querySelector("[data-refresh-duration]");
       const refreshSnapshotSource = document.querySelector("[data-refresh-snapshot-source]");
       const refreshArtifacts = document.querySelector("[data-refresh-artifacts]");
+      const refreshArtifactSummaryLabel = document.querySelector("[data-refresh-artifact-summary-label]");
+      const refreshArtifactSummaryCopy = document.querySelector("[data-refresh-artifact-summary-copy]");
       const refreshArtifactList = document.querySelector("[data-refresh-artifact-list]");
       const detailsPanels = Array.from(document.querySelectorAll("[data-details-key]"));
       const waypointElements = Array.from(document.querySelectorAll("[data-waypoint]"));
       const waypointDock = document.querySelector("[data-waypoint-dock]");
       const waypointTitle = document.querySelector("[data-waypoint-title]");
+      const waypointTopLabels = Array.from(document.querySelectorAll("[data-waypoint-top-label]"));
       const waypointCopy = document.querySelector("[data-waypoint-copy]");
       const waypointPrevButton = document.querySelector("[data-waypoint-prev]");
       const waypointNextButton = document.querySelector("[data-waypoint-next]");
@@ -162,12 +167,12 @@
         const status = (payload && payload.status) || "idle";
         const message =
           (payload && payload.message) ||
-          "页面已就绪，可在不离开当前位置的情况下刷新最新结果。";
+          "页面已就绪，结果速览会在刷新后自动更新。";
         const durationSeconds = payload && payload.duration_seconds;
         if (status === "running" && durationSeconds != null) {
           return `${message} 已运行 ${formatDuration(durationSeconds)}。`;
         }
-        if ((status === "succeeded" || status === "failed") && durationSeconds != null) {
+        if (status === "failed" && durationSeconds != null) {
           return `${message} 总耗时约 ${formatDuration(durationSeconds)}。`;
         }
         return message;
@@ -204,9 +209,25 @@
         return `${sourcePath} · ${sourceCount} 个核心文件`;
       }
 
+      function refreshContractSummaryText(payload) {
+        const status = (payload && payload.status) || "idle";
+        if (status === "running") {
+          return "待完成后校验";
+        }
+        return (payload && payload.contract_status_label) || "—";
+      }
+
       function renderRefreshArtifacts(payload) {
         if (!refreshArtifacts || !refreshArtifactList) {
           return;
+        }
+        if (refreshArtifactSummaryLabel) {
+          refreshArtifactSummaryLabel.textContent =
+            (payload && payload.artifact_summary_label) || "—";
+        }
+        if (refreshArtifactSummaryCopy) {
+          refreshArtifactSummaryCopy.textContent =
+            (payload && payload.artifact_summary_copy) || "—";
         }
         const artifacts = Array.isArray(payload && payload.updated_artifacts)
           ? payload.updated_artifacts
@@ -222,7 +243,11 @@
           item.append(path, time);
           refreshArtifactList.append(item);
         });
-        refreshArtifacts.hidden = artifacts.length === 0;
+        refreshArtifactList.hidden = artifacts.length === 0;
+        const hasSummary =
+          Boolean((payload && payload.artifact_summary_label) || "") ||
+          Boolean((payload && payload.artifact_summary_copy) || "");
+        refreshArtifacts.hidden = artifacts.length === 0 && !hasSummary;
       }
 
       function stopRefreshRuntimeTimer() {
@@ -498,6 +523,9 @@
         if (waypointTitle) {
           waypointTitle.textContent = waypointTitleText(item);
         }
+        waypointTopLabels.forEach((label) => {
+          label.textContent = waypointTitleText(item);
+        });
         if (waypointCopy) {
           waypointCopy.textContent =
             item && item.kind === "track"
@@ -680,6 +708,13 @@
         }
         if (refreshSnapshotSource) {
           refreshSnapshotSource.textContent = refreshSnapshotSourceText(payload);
+        }
+        if (refreshArtifactSummaryInline) {
+          refreshArtifactSummaryInline.textContent =
+            (payload && payload.artifact_summary_label) || "—";
+        }
+        if (refreshContractSummary) {
+          refreshContractSummary.textContent = refreshContractSummaryText(payload);
         }
         renderRefreshArtifacts(payload);
         if (refreshNote) {

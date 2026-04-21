@@ -99,6 +99,10 @@ def test_refresh_status_payload_reports_duration_error_and_redirect() -> None:
             "snapshot_copy": "",
             "snapshot_source_path": "",
             "snapshot_source_count": 0,
+            "contract_status_label": "",
+            "contract_status_copy": "",
+            "artifact_summary_label": "",
+            "artifact_summary_copy": "",
             "updated_artifacts": [],
             "baseline_artifact_mtimes": {},
         },
@@ -111,6 +115,15 @@ def test_refresh_status_payload_reports_duration_error_and_redirect() -> None:
             "source_path": "results/real_tables/event_study_summary.csv",
             "source_count": 1,
         },
+        contract_check={
+            "manifest_exists": True,
+            "manifest_path": "results/real_tables/results_manifest.csv",
+            "manifest_profile": "real",
+            "matches": True,
+            "mismatched_fields": [],
+            "live_status": {"mode": "reconstructed"},
+            "manifest": {"rdd_mode": "reconstructed"},
+        },
         redirect_url_builder=lambda mode, anchor, open_panels: f"/?mode={mode}#{anchor}",
         now_ts=170.0,
     )
@@ -121,6 +134,9 @@ def test_refresh_status_payload_reports_duration_error_and_redirect() -> None:
     assert failed_payload["redirect_url"] == ""
     assert failed_payload["snapshot_source_path"] == "results/real_tables/event_study_summary.csv"
     assert failed_payload["snapshot_source_count"] == 1
+    assert failed_payload["contract_status_label"] == "manifest 已同步"
+    assert failed_payload["artifact_summary_label"] == "本次刷新未完成"
+    assert "结果契约：manifest 已同步" in failed_payload["artifact_summary_copy"]
     assert failed_payload["updated_artifacts"] == []
 
     success_payload = dashboard_refresh.refresh_status_payload(
@@ -138,6 +154,10 @@ def test_refresh_status_payload_reports_duration_error_and_redirect() -> None:
             "snapshot_copy": "",
             "snapshot_source_path": "",
             "snapshot_source_count": 0,
+            "contract_status_label": "",
+            "contract_status_copy": "",
+            "artifact_summary_label": "",
+            "artifact_summary_copy": "",
             "updated_artifacts": [],
             "baseline_artifact_mtimes": {},
         },
@@ -150,11 +170,57 @@ def test_refresh_status_payload_reports_duration_error_and_redirect() -> None:
             "source_path": "results/real_tables/event_study_summary.csv",
             "source_count": 1,
         },
+        contract_check={
+            "manifest_exists": True,
+            "manifest_path": "results/real_tables/results_manifest.csv",
+            "manifest_profile": "real",
+            "matches": True,
+            "mismatched_fields": [],
+            "live_status": {"mode": "reconstructed"},
+            "manifest": {"rdd_mode": "reconstructed"},
+        },
         redirect_url_builder=lambda mode, anchor, open_panels: f"/?mode={mode}&open={open_panels}#{anchor}",
         now_ts=170.0,
     )
 
     assert success_payload["redirect_url"] == "/?mode=demo&open=demo-design-detail-tables#framework"
+    assert success_payload["artifact_summary_label"] == "本次未发现新的核心产物"
+    assert "结果契约：manifest 已同步" in success_payload["artifact_summary_copy"]
+
+
+def test_set_refresh_succeeded_records_contract_sync_status() -> None:
+    refresh_state = dashboard_refresh.default_refresh_state()
+
+    dashboard_refresh.set_refresh_succeeded(
+        Lock(),
+        refresh_state,
+        scope_label="全部材料",
+        scope_key="all",
+        snapshot_meta={
+            "label": "2026-04-17 10:02",
+            "copy": "snapshot",
+            "source_path": "results/real_tables/event_study_summary.csv",
+            "source_count": 2,
+        },
+        contract_check={
+            "manifest_exists": False,
+            "manifest_path": "results/real_tables/results_manifest.csv",
+            "manifest_profile": "",
+            "matches": False,
+            "mismatched_fields": [],
+            "live_status": {"mode": "missing"},
+            "manifest": {},
+        },
+        updated_artifacts=[],
+        finished_at="2026-04-17 10:03",
+        finished_ts=180.0,
+    )
+
+    assert refresh_state["contract_status_label"] == "未找到 manifest"
+    assert "results/real_tables/results_manifest.csv" in refresh_state["contract_status_copy"]
+    assert refresh_state["message"] == "“全部材料”刷新完成，结果速览已更新。"
+    assert refresh_state["artifact_summary_label"] == "本次未发现新的核心产物"
+    assert "结果契约：未找到 manifest" in refresh_state["artifact_summary_copy"]
 
 
 def test_queue_refresh_job_sets_running_state_and_blocks_parallel_runs() -> None:

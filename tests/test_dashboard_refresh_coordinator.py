@@ -10,6 +10,15 @@ def _build_coordinator() -> DashboardRefreshCoordinator:
         allowed_keys=frozenset({"demo-design-detail-tables"}),
         track_anchors=frozenset({"price_pressure_track"}),
         dashboard_snapshot_sources=lambda: [],
+        build_rdd_contract_check=lambda: {
+            "manifest_exists": True,
+            "manifest_path": "results/real_tables/results_manifest.csv",
+            "manifest_profile": "real",
+            "matches": True,
+            "mismatched_fields": [],
+            "live_status": {"mode": "reconstructed"},
+            "manifest": {"rdd_mode": "reconstructed"},
+        },
         to_relative=str,
         build_dashboard_snapshot_meta=lambda snapshot_files=None: {
             "label": "snapshot",
@@ -56,6 +65,9 @@ def test_refresh_coordinator_builds_redirect_and_status_payload() -> None:
     assert payload["accepted"] is True
     assert payload["status"] == "idle"
     assert payload["redirect_url"] == ""
+    assert payload["contract_status_label"] == "manifest 已同步"
+    assert payload["artifact_summary_label"] == "当前核心结果"
+    assert "结果契约：manifest 已同步" in payload["artifact_summary_copy"]
 
 
 def test_refresh_coordinator_queue_and_mark_success() -> None:
@@ -84,6 +96,8 @@ def test_refresh_coordinator_queue_and_mark_success() -> None:
 
     assert coordinator.state["status"] == "succeeded"
     assert coordinator.state["scope_key"] == "all"
+    assert coordinator.state["contract_status_label"] == "manifest 已同步"
+    assert coordinator.state["artifact_summary_label"] == "本次未发现新的核心产物"
     assert coordinator.state["updated_artifacts"] == []
 
 

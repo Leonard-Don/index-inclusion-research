@@ -14,6 +14,22 @@
 
 其中第 1 组和第 2 组可以一起提交；第 3、4 组更适合单独拆开。
 
+## 当前推荐运行面
+
+如果你只是想判断“哪些文件代表现在的主运行面”，可以先记这条：
+
+- 当前推荐入口优先看 `src/index_inclusion_research/` 里的包内模块。
+- 对外命令面优先看 `index-inclusion-*` 这组 CLI，或 `python3 -m index_inclusion_research.<module>`。
+- `scripts/*.py` 现在更多是历史兼容层，不应再被当成主干实现的默认落点。
+
+换句话说，这份文档里凡是提到 `scripts/`，大多是在讨论：
+
+- 旧入口是否还能继续跑
+- 兼容层是否应该单独提交
+- 哪些 wrapper 不该和主干重构绑死
+
+而不是在定义“今天这个项目应该从哪里开始运行”。
+
 ## 建议归入 Dashboard Refactor 主提交的范围
 
 这些文件属于当前 dashboard 主干重构的核心范围：
@@ -55,11 +71,12 @@ git add \
 
 ## 建议单独拆出的提交
 
-### A. 兼容旧主线入口脚本
+### A. 历史兼容层
 
-下面这些脚本更像“研究主线兼容入口”，不一定要和 dashboard 主干重构绑定在一个 commit 里：
+下面这些文件更像“历史兼容层”，不一定要和 dashboard 主干重构绑定在一个 commit 里：
 
 ```text
+src/index_inclusion_research/literature_dashboard.py
 scripts/start_literature_dashboard.py
 scripts/start_harris_gurel.py
 scripts/start_shleifer.py
@@ -68,13 +85,19 @@ src/index_inclusion_research/cli.py
 ```
 
 如果你想把提交边界压得更干净，可以把它们单独做成一个兼容性提交。
+这组文件存在的主要意义是保旧入口，不是定义当前推荐运行面。
+真正的推荐运行面仍然在包内模块，例如 `src/index_inclusion_research/literature_dashboard.py`
+和 `src/index_inclusion_research/*_track.py`。
 
 ### B. HS300 RDD 候选样本导入与数据契约
 
-下面这些文件建议单独成组，因为它们解决的是 RDD 输入和校验问题，不是 dashboard 架构问题：
+下面这些文件建议单独成组，因为它们解决的是 RDD 输入和校验问题，不是 dashboard 架构问题。
+其中包内实现是主干，`scripts/` 入口更多只是兼容层：
 
 ```text
 docs/hs300_rdd_data_contract.md
+src/index_inclusion_research/prepare_hs300_rdd_candidates.py
+src/index_inclusion_research/reconstruct_hs300_rdd_candidates.py
 scripts/prepare_hs300_rdd_candidates.py
 scripts/start_hs300_rdd.py
 src/index_inclusion_research/analysis/rdd_candidates.py
@@ -87,6 +110,8 @@ tests/test_prepare_hs300_rdd_candidates.py
 ```bash
 git add \
   docs/hs300_rdd_data_contract.md \
+  src/index_inclusion_research/prepare_hs300_rdd_candidates.py \
+  src/index_inclusion_research/reconstruct_hs300_rdd_candidates.py \
   scripts/prepare_hs300_rdd_candidates.py \
   scripts/start_hs300_rdd.py \
   src/index_inclusion_research/analysis/rdd_candidates.py \
@@ -112,7 +137,7 @@ README.md
 1. 先提交 dashboard core
    `dashboard_*.py`、`results_snapshot.py`、dashboard tests、静态资源、模板、CI、`pyproject.toml`
 2. 再提交 wrapper / CLI 兼容
-   `scripts/start_literature_dashboard.py`、`src/index_inclusion_research/cli.py`、旧研究主线 wrapper
+   `src/index_inclusion_research/literature_dashboard.py`、`scripts/start_literature_dashboard.py`、`src/index_inclusion_research/cli.py`、旧研究主线 wrapper
 3. 再提交 RDD 候选样本导入
 4. 最后单独提交 README 和架构文档
 

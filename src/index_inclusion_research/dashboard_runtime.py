@@ -19,6 +19,7 @@ from index_inclusion_research.dashboard_types import (
     NavSection,
     PaperDetailResult,
     RefreshStatusPayloadBuilder,
+    RddContractCheck,
     RddStatus,
     SnapshotMeta,
     SupplementResult,
@@ -79,6 +80,18 @@ class DashboardRuntime:
 
     def load_rdd_status(self, output_dir: Path | None = None) -> RddStatus:
         return self.track.load_rdd_status(output_dir)
+
+    def load_rdd_contract_check(
+        self,
+        output_dir: Path | None = None,
+        manifest_path: Path | None = None,
+        rdd_status: RddStatus | None = None,
+    ) -> RddContractCheck:
+        return self.track.load_rdd_contract_check(
+            output_dir=output_dir,
+            manifest_path=manifest_path,
+            rdd_status=rdd_status,
+        )
 
     def load_literature_library_result(self) -> TrackResult:
         return self.track.load_literature_library_result()
