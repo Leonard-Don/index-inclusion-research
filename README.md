@@ -1,7 +1,16 @@
 # Index Inclusion Research Toolkit
 
-`index-inclusion-research` 是一个把指数纳入效应文献、真实样本结果与识别设计放到同一工作流里的实证研究项目。  
-项目不再按“3 篇核心文献 + 后续补充”组织，而是以 `16 篇指数效应文献库` 为底座，围绕 3 条研究主线展开：
+[![CI](https://github.com/Leonard-Don/index-inclusion-research/actions/workflows/ci.yml/badge.svg)](https://github.com/Leonard-Don/index-inclusion-research/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.11%2B-3776AB)
+![Research](https://img.shields.io/badge/focus-index%20inclusion%20research-1f6feb)
+
+`index-inclusion-research` 是一个把指数纳入效应文献、真实样本结果与识别设计放到同一工作流里的实证研究项目。它把 `16 篇指数效应文献库`、3 条研究主线、真实样本表和 HS300 RDD 扩展统一到同一个 dashboard 与 CLI 体系里，适合做：
+
+- 指数纳入效应相关论文的文献综述与研究展示
+- 事件研究、匹配回归与中国市场识别的实证复现
+- 面向课堂汇报、导师讨论和项目维护的同一套界面输出
+
+项目不再按“3 篇核心文献 + 后续补充”组织，而是围绕 3 条研究主线展开：
 
 - `短期价格压力与效应减弱`
 - `需求曲线与长期保留`
@@ -13,9 +22,68 @@
 - 价格效应会不会只部分回吐，从而支持需求曲线向下倾斜？
 - 不同市场制度和识别方法会不会改变结论，尤其是在中国市场？
 
-## 你应该先看什么
+## GitHub 首页先看什么
 
-如果你是第一次进入项目，建议按这个顺序看：
+如果你是第一次点进这个仓库，建议先看这 4 件事：
+
+1. 看下面的“界面预览”，先知道项目最终交付长什么样。
+2. 看“快速开始”，在本地把 dashboard 拉起来。
+3. 看 [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)，理解 16 篇文献如何映射到当前项目。
+4. 如果你要继续维护 dashboard 主干，再看 [docs/dashboard_architecture.md](docs/dashboard_architecture.md) 和 [docs/dashboard_commit_boundary.md](docs/dashboard_commit_boundary.md)。
+
+## 界面预览
+
+<table>
+  <tr>
+    <td><strong>首页总览</strong></td>
+    <td><strong>单篇文献速读</strong></td>
+    <td><strong>移动端阅读</strong></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/dashboard-home.png" alt="Dashboard homepage" width="100%"></td>
+    <td><img src="docs/screenshots/paper-brief.png" alt="Paper brief page" width="100%"></td>
+    <td><img src="docs/screenshots/dashboard-mobile.png" alt="Dashboard mobile view" width="100%"></td>
+  </tr>
+</table>
+
+当前仓库没有公开在线 demo，推荐直接在本地运行并打开 `http://localhost:5001`。
+
+## 快速开始
+
+### 1. 安装
+
+```bash
+python3 -m pip install -e ".[dev]"
+```
+
+### 2. 启动 dashboard
+
+```bash
+index-inclusion-dashboard
+```
+
+然后打开 <http://localhost:5001>
+
+### 3. 先看哪些页面
+
+- `/`：一页式总展板，包含文献脉络、样本结果、机制补充和研究边界
+- `/?mode=brief`：3 分钟汇报模式
+- `/?mode=demo`：展示版
+- `/?mode=full`：完整材料
+- `/paper/<paper_id>`：单篇文献速读页
+- `/paper/<paper_id>/pdf`：对应原文 PDF
+
+### 4. 常用验证
+
+```bash
+python3 -m ruff check .
+pytest -q
+RUN_BROWSER_SMOKE=1 pytest -q tests/test_dashboard_browser_smoke.py
+```
+
+## 维护与扩展前先看什么
+
+如果你已经准备继续维护或扩展这个项目，建议按这个顺序看：
 
 1. 看 [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)
    这里解释 16 篇文献如何统一映射到当前项目。
