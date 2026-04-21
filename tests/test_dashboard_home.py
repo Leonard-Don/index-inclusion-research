@@ -246,3 +246,46 @@ def test_dashboard_home_context_builder_builds_and_caches_secondary_sections() -
     assert context["refresh_meta"]["snapshot_label"] == "snapshot"
     assert run_cache["paper_framework"]["prepared_framework"] is True
     assert run_cache["project_supplement"]["prepared_supplement"] is True
+
+
+def test_dashboard_home_context_builder_writes_prepared_secondary_sections_to_live_cache() -> None:
+    snapshot_cache: AnalysisCache = {}
+    live_cache: AnalysisCache = {}
+    builder = DashboardHomeContextBuilder(
+        root=ROOT,
+        analyses={"price_pressure_track": {"title": "短期价格压力与效应减弱"}},
+        run_cache=snapshot_cache,
+        nav_sections_for_mode=lambda mode: [{"anchor": "overview", "label": "总览"}],
+        mode_tabs_for_mode=lambda mode, open_panels: [{"mode": mode, "open_panels": open_panels}],
+        build_dashboard_snapshot_meta=_snapshot_meta,
+        refresh_status_payload=_refresh_payload,
+        overview_notes_for_mode=lambda mode: [{"title": mode, "copy": "note"}],
+        overview_summary_for_mode=lambda mode: f"{mode}-summary",
+        cta_copy_for_mode=lambda mode: f"{mode}-cta",
+        abstract_lead=lambda: "lead",
+        abstract_points=lambda: [{"title": "point", "copy": "copy"}],
+        load_or_build_track_section=lambda analysis_id: {"id": analysis_id},
+        build_track_notes=lambda analysis_id: [{"name": analysis_id, "copy": "note"}],
+        prepare_track_display=lambda section, analysis_id, demo_mode: {**section, "prepared": True},
+        load_literature_framework_result=lambda: {"id": "paper_framework"},
+        prepare_framework_display=lambda section, demo_mode: {"prepared_framework": True, **section},
+        load_supplement_result=lambda: {"id": "project_supplement"},
+        prepare_supplement_display=lambda section, demo_mode: {"prepared_supplement": True, **section},
+        build_sample_design_section=lambda demo_mode: {"id": "design", "demo_mode": demo_mode},
+        build_robustness_section=lambda: {"id": "robustness"},
+        build_limits_section=lambda: {"id": "limits"},
+        write_cache=live_cache,
+    )
+
+    context = builder.build(
+        display_mode="demo",
+        current_open_panels="demo-design-detail-tables",
+        refresh_status_url="/refresh/status",
+    )
+
+    assert context["framework_section"]["prepared_framework"] is True
+    assert context["supplement_section"]["prepared_supplement"] is True
+    assert snapshot_cache["paper_framework"]["prepared_framework"] is True
+    assert snapshot_cache["project_supplement"]["prepared_supplement"] is True
+    assert live_cache["paper_framework"]["prepared_framework"] is True
+    assert live_cache["project_supplement"]["prepared_supplement"] is True

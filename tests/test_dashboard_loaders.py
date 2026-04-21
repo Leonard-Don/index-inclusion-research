@@ -103,6 +103,42 @@ def test_load_saved_tables_prefers_known_order_and_skips_rdd_status(tmp_path: Pa
     assert [label for label, _ in tables] == ["EVENT_STUDY_SUMMARY", "REGRESSION_COEFFICIENTS", "Z_OTHER"]
 
 
+def test_load_single_csv_uses_cached_snapshot_reader(monkeypatch, tmp_path: Path) -> None:
+    target = tmp_path / "nested"
+    target.mkdir()
+    csv_path = target / "event_study_summary.csv"
+    csv_path.write_text("x\n1\n", encoding="utf-8")
+    expected = pd.DataFrame([{"x": 1}])
+    observed: list[tuple[str, bool, bool]] = []
+
+    def _read_cached_csv(path: str | Path, *, low_memory: bool = False, optional: bool = False) -> pd.DataFrame:
+        observed.append((Path(path).name, low_memory, optional))
+        return expected.copy()
+
+    monkeypatch.setattr(dashboard_loaders, "read_cached_csv", _read_cached_csv)
+
+    frame = dashboard_loaders.load_single_csv(tmp_path, "event_study_summary.csv")
+
+    assert frame is not None
+    assert frame.equals(expected)
+    assert observed == [("event_study_summary.csv", False, False)]
+
+
+def test_read_csv_if_exists_uses_optional_cached_reader(monkeypatch, tmp_path: Path) -> None:
+    observed: list[tuple[str, bool, bool]] = []
+
+    def _read_cached_csv(path: str | Path, *, low_memory: bool = False, optional: bool = False) -> pd.DataFrame:
+        observed.append((Path(path).name, low_memory, optional))
+        return pd.DataFrame()
+
+    monkeypatch.setattr(dashboard_loaders, "read_cached_csv", _read_cached_csv)
+
+    frame = dashboard_loaders.read_csv_if_exists(tmp_path / "missing.csv")
+
+    assert frame.empty
+    assert observed == [("missing.csv", False, True)]
+
+
 def test_load_rdd_status_detects_demo_summary(tmp_path: Path) -> None:
     summary_path = tmp_path / "summary.md"
     summary_path.write_text("这是 demo 伪排名数据，用于显式 `--demo` 模式。", encoding="utf-8")

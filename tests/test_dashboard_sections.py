@@ -42,6 +42,10 @@ def test_build_sample_design_section_uses_real_inputs_and_demo_split() -> None:
         "按年份事件分布",
         "数据来源与口径",
     ]
+    assert section["section_view"]["head"]["section_id"] == "design"
+    assert section["section_view"]["detail_figures_title"] == "展开其余样本设计图表（1 张）"
+    assert section["section_view"]["primary"]["key"] == "demo-design-primary-tables"
+    assert section["section_view"]["detail"]["demo_title"] == "展开样本设计补充表（2 张）"
 
 
 def test_build_robustness_section_returns_expected_table_blocks() -> None:
@@ -62,6 +66,10 @@ def test_build_robustness_section_returns_expected_table_blocks() -> None:
         "回归稳健性",
     ]
     assert [table["label"] for table in section["detail_tables"]] == ["长期保留稳健性"]
+    assert section["section_view"]["head"]["section_id"] == "robustness"
+    assert section["section_view"]["show_suite"] is True
+    assert section["section_view"]["primary"]["key"] == "demo-robustness-primary-tables"
+    assert section["section_view"]["detail"]["demo_title"] == "展开稳健性补充表（1 张）"
 
 
 def test_build_limits_section_returns_scope_and_identification_tables() -> None:
@@ -79,6 +87,10 @@ def test_build_limits_section_returns_scope_and_identification_tables() -> None:
     assert "证据等级为" in section["summary_cards"][1]["foot"]
     assert [table["label"] for table in section["primary_tables"]] == ["样本与数据范围"]
     assert [table["label"] for table in section["detail_tables"]] == ["识别范围说明"]
+    assert section["section_view"]["head"]["section_id"] == "limits"
+    assert section["section_view"]["show_suite"] is True
+    assert section["section_view"]["primary"]["key"] == "demo-limits-primary-tables"
+    assert section["section_view"]["detail"]["demo_title"] == "展开研究边界补充表（1 张）"
 
 
 def test_build_limits_section_derives_live_rdd_tier_for_summary_cards_and_scope_table() -> None:

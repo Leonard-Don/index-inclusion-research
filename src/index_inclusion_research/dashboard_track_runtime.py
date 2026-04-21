@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from index_inclusion_research.dashboard_cache import AnalysisCacheStore
 from index_inclusion_research.dashboard_track_content_runtime import DashboardTrackContentRuntime
 from index_inclusion_research.dashboard_track_display_runtime import DashboardTrackDisplayRuntime
 from index_inclusion_research.dashboard_track_support_runtime import DashboardTrackSupportRuntime
@@ -48,7 +49,7 @@ class DashboardTrackRuntime:
         self.framework_card = framework_card
         self.supplement_card = supplement_card
         self.project_module_display_map = project_module_display_map
-        self.run_cache: AnalysisCache = {}
+        self.run_cache: AnalysisCache = AnalysisCacheStore()
 
         self.support = DashboardTrackSupportRuntime(root=root)
         self.content = DashboardTrackContentRuntime(

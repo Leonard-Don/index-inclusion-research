@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 
 from index_inclusion_research import dashboard_figures
 from index_inclusion_research import dashboard_metrics
 from index_inclusion_research import dashboard_presenters
 from index_inclusion_research import dashboard_tracks
+from index_inclusion_research.dashboard_cache import AnalysisCacheStore
 from index_inclusion_research.dashboard_types import (
     AnalysisCache,
     AnalysesConfig,
+    CacheEntry,
     FigureEntry,
     SecondarySection,
     TrackDisplaySection,
@@ -35,6 +38,18 @@ class DashboardTrackDisplayRuntime:
         self.support = support
         self.content = content
 
+    def _snapshot_run_cache(self) -> dict[str, CacheEntry]:
+        if isinstance(self.run_cache, AnalysisCacheStore):
+            return self.run_cache.snapshot()
+        return dict(self.run_cache)
+
+    def _replace_run_cache(self, next_cache: Mapping[str, CacheEntry]) -> None:
+        if isinstance(self.run_cache, AnalysisCacheStore):
+            self.run_cache.replace_all(next_cache)
+            return
+        self.run_cache.clear()
+        self.run_cache.update(dict(next_cache))
+
     def create_price_pressure_figures(self) -> list[FigureEntry]:
         return dashboard_figures.create_price_pressure_figures(
             self.root,
@@ -49,24 +64,39 @@ class DashboardTrackDisplayRuntime:
         )
 
     def run_and_cache_all(self) -> None:
+        staged_cache = self._snapshot_run_cache()
+
+        def _run_and_cache_analysis(analysis_id: str) -> TrackResult:
+            return dashboard_tracks.run_and_cache_analysis(
+                analysis_id,
+                analyses=self.analyses,
+                run_cache=staged_cache,
+                normalize_result=self.content.normalize_result,
+                attach_project_track_context=self.content.attach_project_track_context,
+            )
+
         dashboard_tracks.run_and_cache_all(
             analyses=self.analyses,
-            run_cache=self.run_cache,
-            run_and_cache_analysis=self.run_and_cache_analysis,
+            run_cache=staged_cache,
+            run_and_cache_analysis=_run_and_cache_analysis,
             load_literature_library_result=self.content.load_literature_library_result,
             load_literature_review_result=self.content.load_literature_review_result,
             load_literature_framework_result=self.content.load_literature_framework_result,
             load_supplement_result=self.content.load_supplement_result,
         )
+        self._replace_run_cache(staged_cache)
 
     def run_and_cache_analysis(self, analysis_id: str) -> TrackResult:
-        return dashboard_tracks.run_and_cache_analysis(
+        staged_cache = self._snapshot_run_cache()
+        current = dashboard_tracks.run_and_cache_analysis(
             analysis_id,
             analyses=self.analyses,
-            run_cache=self.run_cache,
+            run_cache=staged_cache,
             normalize_result=self.content.normalize_result,
             attach_project_track_context=self.content.attach_project_track_context,
         )
+        self._replace_run_cache(staged_cache)
+        return current
 
     def load_or_build_track_section(self, analysis_id: str) -> TrackResult:
         return dashboard_tracks.load_or_build_track_section(

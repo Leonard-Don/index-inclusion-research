@@ -47,7 +47,7 @@ REVIEW_CARD: DashboardCard = {
 }
 
 FRAMEWORK_CARD: DashboardCard = {
-    "title": "研究框架",
+    "title": "文献框架",
     "subtitle": "Five Camps",
     "description_zh": "按五大阵营查看 16 篇文献的演进脉络、项目映射与研究表达",
 }

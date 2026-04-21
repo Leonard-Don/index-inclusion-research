@@ -1,0 +1,420 @@
+{% import "_dashboard_shared_macros.html" as shared with context %}
+
+{% macro render_design_section(mode, design_section) -%}
+{% set view = design_section.section_view %}
+<section class="section" id="{{ view.head.section_id }}" data-waypoint data-waypoint-kind="section" data-waypoint-label="{{ view.head.waypoint_label }}">
+  {{ shared.render_section_head(view.head.kicker, view.head.title, view.head.intro, view.head.side_label, design_section.summary) }}
+  {{ shared.render_summary_cards(design_section.summary_cards) }}
+  {% if mode != "brief" %}
+  {{ render_figure_cards(design_section.figures, "primary", "library-panels", true) }}
+  {% if design_section.detail_figures and mode == "demo" %}
+  {{ render_collapsible_figure_group(
+    view.detail_figures_key,
+    view.detail_figures_title,
+    view.detail_figures_copy,
+    design_section.detail_figures
+  ) }}
+  {% endif %}
+  {% if design_section.primary_tables %}
+  {{ render_primary_result_group(
+    view.primary.key,
+    view.primary.title,
+    view.primary["copy"],
+    design_section.primary_tables,
+    view.primary.container,
+    mode == "demo",
+    view.primary.collapsed_copy,
+    view.primary.toggle_label
+  ) }}
+  {% endif %}
+  {% if design_section.detail_tables and mode == "full" %}
+  {{ render_result_group(view.detail.full_title, view.detail.full_copy, design_section.detail_tables, view.detail.container) }}
+  {% endif %}
+  {% if design_section.detail_tables and mode == "demo" %}
+  {{ render_collapsible_table_group(
+    view.detail.demo_key,
+    view.detail.demo_title,
+    view.detail.demo_copy,
+    design_section.detail_tables,
+    view.detail.container,
+    view.detail.kicker,
+    view.detail.toggle_label
+  ) }}
+  {% endif %}
+  {% else %}
+  {{ shared.render_mode_hint(view.brief_mode_hint) }}
+  {% endif %}
+</section>
+{%- endmacro %}
+
+{% macro render_framework_section(mode, framework_section) -%}
+{{ render_table_suite_section(mode, framework_section) }}
+{%- endmacro %}
+
+{% macro render_supplement_section(mode, supplement_section) -%}
+{{ render_table_suite_section(mode, supplement_section) }}
+{%- endmacro %}
+
+{% macro render_robustness_section(robustness_section) -%}
+{{ render_table_suite_section("full", robustness_section) }}
+{%- endmacro %}
+
+{% macro render_limits_section(mode, limits_section) -%}
+{{ render_table_suite_section(mode, limits_section) }}
+{%- endmacro %}
+
+{% macro render_table_cards(items, container_class) -%}
+<div class="{{ container_class }}">
+  {% for item in items %}
+  <div class="result-card {{ item.layout_class }} {{ item.tier }}">
+    <div class="table-label">{{ item.label }}</div>
+    <div class="table-wrap">{{ item.html|safe }}</div>
+    <div class="table-scroll-note" data-table-scroll-note hidden>支持左右滚动，首列已固定</div>
+  </div>
+  {% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro render_result_group(title, copy, items, container_class='library-panels') -%}
+<div class="result-group">
+  <div class="result-group-head">
+    <h4>{{ title }}</h4>
+    <p>{{ copy }}</p>
+  </div>
+  {{ render_table_cards(items, container_class) }}
+</div>
+{%- endmacro %}
+
+{% macro render_section_table_suite(
+  mode,
+  summary_cards,
+  primary,
+  primary_tables,
+  detail,
+  detail_tables
+) -%}
+{{ shared.render_summary_cards(summary_cards) }}
+{% if primary_tables %}
+{{ render_primary_result_group(
+  primary.key,
+  primary.title,
+  primary["copy"],
+  primary_tables,
+  primary.container,
+  mode == 'demo',
+  primary.collapsed_copy,
+  primary.toggle_label
+) }}
+{% endif %}
+{% if detail_tables and mode == 'full' %}
+{{ render_result_group(detail.full_title, detail.full_copy, detail_tables, detail.container) }}
+{% endif %}
+{% if detail_tables and mode == 'demo' %}
+{{ render_collapsible_table_group(
+  detail.demo_key,
+  detail.demo_title,
+  detail.demo_copy,
+  detail_tables,
+  detail.container,
+  detail.kicker,
+  detail.toggle_label
+) }}
+{% endif %}
+{%- endmacro %}
+
+{% macro render_table_suite_section(mode, section) -%}
+{% set view = section.section_view %}
+<section class="section" id="{{ view.head.section_id }}" data-waypoint data-waypoint-kind="section" data-waypoint-label="{{ view.head.waypoint_label }}">
+  {{ shared.render_section_head(view.head.kicker, view.head.title, view.head.intro, view.head.side_label, section.display_summary or section.summary) }}
+  {% if view.show_suite %}
+  {{ render_section_table_suite(
+    mode,
+    section.summary_cards,
+    view.primary,
+    section.primary_tables,
+    view.detail,
+    section.detail_tables
+  ) }}
+  {% endif %}
+</section>
+{%- endmacro %}
+
+{% macro render_figure_cards(figures, tier='primary', container_class='library-panels', eager_first=false) -%}
+<div class="{{ container_class }}">
+  {% for figure in figures %}
+  {{ render_figure_card(figure, tier, eager_first and loop.first) }}
+  {% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro render_primary_result_group(key, title, copy, items, container_class='library-panels', collapse_in_demo=false, collapsed_copy='展示版默认只露出最关键的一张主表，其余主表收进折叠层。', toggle_label='按需展开') -%}
+{% if items %}
+{% if collapse_in_demo and items|length > 1 %}
+<div class="result-group">
+  <div class="result-group-head">
+    <h4>{{ title }}</h4>
+    <p>{{ copy }}</p>
+  </div>
+  {{ render_table_cards(items[:1], container_class) }}
+</div>
+{% call shared.render_details_panel(
+  key,
+  "补充主表",
+  "展开其余主表（%s 张）"|format((items|length) - 1),
+  collapsed_copy,
+  toggle_label
+) %}
+  {{ render_table_cards(items[1:], container_class) }}
+{% endcall %}
+{% else %}
+{{ render_result_group(title, copy, items, container_class) }}
+{% endif %}
+{% endif %}
+{%- endmacro %}
+
+{% macro render_collapsible_figure_group(key, title, copy, figures, kicker='补充图表', toggle_label='展开查看', tier='detail', container_class='library-panels') -%}
+{% if figures %}
+{% call shared.render_details_panel(key, kicker, title, copy, toggle_label) %}
+  {{ render_figure_cards(figures, tier, container_class) }}
+{% endcall %}
+{% endif %}
+{%- endmacro %}
+
+{% macro render_collapsible_table_group(key, title, copy, items, container_class='library-panels', kicker='补充细表', toggle_label='按需展开') -%}
+{% if items %}
+{% call shared.render_details_panel(key, kicker, title, copy, toggle_label) %}
+  {{ render_table_cards(items, container_class) }}
+{% endcall %}
+{% endif %}
+{%- endmacro %}
+
+{% macro render_collapsible_support_group(key, title, copy, papers, kicker='文献支持', toggle_label='展开文献') -%}
+{% if papers %}
+{% call shared.render_details_panel(key, kicker, title, copy, toggle_label) %}
+  {{ shared.render_support_grid(papers) }}
+{% endcall %}
+{% endif %}
+{%- endmacro %}
+
+{% macro render_figure_card(figure, tier='primary', eager=false) -%}
+<div class="result-card {{ figure.layout_class }} {{ tier }}">
+  <div class="table-label">{{ figure.label }}</div>
+  <div class="result-figure">
+    <div class="figure-media-shell">
+      <img
+        src="{{ url_for('serve_result_file', subpath=figure.path) }}"
+        alt="{{ figure.caption }}"
+        {% if figure.width and figure.height %}width="{{ figure.width }}" height="{{ figure.height }}"{% endif %}
+        decoding="async"
+        {% if eager %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
+      >
+    </div>
+    <div class="figure-copy-panel">
+      <div class="figure-copy-block">
+        <div class="figure-copy-kicker">图意</div>
+        <div class="figure-caption">{{ figure.caption_lead if figure.caption_lead else figure.caption }}</div>
+      </div>
+      {% if figure.caption_focus %}
+      <div class="figure-copy-block figure-focus-block">
+        <div class="figure-copy-kicker">阅读重点</div>
+        <div class="figure-focus">{{ figure.caption_focus }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro render_track_panels(section) -%}
+{% set view = section.track_view %}
+<div class="track-panels">
+  <div class="surface">
+    <div class="figure-stack">
+      {% if section.display_figures %}
+      <div class="figure-feature">
+        <div class="figure-media-shell figure-media-shell-feature">
+          <img src="{{ url_for('serve_result_file', subpath=section.display_figures[0].path) }}" alt="{{ section.display_figures[0].caption }}" {% if section.display_figures[0].width and section.display_figures[0].height %}width="{{ section.display_figures[0].width }}" height="{{ section.display_figures[0].height }}"{% endif %} loading="lazy" decoding="async">
+        </div>
+        <div class="figure-copy-panel figure-copy-panel-feature">
+          <div class="figure-copy-block">
+            <div class="figure-copy-kicker">图意</div>
+            <div class="figure-caption">{{ section.display_figures[0].caption_lead if section.display_figures[0].caption_lead else section.display_figures[0].caption }}</div>
+          </div>
+          {% if section.display_figures[0].caption_focus %}
+          <div class="figure-copy-block figure-focus-block">
+            <div class="figure-copy-kicker">阅读重点</div>
+            <div class="figure-focus">{{ section.display_figures[0].caption_focus }}</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% if section.display_figures|length > 1 %}
+      <div class="thumb-grid">
+        {% for figure in section.display_figures[1:5] %}
+        <div class="thumb" title="{{ figure.caption }}">
+          <div class="thumb-media">
+            <img src="{{ url_for('serve_result_file', subpath=figure.path) }}" alt="{{ figure.caption }}" {% if figure.width and figure.height %}width="{{ figure.width }}" height="{{ figure.height }}"{% endif %} loading="lazy" decoding="async">
+          </div>
+          <div class="thumb-copy">
+            <div class="thumb-kicker">补充图 {{ loop.index }}</div>
+            <div class="thumb-caption">{{ figure.caption_lead if figure.caption_lead else figure.caption }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% else %}
+      <div class="surface-empty">当前这条主线暂无可展示图表。</div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="surface">
+    <div class="surface-pad">
+      <div class="surface-head">
+        <h4 class="surface-title">{{ view.meta.surface_title }}</h4>
+        <div class="surface-note">{{ section.badge }}</div>
+      </div>
+      <div class="stat-list">
+        {% for note in section.notes %}
+        <div class="stat-row">
+          <div class="stat-name">{{ note.name }}</div>
+          <div class="stat-copy">{{ note["copy"] }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro render_track_meta(section, index, mode) -%}
+{% set view = section.track_view %}
+<div class="track-meta">
+  <div>
+    <span class="track-index">{{ "%02d"|format(index) }}</span>
+    <h3 class="track-title">{{ section.title }}</h3>
+    <div class="track-subtitle">{{ section.subtitle }}</div>
+  </div>
+  <div>
+    <div class="track-takeaway"><strong>{{ view.meta.takeaway_label }}</strong>{{ section.takeaway }}</div>
+    <div class="track-summary-block">
+      <div class="track-summary-label">{{ view.meta.summary_label }}</div>
+      <div class="track-summary">{{ section.display_summary }}</div>
+    </div>
+    <div class="track-actions">
+      {{ shared.render_refresh_form(url_for('run_analysis', analysis_id=section.anchor, mode=mode), section.anchor, view.meta.refresh_button_label, section.anchor, view.meta.refresh_running_label) }}
+      <div class="track-actions-copy">{{ view.meta.refresh_help_copy }}</div>
+    </div>
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro render_track_section(section, index, mode) -%}
+{% set view = section.track_view %}
+<div class="track" id="{{ section.anchor }}" data-waypoint data-waypoint-kind="track" data-waypoint-label="{{ section.title }}" data-waypoint-parent="主线结果">
+  {{ render_track_meta(section, index, mode) }}
+  {% if section.result_cards %}
+  {{ render_insight_strip(section.result_cards) }}
+  {% endif %}
+  {% if section.status_panel %}
+  {{ render_status_panel(section.status_panel) }}
+  {% endif %}
+  {{ render_track_panels(section) }}
+  {% if section.primary_tables and mode != "brief" %}
+  {{ render_primary_result_group(
+    view.primary.key,
+    view.primary.title,
+    view.primary["copy"],
+    section.primary_tables,
+    view.primary.container,
+    mode == "demo",
+    view.primary.collapsed_copy,
+    view.primary.toggle_label
+  ) }}
+  {% endif %}
+  {% if section.detail_tables and mode == "full" %}
+  {{ render_result_group(view.detail.full_title, view.detail.full_copy, section.detail_tables, view.detail.container) }}
+  {% endif %}
+  {% if section.detail_tables and mode == "demo" %}
+  {{ render_collapsible_table_group(
+    view.detail.demo_key,
+    view.detail.demo_title,
+    view.detail.demo_copy,
+    section.detail_tables,
+    view.detail.container,
+    view.detail.kicker,
+    view.detail.toggle_label
+  ) }}
+  {% endif %}
+  {% if section.display_support_papers and mode == "full" %}
+  {{ render_support_band(section.display_support_papers, view.support_band_title, view.support_band_copy) }}
+  {% endif %}
+  {% if section.display_support_papers and mode == "demo" %}
+  {{ render_collapsible_support_group(
+    view.support_demo_key,
+    view.support_demo_title,
+    view.support_demo_copy,
+    section.display_support_papers,
+    view.support_demo_kicker,
+    view.support_demo_toggle_label
+  ) }}
+  {% endif %}
+</div>
+{%- endmacro %}
+
+{% macro render_tracks_section(track_sections, mode) -%}
+<section class="section" id="tracks" data-waypoint data-waypoint-kind="section" data-waypoint-label="主线结果">
+  {{ shared.render_section_head("研究主线", "三条主线，分别回答三个核心问题。", "分别对应短期冲击、长期保留和识别强度。", "组织方式", "每条主线都先给判断，再补图表、表格和来源材料。") }}
+  {% for section in track_sections %}
+  {{ render_track_section(section, loop.index, mode) }}
+  {% endfor %}
+</section>
+{%- endmacro %}
+
+{% macro render_insight_strip(items) -%}
+<div class="insight-strip">
+  {% for item in items %}
+  <div class="insight-card {{ item.tone if item.tone else '' }}">
+    <div class="insight-label">{{ item.label }}</div>
+    <div class="insight-value">{{ item.value }}</div>
+    <div class="insight-copy">{{ item["copy"] }}</div>
+  </div>
+  {% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro render_status_panel(panel) -%}
+<div class="status-panel status-panel-{{ panel.tone if panel.tone else 'default' }}">
+  <div class="status-panel-band">
+    <div class="status-band-copy">
+      <div class="status-band-label">{{ panel.signal_label }}</div>
+      <div class="status-band-value">{{ panel.signal_value }}</div>
+    </div>
+    <div class="status-pill">{{ panel.title }}</div>
+  </div>
+  <div class="status-panel-head">
+    <div class="status-kicker">{{ panel.kicker }}</div>
+    <h4 class="status-title">{{ panel.title }}</h4>
+    <div class="status-copy">{{ panel["copy"] }}</div>
+  </div>
+  <div class="status-signal-copy">{{ panel.signal_copy }}</div>
+  <div class="status-meta-grid">
+    {% for item in panel.meta %}
+    <div class="status-meta-card">
+      <div class="status-meta-label">{{ item.label }}</div>
+      <div class="status-meta-value">{{ item.value }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro render_support_band(papers, title, copy) -%}
+<div class="support-band">
+  <div class="support-head">
+    <h4>{{ title }}</h4>
+    <p>{{ copy }}</p>
+  </div>
+  {{ shared.render_support_grid(papers) }}
+</div>
+{%- endmacro %}

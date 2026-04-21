@@ -134,9 +134,9 @@ def test_refresh_status_payload_reports_duration_error_and_redirect() -> None:
     assert failed_payload["redirect_url"] == ""
     assert failed_payload["snapshot_source_path"] == "results/real_tables/event_study_summary.csv"
     assert failed_payload["snapshot_source_count"] == 1
-    assert failed_payload["contract_status_label"] == "manifest 已同步"
+    assert failed_payload["contract_status_label"] == "结果状态已同步"
     assert failed_payload["artifact_summary_label"] == "本次刷新未完成"
-    assert "结果契约：manifest 已同步" in failed_payload["artifact_summary_copy"]
+    assert "结果状态：结果状态已同步" in failed_payload["artifact_summary_copy"]
     assert failed_payload["updated_artifacts"] == []
 
     success_payload = dashboard_refresh.refresh_status_payload(
@@ -185,7 +185,7 @@ def test_refresh_status_payload_reports_duration_error_and_redirect() -> None:
 
     assert success_payload["redirect_url"] == "/?mode=demo&open=demo-design-detail-tables#framework"
     assert success_payload["artifact_summary_label"] == "本次未发现新的核心产物"
-    assert "结果契约：manifest 已同步" in success_payload["artifact_summary_copy"]
+    assert "结果状态：结果状态已同步" in success_payload["artifact_summary_copy"]
 
 
 def test_set_refresh_succeeded_records_contract_sync_status() -> None:
@@ -216,11 +216,11 @@ def test_set_refresh_succeeded_records_contract_sync_status() -> None:
         finished_ts=180.0,
     )
 
-    assert refresh_state["contract_status_label"] == "未找到 manifest"
+    assert refresh_state["contract_status_label"] == "缺少结果状态文件"
     assert "results/real_tables/results_manifest.csv" in refresh_state["contract_status_copy"]
-    assert refresh_state["message"] == "“全部材料”刷新完成，结果速览已更新。"
+    assert refresh_state["message"] == "“全部材料”刷新完成，本次更新已同步。"
     assert refresh_state["artifact_summary_label"] == "本次未发现新的核心产物"
-    assert "结果契约：未找到 manifest" in refresh_state["artifact_summary_copy"]
+    assert "结果状态：缺少结果状态文件" in refresh_state["artifact_summary_copy"]
 
 
 def test_queue_refresh_job_sets_running_state_and_blocks_parallel_runs() -> None:
