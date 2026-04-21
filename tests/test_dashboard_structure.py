@@ -21,7 +21,7 @@ def _reset_refresh_state() -> None:
         dashboard.REFRESH_STATE.update(
             {
                 "status": "idle",
-                "message": "页面已就绪，结果速览会在刷新后自动更新。",
+                "message": "页面已就绪，刷新完成后会自动同步本次更新。",
                 "scope_label": "全部材料",
                 "scope_key": "all",
                 "started_at": "",
@@ -115,7 +115,7 @@ def test_literature_result_package_summaries_use_repo_relative_paths() -> None:
 
 
 def test_dashboard_exposes_framework_page() -> None:
-    assert dashboard.FRAMEWORK_CARD["title"] == "研究框架"
+    assert dashboard.FRAMEWORK_CARD["title"] == "文献框架"
     framework = dashboard.runtime.load_literature_framework_result()
     assert framework["id"] == "paper_framework"
     assert "五大阵营" in framework["summary_text"]
@@ -150,23 +150,23 @@ def test_home_dashboard_renders_single_frontend_sections() -> None:
     assert response.status_code == 200
     html = response.get_data(as_text=True)
     status = dashboard.runtime.load_rdd_status()
-    assert "16 篇文献、真实样本与识别设计：指数纳入效应的综合证据" in html
-    assert "三条主线，对应三类核心问题" in html
-    assert "16 篇文献在同一条研究链条中的位置" in html
-    assert "把事件研究结果放回交易机制与执行场景" in html
+    assert "把 16 篇文献、真实样本与识别设计放进同一条研究叙述" in html
+    assert "三条主线，分别回答三个核心问题" in html
+    assert "16 篇文献如何连成一条研究链" in html
+    assert "把结果放回交易机制与执行场景" in html
     assert "展示版" in html
     assert "支撑文献" in html
-    assert "文献讲义" in html
+    assert "查看这篇速读" in html
     assert "识别对象" in html
     assert "挑战的假设" in html
     assert "争论推进" in html
-    assert "结果快照" in html
-    assert "结果速览" in html
-    assert "当前核心结果" in html
+    assert "最近结果" in html
+    assert "本次更新" in html
+    assert "最近结果概览" in html
     assert "更新明细" in html
-    assert "当前识别层级" in html
-    assert "契约一致性" in html
-    assert "manifest 已同步" in html
+    assert "识别层级" in html
+    assert "状态一致性" in html
+    assert "结果状态已同步" in html
     assert dashboard.runtime.load_rdd_status()["evidence_status"] in html
     assert dashboard.runtime.load_rdd_status()["source_label"] in html
     assert "results/real_tables/results_manifest.csv" in html
@@ -198,6 +198,7 @@ def test_home_dashboard_demo_mode_collapses_secondary_material_and_marks_lazy_me
     html = response.get_data(as_text=True)
     assert 'href="/static/dashboard.css"' in html
     assert 'src="/static/dashboard.js"' in html
+    assert 'type="module"' in html
     assert 'data-refresh-status-url="/refresh/status"' in html
     assert 'data-refresh-form' in html
     assert 'data-refresh-panel' in html
@@ -239,10 +240,154 @@ def test_dashboard_static_assets_are_served() -> None:
     js_response = client.get("/static/dashboard.js")
     assert js_response.status_code == 200
     js = js_response.get_data(as_text=True)
-    assert "document.body.dataset.refreshStatusUrl" in js
-    assert "pollRefreshStatus" in js
-    assert "setWaypointMenuOpen" in js
-    assert "updateReadingProgress" in js
+    assert 'from "./dashboard/bootstrap.js"' in js
+    assert "bootstrapDashboard" in js
+
+    bootstrap_response = client.get("/static/dashboard/bootstrap.js")
+    assert bootstrap_response.status_code == 200
+    bootstrap_js = bootstrap_response.get_data(as_text=True)
+    assert 'from "./context.js"' in bootstrap_js
+    assert 'from "./surface.js"' in bootstrap_js
+    assert 'from "./navigation.js"' in bootstrap_js
+    assert 'from "./refresh.js"' in bootstrap_js
+    assert "bootstrapDashboard" in bootstrap_js
+
+    context_response = client.get("/static/dashboard/context.js")
+    assert context_response.status_code == 200
+    context_js = context_response.get_data(as_text=True)
+    assert 'from "./context_groups.js"' in context_js
+    assert "createDashboardContext" in context_js
+
+    context_groups_response = client.get("/static/dashboard/context_groups.js")
+    assert context_groups_response.status_code == 200
+    context_groups_js = context_groups_response.get_data(as_text=True)
+    assert "createNavigationContext" in context_groups_js
+    assert "createRefreshContext" in context_groups_js
+    assert "createSurfaceContext" in context_groups_js
+    assert "createRuntimeContext" in context_groups_js
+
+    surface_response = client.get("/static/dashboard/surface.js")
+    assert surface_response.status_code == 200
+    surface_js = surface_response.get_data(as_text=True)
+    assert 'from "./surface_details.js"' in surface_js
+    assert 'from "./surface_tables.js"' in surface_js
+    assert "createSurfaceController" in surface_js
+
+    surface_details_response = client.get("/static/dashboard/surface_details.js")
+    assert surface_details_response.status_code == 200
+    surface_details_js = surface_details_response.get_data(as_text=True)
+    assert "createDetailsSurface" in surface_details_js
+    assert "shouldCarryDetailsState" in surface_details_js
+
+    surface_tables_response = client.get("/static/dashboard/surface_tables.js")
+    assert surface_tables_response.status_code == 200
+    surface_tables_js = surface_tables_response.get_data(as_text=True)
+    assert "createTableSurface" in surface_tables_js
+    assert "syncAllTableWraps" in surface_tables_js
+
+    navigation_response = client.get("/static/dashboard/navigation.js")
+    assert navigation_response.status_code == 200
+    navigation_js = navigation_response.get_data(as_text=True)
+    assert 'from "./navigation_helpers.js"' in navigation_js
+    assert 'from "./navigation_ui.js"' in navigation_js
+    assert "createNavigationController" in navigation_js
+
+    navigation_helpers_response = client.get("/static/dashboard/navigation_helpers.js")
+    assert navigation_helpers_response.status_code == 200
+    navigation_helpers_js = navigation_helpers_response.get_data(as_text=True)
+    assert "collectWaypoints" in navigation_helpers_js
+    assert "normalizeHashForAllowedSet" in navigation_helpers_js
+
+    navigation_ui_response = client.get("/static/dashboard/navigation_ui.js")
+    assert navigation_ui_response.status_code == 200
+    navigation_ui_js = navigation_ui_response.get_data(as_text=True)
+    assert "setWaypointMenuOpen" in navigation_ui_js
+    assert "updateWaypointDock" in navigation_ui_js
+
+    refresh_response = client.get("/static/dashboard/refresh.js")
+    assert refresh_response.status_code == 200
+    refresh_js = refresh_response.get_data(as_text=True)
+    assert 'from "./refresh_requests.js"' in refresh_js
+    assert 'from "./refresh_presenter.js"' in refresh_js
+    assert "pollRefreshStatus" in refresh_js
+
+    refresh_requests_response = client.get("/static/dashboard/refresh_requests.js")
+    assert refresh_requests_response.status_code == 200
+    refresh_requests_js = refresh_requests_response.get_data(as_text=True)
+    assert "fetchRefreshStatus" in refresh_requests_js
+    assert "postRefreshRequest" in refresh_requests_js
+
+    refresh_presenter_response = client.get("/static/dashboard/refresh_presenter.js")
+    assert refresh_presenter_response.status_code == 200
+    refresh_presenter_js = refresh_presenter_response.get_data(as_text=True)
+    assert "applyRefreshStateToDom" in refresh_presenter_js
+    assert "renderRefreshArtifacts" in refresh_presenter_js
+
+
+def test_dashboard_template_uses_shared_section_and_figure_macros() -> None:
+    macros = (ROOT / "scripts" / "templates" / "_dashboard_macros.html").read_text(encoding="utf-8")
+    shared_macros = (ROOT / "scripts" / "templates" / "_dashboard_shared_macros.html").read_text(encoding="utf-8")
+    overview_macros = (ROOT / "scripts" / "templates" / "_dashboard_overview_macros.html").read_text(encoding="utf-8")
+    content_macros = (ROOT / "scripts" / "templates" / "_dashboard_content_macros.html").read_text(encoding="utf-8")
+    dashboard_template = (ROOT / "scripts" / "templates" / "dashboard.html").read_text(encoding="utf-8")
+
+    assert '{% import "_dashboard_shared_macros.html" as shared with context %}' in macros
+    assert '{% import "_dashboard_overview_macros.html" as overview with context %}' in macros
+    assert '{% import "_dashboard_content_macros.html" as content with context %}' in macros
+    assert "macro render_summary_cards" in shared_macros
+    assert "macro render_details_panel" in shared_macros
+    assert "macro render_hero_section" in overview_macros
+    assert "macro render_waypoint_navigation" in overview_macros
+    assert "macro render_design_section" in content_macros
+    assert "macro render_track_section" in content_macros
+    assert "macro render_table_suite_section" in content_macros
+    assert "macro render_topbar" in macros
+    assert "macro render_section_head" in macros
+    assert "macro render_abstract_panel" in macros
+    assert "macro render_figure_card" in macros
+    assert "macro render_figure_cards" in macros
+    assert "macro render_hero_metrics" in macros
+    assert "macro render_highlight_grid" in macros
+    assert "macro render_refresh_form" in macros
+    assert "macro render_refresh_status_panel" in macros
+    assert "macro render_hero_section" in macros
+    assert "macro render_utility_bar" in macros
+    assert "macro render_core_findings_section" in macros
+    assert "macro render_overview_context" in macros
+    assert "macro render_design_section" in macros
+    assert "macro render_framework_section" in macros
+    assert "macro render_supplement_section" in macros
+    assert "macro render_robustness_section" in macros
+    assert "macro render_limits_section" in macros
+    assert "macro render_insight_strip" in macros
+    assert "macro render_status_panel" in macros
+    assert "macro render_collapsible_figure_group" in macros
+    assert "macro render_collapsible_table_group" in macros
+    assert "macro render_collapsible_support_group" in macros
+    assert "macro render_section_table_suite" in macros
+    assert "macro render_table_suite_section" in macros
+    assert "macro render_track_meta" in macros
+    assert "macro render_track_section" in macros
+    assert "macro render_track_panels" in macros
+    assert "macro render_tracks_section" in macros
+    assert "macro render_cta_strip" in macros
+    assert "macro render_mode_hint" in macros
+    assert "macro render_support_band" in macros
+    assert "macro render_waypoint_navigation" in macros
+    assert '{% import "_dashboard_macros.html" as ui with context %}' in dashboard_template
+    assert "ui.render_topbar(" in dashboard_template
+    assert "ui.render_hero_section(" in dashboard_template
+    assert "ui.render_core_findings_section(" in dashboard_template
+    assert "ui.render_utility_bar(" in dashboard_template
+    assert "ui.render_overview_context(" in dashboard_template
+    assert "ui.render_design_section(" in dashboard_template
+    assert "ui.render_framework_section(" in dashboard_template
+    assert "ui.render_supplement_section(" in dashboard_template
+    assert "ui.render_robustness_section(" in dashboard_template
+    assert "ui.render_limits_section(" in dashboard_template
+    assert "ui.render_tracks_section(" in dashboard_template
+    assert "ui.render_cta_strip(" in dashboard_template
+    assert "ui.render_waypoint_navigation(" in dashboard_template
 
 
 def test_home_dashboard_keeps_mode_tabs_and_refresh_anchor_logic(monkeypatch) -> None:
@@ -414,15 +559,15 @@ def test_home_dashboard_supports_three_minute_mode() -> None:
     assert response.status_code == 200
     html = response.get_data(as_text=True)
     assert "3 分钟汇报" in html
-    assert "3 分钟汇报模式下" in html
-    assert "核心研究结论" in html
-    assert "三条主线，对应三类核心问题" in html
+    assert "3 分钟汇报只保留样本摘要" in html
+    assert "核心结论" in html
+    assert "三条主线，分别回答三个核心问题" in html
     assert "支撑文献" not in html
     assert 'data-section-key="framework"' not in html
     assert 'data-section-key="supplement"' not in html
     assert 'data-allowed-hashes="#overview,#design,#tracks,#limits,#price_pressure_track,#demand_curve_track,#identification_china_track"' in html
-    assert "页面将真实样本、三条研究主线与研究边界压缩为一套适合快速汇报的展示材料" in html
-    assert "页面同步呈现主线结果、文献框架与机制补充" not in html
+    assert "这一模式把真实样本、三条主线与研究边界压缩到一页里" in html
+    assert "页面同步呈现主线结果、文献框架与机制补充，便于在同一叙述里完成现象、机制与识别的说明" not in html
     assert "稳健性检查" not in html
 
 
@@ -442,21 +587,26 @@ def test_paper_route_now_renders_brief_before_pdf() -> None:
     assert 'href="/static/paper.css"' in html
     assert 'src="/static/paper.js"' in html
     assert "<title>Lawrence Harris 等（1986）｜指数纳入效应研究界面</title>" in html
-    assert "单篇文献讲义" in html
+    assert "单篇文献速读" in html
     assert "核心解读" in html
     assert "研究路径" in html
     assert "这篇论文在 16 篇链条中的位置" in html
     assert "结构化信息" in html
     assert "论文信息与深度解读" in html
-    assert "返回文献库" in html
-    assert "打开原文 PDF" in html
+    assert "首页总览" in html
+    assert "返回文献框架" in html
+    assert "查看原文 PDF" in html
     assert "识别对象" in html
     assert "挑战的假设" in html
     assert "争论推进" in html
     assert "前一篇" in html
     assert "后一篇" in html
-    assert "推荐下一篇" in html
-    assert "完整文献演进导航" in html
+    assert "当前这篇" in html
+    assert "相关论文" in html
+    assert "看上一篇" in html
+    assert "看下一篇" in html
+    assert "看相关论文" in html
+    assert "文献导航" in html
     assert "01 ·" in html
     assert "按阵营" in html
     assert "按主线" in html

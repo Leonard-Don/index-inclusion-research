@@ -74,6 +74,10 @@ def test_prepare_track_display_splits_tables_and_keeps_demo_note() -> None:
     assert len(display["primary_tables"]) == 2
     assert display["detail_tables"] == []
     assert display["display_support_papers"] == section["support_papers"]
+    assert display["track_view"]["meta"]["refresh_button_label"] == "只刷新本主线"
+    assert display["track_view"]["primary"]["key"] == "demo-price_pressure_track-primary-tables"
+    assert display["track_view"]["detail"]["demo_title"] == "展开 本主线 的补充细表（0 张）"
+    assert display["track_view"]["support_demo_title"] == "支撑文献（1 篇）"
 
 
 def test_prepare_track_display_updates_identification_copy_for_reconstructed_status() -> None:
@@ -95,7 +99,7 @@ def test_prepare_track_display_updates_identification_copy_for_reconstructed_sta
             "kicker": "证据等级",
             "title": "公开重建样本",
             "tone": "reconstructed",
-            "signal_label": "当前识别层级",
+            "signal_label": "识别层级",
             "signal_value": "L2 · 公开重建样本",
             "signal_copy": "公开重建说明",
             "copy": "状态说明",
@@ -106,9 +110,11 @@ def test_prepare_track_display_updates_identification_copy_for_reconstructed_sta
     assert "L2 · 公开重建样本" in display["display_summary"]
     assert "公开数据版证据链" in display["display_summary"]
     assert "公开重建口径" in display["takeaway"]
-    assert display["notes"][0]["copy"] == "先观察中国样本的事件研究与匹配对照组结果，再看证据等级卡，最后核对 RDD 摘要表与断点图。"
+    assert display["notes"][0]["copy"] == "重点看中国样本的事件研究与匹配结果，再对照证据等级卡和断点回归（RDD）摘要表。"
     assert "L2 · 公开重建样本" in display["notes"][1]["copy"]
     assert "公开重建口径" in display["notes"][1]["copy"]
+    assert display["track_view"]["primary"]["key"] == "demo-identification_china_track-primary-tables"
+    assert display["track_view"]["support_demo_title"] == "支撑文献（0 篇）"
 
 
 def test_prepare_framework_display_orders_tables() -> None:
@@ -131,3 +137,29 @@ def test_prepare_framework_display_orders_tables() -> None:
         "研究表达框架",
     ]
     assert display["summary_cards"][0]["title"] == "卡片"
+    assert display["section_view"]["head"]["section_id"] == "framework"
+    assert display["section_view"]["primary"]["key"] == "demo-framework-primary-tables"
+    assert display["section_view"]["detail"]["demo_title"] == "展开文献框架补充表（2 张）"
+
+
+def test_prepare_supplement_display_assigns_section_view_contract() -> None:
+    section = {
+        "rendered_tables": [
+            ("事件时钟", "<table>clock</table>"),
+            ("机制链", "<table>chain</table>"),
+            ("冲击估算步骤", "<table>steps</table>"),
+            ("冲击估算示例", "<table>example</table>"),
+            ("表达框架", "<table>frame</table>"),
+        ]
+    }
+
+    display = dashboard_presenters.prepare_supplement_display(
+        section,
+        summary_cards=[{"title": "卡片", "kicker": "摘要", "copy": "说明"}],
+    )
+
+    assert [item["label"] for item in display["primary_tables"]] == ["事件时钟", "机制链"]
+    assert [item["label"] for item in display["detail_tables"]] == ["冲击估算步骤", "冲击估算示例", "表达框架"]
+    assert display["section_view"]["head"]["section_id"] == "supplement"
+    assert display["section_view"]["primary"]["key"] == "demo-supplement-primary-tables"
+    assert display["section_view"]["detail"]["demo_title"] == "展开机制补充表（3 张）"

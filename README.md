@@ -1,13 +1,13 @@
 # Index Inclusion Research Toolkit
 
-`index-inclusion-research` 是一个围绕“股票被纳入指数后为什么会上涨”这一问题搭建的实证研究项目。  
-项目现在不再按“3 篇核心文献 + 后续补充”组织，而是以 `16 篇指数效应文献库` 为理论底座，统一抽象成 3 条研究主线：
+`index-inclusion-research` 是一个把指数纳入效应文献、真实样本结果与识别设计放到同一工作流里的实证研究项目。  
+项目不再按“3 篇核心文献 + 后续补充”组织，而是以 `16 篇指数效应文献库` 为底座，围绕 3 条研究主线展开：
 
 - `短期价格压力与效应减弱`
 - `需求曲线与长期保留`
 - `制度识别与中国市场证据`
 
-这三条主线分别对应你在文献中最关心的三个问题：
+这三条主线分别回答 3 个核心问题：
 
 - 指数纳入后的上涨是不是只是短期交易冲击？
 - 价格效应会不会只部分回吐，从而支持需求曲线向下倾斜？
@@ -15,11 +15,11 @@
 
 ## 你应该先看什么
 
-如果你只是想快速进入项目，最推荐的顺序是：
+如果你是第一次进入项目，建议按这个顺序看：
 
 1. 看 [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)
    这里解释 16 篇文献如何统一映射到当前项目。
-2. 如果你要继续维护 dashboard 主干，先看：
+2. 如果你要维护 dashboard 主干，再看：
    [docs/dashboard_architecture.md](docs/dashboard_architecture.md)
    和 [docs/dashboard_commit_boundary.md](docs/dashboard_commit_boundary.md)
 3. 启动界面：
@@ -28,11 +28,11 @@
    ```
    然后打开 <http://localhost:5001>
 4. 在界面里先看首页 `/`：
-    - `3 分钟汇报`：只保留开场结论、样本摘要、三条主线核心证据和研究边界，适合直接给教授讲
+    - `3 分钟汇报`：只保留结论、样本范围和研究边界，适合快速汇报
     - `展示版`：默认模式，适合课堂展示和研究讨论
-    - `完整材料`：显示更多表格、图表和支撑材料，适合自己检查细节
+    - `完整材料`：补全表格、图表和支撑材料，适合核对细节
 
-如果你是要直接跑数据和结果，推荐从“命令行入口”一节开始。
+如果你是要直接跑数据和结果，可以直接跳到“命令行入口”一节。
 
 ## 项目结构
 
@@ -392,7 +392,7 @@ python3 -m index_inclusion_research.literature_dashboard
 ```
 
 这就是当前项目唯一推荐的前端启动方式。
-首页默认进入 `展示版`，更适合汇报和展示；需要更短的口头汇报可切到 `3 分钟汇报`，需要更多表格时可切到 `完整材料`。
+首页默认进入 `展示版`。需要快速汇报时切到 `3 分钟汇报`；需要核对更多表格时切到 `完整材料`。
 
 打开后常用入口：
 
@@ -400,7 +400,7 @@ python3 -m index_inclusion_research.literature_dashboard
 - `/?mode=brief`：3 分钟汇报模式
 - `/?mode=demo`：展示版
 - `/?mode=full`：完整材料
-- `/paper/<paper_id>`：单篇文献讲义页
+- `/paper/<paper_id>`：单篇文献速读页
 - `/paper/<paper_id>/pdf`：打开对应原文 PDF
 
 历史副页入口已经并入首页：
@@ -485,7 +485,7 @@ RUN_BROWSER_SMOKE=1 pytest -q tests/test_dashboard_browser_smoke.py
 - `ruff` lint + 常规单元测试
 - 安装 Chromium 后再跑 dashboard 浏览器 smoke test
 
-如果你准备继续改 dashboard 主干，推荐先看：
+如果你准备继续改 dashboard 主干，先看：
 
 - [docs/dashboard_architecture.md](docs/dashboard_architecture.md)
 - [docs/dashboard_commit_boundary.md](docs/dashboard_commit_boundary.md)
@@ -500,7 +500,7 @@ index-inclusion-identification
 
 ## 哪些文件是“核心文件”
 
-如果你时间不多，优先看这些：
+如果你时间不多，优先看这几项：
 
 - [README.md](README.md)
 - [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)
@@ -528,7 +528,7 @@ index-inclusion-identification
 - `docs/`
 - `config/markets.yml`
 
-`scripts/` 仍然值得保留，但更适合作为兼容层检查对象，而不是默认开发入口。
+`scripts/` 仍然值得保留，但更适合作为兼容层，而不是默认开发入口。
 
 ## 论文写作建议
 

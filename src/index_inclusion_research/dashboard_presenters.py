@@ -20,6 +20,13 @@ from index_inclusion_research.dashboard_types import (
     TrackDisplaySection,
     TrackNote,
 )
+from index_inclusion_research.dashboard_view_models import (
+    build_section_head_view,
+    build_table_detail_view,
+    build_table_primary_view,
+    build_table_suite_section_view,
+    build_track_section_view,
+)
 
 def nav_sections_for_mode(mode: ModeName) -> list[NavSection]:
     items = [
@@ -218,9 +225,9 @@ def _update_identification_notes(notes: list[TrackNote], status_panel: StatusPan
         row = dict(note)
         if row.get("name") == "阅读顺序":
             if tone in {"official", "reconstructed"}:
-                row["copy"] = "先观察中国样本的事件研究与匹配对照组结果，再看证据等级卡，最后核对 RDD 摘要表与断点图。"
+                row["copy"] = "重点看中国样本的事件研究与匹配结果，再对照证据等级卡和断点回归（RDD）摘要表。"
             else:
-                row["copy"] = "先观察中国样本的事件研究与匹配对照组结果，再查看 DID 风格摘要，最后单独阅读 RDD 的证据等级卡。"
+                row["copy"] = "重点看中国样本的事件研究与匹配结果，再看双重差分（DID）摘要和断点回归（RDD）证据等级。"
         if row.get("name") == "样本特征":
             if tone == "official":
                 row["copy"] = f"风格识别部分已基于真实样本运行；RDD 当前处于 {signal_value}，可与其他识别结果并列进入正式证据链。"
@@ -247,7 +254,7 @@ def prepare_track_display(
 ) -> TrackDisplaySection:
     curated_summary = {
         "price_pressure_track": "这条主线集中展示短窗口 CAR、公告日与生效日差异，以及交易活跃度变化。当前样本表明，美国市场的公告日效应更强；中国 A 股更值得关注的是生效阶段长期窗口中的调入/调出分化。",
-        "demand_curve_track": "这条主线关注价格冲击是否只在短期出现，还是会在更长窗口中保留。阅读时应重点比较保留率、长窗口 CAR，以及短长窗口之间的差异。",
+        "demand_curve_track": "这条主线关注价格冲击是否只在短期出现，还是会在更长窗口中保留。重点比较长期保留率、长窗口异常收益（CAR）以及短长窗口之间的差异。",
         "identification_china_track": _identification_summary_from_status(status_panel),
     }
     takeaways = {
@@ -266,6 +273,7 @@ def prepare_track_display(
     display["display_figures"] = all_figures[: (3 if demo_mode else 6)]
     display["display_tables"] = decorate_display_tables(curated_tables_by_analysis.get(analysis_id, []))
     display["primary_tables"], display["detail_tables"] = split_items_by_tier(display["display_tables"])
+    display.setdefault("anchor", analysis_id)
     default_badge = "核心结果" if demo_mode else "完整结果"
     if analysis_id == "identification_china_track" and status_panel is not None:
         display["badge"] = f"证据等级 · {status_panel['title']}"
@@ -275,6 +283,12 @@ def prepare_track_display(
     if analysis_id == "identification_china_track":
         display["notes"] = _update_identification_notes(display.get("notes", []), status_panel)
     display["status_panel"] = status_panel
+    display["track_view"] = build_track_section_view(
+        anchor=str(display.get("anchor", "track")),
+        title=str(display.get("title", "本主线")),
+        detail_tables_count=len(display.get("detail_tables", [])),
+        support_papers_count=len(display.get("display_support_papers", [])),
+    )
     return display
 
 
@@ -284,7 +298,7 @@ def prepare_framework_display(
     summary_cards: list[SummaryCard],
 ) -> SecondarySection:
     display: SecondarySection = dict(section)
-    display["display_summary"] = "这里把 16 篇文献组织成一条可以直接讲述的研究史：从 1986 年的经典对决，到现代市场里指数效应的弱化，再到 RDD 方法与中国市场证据的扩展。"
+    display["display_summary"] = "这一页把 16 篇文献整理成一条可直接讲述的研究链：经典对决、效应弱化、RDD 转向，以及中国市场证据。"
     raw_tables = {label: html for label, html in display.get("rendered_tables", [])}
     ordered_tables = [
         ("文献演进总表", raw_tables["文献演进总表"]),
@@ -297,6 +311,30 @@ def prepare_framework_display(
     display["display_tables"] = tables
     display["primary_tables"] = primary_tables
     display["detail_tables"] = detail_tables
+    display["section_view"] = build_table_suite_section_view(
+        head=build_section_head_view(
+            section_id="framework",
+            waypoint_label="文献框架",
+            kicker="文献框架",
+            title="16 篇文献如何连成一条研究链。",
+            intro="重点不是逐篇罗列，而是看每篇文献在争论里的角色。",
+            side_label="阅读焦点",
+        ),
+        primary=build_table_primary_view(
+            key="demo-framework-primary-tables",
+            title="核心摘要表",
+            copy="阵营概览最适合先建立全貌，再回到演进表和表达框架。",
+            container="library-panels",
+            collapsed_copy="展示版默认先显示阵营概览，其余主表按需展开。",
+        ),
+        detail=build_table_detail_view(
+            full_title="补充细表",
+            full_copy="这些表格保留完整演进顺序与表达框架，适合在问答或写作时回到更细的组织方式。",
+            demo_key="demo-framework-detail-tables",
+            demo_title=f"展开文献框架补充表（{len(detail_tables)} 张）",
+            demo_copy="展示版默认收起演进顺序和表达框架，减少首页长度。",
+        ),
+    )
     return display
 
 
@@ -306,7 +344,7 @@ def prepare_supplement_display(
     summary_cards: list[SummaryCard],
 ) -> SecondarySection:
     display: SecondarySection = dict(section)
-    display["display_summary"] = "这部分把事件研究背后的交易逻辑整理成更便于讨论的解释框架，重点在于说明资金何时进场、冲击为何形成，以及价格与流动性如何在不同阶段调整。"
+    display["display_summary"] = "这部分把事件研究背后的交易逻辑整理成更便于讨论的解释框架，重点说明资金何时进场、冲击为何形成，以及价格与流动性如何调整。"
     raw_tables = {label: html for label, html in display.get("rendered_tables", [])}
     ordered_tables = [
         ("事件时钟", raw_tables["事件时钟"]),
@@ -321,26 +359,50 @@ def prepare_supplement_display(
     display["display_tables"] = tables
     display["primary_tables"] = primary_tables
     display["detail_tables"] = detail_tables
+    display["section_view"] = build_table_suite_section_view(
+        head=build_section_head_view(
+            section_id="supplement",
+            waypoint_label="机制补充",
+            kicker="机制补充",
+            title="把结果放回交易机制与执行场景。",
+            intro="先理解事件时钟和机制链，再回到结果本身。",
+            side_label="阅读焦点",
+        ),
+        primary=build_table_primary_view(
+            key="demo-supplement-primary-tables",
+            title="核心摘要表",
+            copy="事件时钟和机制链最适合先建立框架，再把实证结果放回交易逻辑。",
+            container="library-panels",
+            collapsed_copy="展示版默认先显示事件时钟和机制链，其余主表按需展开。",
+        ),
+        detail=build_table_detail_view(
+            full_title="补充细表",
+            full_copy="这里保留冲击估算和表达框架，用于把机制解释进一步转成执行语言或课堂展示语言。",
+            demo_key="demo-supplement-detail-tables",
+            demo_title=f"展开机制补充表（{len(detail_tables)} 张）",
+            demo_copy="展示版默认收起冲击估算和表达框架，先保留主结果。",
+        ),
+    )
     return display
 
 
 def track_notes_for_analysis(analysis_id: str) -> list[TrackNote]:
     if analysis_id == "price_pressure_track":
         return [
-            {"name": "主问题", "copy": "这条主线专门回答指数调入后的上涨是不是主要来自短期交易冲击，而不是长期重估。"},
-            {"name": "阅读顺序", "copy": "先比较调入事件的短窗口 CAR，再看按年份展开的时变结果，最后结合成交量、换手率与波动率变化。"},
-            {"name": "样本特征", "copy": "扩展样本中，美股公告日调入效应更强；中国 A 股更值得关注的是生效阶段长期窗口中的调入/调出分化。"},
+            {"name": "主问题", "copy": "这条主线回答指数调入后的上涨更像短期交易冲击，还是长期重估。"},
+            {"name": "阅读顺序", "copy": "重点看短窗口异常收益（CAR）、按年份展开的变化，以及成交量、换手率与波动率。"},
+            {"name": "样本特征", "copy": "扩展样本中，美股公告日调入效应更强；中国 A 股更值得看的是生效阶段长期窗口里的调入调出分化。"},
         ]
     if analysis_id == "demand_curve_track":
         return [
-            {"name": "主问题", "copy": "这条主线专门判断上涨是不是只短暂发生，还是会保留到更长窗口，从而支持需求曲线向下倾斜。"},
-            {"name": "阅读顺序", "copy": "优先观察 retention ratio、长窗口 CAR 与短长窗口对比，而不是只停留在公告当天的涨跌。"},
-            {"name": "样本特征", "copy": "当前真实样本显示，中美市场都存在一定程度的长期保留，但公告阶段与生效阶段的保留形态并不一致。"},
+            {"name": "主问题", "copy": "这条主线判断上涨是短暂冲击，还是会保留到更长窗口。"},
+            {"name": "阅读顺序", "copy": "重点看长期保留率、长窗口异常收益（CAR）和短长窗口对比，不必只盯公告当天。"},
+            {"name": "样本特征", "copy": "当前真实样本显示，中美市场都存在一定程度的长期保留，但公告阶段和生效阶段并不一致。"},
         ]
     return [
-        {"name": "主问题", "copy": "这条主线专门处理识别问题，回答不同制度背景和识别方法是否会改变对指数效应的判断。"},
-        {"name": "阅读顺序", "copy": "先观察中国样本的事件研究与匹配对照组结果，再查看 DID 风格摘要，最后单独阅读 RDD 的证据等级卡。"},
-        {"name": "样本特征", "copy": "风格识别部分已基于真实样本运行；RDD 会根据当前样本状态进入 L0-L3 的不同证据等级。"},
+        {"name": "主问题", "copy": "这条主线处理识别问题，回答制度背景和识别方法会不会改变结论。"},
+        {"name": "阅读顺序", "copy": "重点看中国样本的事件研究与匹配结果，再看双重差分（DID）摘要和断点回归（RDD）证据等级。"},
+        {"name": "样本特征", "copy": "风格识别部分已基于真实样本运行；断点回归（RDD）会按当前样本状态进入 L0-L3 的不同证据等级。"},
     ]
 
 
@@ -349,33 +411,33 @@ def overview_notes() -> list[NoteItem]:
         {"title": "文献层", "copy": "16 篇文献既可按反方、中性、正方阅读，也可按五大阵营理解研究演进。"},
         {"title": "实证层", "copy": "三条研究主线均已接入真实样本、核心表格与可视化结果。"},
         {"title": "方法层", "copy": "页面将事件研究、匹配回归与 RDD 并置展示，便于比较识别强度。"},
-        {"title": "机制层", "copy": "补充部分展示事件时钟、机制链与冲击估算，用于解释统计结果背后的交易逻辑。"},
+        {"title": "机制层", "copy": "补充部分展示事件时钟、机制链与冲击估算，用于解释结果背后的交易逻辑。"},
     ]
 
 
 def overview_notes_for_mode(mode: ModeName) -> list[NoteItem]:
     if mode == "brief":
         return [
-            {"title": "样本层", "copy": "首页先交代真实样本覆盖、事件窗口口径与跨市场比较的基本范围。"},
-            {"title": "结果层", "copy": "3 分钟汇报模式保留三条研究主线的核心结果，便于快速建立主要结论。"},
-            {"title": "识别层", "copy": "事件研究、匹配回归与 RDD 的识别含义仍保留在主线解释中，只是不再展开完整附加材料。"},
-            {"title": "边界层", "copy": "页面最后仍保留研究边界，用于交代样本期、识别范围与数据口径。"},
+            {"title": "样本层", "copy": "首页先交代真实样本覆盖、事件窗口口径与跨市场比较范围。"},
+            {"title": "结果层", "copy": "3 分钟汇报模式保留三条研究主线的核心结果，便于快速建立结论。"},
+            {"title": "识别层", "copy": "事件研究、匹配回归与 RDD 的识别含义仍保留在主线解释里，只是不再展开完整附加材料。"},
+            {"title": "边界层", "copy": "页面最后仍保留研究边界，用于交代样本期、识别范围和数据口径。"},
         ]
     return overview_notes()
 
 
 def overview_summary() -> str:
     return (
-        "页面将文献框架、真实数据结果、机制解释与识别设计放在同一叙述结构中，"
-        "从而形成一条完整且可连续展开的研究链条。"
+        "首页把文献脉络、真实结果与识别设计放在同一叙述里，"
+        "方便从现象、机制、识别三个层面连续展开。"
     )
 
 
 def overview_summary_for_mode(mode: ModeName) -> str:
     if mode == "brief":
         return (
-            "页面将真实样本、三条研究主线与研究边界压缩为一套适合快速汇报的展示材料，"
-            "用于在较短时间内说明现象、机制与识别三个层面。"
+            "这一模式把真实样本、三条主线与研究边界压缩到一页里，"
+            "适合快速汇报。"
         )
     return overview_summary()
 
@@ -383,7 +445,7 @@ def overview_summary_for_mode(mode: ModeName) -> str:
 def cta_copy_for_mode(mode: ModeName) -> str:
     if mode == "brief":
         return "页面以压缩方式呈现样本、主线与研究边界，适合在较短时间内完成问题提出、证据展示与边界交代。"
-    return "页面同步呈现主线结果、文献框架与机制补充，便于在同一叙述中完成现象、机制与识别三个层面的展示。"
+    return "页面同步呈现主线结果、文献框架与机制补充，便于在同一叙述里完成现象、机制与识别的说明。"
 
 
 def abstract_lead() -> str:
@@ -405,6 +467,6 @@ def abstract_points() -> list[AbstractPoint]:
         },
         {
             "title": "识别层",
-            "copy": "事件研究能够说明现象，匹配回归帮助控制样本差异，而 RDD 则进一步提升识别强度，三者应被视为互补而非替代。",
+            "copy": "事件研究能够说明现象，匹配回归帮助控制样本差异，而断点回归（RDD）则进一步提升识别强度，三者应被视为互补而非替代。",
         },
     ]

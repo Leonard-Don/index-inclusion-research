@@ -74,14 +74,14 @@ def test_load_paper_detail_result_builds_navigation_and_actions() -> None:
     assert result is not None
     assert result["title"] == "Lawrence Harris 等（1986）"
     assert [label for label, _ in result["rendered_tables"]] == ["论文信息", "深度解读"]
-    assert any(card["kicker"] == "当前位置" and card["is_current"] for card in result["sequence_cards"])
+    assert any(card["kicker"] == "当前这篇" and card["is_current"] for card in result["sequence_cards"])
     assert any(card["kicker"] == "前一篇" for card in result["sequence_cards"])
     assert any(card["kicker"] == "后一篇" for card in result["sequence_cards"])
     assert result["recommended_cards"]
     assert all(card["href"].startswith("/paper/") for card in result["recommended_cards"])
     assert [view["id"] for view in result["evolution_nav_views"]] == ["camp", "track", "stance"]
     assert result["primary_actions"] == [
-        {"label": "打开原文 PDF", "href": "/paper/harris_gurel_1986/pdf", "target": "_blank"}
+        {"label": "查看原文 PDF", "href": "/paper/harris_gurel_1986/pdf", "target": "_blank"}
     ]
     assert "·" in result["subtitle"]
     assert result["hero_aside_title"]
