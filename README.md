@@ -24,7 +24,7 @@
    和 [docs/dashboard_commit_boundary.md](docs/dashboard_commit_boundary.md)
 3. 启动界面：
    ```bash
-   python3 scripts/start_literature_dashboard.py
+   index-inclusion-dashboard
    ```
    然后打开 <http://localhost:5001>
 4. 在界面里先看首页 `/`：
@@ -61,7 +61,7 @@ results/
   literature/          仪表盘三条主线对应的结果包
 
 scripts/
-  数据清洗、事件研究、回归、文献仪表盘入口脚本
+  历史兼容脚本与本地 bootstrap 薄 wrapper
 
 src/index_inclusion_research/
   analysis/            事件研究、回归、RDD
@@ -73,6 +73,20 @@ src/index_inclusion_research/
 tests/
   测试
 ```
+
+## 推荐入口与兼容层
+
+当前推荐的运行面只有两类：
+
+- 已安装项目时：优先使用 `index-inclusion-*` 这组 CLI。
+- 未安装 console script 时：优先使用 `python3 -m index_inclusion_research.<module>`。
+
+`scripts/*.py` 现在只保留历史兼容意义：
+
+- 方便旧命令、旧笔记和已有本地工作流继续运行。
+- 本身不再承载主要业务实现，默认不应把它们当成首选入口。
+
+下面正文默认只写当前推荐入口；历史兼容脚本统一放到文末附录。
 
 ## 16 篇文献驱动的三条主线
 
@@ -94,11 +108,7 @@ tests/
 
 研究主线入口：
 
-- `scripts/start_price_pressure_track.py`
-
-兼容旧入口：
-
-- `scripts/start_harris_gurel.py`
+- `index-inclusion-price-pressure`
 
 ### 2. 需求曲线与长期保留
 
@@ -118,11 +128,7 @@ tests/
 
 研究主线入口：
 
-- `scripts/start_demand_curve_track.py`
-
-兼容旧入口：
-
-- `scripts/start_shleifer.py`
+- `index-inclusion-demand-curve`
 
 ### 3. 制度识别与中国市场证据
 
@@ -142,40 +148,26 @@ tests/
 
 研究主线入口：
 
-- `scripts/start_identification_china_track.py`
-
-兼容旧入口：
-
-- `scripts/start_hs300_style.py`
-- `scripts/start_hs300_rdd.py`
+- `index-inclusion-identification`
 
 其中 `RDD` 默认不再自动回退 demo。  
 当 [data/raw/hs300_rdd_candidates.csv](data/raw/hs300_rdd_candidates.csv) 存在且通过校验时，`RDD` 会进入 `L3` 正式边界样本；当 [data/raw/hs300_rdd_candidates.reconstructed.csv](data/raw/hs300_rdd_candidates.reconstructed.csv) 存在且通过校验时，`RDD` 会进入 `L2` 公开重建样本。如需开发演示，请显式运行：
 
 ```bash
-python3 scripts/start_hs300_rdd.py --demo
+index-inclusion-hs300-rdd --demo
 ```
 
 正式字段模板见 [data/raw/hs300_rdd_candidates.template.csv](data/raw/hs300_rdd_candidates.template.csv)，数据契约见 [docs/hs300_rdd_data_contract.md](docs/hs300_rdd_data_contract.md)。
 如果你拿到的是原始候选名单表（CSV / Excel，列名不一定标准），推荐先运行：
 
 ```bash
-python3 scripts/prepare_hs300_rdd_candidates.py \
+index-inclusion-prepare-hs300-rdd \
   --input /path/to/raw_candidates.xlsx \
   --sheet 0 \
   --announce-date 2024-11-29 \
   --effective-date 2024-12-16 \
   --source CSIndex \
   --source-url https://www.csindex.com.cn/
-```
-
-如果你已经安装了项目，也可以改用包内 CLI：
-
-```bash
-index-inclusion-prepare-hs300-rdd \
-  --input /path/to/raw_candidates.xlsx \
-  --sheet 0 \
-  --check-only
 ```
 
 它会先把原始列名规范化成项目要求的字段，再输出标准候选文件、批次审计表和导入摘要；如果只想先验收而不落盘，可以加 `--check-only`。
@@ -242,13 +234,25 @@ index-inclusion-prepare-hs300-rdd \
 ### 1. 生成示例数据
 
 ```bash
-python3 scripts/generate_sample_data.py
+index-inclusion-generate-sample-data
+```
+
+如果你还没有安装 console script，也可以直接运行模块：
+
+```bash
+python3 -m index_inclusion_research.sample_data
 ```
 
 ### 2. 下载真实公开数据
 
 ```bash
-python3 scripts/download_real_data.py
+index-inclusion-download-real-data
+```
+
+如果你还没有安装 console script，也可以直接运行模块：
+
+```bash
+python3 -m index_inclusion_research.real_data
 ```
 
 真实数据说明见 [docs/real_data_notes.md](docs/real_data_notes.md)。
@@ -269,15 +273,15 @@ python3 scripts/download_real_data.py
 当你拿到沪深 300 调样候选名单后，推荐先用导入脚本做标准化和校验：
 
 ```bash
-python3 scripts/prepare_hs300_rdd_candidates.py \
+index-inclusion-prepare-hs300-rdd \
   --input /path/to/raw_candidates.csv \
   --check-only
 ```
 
-如果你已经安装了项目，也可以直接运行：
+如果你还没有安装 console script，也可以直接运行模块：
 
 ```bash
-index-inclusion-prepare-hs300-rdd \
+python3 -m index_inclusion_research.prepare_hs300_rdd_candidates \
   --input /path/to/raw_candidates.csv \
   --check-only
 ```
@@ -285,7 +289,7 @@ index-inclusion-prepare-hs300-rdd \
 确认通过后，再写入正式候选文件：
 
 ```bash
-python3 scripts/prepare_hs300_rdd_candidates.py \
+index-inclusion-prepare-hs300-rdd \
   --input /path/to/raw_candidates.csv \
   --output data/raw/hs300_rdd_candidates.csv \
   --force
@@ -307,7 +311,7 @@ index-inclusion-reconstruct-hs300-rdd \
 
 这条路径会用当前 CSI300 成分股、后续真实调样批次回滚、以及公开价格/总股本代理口径，优先重建当前事件源里“可以稳定回滚”的连续批次后缀；如果只想做单批次，也可以改用 `--announce-date 2024-05-31`。它适合课程论文、方法复现和公开数据版本的稳健性补充，但不应表述为中证官方历史候选排名表。
 
-从下面第 3 步开始，推荐优先使用包内 CLI。它们和脚本入口一样都支持 `--profile auto|sample|real`，默认会自动优先走 real 工作流；如果你想显式生成 sample 版本，可以在相应命令后加 `--profile sample`。
+下面这些命令都推荐优先使用包内 CLI。它们和脚本入口一样都支持 `--profile auto|sample|real`，默认会自动优先走 real 工作流；如果你想显式生成 sample 版本，可以在相应命令后加 `--profile sample`。
 
 ### 3. 清洗事件样本
 
@@ -342,37 +346,49 @@ index-inclusion-run-regressions
 ### 7. 导出论文图表和表格
 
 ```bash
-python3 scripts/make_figures_tables.py
+index-inclusion-make-figures-tables
 ```
 
 这条命令现在会默认自动识别当前工作流：如果仓库里已经存在 `real_*` 数据与结果文件，就优先刷新 `results/real_figures/` 和 `results/real_tables/`，并把当前 `hs300_rdd` 状态一并写入 `identification_scope.csv`。如果你想显式回到旧的 sample 路径，可以改用：
 
 ```bash
-python3 scripts/make_figures_tables.py --profile sample
+index-inclusion-make-figures-tables --profile sample
+```
+
+如果你还没有安装 console script，也可以直接运行模块：
+
+```bash
+python3 -m index_inclusion_research.figures_tables
 ```
 
 ### 8. 自动生成论文结果摘要
 
 ```bash
-python3 scripts/generate_research_report.py
+index-inclusion-generate-research-report
 ```
 
 它也会沿用同样的自动识别逻辑：默认优先读取 `results/real_event_study/` 与 `results/real_regressions/`，并把摘要写到 `results/real_tables/research_summary.md`。如果你要显式生成 sample 版本，可以改用：
 
 ```bash
-python3 scripts/generate_research_report.py --profile sample
+index-inclusion-generate-research-report --profile sample
+```
+
+如果你还没有安装 console script，也可以直接运行模块：
+
+```bash
+python3 -m index_inclusion_research.research_report
 ```
 
 ### 9. 打开文献与结果仪表盘
 
 ```bash
-python3 scripts/start_literature_dashboard.py
+index-inclusion-dashboard
 ```
 
-如果你已经安装了项目，也可以直接用包内 CLI：
+如果你还没有安装 console script，也可以直接运行模块：
 
 ```bash
-index-inclusion-dashboard
+python3 -m index_inclusion_research.literature_dashboard
 ```
 
 这就是当前项目唯一推荐的前端启动方式。
@@ -396,7 +412,7 @@ index-inclusion-dashboard
 如果你需要避免占用默认端口，也可以显式指定：
 
 ```bash
-python3 scripts/start_literature_dashboard.py --port 5002
+index-inclusion-dashboard --port 5002
 ```
 
 安装后的 CLI 入口目前包括：
@@ -407,6 +423,10 @@ index-inclusion-build-price-panel
 index-inclusion-match-controls
 index-inclusion-run-event-study
 index-inclusion-run-regressions
+index-inclusion-generate-sample-data
+index-inclusion-download-real-data
+index-inclusion-make-figures-tables
+index-inclusion-generate-research-report
 index-inclusion-dashboard
 index-inclusion-price-pressure
 index-inclusion-demand-curve
@@ -416,7 +436,27 @@ index-inclusion-prepare-hs300-rdd
 index-inclusion-reconstruct-hs300-rdd
 ```
 
-前五个分别覆盖清洗事件、构面板、匹配对照、事件研究和回归；中间四个对应 dashboard 与三条研究主线；最后三个分别对应 HS300 RDD 运行、候选样本导入和公开口径重建。脚本入口仍然保留，但推荐把 CLI 当作默认调用面。
+前五个分别覆盖清洗事件、构面板、匹配对照、事件研究和回归；接着四个分别覆盖示例数据、真实数据、图表表格导出和研究摘要；中间四个对应 dashboard 与三条研究主线；最后三个分别对应 HS300 RDD 运行、候选样本导入和公开口径重建。默认调用面应该是 CLI；`scripts/` 只保留历史兼容。
+
+## 历史兼容脚本附录
+
+只有在你需要复用旧命令、旧笔记或已有本地脚本时，才建议直接碰这些文件：
+
+- `index-inclusion-dashboard` 对应 `scripts/start_literature_dashboard.py`
+- `index-inclusion-price-pressure` 对应 `scripts/start_harris_gurel.py`
+- `index-inclusion-demand-curve` 对应 `scripts/start_shleifer.py`
+- `index-inclusion-identification` 对应 `scripts/start_hs300_style.py` 与 `scripts/start_hs300_rdd.py`
+- `index-inclusion-build-event-sample` 对应 `scripts/build_event_sample.py`
+- `index-inclusion-build-price-panel` 对应 `scripts/build_price_panel.py`
+- `index-inclusion-match-controls` 对应 `scripts/match_controls.py`
+- `index-inclusion-run-event-study` 对应 `scripts/run_event_study.py`
+- `index-inclusion-run-regressions` 对应 `scripts/run_regressions.py`
+- `index-inclusion-generate-sample-data` 对应 `scripts/generate_sample_data.py`
+- `index-inclusion-download-real-data` 对应 `scripts/download_real_data.py`
+- `index-inclusion-make-figures-tables` 对应 `scripts/make_figures_tables.py`
+- `index-inclusion-generate-research-report` 对应 `scripts/generate_research_report.py`
+- `index-inclusion-prepare-hs300-rdd` 对应 `scripts/prepare_hs300_rdd_candidates.py`
+- `index-inclusion-reconstruct-hs300-rdd` 对应 `scripts/reconstruct_hs300_rdd_candidates.py`
 
 ## 开发与验证
 
@@ -453,9 +493,9 @@ RUN_BROWSER_SMOKE=1 pytest -q tests/test_dashboard_browser_smoke.py
 ### 10. 直接运行三条研究主线
 
 ```bash
-python3 scripts/start_price_pressure_track.py
-python3 scripts/start_demand_curve_track.py
-python3 scripts/start_identification_china_track.py
+index-inclusion-price-pressure
+index-inclusion-demand-curve
+index-inclusion-identification
 ```
 
 ## 哪些文件是“核心文件”
@@ -467,7 +507,7 @@ python3 scripts/start_identification_china_track.py
 - [docs/dashboard_architecture.md](docs/dashboard_architecture.md)
 - [docs/dashboard_commit_boundary.md](docs/dashboard_commit_boundary.md)
 - [docs/literature_review_author_year_cn.md](docs/literature_review_author_year_cn.md)
-- [scripts/start_literature_dashboard.py](scripts/start_literature_dashboard.py)
+- [src/index_inclusion_research/literature_dashboard.py](src/index_inclusion_research/literature_dashboard.py)
 - [src/index_inclusion_research/literature_catalog.py](src/index_inclusion_research/literature_catalog.py)
 - [results/real_tables/research_summary.md](results/real_tables/research_summary.md)
 
@@ -484,10 +524,11 @@ python3 scripts/start_identification_china_track.py
 
 所以平时真正需要维护的“源文件”主要还是：
 
-- `scripts/`
 - `src/index_inclusion_research/`
 - `docs/`
 - `config/markets.yml`
+
+`scripts/` 仍然值得保留，但更适合作为兼容层检查对象，而不是默认开发入口。
 
 ## 论文写作建议
 
@@ -519,7 +560,7 @@ pytest -q
 如果你接下来继续做清理，最值得优先保持稳定的是：
 
 - `src/index_inclusion_research/literature_catalog.py`
-- `scripts/start_literature_dashboard.py`
+- `src/index_inclusion_research/literature_dashboard.py`
 - `docs/literature_to_project_guide.md`
 
 因为这三处现在定义了整个项目的统一主线。

@@ -66,6 +66,7 @@ def build_refresh_coordinator(
         allowed_keys=allowed_keys,
         track_anchors=track_anchors,
         dashboard_snapshot_sources=runtime.dashboard_snapshot_sources,
+        build_rdd_contract_check=runtime.load_rdd_contract_check,
         to_relative=runtime.safe_relative,
         build_dashboard_snapshot_meta=runtime.build_dashboard_snapshot_meta,
         nav_sections_for_mode=runtime.nav_sections_for_mode,

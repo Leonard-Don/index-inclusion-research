@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-from start_shleifer import run_analysis as run_shleifer_analysis
+import sys
+from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
 
-def run_analysis(verbose: bool = True) -> dict[str, object]:
-    result = run_shleifer_analysis(verbose=verbose)
-    result["id"] = "demand_curve_track"
-    result["title"] = "需求曲线与长期保留"
-    result["description"] = "以正方机制文献为底，检验长窗口 CAR、保留率与需求曲线向下倾斜。"
-    result["subtitle"] = "Demand Curves & Long-run Retention"
-    return result
+from index_inclusion_research import demand_curve_track as _demand_curve_track
 
-
-def main() -> None:
-    run_analysis(verbose=True)
+main = _demand_curve_track.main
+run_analysis = _demand_curve_track.run_analysis
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

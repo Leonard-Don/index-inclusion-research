@@ -24,7 +24,7 @@
 ## 推荐用法
 
 ```bash
-python3 scripts/download_real_data.py
-python3 scripts/build_event_sample.py --input data/raw/real_events.csv --output data/processed/real_events_clean.csv
-python3 scripts/build_price_panel.py --events data/processed/real_events_clean.csv --prices data/raw/real_prices.csv --benchmarks data/raw/real_benchmarks.csv --output data/processed/real_event_panel.csv
+index-inclusion-download-real-data
+index-inclusion-build-event-sample --input data/raw/real_events.csv --output data/processed/real_events_clean.csv
+index-inclusion-build-price-panel --events data/processed/real_events_clean.csv --prices data/raw/real_prices.csv --benchmarks data/raw/real_benchmarks.csv --output data/processed/real_event_panel.csv
 ```

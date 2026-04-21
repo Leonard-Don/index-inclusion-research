@@ -28,6 +28,10 @@ def _refresh_payload(mode: str, anchor: str, open_panels: str | None) -> Refresh
         "snapshot_copy": f"{anchor}:{open_panels or ''}",
         "snapshot_source_path": "results/real_tables/event_study_summary.csv",
         "snapshot_source_count": 1,
+        "contract_status_label": "",
+        "contract_status_copy": "",
+        "artifact_summary_label": "",
+        "artifact_summary_copy": "",
         "updated_artifacts": [],
     }
 

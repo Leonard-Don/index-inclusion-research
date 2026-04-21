@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from index_inclusion_research.dashboard_media import build_figure_entry
 from index_inclusion_research.dashboard_types import (
     FigureEntry,
     FormatPValue,
@@ -40,12 +41,13 @@ def significance_stars(p_value: float) -> str:
 
 
 def _price_pressure_figure_entry(path: Path, to_relative: RelativePathBuilder) -> FigureEntry:
-    return {
-        "label": "短窗口 CAR 时间变化图",
-        "caption": "图意：按公告年份追踪调入事件的 CAR[-1,+1]。阅读重点：观察美股公告日效应是否随时间减弱，以及中国样本是否呈现不同的阶段性变化。",
-        "path": to_relative(path),
-        "layout_class": "wide",
-    }
+    return build_figure_entry(
+        path,
+        to_relative=to_relative,
+        label="短窗口 CAR 时间变化图",
+        caption="图意：按公告年份追踪调入事件的 CAR[-1,+1]。阅读重点：观察美股公告日效应是否随时间减弱，以及中国样本是否呈现不同的阶段性变化。",
+        layout_class="wide",
+    )
 
 
 def create_price_pressure_figures(
@@ -174,10 +176,11 @@ def create_identification_figures(
     figure_path = rdd_dir / "car_m1_p1_rdd_main.png"
     if figure_cache_is_fresh([figure_path], [event_level_path]):
         return [
-            {
-                "path": to_relative(figure_path),
-                "caption": "中国样本 RDD 主图。图意：以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。阅读重点：聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
-            }
+            build_figure_entry(
+                figure_path,
+                to_relative=to_relative,
+                caption="中国样本 RDD 主图。图意：以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。阅读重点：聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
+            )
         ]
     fig, ax = plt.subplots(figsize=(10.8, 6.0))
     ax.axvline(0, color="#5c6b77", linestyle="--", linewidth=1.2)
@@ -200,10 +203,11 @@ def create_identification_figures(
     fig.savefig(figure_path, dpi=220)
     plt.close(fig)
     return [
-        {
-            "path": to_relative(figure_path),
-            "caption": "中国样本 RDD 主图。图意：以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。阅读重点：聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
-        }
+        build_figure_entry(
+            figure_path,
+            to_relative=to_relative,
+            caption="中国样本 RDD 主图。图意：以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。阅读重点：聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
+        )
     ]
 
 
@@ -214,36 +218,39 @@ def _sample_design_figure_entries(target_dir: Path, to_relative: RelativePathBui
     mechanism_path = target_dir / "mechanism_regression_coefficients.png"
     match_path = target_dir / "match_diagnostics_overview.png"
     return [
-        {
-            "label": "真实调入调出事件时间线",
-            "caption": "图意：按市场与事件阶段展开所有真实调入/调出事件。阅读重点：观察样本是否集中于少数批次，以及公告日与生效日是否在时间轴上形成清晰层次。",
-            "path": to_relative(timeline_path),
-            "layout_class": "wide",
-        },
-        {
-            "label": "真实样本短窗口 CAR 热力图",
-            "caption": "图意：把三组短窗口 CAR 压缩到同一张热力图中。阅读重点：优先比较美国公告日和中国生效日单元格的方向、幅度与显著性差异。",
-            "path": to_relative(heatmap_path),
-            "layout_class": "wide",
-        },
-        {
-            "label": "主回归处理组系数图",
-            "caption": "图意：展示主回归中处理组变量系数与 95% 置信区间。阅读重点：比较不同市场、不同事件阶段的方向是否一致，以及置信区间是否跨越 0。",
-            "path": to_relative(main_path),
-            "layout_class": "",
-        },
-        {
-            "label": "机制回归系数图",
-            "caption": "图意：把换手率、成交量与波动率三类机制回归放在同一张图中。阅读重点：观察中国 A 股与美国在公告日和生效日的机制方向是否一致。",
-            "path": to_relative(mechanism_path),
-            "layout_class": "",
-        },
-        {
-            "label": "匹配诊断图",
-            "caption": "图意：同时展示匹配状态分布与匹配质量指标。阅读重点：先看匹配成功率，再看三对照构造与行业口径放宽占比，从而判断对照组设计是否稳定。",
-            "path": to_relative(match_path),
-            "layout_class": "wide",
-        },
+        build_figure_entry(
+            timeline_path,
+            to_relative=to_relative,
+            label="真实调入调出事件时间线",
+            caption="图意：按市场与事件阶段展开所有真实调入/调出事件。阅读重点：观察样本是否集中于少数批次，以及公告日与生效日是否在时间轴上形成清晰层次。",
+            layout_class="wide",
+        ),
+        build_figure_entry(
+            heatmap_path,
+            to_relative=to_relative,
+            label="真实样本短窗口 CAR 热力图",
+            caption="图意：把三组短窗口 CAR 压缩到同一张热力图中。阅读重点：优先比较美国公告日和中国生效日单元格的方向、幅度与显著性差异。",
+            layout_class="wide",
+        ),
+        build_figure_entry(
+            main_path,
+            to_relative=to_relative,
+            label="主回归处理组系数图",
+            caption="图意：展示主回归中处理组变量系数与 95% 置信区间。阅读重点：比较不同市场、不同事件阶段的方向是否一致，以及置信区间是否跨越 0。",
+        ),
+        build_figure_entry(
+            mechanism_path,
+            to_relative=to_relative,
+            label="机制回归系数图",
+            caption="图意：把换手率、成交量与波动率三类机制回归放在同一张图中。阅读重点：观察中国 A 股与美国在公告日和生效日的机制方向是否一致。",
+        ),
+        build_figure_entry(
+            match_path,
+            to_relative=to_relative,
+            label="匹配诊断图",
+            caption="图意：同时展示匹配状态分布与匹配质量指标。阅读重点：先看匹配成功率，再看三对照构造与行业口径放宽占比，从而判断对照组设计是否稳定。",
+            layout_class="wide",
+        ),
     ]
 
 

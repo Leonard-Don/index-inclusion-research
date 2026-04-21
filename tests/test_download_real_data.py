@@ -1,17 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-import sys
 
 import pandas as pd
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT / "scripts") not in sys.path:
-    sys.path.insert(0, str(ROOT / "scripts"))
-
-from download_real_data import _build_price_rows, build_cn_events
 from index_inclusion_research.loaders import load_events
+from index_inclusion_research.real_data import _build_price_rows, build_cn_events
 
 
 def test_load_events_infers_inclusion_and_treatment_group(tmp_path: Path) -> None:

@@ -9,23 +9,30 @@
 
 ## 启动链路
 
-推荐入口仍然是：
+推荐入口现在是：
 
 ```bash
-python3 scripts/start_literature_dashboard.py
+index-inclusion-dashboard
 ```
 
 启动路径如下：
 
-1. [scripts/start_literature_dashboard.py](../scripts/start_literature_dashboard.py)
-   只做 repo 路径 bootstrap，然后把控制权交给包内入口。
-2. [src/index_inclusion_research/dashboard_app.py](../src/index_inclusion_research/dashboard_app.py)
+1. [src/index_inclusion_research/cli.py](../src/index_inclusion_research/cli.py)
+   `index-inclusion-dashboard` 会先走统一 CLI wrapper，再委托给包内 dashboard 启动模块。
+2. [src/index_inclusion_research/literature_dashboard.py](../src/index_inclusion_research/literature_dashboard.py)
+   负责解析 dashboard CLI 参数，并把启动职责交给已组装好的 Flask `app`。
+3. [src/index_inclusion_research/dashboard_app.py](../src/index_inclusion_research/dashboard_app.py)
    负责构建全局 `dashboard_application`，并导出当前仍然有用的薄别名：
    `app`、`runtime`、`services`、`route_views`、`ANALYSES` 等。
-3. [src/index_inclusion_research/dashboard_application.py](../src/index_inclusion_research/dashboard_application.py)
+4. [src/index_inclusion_research/dashboard_application.py](../src/index_inclusion_research/dashboard_application.py)
    负责把 `shell`、`services`、`route_views` 和 Flask `app` 组装起来。
 
-如果只是想回答“为什么打开这个页面会走到这里”，先从 `dashboard_app.py -> dashboard_application.py` 看起最快。
+历史兼容层：
+
+- [scripts/start_literature_dashboard.py](../scripts/start_literature_dashboard.py)
+  仍然保留，但它现在只做 repo 路径 bootstrap，然后把控制权交给 `literature_dashboard.py`。
+
+如果只是想回答“为什么打开这个页面会走到这里”，先从 `literature_dashboard.py -> dashboard_app.py -> dashboard_application.py` 看起最快。
 
 ## 分层概览
 

@@ -90,6 +90,7 @@ class DashboardTrackDisplayRuntime:
             analysis_id,
             demo_mode,
             load_rdd_status=self.content.load_rdd_status,
+            load_rdd_contract_check=self.content.load_rdd_contract_check,
             clean_display_text=self.support.clean_display_text,
             render_table=self.support.render_table,
             format_pct=self.support.format_pct,

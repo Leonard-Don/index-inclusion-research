@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-from start_harris_gurel import run_analysis as run_harris_gurel_analysis
+import sys
+from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
 
-def run_analysis(verbose: bool = True) -> dict[str, object]:
-    result = run_harris_gurel_analysis(verbose=verbose)
-    result["id"] = "price_pressure_track"
-    result["title"] = "短期价格压力与效应减弱"
-    result["description"] = "以反方文献和早期事件研究证据为底，检验短窗口 CAR、交易冲击与效应减弱。"
-    result["subtitle"] = "Price Pressure & Disappearing Effect"
-    return result
+from index_inclusion_research import price_pressure_track as _price_pressure_track
 
-
-def main() -> None:
-    run_analysis(verbose=True)
+main = _price_pressure_track.main
+run_analysis = _price_pressure_track.run_analysis
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

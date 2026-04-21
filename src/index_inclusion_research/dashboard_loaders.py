@@ -2,16 +2,14 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import pandas as pd
 
-from index_inclusion_research.rdd_evidence import (
-    rdd_coverage_note,
-    rdd_evidence_tier,
-    rdd_evidence_tier_from_status,
-    rdd_source_kind,
-    rdd_source_label,
+from index_inclusion_research.dashboard_media import build_figure_entry
+from index_inclusion_research.result_contract import (
+    load_rdd_status as load_shared_rdd_status,
+    load_results_manifest as load_shared_results_manifest,
 )
 from index_inclusion_research.dashboard_types import (
     AnalysesConfig,
@@ -23,6 +21,7 @@ from index_inclusion_research.dashboard_types import (
     RawAnalysisResult,
     RawFigureEntry,
     RelativePathBuilder,
+    RddContractCheck,
     RddStatus,
     RddStatusLoader,
     RenderedTable,
@@ -121,23 +120,19 @@ def normalize_result(
     figure_paths: list[FigureEntry] = []
     for item in raw.get("figures", []):
         if isinstance(item, Path):
-            figure_paths.append(
-                {
-                    "path": to_relative(item),
-                    "caption": build_figure_caption(item),
-                }
-            )
+            figure_paths.append(build_figure_entry(item, to_relative=to_relative, caption=build_figure_caption(item)))
         elif isinstance(item, dict) and isinstance(item.get("path"), Path):
             figure_item = cast(RawFigureEntry, item)
             figure_paths.append(
-                {
-                    "path": to_relative(figure_item["path"]),
-                    "caption": build_figure_caption(
+                build_figure_entry(
+                    figure_item["path"],
+                    to_relative=to_relative,
+                    caption=build_figure_caption(
                         figure_item["path"],
                         custom_caption=figure_item.get("caption"),
                         prefix=figure_item.get("prefix"),
                     ),
-                }
+                )
             )
     output_dir = raw.get("output_dir")
     return {
@@ -214,6 +209,23 @@ def rdd_output_dir(root: Path) -> Path:
     return root / "results" / "literature" / "hs300_rdd"
 
 
+def results_manifest_path(root: Path) -> Path:
+    real_manifest = root / "results" / "real_tables" / "results_manifest.csv"
+    if real_manifest.exists():
+        return real_manifest
+    sample_manifest = root / "results" / "tables" / "results_manifest.csv"
+    if sample_manifest.exists():
+        return sample_manifest
+    return real_manifest
+
+
+def _display_path(root: Path, path: Path) -> str:
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return str(path)
+
+
 def _optional_int(value) -> int | None:
     if pd.isna(value):
         return None
@@ -235,150 +247,74 @@ def load_rdd_status(
     output_dir: Path | None = None,
     read_csv_if_exists: CsvFrameReader = read_csv_if_exists,
 ) -> RddStatus:
-    rdd_dir = output_dir or rdd_output_dir(root)
-    status_path = rdd_dir / "rdd_status.csv"
-    if status_path.exists():
-        status_frame = read_csv_if_exists(status_path)
-        if not status_frame.empty:
-            row = status_frame.iloc[0]
-            mode = str(row.get("status", "missing"))
-            evidence_status = str(row.get("evidence_status", "待补正式样本"))
-            evidence_tier = ("" if pd.isna(row.get("evidence_tier")) else str(row.get("evidence_tier"))) or rdd_evidence_tier(mode)
-            if evidence_tier == "—":
-                evidence_tier = rdd_evidence_tier_from_status(evidence_status)
-            candidate_rows = _optional_int(row.get("candidate_rows"))
-            candidate_batches = _optional_int(row.get("candidate_batches"))
-            treated_rows = _optional_int(row.get("treated_rows"))
-            control_rows = _optional_int(row.get("control_rows"))
-            crossing_batches = _optional_int(row.get("crossing_batches"))
-            validation_error = _optional_text(row.get("validation_error"))
-            input_file = _optional_text(row.get("input_file"))
-            source_file = _optional_text(row.get("source_file")) or input_file
-            coverage_note = _optional_text(row.get("coverage_note")) or rdd_coverage_note(
-                mode,
-                candidate_rows=candidate_rows,
-                candidate_batches=candidate_batches,
-                treated_rows=treated_rows,
-                control_rows=control_rows,
-                crossing_batches=crossing_batches,
-                validation_error=validation_error,
-            )
-            return {
-                "mode": mode,
-                "evidence_tier": evidence_tier,
-                "evidence_status": evidence_status,
-                "source_kind": _optional_text(row.get("source_kind")) or rdd_source_kind(mode),
-                "source_label": _optional_text(row.get("source_label")) or rdd_source_label(mode),
-                "source_file": source_file,
-                "generated_at": _optional_text(row.get("generated_at")),
-                "as_of_date": _optional_text(row.get("as_of_date")),
-                "batch_label": _optional_text(row.get("batch_label")),
-                "coverage_note": coverage_note,
-                "message": str(row.get("message", "等待真实候选样本文件。")),
-                "note": str(row.get("note", "等待正式候选样本、公开重建样本，或修复文件校验错误后，RDD 才能进入 L2/L3 证据等级。")),
-                "input_file": input_file,
-                "audit_file": _optional_text(row.get("audit_file")),
-                "candidate_rows": candidate_rows,
-                "candidate_batches": candidate_batches,
-                "treated_rows": treated_rows,
-                "control_rows": control_rows,
-                "crossing_batches": crossing_batches,
-                "validation_error": validation_error,
-            }
+    return load_shared_rdd_status(root, output_dir=output_dir, read_csv_if_exists_fn=read_csv_if_exists)
 
-    summary_path = rdd_dir / "summary.md"
-    if summary_path.exists():
-        summary_text = summary_path.read_text(encoding="utf-8")
-        if "显式 `--demo` 模式" in summary_text or "demo 伪排名数据" in summary_text:
-            return {
-                "mode": "demo",
-                "evidence_tier": rdd_evidence_tier("demo"),
-                "evidence_status": "方法展示",
-                "source_kind": rdd_source_kind("demo"),
-                "source_label": rdd_source_label("demo"),
-                "source_file": "",
-                "generated_at": "",
-                "as_of_date": "",
-                "batch_label": "",
-                "coverage_note": rdd_coverage_note("demo"),
-                "message": "当前为显式 demo 模式，只用于方法展示。",
-                "note": "当前为显式 demo 模式，只用于方法展示，不进入正式证据链。",
-                "input_file": "",
-                "audit_file": "",
-                "candidate_rows": None,
-                "candidate_batches": None,
-                "treated_rows": None,
-                "control_rows": None,
-                "crossing_batches": None,
-                "validation_error": "",
-            }
-        if "当前正在使用公开数据重建的候选样本文件" in summary_text:
-            return {
-                "mode": "reconstructed",
-                "evidence_tier": rdd_evidence_tier("reconstructed"),
-                "evidence_status": "公开重建样本",
-                "source_kind": rdd_source_kind("reconstructed"),
-                "source_label": rdd_source_label("reconstructed"),
-                "source_file": "data/raw/hs300_rdd_candidates.reconstructed.csv",
-                "generated_at": "",
-                "as_of_date": "",
-                "batch_label": "",
-                "coverage_note": rdd_coverage_note("reconstructed"),
-                "message": "当前正在使用公开数据重建的候选样本文件。",
-                "note": "基于公开数据重建的边界样本，可进入公开数据版证据链，但不应表述为中证官方历史候选排名表。",
-                "input_file": "data/raw/hs300_rdd_candidates.reconstructed.csv",
-                "audit_file": "",
-                "candidate_rows": None,
-                "candidate_batches": None,
-                "treated_rows": None,
-                "control_rows": None,
-                "crossing_batches": None,
-                "validation_error": "",
-            }
-        if "当前正在使用你提供的真实候选排名文件" in summary_text:
-            return {
-                "mode": "real",
-                "evidence_tier": rdd_evidence_tier("real"),
-                "evidence_status": "正式边界样本",
-                "source_kind": rdd_source_kind("real"),
-                "source_label": rdd_source_label("real"),
-                "source_file": "",
-                "generated_at": "",
-                "as_of_date": "",
-                "batch_label": "",
-                "coverage_note": rdd_coverage_note("real"),
-                "message": "当前正在使用你提供的真实候选排名文件。",
-                "note": "基于真实候选排名变量，可作为更强识别证据。",
-                "input_file": "",
-                "audit_file": "",
-                "candidate_rows": None,
-                "candidate_batches": None,
-                "treated_rows": None,
-                "control_rows": None,
-                "crossing_batches": None,
-                "validation_error": "",
-            }
+
+def load_results_manifest(
+    root: Path,
+    *,
+    manifest_path: Path | None = None,
+) -> dict[str, Any]:
+    return load_shared_results_manifest(manifest_path or results_manifest_path(root))
+
+
+def build_rdd_contract_check(
+    root: Path,
+    *,
+    rdd_status: RddStatus | None = None,
+    output_dir: Path | None = None,
+    manifest_path: Path | None = None,
+    read_csv_if_exists: CsvFrameReader = read_csv_if_exists,
+) -> RddContractCheck:
+    live_status = (
+        dict(rdd_status)
+        if rdd_status is not None
+        else load_rdd_status(
+            root,
+            output_dir=output_dir,
+            read_csv_if_exists=read_csv_if_exists,
+        )
+    )
+    resolved_manifest_path = manifest_path or results_manifest_path(root)
+    manifest = load_shared_results_manifest(resolved_manifest_path)
+    if not manifest:
+        return {
+            "manifest_exists": False,
+            "manifest_path": _display_path(root, resolved_manifest_path),
+            "manifest_profile": "",
+            "matches": False,
+            "mismatched_fields": [],
+            "live_status": cast(RddStatus, live_status),
+            "manifest": {},
+        }
+
+    field_map = {
+        "mode": "rdd_mode",
+        "evidence_tier": "rdd_evidence_tier",
+        "evidence_status": "rdd_evidence_status",
+        "source_kind": "rdd_source_kind",
+        "source_label": "rdd_source_label",
+        "source_file": "rdd_source_file",
+        "coverage_note": "rdd_coverage_note",
+        "candidate_rows": "rdd_candidate_rows",
+        "candidate_batches": "rdd_candidate_batches",
+        "treated_rows": "rdd_treated_rows",
+        "control_rows": "rdd_control_rows",
+        "crossing_batches": "rdd_crossing_batches",
+    }
+    mismatched_fields = [
+        field
+        for field, manifest_key in field_map.items()
+        if live_status.get(field) != manifest.get(manifest_key)
+    ]
     return {
-        "mode": "missing",
-        "evidence_tier": rdd_evidence_tier("missing"),
-        "evidence_status": "待补正式样本",
-        "source_kind": rdd_source_kind("missing"),
-        "source_label": rdd_source_label("missing"),
-        "source_file": "data/raw/hs300_rdd_candidates.csv",
-        "generated_at": "",
-        "as_of_date": "",
-        "batch_label": "",
-        "coverage_note": rdd_coverage_note("missing"),
-        "message": "等待正式或公开重建候选样本文件：data/raw/hs300_rdd_candidates.csv 或 data/raw/hs300_rdd_candidates.reconstructed.csv。",
-        "note": "等待正式候选样本、公开重建样本，或修复文件校验错误后，RDD 才能进入 L2/L3 证据等级。",
-        "input_file": "data/raw/hs300_rdd_candidates.csv",
-        "audit_file": "",
-        "candidate_rows": None,
-        "candidate_batches": None,
-        "treated_rows": None,
-        "control_rows": None,
-        "crossing_batches": None,
-        "validation_error": "",
+        "manifest_exists": True,
+        "manifest_path": _display_path(root, resolved_manifest_path),
+        "manifest_profile": str(manifest.get("profile", "")),
+        "matches": not mismatched_fields,
+        "mismatched_fields": mismatched_fields,
+        "live_status": cast(RddStatus, live_status),
+        "manifest": manifest,
     }
 
 
@@ -417,10 +353,22 @@ def load_identification_china_saved_result(
 
     figure_paths: list[FigureEntry] = []
     for path in sorted(style_dir.rglob("*.png")):
-        figure_paths.append({"path": to_relative(path), "caption": build_figure_caption(path, prefix="风格识别")})
+        figure_paths.append(
+            build_figure_entry(
+                path,
+                to_relative=to_relative,
+                caption=build_figure_caption(path, prefix="风格识别"),
+            )
+        )
     if rdd_status["mode"] in {"real", "reconstructed"}:
         for path in sorted(rdd_dir.rglob("*.png")):
-            figure_paths.append({"path": to_relative(path), "caption": build_figure_caption(path, prefix="断点回归")})
+            figure_paths.append(
+                build_figure_entry(
+                    path,
+                    to_relative=to_relative,
+                    caption=build_figure_caption(path, prefix="断点回归"),
+                )
+            )
 
     summary_text = "\n\n".join(
         [
@@ -477,10 +425,11 @@ def load_saved_track_result(
         "summary_text": summary_path.read_text(encoding="utf-8"),
         "rendered_tables": load_saved_tables(output_dir),
         "figure_paths": [
-            {
-                "path": to_relative(path),
-                "caption": build_figure_caption(path),
-            }
+            build_figure_entry(
+                path,
+                to_relative=to_relative,
+                caption=build_figure_caption(path),
+            )
             for path in sorted(output_dir.rglob("*.png"))
         ],
         "output_dir": to_relative(output_dir),

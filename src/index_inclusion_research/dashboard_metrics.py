@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pandas as pd
+
 from index_inclusion_research import dashboard_loaders
 from index_inclusion_research.results_snapshot import ResultsSnapshot
 from index_inclusion_research.dashboard_types import (
@@ -9,6 +11,7 @@ from index_inclusion_research.dashboard_types import (
     FormatPValue,
     ResultCard,
     RenderedTable,
+    RddContractCheck,
     RddStatus,
     StatusPanel,
     SummaryCard,
@@ -40,6 +43,23 @@ def _hs300_rdd_reconstruct_command() -> str:
         "index-inclusion-reconstruct-hs300-rdd --all-batches "
         "--output data/raw/hs300_rdd_candidates.reconstructed.csv --force"
     )
+
+
+def _build_retention_ratio_card(
+    row: pd.Series,
+    *,
+    label: str,
+    valid_copy: str,
+) -> ResultCard:
+    raw_ratio = row.get("retention_ratio")
+    raw_valid = row.get("retention_ratio_valid")
+    is_valid = str(raw_valid).strip().lower() in {"true", "1", "yes"}
+    if is_valid and pd.notna(raw_ratio):
+        return {"label": label, "value": f"{float(raw_ratio):.2f}", "copy": valid_copy}
+
+    raw_note = row.get("retention_note")
+    note = str(raw_note).strip() if pd.notna(raw_note) and str(raw_note).strip() else "短窗口基数过小，不适合解释保留率。"
+    return {"label": label, "value": "暂不解释", "copy": note}
 
 
 def build_library_summary_cards() -> list[SummaryCard]:
@@ -201,10 +221,22 @@ def build_demand_curve_cards(
         ]
         if not us_announce.empty:
             row = us_announce.iloc[0]
-            cards.append({"label": "美股公告日保留率", "value": f"{float(row['retention_ratio']):.2f}", "copy": "大于 1 表示长窗口效应仍在累积"})
+            cards.append(
+                _build_retention_ratio_card(
+                    row,
+                    label="美股公告日保留率",
+                    valid_copy="大于 1 表示长窗口效应仍在累积",
+                )
+            )
         if not cn_effective.empty:
             row = cn_effective.iloc[0]
-            cards.append({"label": "A 股生效日保留率", "value": f"{float(row['retention_ratio']):.2f}", "copy": "用于比较中国样本的长期保留程度"})
+            cards.append(
+                _build_retention_ratio_card(
+                    row,
+                    label="A 股生效日保留率",
+                    valid_copy="用于比较中国样本的长期保留程度",
+                )
+            )
     if event is not None:
         us_long = event.loc[
             (event["market"] == "US")
@@ -283,7 +315,45 @@ def build_identification_cards(
     return cards[:4]
 
 
-def build_identification_status_panel(rdd_status: RddStatus) -> StatusPanel | None:
+def _contract_field_label(field: str) -> str:
+    labels = {
+        "mode": "模式",
+        "evidence_tier": "证据等级",
+        "evidence_status": "证据状态",
+        "source_kind": "来源类型",
+        "source_label": "来源摘要",
+        "source_file": "来源文件",
+        "coverage_note": "覆盖说明",
+        "candidate_rows": "候选样本数",
+        "candidate_batches": "候选批次数",
+        "treated_rows": "调入样本数",
+        "control_rows": "对照样本数",
+        "crossing_batches": "跨 cutoff 批次数",
+    }
+    return labels.get(field, field)
+
+
+def _contract_consistency_copy(contract_check: RddContractCheck | None) -> str:
+    if contract_check is None:
+        return "当前未附加 results_manifest 校验；页面按照 live RDD 状态渲染。"
+    manifest_path = contract_check["manifest_path"]
+    if not contract_check["manifest_exists"]:
+        return f"未找到 {manifest_path}；页面当前按 live RDD 状态渲染。"
+    if contract_check["matches"]:
+        return f"已校验：{manifest_path} 与 live RDD 状态一致。"
+    mismatch_labels = "、".join(_contract_field_label(field) for field in contract_check["mismatched_fields"])
+    return (
+        f"发现 {manifest_path} 与 live RDD 状态在 {mismatch_labels} 上不一致；"
+        "页面当前以 live RDD 状态为准，建议重跑 index-inclusion-make-figures-tables 和 "
+        "index-inclusion-generate-research-report。"
+    )
+
+
+def build_identification_status_panel(
+    rdd_status: RddStatus,
+    *,
+    contract_check: RddContractCheck | None = None,
+) -> StatusPanel | None:
     mode = rdd_status["mode"]
     if rdd_status.get("candidate_batches"):
         sample_overview = (
@@ -367,6 +437,7 @@ def build_identification_status_panel(rdd_status: RddStatus) -> StatusPanel | No
         "copy": panel_copy,
         "meta": [
             {"label": "样本来源", "value": source_meta},
+            {"label": "契约一致性", "value": _contract_consistency_copy(contract_check)},
             {"label": "覆盖说明", "value": coverage_meta},
             {"label": "当前状态", "value": sample_overview},
             {"label": "推荐下一步", "value": next_step_copy},

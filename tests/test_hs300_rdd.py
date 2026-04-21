@@ -1,16 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-import sys
 
 import pandas as pd
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT / "scripts") not in sys.path:
-    sys.path.insert(0, str(ROOT / "scripts"))
-
-import start_hs300_rdd as hs300_rdd
+from index_inclusion_research import hs300_rdd
 
 
 def _valid_candidate_frame() -> pd.DataFrame:

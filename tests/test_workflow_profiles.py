@@ -2,14 +2,8 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-import sys
 
-
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT / "scripts") not in sys.path:
-    sys.path.insert(0, str(ROOT / "scripts"))
-
-import _workflow_profiles as workflow_profiles
+from index_inclusion_research import workflow_profiles
 
 
 def _args(**overrides: str) -> argparse.Namespace:

@@ -22,6 +22,7 @@ from index_inclusion_research.dashboard_types import (
     RefreshSuccessHandler,
     RefreshWorkerSpawner,
     RelativePathBuilder,
+    RddContractCheck,
     SnapshotMeta,
 )
 
@@ -29,7 +30,7 @@ from index_inclusion_research.dashboard_types import (
 def default_refresh_state() -> RefreshState:
     return {
         "status": "idle",
-        "message": "页面已就绪，可在不离开当前位置的情况下刷新最新结果。",
+        "message": "页面已就绪，结果速览会在刷新后自动更新。",
         "scope_label": "全部材料",
         "scope_key": "all",
         "started_at": "",
@@ -41,6 +42,10 @@ def default_refresh_state() -> RefreshState:
         "snapshot_copy": "",
         "snapshot_source_path": "",
         "snapshot_source_count": 0,
+        "contract_status_label": "",
+        "contract_status_copy": "",
+        "artifact_summary_label": "",
+        "artifact_summary_copy": "",
         "updated_artifacts": [],
         "baseline_artifact_mtimes": {},
     }
@@ -52,12 +57,79 @@ def dashboard_snapshot_sources(root: Path) -> list[Path]:
         root / "results" / "real_tables" / "long_window_event_study_summary.csv",
         root / "results" / "real_tables" / "regression_coefficients.csv",
         root / "results" / "real_tables" / "identification_scope.csv",
+        root / "results" / "real_tables" / "results_manifest.csv",
         root / "results" / "literature" / "harris_gurel" / "summary.md",
         root / "results" / "literature" / "shleifer" / "summary.md",
         root / "results" / "literature" / "hs300_style" / "summary.md",
         root / "results" / "literature" / "hs300_rdd" / "rdd_status.csv",
     ]
     return [path for path in tracked if path.exists()]
+
+
+def _contract_field_label(field: str) -> str:
+    labels = {
+        "mode": "模式",
+        "evidence_tier": "证据等级",
+        "evidence_status": "证据状态",
+        "source_kind": "来源类型",
+        "source_label": "来源摘要",
+        "source_file": "来源文件",
+        "coverage_note": "覆盖说明",
+        "candidate_rows": "候选样本数",
+        "candidate_batches": "候选批次数",
+        "treated_rows": "调入样本数",
+        "control_rows": "对照样本数",
+        "crossing_batches": "跨 cutoff 批次数",
+    }
+    return labels.get(field, field)
+
+
+def refresh_contract_status(contract_check: RddContractCheck | None) -> tuple[str, str]:
+    if contract_check is None:
+        return ("未校验", "刷新状态未附带结果契约校验。")
+    manifest_path = contract_check["manifest_path"] or "results_manifest.csv"
+    if not contract_check["manifest_exists"]:
+        return ("未找到 manifest", f"未找到 {manifest_path}；刷新完成后请补生成结构化结果契约文件。")
+    if contract_check["matches"]:
+        return ("manifest 已同步", f"{manifest_path} 已和 live RDD 状态保持一致。")
+    mismatch_labels = "、".join(_contract_field_label(field) for field in contract_check["mismatched_fields"])
+    return (
+        "manifest 待同步",
+        f"{manifest_path} 与 live RDD 状态在 {mismatch_labels} 上不一致；建议重跑 index-inclusion-make-figures-tables 和 index-inclusion-generate-research-report。",
+    )
+
+
+def refresh_artifact_summary(
+    *,
+    status: RefreshStatus,
+    updated_artifacts: list[RefreshArtifact],
+    contract_check: RddContractCheck | None,
+) -> tuple[str, str]:
+    contract_status_label, contract_status_copy = refresh_contract_status(contract_check)
+    if status == "running":
+        return ("本次刷新进行中", "正在生成最新核心产物；结果契约将在刷新完成后重新校验。")
+    if status == "failed":
+        return ("本次刷新未完成", f"当前页面仍显示上一个成功快照；结果契约：{contract_status_label}。{contract_status_copy}")
+    if status != "succeeded":
+        return ("当前核心结果", f"结果契约：{contract_status_label}。{contract_status_copy}")
+
+    artifact_count = len(updated_artifacts)
+    if artifact_count <= 0:
+        return (
+            "本次未发现新的核心产物",
+            f"本次刷新未检测到新的核心结果文件变化；结果契约：{contract_status_label}。{contract_status_copy}",
+        )
+
+    preview_paths = [str(item.get("path", "") or "") for item in updated_artifacts[:2] if item.get("path")]
+    preview = "、".join(preview_paths)
+    if preview and artifact_count > len(preview_paths):
+        preview = f"{preview} 等 {artifact_count} 项"
+    elif not preview:
+        preview = f"共 {artifact_count} 项"
+    return (
+        f"本次更新 {artifact_count} 项核心产物",
+        f"最近变更：{preview}；结果契约：{contract_status_label}。{contract_status_copy}",
+    )
 
 
 def build_dashboard_snapshot_meta(
@@ -225,12 +297,13 @@ def refresh_status_payload(
     anchor: str,
     open_panels: str | None,
     snapshot_meta: SnapshotMeta,
+    contract_check: RddContractCheck | None,
     redirect_url_builder: RefreshRedirectUrlBuilder,
     now_ts: float,
     accepted: bool = True,
 ) -> RefreshStatusPayload:
     status = state.get("status", "idle")
-    message = str(state.get("message", "") or "页面已就绪，可在不离开当前位置的情况下刷新最新结果。")
+    message = str(state.get("message", "") or "页面已就绪，结果速览会在刷新后自动更新。")
     scope_label = str(state.get("scope_label", "全部材料") or "全部材料")
     scope_key = str(state.get("scope_key", "all") or "all")
     error = str(state.get("error", "") or "")
@@ -240,7 +313,17 @@ def refresh_status_payload(
     snapshot_copy = str(state.get("snapshot_copy", "") or snapshot_meta["copy"])
     snapshot_source_path = str(state.get("snapshot_source_path", "") or snapshot_meta["source_path"])
     snapshot_source_count = int(state.get("snapshot_source_count", 0) or snapshot_meta["source_count"])
+    contract_status_label, contract_status_copy = refresh_contract_status(contract_check)
+    contract_status_label = str(state.get("contract_status_label", "") or contract_status_label)
+    contract_status_copy = str(state.get("contract_status_copy", "") or contract_status_copy)
     updated_artifacts = list(state.get("updated_artifacts", []) or [])
+    artifact_summary_label, artifact_summary_copy = refresh_artifact_summary(
+        status=status,
+        updated_artifacts=updated_artifacts,
+        contract_check=contract_check,
+    )
+    artifact_summary_label = str(state.get("artifact_summary_label", "") or artifact_summary_label)
+    artifact_summary_copy = str(state.get("artifact_summary_copy", "") or artifact_summary_copy)
     duration_seconds = refresh_duration_seconds(started_ts, finished_ts, status, now_ts=now_ts)
     if status == "failed" and error:
         message = f"{message} {error}"
@@ -262,6 +345,10 @@ def refresh_status_payload(
         "snapshot_copy": snapshot_copy,
         "snapshot_source_path": snapshot_source_path,
         "snapshot_source_count": snapshot_source_count,
+        "contract_status_label": contract_status_label,
+        "contract_status_copy": contract_status_copy,
+        "artifact_summary_label": artifact_summary_label,
+        "artifact_summary_copy": artifact_summary_copy,
         "updated_artifacts": updated_artifacts,
     }
 
@@ -273,17 +360,24 @@ def set_refresh_succeeded(
     scope_label: str,
     scope_key: str,
     snapshot_meta: SnapshotMeta,
+    contract_check: RddContractCheck | None,
     updated_artifacts: list[RefreshArtifact],
     finished_at: str,
     finished_ts: float,
 ) -> None:
+    contract_status_label, contract_status_copy = refresh_contract_status(contract_check)
+    artifact_summary_label, artifact_summary_copy = refresh_artifact_summary(
+        status="succeeded",
+        updated_artifacts=updated_artifacts,
+        contract_check=contract_check,
+    )
     with refresh_lock:
         refresh_state.update(
             {
                 "status": "succeeded",
                 "scope_label": scope_label,
                 "scope_key": scope_key,
-                "message": f'“{scope_label}”刷新完成，最新快照时间为 {snapshot_meta["label"]}。',
+                "message": f'“{scope_label}”刷新完成，结果速览已更新。',
                 "finished_at": finished_at,
                 "finished_ts": finished_ts,
                 "error": "",
@@ -291,6 +385,10 @@ def set_refresh_succeeded(
                 "snapshot_copy": snapshot_meta["copy"],
                 "snapshot_source_path": snapshot_meta["source_path"],
                 "snapshot_source_count": snapshot_meta["source_count"],
+                "contract_status_label": contract_status_label,
+                "contract_status_copy": contract_status_copy,
+                "artifact_summary_label": artifact_summary_label,
+                "artifact_summary_copy": artifact_summary_copy,
                 "updated_artifacts": updated_artifacts,
                 "baseline_artifact_mtimes": {},
             }
@@ -317,6 +415,11 @@ def set_refresh_failed(
                 "finished_at": finished_at,
                 "finished_ts": finished_ts,
                 "error": error,
+                "contract_status_label": "",
+                "contract_status_copy": "",
+                "artifact_summary_label": "",
+                "artifact_summary_copy": "",
+                "updated_artifacts": [],
                 "baseline_artifact_mtimes": {},
             }
         )
@@ -369,7 +472,7 @@ def queue_refresh_job(
                 "status": "running",
                 "scope_label": scope_label,
                 "scope_key": scope_key,
-                "message": f'正在后台刷新“{scope_label}”，页面会在完成后自动回到当前位置。',
+                "message": f'正在刷新“{scope_label}”，结果速览会在完成后自动更新。',
                 "started_at": started_at,
                 "started_ts": started_ts,
                 "finished_at": "",
@@ -379,6 +482,11 @@ def queue_refresh_job(
                 "snapshot_copy": snapshot_meta["copy"],
                 "snapshot_source_path": snapshot_meta["source_path"],
                 "snapshot_source_count": snapshot_meta["source_count"],
+                "contract_status_label": "",
+                "contract_status_copy": "",
+                "artifact_summary_label": "",
+                "artifact_summary_copy": "",
+                "updated_artifacts": [],
                 "baseline_artifact_mtimes": baseline_artifact_mtimes,
             }
         )

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import argparse
 import sys
 from pathlib import Path
 
@@ -9,41 +8,8 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from _workflow_profiles import add_profile_argument, resolve_profile_args
-from index_inclusion_research import load_project_config
-from index_inclusion_research.loaders import load_events, load_prices, save_dataframe
-from index_inclusion_research.pipeline import build_matched_sample
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Build matched-control pseudo-events.")
-    add_profile_argument(parser)
-    parser.add_argument("--events", default="", help="Cleaned events CSV.")
-    parser.add_argument("--prices", default="", help="Daily prices CSV.")
-    parser.add_argument("--output-events", default="", help="Output matched events CSV.")
-    parser.add_argument(
-        "--output-diagnostics",
-        default="",
-        help="Match diagnostics CSV.",
-    )
-    parser.add_argument("--config", default="config/markets.yml", help="Project config path.")
-    args = resolve_profile_args(parser.parse_args(), workflow="match_controls")
-
-    config = load_project_config(args.config)
-    matching = config["defaults"]["matching"]
-    events = load_events(args.events)
-    prices = load_prices(args.prices)
-    matched_events, diagnostics = build_matched_sample(
-        events=events,
-        prices=prices,
-        lookback_days=matching["lookback_days"],
-        num_controls=matching["num_controls"],
-        reference_date_column=matching["reference_date_column"],
-    )
-    save_dataframe(matched_events, args.output_events)
-    save_dataframe(diagnostics, args.output_diagnostics)
-    print(f"Saved {len(matched_events)} matched events to {args.output_events} (profile: {args.profile})")
+from index_inclusion_research.match_controls import main
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

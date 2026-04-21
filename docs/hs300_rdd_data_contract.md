@@ -1,23 +1,23 @@
 # HS300 RDD 正式数据契约
 
-`start_hs300_rdd.py` 现在默认走“正式候选样本文件”模式。  
+`index-inclusion-hs300-rdd` 现在默认走“正式候选样本文件”模式。  
 当 [data/raw/hs300_rdd_candidates.csv](/Users/leonardodon/index-inclusion-research/data/raw/hs300_rdd_candidates.csv) 存在且通过校验时，`RDD` 会进入 `L3` 正式边界样本；当 [data/raw/hs300_rdd_candidates.reconstructed.csv](/Users/leonardodon/index-inclusion-research/data/raw/hs300_rdd_candidates.reconstructed.csv) 存在且通过校验时，`RDD` 会进入 `L2` 公开重建样本。
 
 如果文件缺失或不合法：
-- 脚本默认写出 `missing` 状态
+- 命令默认写出 `missing` 状态
 - 不再自动回退到 demo 系数结果
 - 首页只展示“待补正式样本”的说明，不展示伪正式 `tau`
 
 开发调试时，如确实需要跑 demo，请显式使用：
 
 ```bash
-python3 scripts/start_hs300_rdd.py --demo
+index-inclusion-hs300-rdd --demo
 ```
 
 如果你拿到的是原始候选名单 Excel / CSV，推荐先用导入脚本做标准化、字段补齐和批次审计：
 
 ```bash
-python3 scripts/prepare_hs300_rdd_candidates.py \
+index-inclusion-prepare-hs300-rdd \
   --input /path/to/raw_candidates.xlsx \
   --sheet 0 \
   --announce-date 2024-11-29 \
@@ -26,19 +26,10 @@ python3 scripts/prepare_hs300_rdd_candidates.py \
   --source-url https://www.csindex.com.cn/
 ```
 
-如果已经安装了项目，也可以改用包内 CLI：
-
-```bash
-index-inclusion-prepare-hs300-rdd \
-  --input /path/to/raw_candidates.xlsx \
-  --sheet 0 \
-  --check-only
-```
-
 如果只想先检查、不覆盖正式候选文件，可以改用：
 
 ```bash
-python3 scripts/prepare_hs300_rdd_candidates.py \
+index-inclusion-prepare-hs300-rdd \
   --input /path/to/raw_candidates.xlsx \
   --check-only
 ```
@@ -47,7 +38,7 @@ python3 scripts/prepare_hs300_rdd_candidates.py \
 
 - 真实候选样本：`data/raw/hs300_rdd_candidates.csv`
 - 字段模板：`data/raw/hs300_rdd_candidates.template.csv`
-- 导入脚本：`scripts/prepare_hs300_rdd_candidates.py`
+- 导入命令：`index-inclusion-prepare-hs300-rdd`
 
 ## 必需列
 
@@ -111,7 +102,7 @@ batch_id,market,index_name,ticker,security_name,announce_date,effective_date,run
 - `running_variable` 或 `cutoff` 不是数值
 - `inclusion` 不是 `0/1`
 
-脚本行为：
+命令行为：
 
 - 命令行直接运行时：明确报错，不回退 demo
 - 仪表盘刷新或研究主线联动时：写出 `missing` 状态，保留方法说明，但不展示正式 `RDD` 系数

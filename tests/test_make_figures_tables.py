@@ -2,15 +2,8 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-import sys
 
-
-ROOT = Path(__file__).resolve().parents[1]
-for path in [ROOT / "src", ROOT / "scripts"]:
-    if str(path) not in sys.path:
-        sys.path.insert(0, str(path))
-
-import make_figures_tables as export_script
+from index_inclusion_research import figures_tables as export_script
 
 
 def _args(**overrides: str) -> argparse.Namespace:
@@ -27,10 +20,11 @@ def _args(**overrides: str) -> argparse.Namespace:
         "regression_coefs": "",
         "regression_models": "",
         "rdd_summary": "",
-        "rdd_summary_note": "",
+        "rdd_output_dir": "",
         "long_window_output_dir": "",
         "figures_dir": "",
         "tables_dir": "",
+        "results_manifest": "",
     }
     values.update(overrides)
     return argparse.Namespace(**values)
@@ -52,9 +46,10 @@ def test_resolve_cli_args_prefers_real_profile_when_real_workflow_exists(tmp_pat
     assert resolved.profile == "real"
     assert resolved.events == str(tmp_path / "data" / "processed" / "real_events_clean.csv")
     assert resolved.rdd_summary == str(tmp_path / "results" / "literature" / "hs300_rdd" / "rdd_summary.csv")
-    assert resolved.rdd_summary_note == str(tmp_path / "results" / "literature" / "hs300_rdd" / "summary.md")
+    assert resolved.rdd_output_dir == str(tmp_path / "results" / "literature" / "hs300_rdd")
     assert resolved.figures_dir == str(tmp_path / "results" / "real_figures")
     assert resolved.tables_dir == str(tmp_path / "results" / "real_tables")
+    assert resolved.results_manifest == str(tmp_path / "results" / "real_tables" / "results_manifest.csv")
 
 
 def test_resolve_cli_args_falls_back_to_sample_profile_without_real_markers(tmp_path: Path) -> None:
@@ -64,8 +59,9 @@ def test_resolve_cli_args_falls_back_to_sample_profile_without_real_markers(tmp_
     assert resolved.events == str(tmp_path / "data" / "processed" / "events_clean.csv")
     assert resolved.event_summary == str(tmp_path / "results" / "event_study" / "event_study_summary.csv")
     assert resolved.rdd_summary == ""
-    assert resolved.rdd_summary_note == ""
+    assert resolved.rdd_output_dir == str(tmp_path / "results" / "literature" / "hs300_rdd")
     assert resolved.tables_dir == str(tmp_path / "results" / "tables")
+    assert resolved.results_manifest == str(tmp_path / "results" / "tables" / "results_manifest.csv")
 
 
 def test_resolve_cli_args_honors_explicit_sample_profile_even_when_real_exists(tmp_path: Path) -> None:

@@ -27,7 +27,11 @@
           >{{ item.label }}</a>
           {% endfor %}
         </nav>
-        <div class="nav nav-shortcuts">
+        <div class="nav nav-shortcuts mobile-only">
+          <div class="topbar-current">
+            <div class="topbar-current-kicker">当前章节</div>
+            <div class="topbar-current-value" data-waypoint-top-label>总览</div>
+          </div>
           <button type="button" class="waypoint-menu-toggle mobile-only" data-waypoint-menu-toggle aria-expanded="false" aria-controls="chapter-drawer">章节目录</button>
         </div>
       </div>
@@ -50,9 +54,11 @@
       </div>
       <div class="hero-side">
         <div class="hero-side-inner">
+          {% set hero_primary_metrics = overview_metrics[:2] %}
+          {% set hero_extra_metrics = overview_metrics[2:] %}
           <div class="hero-side-kicker">当前展示口径</div>
           <div class="kpi-grid">
-            {% for metric in overview_metrics %}
+            {% for metric in hero_primary_metrics %}
             <div class="kpi {% if metric.tone %}kpi-{{ metric.tone }}{% endif %}">
               <div class="value">{{ metric.value }}</div>
               <div class="label">{{ metric.label }}</div>
@@ -62,6 +68,31 @@
             </div>
             {% endfor %}
           </div>
+          {% if hero_extra_metrics %}
+          <details class="details-panel hero-details" data-details-key="hero_metrics">
+            <summary>
+              <div>
+                <div class="details-kicker">补充口径</div>
+                <div class="details-title">展开其余展示口径（{{ hero_extra_metrics|length }} 项）</div>
+                <div class="details-copy">首屏先保留最关键的三项指标，其余当前口径按需查看。</div>
+              </div>
+              <div class="details-toggle" data-details-toggle>展开查看</div>
+            </summary>
+            <div class="details-panel-body">
+              <div class="kpi-grid">
+                {% for metric in hero_extra_metrics %}
+                <div class="kpi {% if metric.tone %}kpi-{{ metric.tone }}{% endif %}">
+                  <div class="value">{{ metric.value }}</div>
+                  <div class="label">{{ metric.label }}</div>
+                  {% if metric.meta %}
+                  <div class="meta">{{ metric.meta }}</div>
+                  {% endif %}
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </details>
+          {% endif %}
           <div class="refresh-status hero-status" data-refresh-panel data-state="{{ refresh_meta.status }}">
             <div class="refresh-status-head">
               <div>
@@ -82,80 +113,83 @@
             </div>
             <div class="refresh-status-copy" data-refresh-snapshot-copy>{{ refresh_meta.snapshot_copy }}</div>
             <div class="refresh-status-note" data-refresh-note aria-live="polite" role="status">{{ refresh_meta.message }}</div>
-            <div class="refresh-status-grid">
-              <div class="refresh-status-meta-card">
-                <div class="refresh-status-meta-label">当前范围</div>
-                <div class="refresh-status-meta-value" data-refresh-scope-label>{{ refresh_meta.scope_label }}</div>
+            <div class="refresh-status-summary-strip">
+              <div class="refresh-status-summary-copy">
+                <span class="refresh-status-summary-label">结果速览</span>
+                <strong class="refresh-status-summary-value" data-refresh-artifact-summary-inline>{{ refresh_meta.artifact_summary_label or "—" }}</strong>
               </div>
-              <div class="refresh-status-meta-card">
-                <div class="refresh-status-meta-label">开始时间</div>
-                <div class="refresh-status-meta-value" data-refresh-started-at>{{ refresh_meta.started_at or "—" }}</div>
+              <div class="refresh-status-summary-pill" data-refresh-contract-summary>
+                {% if refresh_meta.status == "running" %}
+                待完成后校验
+                {% else %}
+                {{ refresh_meta.contract_status_label or "—" }}
+                {% endif %}
               </div>
-              <div class="refresh-status-meta-card">
-                <div class="refresh-status-meta-label">结束时间</div>
-                <div class="refresh-status-meta-value" data-refresh-finished-at>{{ refresh_meta.finished_at or "—" }}</div>
+            </div>
+            <div class="hero-status-inline">
+              <div class="hero-status-inline-item">
+                <span>当前范围</span>
+                <strong data-refresh-scope-label>{{ refresh_meta.scope_label }}</strong>
               </div>
-              <div class="refresh-status-meta-card">
-                <div class="refresh-status-meta-label">运行时长</div>
-                <div class="refresh-status-meta-value" data-refresh-duration>
-                  {% if refresh_meta.duration_seconds is not none %}
-                  {{ refresh_meta.duration_seconds }} 秒
-                  {% else %}
-                  —
-                  {% endif %}
-                </div>
-              </div>
-              <div class="refresh-status-meta-card refresh-status-meta-card-wide">
-                <div class="refresh-status-meta-label">快照来源</div>
-                <div class="refresh-status-meta-value" data-refresh-snapshot-source>
+              <div class="hero-status-inline-item">
+                <span>快照来源</span>
+                <strong data-refresh-snapshot-source>
                   {% if refresh_meta.snapshot_source_path %}
                   {{ refresh_meta.snapshot_source_path }} · {{ refresh_meta.snapshot_source_count }} 个核心文件
                   {% else %}
                   —
                   {% endif %}
-                </div>
+                </strong>
               </div>
             </div>
-            <div class="refresh-status-artifacts" data-refresh-artifacts {% if not refresh_meta.updated_artifacts %}hidden{% endif %}>
-              <div class="refresh-status-artifacts-label">最近更新</div>
-              <ul class="refresh-status-artifact-list" data-refresh-artifact-list>
-                {% for item in refresh_meta.updated_artifacts %}
-                <li class="refresh-status-artifact-item">
-                  <span>{{ item.path }}</span>
-                  <time>{{ item.modified_at }}</time>
-                </li>
-                {% endfor %}
-              </ul>
-            </div>
+            <details class="details-panel hero-details" data-details-key="hero_refresh_status">
+              <summary>
+                <div>
+                  <div class="details-kicker">刷新细节</div>
+                  <div class="details-title">查看开始时间、时长与更新明细</div>
+                  <div class="details-copy">完成态会先给出产物摘要，再展开看具体更新文件。</div>
+                </div>
+                <div class="details-toggle" data-details-toggle>展开细节</div>
+              </summary>
+              <div class="details-panel-body">
+                <div class="refresh-status-grid">
+                  <div class="refresh-status-meta-card">
+                    <div class="refresh-status-meta-label">开始时间</div>
+                    <div class="refresh-status-meta-value" data-refresh-started-at>{{ refresh_meta.started_at or "—" }}</div>
+                  </div>
+                  <div class="refresh-status-meta-card">
+                    <div class="refresh-status-meta-label">结束时间</div>
+                    <div class="refresh-status-meta-value" data-refresh-finished-at>{{ refresh_meta.finished_at or "—" }}</div>
+                  </div>
+                  <div class="refresh-status-meta-card refresh-status-meta-card-wide">
+                    <div class="refresh-status-meta-label">运行时长</div>
+                    <div class="refresh-status-meta-value" data-refresh-duration>
+                      {% if refresh_meta.duration_seconds is not none %}
+                      {{ refresh_meta.duration_seconds }} 秒
+                      {% else %}
+                      —
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+                <div class="refresh-status-artifacts" data-refresh-artifacts>
+                  <div class="refresh-status-artifacts-label">更新明细</div>
+                  <div class="refresh-status-artifacts-summary">
+                    <div class="refresh-status-artifacts-value" data-refresh-artifact-summary-label>{{ refresh_meta.artifact_summary_label or "—" }}</div>
+                    <div class="refresh-status-artifacts-copy" data-refresh-artifact-summary-copy>{{ refresh_meta.artifact_summary_copy or "—" }}</div>
+                  </div>
+                  <ul class="refresh-status-artifact-list" data-refresh-artifact-list {% if not refresh_meta.updated_artifacts %}hidden{% endif %}>
+                    {% for item in refresh_meta.updated_artifacts %}
+                    <li class="refresh-status-artifact-item">
+                      <span>{{ item.path }}</span>
+                      <time>{{ item.modified_at }}</time>
+                    </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              </div>
+            </details>
           </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="overview-context" aria-label="研究结构概览">
-      <div class="overview-card overview-card-track">
-        <div class="hero-rail-label">研究路径</div>
-        <div class="hero-rail">
-          {% for section in track_sections %}
-          <div class="hero-step">
-            <span class="index">{{ "%02d"|format(loop.index) }}</span>
-            <div class="hero-step-copy">
-              <strong>{{ section.title }}</strong>
-              <span>{{ section.takeaway or section.display_summary }}</span>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-      <div class="overview-card overview-card-notes">
-        <div class="hero-rail-label">怎么读</div>
-        <div class="hero-notes">
-          {% for note in overview_notes %}
-          <div class="hero-note">
-            <strong>{{ note.title }}</strong>
-            <span>{{ note["copy"] }}</span>
-          </div>
-          {% endfor %}
         </div>
       </div>
     </section>
@@ -167,25 +201,28 @@
         <div class="utility-text">浏览时先看内容，需要操作时再回这里。</div>
       </div>
       <div class="utility-actions">
-        <nav class="nav nav-modes" aria-label="展示模式与刷新">
-          <span class="nav-inline-label">展示模式</span>
-          {% for item in mode_tabs %}
-          <a
-            data-mode-link
-            data-base-href="{{ item.base_href }}"
-            data-default-hash="{{ item.default_hash }}"
-            data-allowed-hashes="{{ item.allowed_hashes|join(',') }}"
-            class="{% if item.active %}active{% endif %}"
-            href="{{ item.href }}"
-            {% if item.active %}aria-current="page"{% endif %}
-          >{{ item.label }}</a>
-          {% endfor %}
-          <form method="post" action="{{ url_for('refresh_dashboard', mode=mode) }}" data-refresh-form>
-            <input type="hidden" name="anchor" value="overview" data-anchor-input>
-            <input type="hidden" name="open" value="{{ current_open_panels if current_open_panels is not none else '' }}" data-open-input>
-            <button type="submit" data-refresh-button data-scope-key="all" data-running-label="刷新中…">刷新数据</button>
-          </form>
-        </nav>
+        <div class="utility-mode-stack">
+          <nav class="nav nav-modes" aria-label="展示模式与刷新">
+            <span class="nav-inline-label">展示模式</span>
+            {% for item in mode_tabs %}
+            <a
+              data-mode-link
+              data-base-href="{{ item.base_href }}"
+              data-default-hash="{{ item.default_hash }}"
+              data-allowed-hashes="{{ item.allowed_hashes|join(',') }}"
+              class="{% if item.active %}active{% endif %}"
+              href="{{ item.href }}"
+              {% if item.active %}aria-current="page"{% endif %}
+            >{{ item.label }}</a>
+            {% endfor %}
+            <form method="post" action="{{ url_for('refresh_dashboard', mode=mode) }}" data-refresh-form>
+              <input type="hidden" name="anchor" value="overview" data-anchor-input>
+              <input type="hidden" name="open" value="{{ current_open_panels if current_open_panels is not none else '' }}" data-open-input>
+              <button type="submit" data-refresh-button data-scope-key="all" data-running-label="刷新中…">刷新数据</button>
+            </form>
+          </nav>
+          <div class="utility-mode-note">从左到右信息量递增：3 分钟汇报先保留结论，展示版作为默认讲述口径，完整材料再补全支撑表与细节。</div>
+        </div>
         <div class="table-density-panel" data-table-density-panel>
           <div class="table-density-label">表格阅读</div>
           <div class="table-density-switch" role="toolbar" aria-label="表格密度切换">
@@ -233,6 +270,34 @@
       </div>
     </section>
 
+    <section class="overview-context" aria-label="研究结构概览">
+      <div class="overview-card overview-card-track">
+        <div class="hero-rail-label">研究路径</div>
+        <div class="hero-rail">
+          {% for section in track_sections %}
+          <div class="hero-step">
+            <span class="index">{{ "%02d"|format(loop.index) }}</span>
+            <div class="hero-step-copy">
+              <strong>{{ section.title }}</strong>
+              <span>{{ section.takeaway or section.display_summary }}</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="overview-card overview-card-notes">
+        <div class="hero-rail-label">怎么读</div>
+        <div class="hero-notes">
+          {% for note in overview_notes %}
+          <div class="hero-note">
+            <strong>{{ note.title }}</strong>
+            <span>{{ note["copy"] }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
     <section class="section" id="design" data-waypoint data-waypoint-kind="section" data-waypoint-label="样本与设计">
       <div class="section-head">
         <div>
@@ -247,20 +312,32 @@
       </div>
       {{ ui.render_summary_cards(design_section.summary_cards) }}
       {% if mode != "brief" %}
-      <div class="library-panels">
+          <div class="library-panels">
         {% for figure in design_section.figures %}
         <div class="result-card {{ figure.layout_class }} primary">
           <div class="table-label">{{ figure.label }}</div>
           <div class="result-figure">
-            <img
-              src="{{ url_for('serve_result_file', subpath=figure.path) }}"
-              alt="{{ figure.caption }}"
-              width="1600"
-              height="1000"
-              decoding="async"
-              {% if loop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
-            >
-            <div class="figure-caption">{{ figure.caption }}</div>
+            <div class="figure-media-shell">
+              <img
+                src="{{ url_for('serve_result_file', subpath=figure.path) }}"
+                alt="{{ figure.caption }}"
+                {% if figure.width and figure.height %}width="{{ figure.width }}" height="{{ figure.height }}"{% endif %}
+                decoding="async"
+                {% if loop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
+              >
+            </div>
+            <div class="figure-copy-panel">
+              <div class="figure-copy-block">
+                <div class="figure-copy-kicker">图意</div>
+                <div class="figure-caption">{{ figure.caption_lead if figure.caption_lead else figure.caption }}</div>
+              </div>
+              {% if figure.caption_focus %}
+              <div class="figure-copy-block figure-focus-block">
+                <div class="figure-copy-kicker">阅读重点</div>
+                <div class="figure-focus">{{ figure.caption_focus }}</div>
+              </div>
+              {% endif %}
+            </div>
           </div>
         </div>
         {% endfor %}
@@ -277,8 +354,21 @@
             <div class="result-card {{ figure.layout_class }} detail">
               <div class="table-label">{{ figure.label }}</div>
               <div class="result-figure">
-                <img src="{{ url_for('serve_result_file', subpath=figure.path) }}" alt="{{ figure.caption }}" width="1600" height="1000" loading="lazy" decoding="async">
-                <div class="figure-caption">{{ figure.caption }}</div>
+                <div class="figure-media-shell">
+                  <img src="{{ url_for('serve_result_file', subpath=figure.path) }}" alt="{{ figure.caption }}" {% if figure.width and figure.height %}width="{{ figure.width }}" height="{{ figure.height }}"{% endif %} loading="lazy" decoding="async">
+                </div>
+                <div class="figure-copy-panel">
+                  <div class="figure-copy-block">
+                    <div class="figure-copy-kicker">图意</div>
+                    <div class="figure-caption">{{ figure.caption_lead if figure.caption_lead else figure.caption }}</div>
+                  </div>
+                  {% if figure.caption_focus %}
+                  <div class="figure-copy-block figure-focus-block">
+                    <div class="figure-copy-kicker">阅读重点</div>
+                    <div class="figure-focus">{{ figure.caption_focus }}</div>
+                  </div>
+                  {% endif %}
+                </div>
               </div>
             </div>
             {% endfor %}
@@ -396,15 +486,33 @@
             <div class="figure-stack">
               {% if section.display_figures %}
               <div class="figure-feature">
-                <img src="{{ url_for('serve_result_file', subpath=section.display_figures[0].path) }}" alt="{{ section.display_figures[0].caption }}" width="1600" height="1000" loading="lazy" decoding="async">
-                <div class="figure-caption">{{ section.display_figures[0].caption }}</div>
+                <div class="figure-media-shell figure-media-shell-feature">
+                  <img src="{{ url_for('serve_result_file', subpath=section.display_figures[0].path) }}" alt="{{ section.display_figures[0].caption }}" {% if section.display_figures[0].width and section.display_figures[0].height %}width="{{ section.display_figures[0].width }}" height="{{ section.display_figures[0].height }}"{% endif %} loading="lazy" decoding="async">
+                </div>
+                <div class="figure-copy-panel figure-copy-panel-feature">
+                  <div class="figure-copy-block">
+                    <div class="figure-copy-kicker">图意</div>
+                    <div class="figure-caption">{{ section.display_figures[0].caption_lead if section.display_figures[0].caption_lead else section.display_figures[0].caption }}</div>
+                  </div>
+                  {% if section.display_figures[0].caption_focus %}
+                  <div class="figure-copy-block figure-focus-block">
+                    <div class="figure-copy-kicker">阅读重点</div>
+                    <div class="figure-focus">{{ section.display_figures[0].caption_focus }}</div>
+                  </div>
+                  {% endif %}
+                </div>
               </div>
               {% if section.display_figures|length > 1 %}
               <div class="thumb-grid">
                 {% for figure in section.display_figures[1:5] %}
-                <div class="thumb">
-                  <img src="{{ url_for('serve_result_file', subpath=figure.path) }}" alt="{{ figure.caption }}" width="1600" height="1000" loading="lazy" decoding="async">
-                  <div>{{ figure.caption }}</div>
+                <div class="thumb" title="{{ figure.caption }}">
+                  <div class="thumb-media">
+                    <img src="{{ url_for('serve_result_file', subpath=figure.path) }}" alt="{{ figure.caption }}" {% if figure.width and figure.height %}width="{{ figure.width }}" height="{{ figure.height }}"{% endif %} loading="lazy" decoding="async">
+                  </div>
+                  <div class="thumb-copy">
+                    <div class="thumb-kicker">补充图 {{ loop.index }}</div>
+                    <div class="thumb-caption">{{ figure.caption_lead if figure.caption_lead else figure.caption }}</div>
+                  </div>
                 </div>
                 {% endfor %}
               </div>

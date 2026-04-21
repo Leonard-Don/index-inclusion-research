@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 
 import matplotlib
@@ -89,6 +90,15 @@ def _display_value(value: object) -> str:
     if value is None or pd.isna(value):
         return "NA"
     return str(value)
+
+
+def _identification_source_summary(analysis_layer: str) -> str:
+    defaults = {
+        "短窗口事件研究": "正式事件样本 + 短窗口事件面板",
+        "长窗口保留分析": "正式事件样本 + 长窗口保留面板",
+        "匹配对照组回归": "正式事件样本 + 匹配对照面板",
+    }
+    return defaults.get(analysis_layer, "正式事件样本")
 
 
 def _summarise_event_sources(events: pd.DataFrame) -> str:
@@ -308,6 +318,7 @@ def build_identification_scope_table(
     panel: pd.DataFrame,
     matched_panel: pd.DataFrame = pd.DataFrame(),
     rdd_summary: pd.DataFrame = pd.DataFrame(),
+    rdd_status: Mapping[str, object] | None = None,
     rdd_mode: str = "unavailable",
 ) -> pd.DataFrame:
     event_count = _safe_int(len(events)) if not events.empty else pd.NA
@@ -319,30 +330,40 @@ def build_identification_scope_table(
     matched_rows = _safe_int(len(matched_panel)) if not matched_panel.empty else pd.NA
     rdd_n_obs = _safe_int(rdd_summary["n_obs"].max()) if not rdd_summary.empty and "n_obs" in rdd_summary.columns else pd.NA
 
-    rdd_status = "待补正式样本"
+    current_rdd_status = dict(rdd_status) if rdd_status is not None else None
+    rdd_status_label = "待补正式样本"
     rdd_tier = rdd_evidence_tier("missing")
     rdd_note = "尚未提供有效的 hs300_rdd_candidates.csv，当前中国主线的正式证据仍以事件研究与匹配回归为主。"
     rdd_source = rdd_source_label("missing")
-    if rdd_mode == "real":
-        rdd_status = "正式边界样本"
-        rdd_tier = rdd_evidence_tier("real")
-        rdd_note = "基于真实候选排名变量，可作为更强识别证据。"
-        rdd_source = rdd_source_label("real")
-    if rdd_mode == "reconstructed":
-        rdd_status = "公开重建样本"
-        rdd_tier = rdd_evidence_tier("reconstructed")
-        rdd_note = "当前使用公开数据重建的边界样本，适合公开数据版 RDD 复现，但不应表述为中证官方历史候选排名表。"
-        rdd_source = rdd_source_label("reconstructed")
-    if rdd_mode == "demo":
-        rdd_status = "方法展示"
-        rdd_tier = rdd_evidence_tier("demo")
-        rdd_note = "当前使用 demo 伪排名变量，展示的是断点回归方法框架，不应与正式实证结果混用。"
-        rdd_source = rdd_source_label("demo")
-    elif rdd_mode == "unavailable":
-        rdd_status = "未生成"
-        rdd_tier = rdd_evidence_tier("unavailable")
-        rdd_note = "尚未生成 RDD 扩展结果。"
-        rdd_source = "尚未生成 RDD 结果"
+    if current_rdd_status is not None:
+        mode = str(current_rdd_status.get("mode", "missing"))
+        rdd_status_label = str(current_rdd_status.get("evidence_status", "待补正式样本"))
+        rdd_tier = str(current_rdd_status.get("evidence_tier", "")) or rdd_evidence_tier(mode)
+        rdd_note = str(current_rdd_status.get("note") or current_rdd_status.get("message") or rdd_note)
+        if mode == "missing" and current_rdd_status.get("message"):
+            rdd_note = str(current_rdd_status["message"])
+        rdd_source = str(current_rdd_status.get("source_label", "")) or rdd_source_label(mode)
+    else:
+        if rdd_mode == "real":
+            rdd_status_label = "正式边界样本"
+            rdd_tier = rdd_evidence_tier("real")
+            rdd_note = "基于真实候选排名变量，可作为更强识别证据。"
+            rdd_source = rdd_source_label("real")
+        if rdd_mode == "reconstructed":
+            rdd_status_label = "公开重建样本"
+            rdd_tier = rdd_evidence_tier("reconstructed")
+            rdd_note = "当前使用公开数据重建的边界样本，适合公开数据版 RDD 复现，但不应表述为中证官方历史候选排名表。"
+            rdd_source = rdd_source_label("reconstructed")
+        if rdd_mode == "demo":
+            rdd_status_label = "方法展示"
+            rdd_tier = rdd_evidence_tier("demo")
+            rdd_note = "当前使用 demo 伪排名变量，展示的是断点回归方法框架，不应与正式实证结果混用。"
+            rdd_source = rdd_source_label("demo")
+        elif rdd_mode == "unavailable":
+            rdd_status_label = "未生成"
+            rdd_tier = rdd_evidence_tier("unavailable")
+            rdd_note = "尚未生成 RDD 扩展结果。"
+            rdd_source = "尚未生成 RDD 结果"
 
     rows = [
         {
@@ -353,6 +374,7 @@ def build_identification_scope_table(
             "证据等级": "L3",
             "证据状态": "正式样本",
             "当前口径": "直接回答事件附近是否存在显著超额收益。",
+            "来源摘要": _identification_source_summary("短窗口事件研究"),
         },
         {
             "分析层": "长窗口保留分析",
@@ -362,6 +384,7 @@ def build_identification_scope_table(
             "证据等级": "L3",
             "证据状态": "正式样本",
             "当前口径": "用于区分短期价格压力与部分永久性需求曲线效应。",
+            "来源摘要": _identification_source_summary("长窗口保留分析"),
         },
         {
             "分析层": "匹配对照组回归",
@@ -371,6 +394,7 @@ def build_identification_scope_table(
             "证据等级": "L3",
             "证据状态": "正式样本",
             "当前口径": "在市值与纳入前收益控制下，对事件研究结果进行进一步识别。",
+            "来源摘要": _identification_source_summary("匹配对照组回归"),
         },
         {
             "分析层": "中国 RDD 扩展",
@@ -378,7 +402,7 @@ def build_identification_scope_table(
             "样本基础": f"{_display_value(rdd_n_obs)} 个断点附近观测值",
             "主要输出": "local linear RD 系数、断点主图与分箱图",
             "证据等级": rdd_tier,
-            "证据状态": rdd_status,
+            "证据状态": rdd_status_label,
             "当前口径": rdd_note,
             "来源摘要": rdd_source,
         },

@@ -67,6 +67,8 @@ def test_create_price_pressure_figures_returns_cached_metadata(tmp_path: Path) -
         {
             "label": "短窗口 CAR 时间变化图",
             "caption": "图意：按公告年份追踪调入事件的 CAR[-1,+1]。阅读重点：观察美股公告日效应是否随时间减弱，以及中国样本是否呈现不同的阶段性变化。",
+            "caption_lead": "按公告年份追踪调入事件的 CAR[-1,+1]。",
+            "caption_focus": "观察美股公告日效应是否随时间减弱，以及中国样本是否呈现不同的阶段性变化。",
             "path": "results/real_figures/price_pressure_time_series.png",
             "layout_class": "wide",
         }
@@ -106,6 +108,8 @@ def test_create_identification_figures_returns_cached_metadata_for_real_mode(tmp
         {
             "path": "results/literature/hs300_rdd/figures/car_m1_p1_rdd_main.png",
             "caption": "中国样本 RDD 主图。图意：以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。阅读重点：聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
+            "caption_lead": "中国样本 RDD 主图。以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。",
+            "caption_focus": "聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
         }
     ]
 
