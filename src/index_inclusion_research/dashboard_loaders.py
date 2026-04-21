@@ -7,6 +7,7 @@ from typing import Any, cast
 import pandas as pd
 
 from index_inclusion_research.dashboard_media import build_figure_entry
+from index_inclusion_research.results_snapshot import read_cached_csv
 from index_inclusion_research.result_contract import (
     load_rdd_status as load_shared_rdd_status,
     load_results_manifest as load_shared_results_manifest,
@@ -179,7 +180,7 @@ def load_saved_tables(
             continue
         seen.add(key)
         try:
-            frame = pd.read_csv(path)
+            frame = read_cached_csv(path)
         except Exception:
             continue
         tables.append((translate_label(key), render_table(frame)))
@@ -193,16 +194,13 @@ def load_single_csv(output_dir: Path, filename: str) -> pd.DataFrame | None:
     if path is None:
         return None
     try:
-        return pd.read_csv(path)
+        return read_cached_csv(path)
     except Exception:
         return None
 
 
 def read_csv_if_exists(path: str | Path) -> pd.DataFrame:
-    csv_path = Path(path)
-    if not csv_path.exists():
-        return pd.DataFrame()
-    return pd.read_csv(csv_path, low_memory=False)
+    return read_cached_csv(path, low_memory=False, optional=True)
 
 
 def rdd_output_dir(root: Path) -> Path:

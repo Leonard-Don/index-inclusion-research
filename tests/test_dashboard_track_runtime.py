@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from index_inclusion_research import dashboard_config
 from index_inclusion_research.dashboard_track_content_runtime import DashboardTrackContentRuntime
@@ -101,3 +102,64 @@ def test_load_rdd_contract_check_delegates_to_content(monkeypatch) -> None:
     monkeypatch.setattr(track.content, "load_rdd_contract_check", lambda **kwargs: expected)
 
     assert track.load_rdd_contract_check() is expected
+
+
+def test_run_and_cache_analysis_keeps_live_cache_until_staged_swap() -> None:
+    observed_live_cache: list[object] = []
+    track: DashboardTrackRuntime | None = None
+
+    def _price_pressure_runner(verbose: bool = False):
+        del verbose
+        assert track is not None
+        observed_live_cache.append(track.run_cache.get("price_pressure_track"))
+        return {
+            "summary_text": "new",
+            "tables": {},
+            "figures": [],
+        }
+
+    analyses = dashboard_config.build_analyses(
+        run_price_pressure_track=_price_pressure_runner,
+        run_demand_curve_track=lambda verbose=False: {},
+        run_identification_china_track=lambda verbose=False: {},
+    )
+    track = DashboardTrackRuntime(
+        root=Path("/tmp"),
+        analyses=analyses,
+        library_card=dashboard_config.LIBRARY_CARD,
+        review_card=dashboard_config.REVIEW_CARD,
+        framework_card=dashboard_config.FRAMEWORK_CARD,
+        supplement_card=dashboard_config.SUPPLEMENT_CARD,
+        project_module_display_map=dashboard_config.build_project_module_display(analyses),
+    )
+    track.run_cache["price_pressure_track"] = {"id": "stale", "summary_text": "old"}
+
+    result = track.run_and_cache_analysis("price_pressure_track")
+
+    assert observed_live_cache == [{"id": "stale", "summary_text": "old"}]
+    assert result["summary_text"].endswith("new")
+    assert result["id"] == "短期价格压力"
+    assert track.run_cache["price_pressure_track"] == result
+
+
+def test_run_and_cache_analysis_leaves_live_cache_untouched_on_failure() -> None:
+    analyses = dashboard_config.build_analyses(
+        run_price_pressure_track=lambda verbose=False: (_ for _ in ()).throw(RuntimeError("boom")),
+        run_demand_curve_track=lambda verbose=False: {},
+        run_identification_china_track=lambda verbose=False: {},
+    )
+    track = DashboardTrackRuntime(
+        root=Path("/tmp"),
+        analyses=analyses,
+        library_card=dashboard_config.LIBRARY_CARD,
+        review_card=dashboard_config.REVIEW_CARD,
+        framework_card=dashboard_config.FRAMEWORK_CARD,
+        supplement_card=dashboard_config.SUPPLEMENT_CARD,
+        project_module_display_map=dashboard_config.build_project_module_display(analyses),
+    )
+    track.run_cache["price_pressure_track"] = {"id": "stale", "summary_text": "old"}
+
+    with pytest.raises(RuntimeError, match="boom"):
+        track.run_and_cache_analysis("price_pressure_track")
+
+    assert track.run_cache["price_pressure_track"] == {"id": "stale", "summary_text": "old"}

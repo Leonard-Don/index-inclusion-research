@@ -139,8 +139,8 @@ def test_identification_status_panel_handles_missing_and_real_modes() -> None:
     assert panel["tone"] == "missing"
     assert panel["signal_value"] == "L0 · 待补正式样本"
     assert panel["meta"][0]["label"] == "样本来源"
-    assert panel["meta"][1]["label"] == "契约一致性"
-    assert "live RDD 状态渲染" in panel["meta"][1]["value"]
+    assert panel["meta"][1]["label"] == "状态一致性"
+    assert "当前识别状态为准" in panel["meta"][1]["value"]
     assert panel["meta"][2]["label"] == "覆盖说明"
     assert "index-inclusion-prepare-hs300-rdd" in panel["meta"][4]["value"]
     assert "index-inclusion-reconstruct-hs300-rdd" in panel["meta"][4]["value"]

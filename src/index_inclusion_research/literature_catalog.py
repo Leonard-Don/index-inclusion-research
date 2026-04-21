@@ -489,7 +489,7 @@ def build_literature_catalog_frame() -> pd.DataFrame:
 def build_literature_dashboard_frame() -> pd.DataFrame:
     rows: list[dict[str, object]] = []
     for paper in PAPER_LIBRARY:
-        open_link = f'<a href="/paper/{paper.paper_id}" target="_blank">文献讲义</a>' if paper.exists else "PDF 不存在"
+        open_link = f'<a href="/paper/{paper.paper_id}" target="_blank">查看文献速读</a>' if paper.exists else "PDF 不存在"
         rows.append(
             {
                 "阵营": CAMP_LABELS[paper.camp]["title"],
@@ -715,7 +715,7 @@ def build_project_track_frame(project_module: str) -> pd.DataFrame:
     )
     grouped["阵营"] = grouped["阵营"].map(lambda value: CAMP_LABELS[value]["title"])
     grouped["PDF"] = grouped.apply(
-        lambda row: f'<a href="/paper/{row["paper_id"]}" target="_blank">文献讲义</a>' if bool(row["pdf_exists"]) else "PDF 不存在",
+        lambda row: f'<a href="/paper/{row["paper_id"]}" target="_blank">查看文献速读</a>' if bool(row["pdf_exists"]) else "PDF 不存在",
         axis=1,
     )
     grouped["代表文献"] = grouped.apply(
@@ -821,7 +821,7 @@ def build_grouped_literature_frame(stance: str) -> pd.DataFrame:
     )
     grouped["阵营"] = grouped["阵营"].map(lambda value: CAMP_LABELS[value]["title"])
     grouped["PDF"] = grouped.apply(
-        lambda row: f'<a href="/paper/{row["paper_id"]}" target="_blank">文献讲义</a>' if bool(row["pdf_exists"]) else "PDF 不存在",
+        lambda row: f'<a href="/paper/{row["paper_id"]}" target="_blank">查看文献速读</a>' if bool(row["pdf_exists"]) else "PDF 不存在",
         axis=1,
     )
     grouped["代表文献"] = grouped.apply(

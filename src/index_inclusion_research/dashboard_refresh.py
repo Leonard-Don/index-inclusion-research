@@ -30,7 +30,7 @@ from index_inclusion_research.dashboard_types import (
 def default_refresh_state() -> RefreshState:
     return {
         "status": "idle",
-        "message": "页面已就绪，结果速览会在刷新后自动更新。",
+        "message": "页面已就绪，刷新完成后会自动同步本次更新。",
         "scope_label": "全部材料",
         "scope_key": "all",
         "started_at": "",
@@ -86,16 +86,16 @@ def _contract_field_label(field: str) -> str:
 
 def refresh_contract_status(contract_check: RddContractCheck | None) -> tuple[str, str]:
     if contract_check is None:
-        return ("未校验", "刷新状态未附带结果契约校验。")
+        return ("未校验", "本次刷新未附带结果状态校验。")
     manifest_path = contract_check["manifest_path"] or "results_manifest.csv"
     if not contract_check["manifest_exists"]:
-        return ("未找到 manifest", f"未找到 {manifest_path}；刷新完成后请补生成结构化结果契约文件。")
+        return ("缺少结果状态文件", f"未找到 {manifest_path}；刷新完成后请补生成结构化结果状态文件。")
     if contract_check["matches"]:
-        return ("manifest 已同步", f"{manifest_path} 已和 live RDD 状态保持一致。")
+        return ("结果状态已同步", f"{manifest_path} 已与当前识别状态保持一致。")
     mismatch_labels = "、".join(_contract_field_label(field) for field in contract_check["mismatched_fields"])
     return (
-        "manifest 待同步",
-        f"{manifest_path} 与 live RDD 状态在 {mismatch_labels} 上不一致；建议重跑 index-inclusion-make-figures-tables 和 index-inclusion-generate-research-report。",
+        "结果状态待同步",
+        f"{manifest_path} 与当前识别状态在 {mismatch_labels} 上不一致；建议重跑 index-inclusion-make-figures-tables 和 index-inclusion-generate-research-report。",
     )
 
 
@@ -107,17 +107,17 @@ def refresh_artifact_summary(
 ) -> tuple[str, str]:
     contract_status_label, contract_status_copy = refresh_contract_status(contract_check)
     if status == "running":
-        return ("本次刷新进行中", "正在生成最新核心产物；结果契约将在刷新完成后重新校验。")
+        return ("本次刷新进行中", "正在生成最新核心产物；结果状态会在刷新完成后重新校验。")
     if status == "failed":
-        return ("本次刷新未完成", f"当前页面仍显示上一个成功快照；结果契约：{contract_status_label}。{contract_status_copy}")
+        return ("本次刷新未完成", f"页面仍显示上一个成功快照；结果状态：{contract_status_label}。{contract_status_copy}")
     if status != "succeeded":
-        return ("当前核心结果", f"结果契约：{contract_status_label}。{contract_status_copy}")
+        return ("最近结果概览", f"结果状态：{contract_status_label}。{contract_status_copy}")
 
     artifact_count = len(updated_artifacts)
     if artifact_count <= 0:
         return (
             "本次未发现新的核心产物",
-            f"本次刷新未检测到新的核心结果文件变化；结果契约：{contract_status_label}。{contract_status_copy}",
+            f"本次刷新未检测到新的核心结果文件变化；结果状态：{contract_status_label}。{contract_status_copy}",
         )
 
     preview_paths = [str(item.get("path", "") or "") for item in updated_artifacts[:2] if item.get("path")]
@@ -128,7 +128,7 @@ def refresh_artifact_summary(
         preview = f"共 {artifact_count} 项"
     return (
         f"本次更新 {artifact_count} 项核心产物",
-        f"最近变更：{preview}；结果契约：{contract_status_label}。{contract_status_copy}",
+        f"最近变更：{preview}；结果状态：{contract_status_label}。{contract_status_copy}",
     )
 
 
@@ -142,7 +142,7 @@ def build_dashboard_snapshot_meta(
     if not files:
         return {
             "label": "尚未生成",
-            "copy": "当前页面尚未读到核心结果文件；首次刷新后这里会显示最新快照时间。",
+            "copy": "页面暂未读到核心结果文件；首次刷新后这里会显示最新快照时间。",
             "source_path": "",
             "source_count": 0,
         }
@@ -151,7 +151,7 @@ def build_dashboard_snapshot_meta(
     latest_path = to_relative(latest)
     return {
         "label": latest_dt.strftime("%Y-%m-%d %H:%M"),
-        "copy": f"当前页面读取的是 {len(files)} 个核心结果文件中的最新快照，最近更新文件：{latest_path}。",
+        "copy": f"页面目前读取的是 {len(files)} 个核心结果文件中的最新快照，最近更新文件：{latest_path}。",
         "source_path": latest_path,
         "source_count": len(files),
     }
@@ -303,7 +303,7 @@ def refresh_status_payload(
     accepted: bool = True,
 ) -> RefreshStatusPayload:
     status = state.get("status", "idle")
-    message = str(state.get("message", "") or "页面已就绪，结果速览会在刷新后自动更新。")
+    message = str(state.get("message", "") or "页面已就绪，刷新完成后会自动同步本次更新。")
     scope_label = str(state.get("scope_label", "全部材料") or "全部材料")
     scope_key = str(state.get("scope_key", "all") or "all")
     error = str(state.get("error", "") or "")
@@ -377,7 +377,7 @@ def set_refresh_succeeded(
                 "status": "succeeded",
                 "scope_label": scope_label,
                 "scope_key": scope_key,
-                "message": f'“{scope_label}”刷新完成，结果速览已更新。',
+                "message": f'“{scope_label}”刷新完成，本次更新已同步。',
                 "finished_at": finished_at,
                 "finished_ts": finished_ts,
                 "error": "",
@@ -472,7 +472,7 @@ def queue_refresh_job(
                 "status": "running",
                 "scope_label": scope_label,
                 "scope_key": scope_key,
-                "message": f'正在刷新“{scope_label}”，结果速览会在完成后自动更新。',
+                "message": f'正在刷新“{scope_label}”，完成后会自动同步本次更新。',
                 "started_at": started_at,
                 "started_ts": started_ts,
                 "finished_at": "",

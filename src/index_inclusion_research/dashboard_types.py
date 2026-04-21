@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, MutableMapping
 from flask.typing import ResponseReturnValue
 from pathlib import Path
 from typing import Any, Literal, Protocol, TypeAlias, TypedDict
@@ -346,6 +346,75 @@ class DashboardSection(TypedDict, total=False):
     display_tables: list[DisplayTable]
     primary_tables: list[DisplayTable]
     detail_tables: list[DisplayTable]
+    section_view: "DesignSectionView | TableSuiteSectionView"
+
+
+class SectionHeadView(TypedDict):
+    section_id: str
+    waypoint_label: str
+    kicker: str
+    title: str
+    intro: str
+    side_label: str
+
+
+class TablePrimaryView(TypedDict):
+    key: str
+    title: str
+    copy: str
+    container: str
+    collapsed_copy: str
+    toggle_label: str
+
+
+class TableDetailView(TypedDict):
+    full_title: str
+    full_copy: str
+    demo_key: str
+    demo_title: str
+    demo_copy: str
+    container: str
+    kicker: str
+    toggle_label: str
+
+
+class TableSuiteSectionView(TypedDict):
+    head: SectionHeadView
+    show_suite: bool
+    primary: TablePrimaryView
+    detail: TableDetailView
+
+
+class DesignSectionView(TypedDict):
+    head: SectionHeadView
+    detail_figures_key: str
+    detail_figures_title: str
+    detail_figures_copy: str
+    primary: TablePrimaryView
+    detail: TableDetailView
+    brief_mode_hint: str
+
+
+class TrackMetaView(TypedDict):
+    takeaway_label: str
+    summary_label: str
+    refresh_button_label: str
+    refresh_running_label: str
+    refresh_help_copy: str
+    surface_title: str
+
+
+class TrackSectionView(TypedDict):
+    meta: TrackMetaView
+    primary: TablePrimaryView
+    detail: TableDetailView
+    support_band_title: str
+    support_band_copy: str
+    support_demo_key: str
+    support_demo_title: str
+    support_demo_copy: str
+    support_demo_kicker: str
+    support_demo_toggle_label: str
 
 
 class TrackDisplaySection(TrackResult, DashboardSection, total=False):
@@ -356,6 +425,7 @@ class TrackDisplaySection(TrackResult, DashboardSection, total=False):
     badge: str
     takeaway: str
     status_panel: StatusPanel | None
+    track_view: TrackSectionView
 
 
 class SecondarySection(BaseResult, DashboardSection, total=False):
@@ -403,7 +473,7 @@ class AnalysisDefinition(TypedDict):
 
 AnalysesConfig: TypeAlias = dict[str, AnalysisDefinition]
 CacheEntry: TypeAlias = TrackResult | SecondarySection | SupplementResult
-AnalysisCache: TypeAlias = dict[str, CacheEntry]
+AnalysisCache: TypeAlias = MutableMapping[str, CacheEntry]
 
 
 RouteResponse: TypeAlias = ResponseReturnValue

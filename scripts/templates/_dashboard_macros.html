@@ -1,123 +1,49 @@
-{% macro render_summary_cards(cards) -%}
-{% if cards %}
-<div class="section-summary-grid">
-  {% for card in cards %}
-  <div class="summary-card">
-    <div class="summary-kicker">{{ card.kicker }}</div>
-    <h3 class="summary-title">{{ card.title }}</h3>
-    {% if card.meta %}
-    <div class="summary-meta">{{ card.meta }}</div>
-    {% endif %}
-    <div class="summary-copy">{{ card["copy"] }}</div>
-    {% if card["foot"] %}
-    <div class="summary-foot">{{ card["foot"] }}</div>
-    {% endif %}
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
-{%- endmacro %}
+{% import "_dashboard_shared_macros.html" as shared with context %}
+{% import "_dashboard_overview_macros.html" as overview with context %}
+{% import "_dashboard_content_macros.html" as content with context %}
 
-{% macro render_table_cards(items, container_class) -%}
-<div class="{{ container_class }}">
-  {% for item in items %}
-  <div class="result-card {{ item.layout_class }} {{ item.tier }}">
-    <div class="table-label">{{ item.label }}</div>
-    <div class="table-wrap">{{ item.html|safe }}</div>
-    <div class="table-scroll-note" data-table-scroll-note hidden>支持左右滚动，首列已固定</div>
-  </div>
-  {% endfor %}
-</div>
-{%- endmacro %}
-
-{% macro render_result_group(title, copy, items, container_class='library-panels') -%}
-<div class="result-group">
-  <div class="result-group-head">
-    <h4>{{ title }}</h4>
-    <p>{{ copy }}</p>
-  </div>
-  {{ render_table_cards(items, container_class) }}
-</div>
-{%- endmacro %}
-
-{% macro render_primary_result_group(key, title, copy, items, container_class='library-panels', collapse_in_demo=false, collapsed_copy='展示版默认只露出最关键的一张主表，其余主表收进折叠层。', toggle_label='按需展开') -%}
-{% if items %}
-{% if collapse_in_demo and items|length > 1 %}
-<div class="result-group">
-  <div class="result-group-head">
-    <h4>{{ title }}</h4>
-    <p>{{ copy }}</p>
-  </div>
-  {{ render_table_cards(items[:1], container_class) }}
-</div>
-{% call render_details_panel(
-  key,
-  "补充主表",
-  "展开其余主表（%s 张）"|format((items|length) - 1),
-  collapsed_copy,
-  toggle_label
-) %}
-  {{ render_table_cards(items[1:], container_class) }}
-{% endcall %}
-{% else %}
-{{ render_result_group(title, copy, items, container_class) }}
-{% endif %}
-{% endif %}
-{%- endmacro %}
-
+{% macro render_summary_cards(cards) -%}{{ shared.render_summary_cards(cards) }}{%- endmacro %}
+{% macro render_topbar(nav_sections) -%}{{ overview.render_topbar(nav_sections) }}{%- endmacro %}
+{% macro render_section_head(kicker, title, intro, side_label, side_copy) -%}{{ shared.render_section_head(kicker, title, intro, side_label, side_copy) }}{%- endmacro %}
+{% macro render_abstract_panel(abstract_lead, abstract_points) -%}{{ shared.render_abstract_panel(abstract_lead, abstract_points) }}{%- endmacro %}
+{% macro render_highlight_grid(highlights) -%}{{ shared.render_highlight_grid(highlights) }}{%- endmacro %}
+{% macro render_kpi_card(metric) -%}{{ shared.render_kpi_card(metric) }}{%- endmacro %}
+{% macro render_hero_metrics(metrics) -%}{{ overview.render_hero_metrics(metrics) }}{%- endmacro %}
+{% macro render_refresh_form(action, anchor, button_label, scope_key, running_label) -%}{{ shared.render_refresh_form(action, anchor, button_label, scope_key, running_label) }}{%- endmacro %}
+{% macro render_refresh_status_panel(refresh_meta) -%}{{ overview.render_refresh_status_panel(refresh_meta) }}{%- endmacro %}
+{% macro render_hero_section(overview_summary, overview_metrics, refresh_meta) -%}{{ overview.render_hero_section(overview_summary, overview_metrics, refresh_meta) }}{%- endmacro %}
+{% macro render_utility_bar(mode_tabs, mode) -%}{{ overview.render_utility_bar(mode_tabs, mode) }}{%- endmacro %}
+{% macro render_core_findings_section(abstract_lead, abstract_points, highlights) -%}{{ overview.render_core_findings_section(abstract_lead, abstract_points, highlights) }}{%- endmacro %}
+{% macro render_overview_context(track_sections, overview_notes) -%}{{ overview.render_overview_context(track_sections, overview_notes) }}{%- endmacro %}
+{% macro render_cta_strip(cta_copy, mode) -%}{{ overview.render_cta_strip(cta_copy, mode) }}{%- endmacro %}
+{% macro render_design_section(mode, design_section) -%}{{ content.render_design_section(mode, design_section) }}{%- endmacro %}
+{% macro render_framework_section(mode, framework_section) -%}{{ content.render_framework_section(mode, framework_section) }}{%- endmacro %}
+{% macro render_supplement_section(mode, supplement_section) -%}{{ content.render_supplement_section(mode, supplement_section) }}{%- endmacro %}
+{% macro render_robustness_section(robustness_section) -%}{{ content.render_robustness_section(robustness_section) }}{%- endmacro %}
+{% macro render_limits_section(mode, limits_section) -%}{{ content.render_limits_section(mode, limits_section) }}{%- endmacro %}
+{% macro render_table_cards(items, container_class) -%}{{ content.render_table_cards(items, container_class) }}{%- endmacro %}
+{% macro render_result_group(title, copy, items, container_class='library-panels') -%}{{ content.render_result_group(title, copy, items, container_class) }}{%- endmacro %}
+{% macro render_section_table_suite(mode, summary_cards, primary, primary_tables, detail, detail_tables) -%}{{ content.render_section_table_suite(mode, summary_cards, primary, primary_tables, detail, detail_tables) }}{%- endmacro %}
+{% macro render_table_suite_section(mode, section) -%}{{ content.render_table_suite_section(mode, section) }}{%- endmacro %}
+{% macro render_figure_cards(figures, tier='primary', container_class='library-panels', eager_first=false) -%}{{ content.render_figure_cards(figures, tier, container_class, eager_first) }}{%- endmacro %}
+{% macro render_primary_result_group(key, title, copy, items, container_class='library-panels', collapse_in_demo=false, collapsed_copy='展示版默认只露出最关键的一张主表，其余主表收进折叠层。', toggle_label='按需展开') -%}{{ content.render_primary_result_group(key, title, copy, items, container_class, collapse_in_demo, collapsed_copy, toggle_label) }}{%- endmacro %}
+{% macro render_collapsible_figure_group(key, title, copy, figures, kicker='补充图表', toggle_label='展开查看', tier='detail', container_class='library-panels') -%}{{ content.render_collapsible_figure_group(key, title, copy, figures, kicker, toggle_label, tier, container_class) }}{%- endmacro %}
+{% macro render_collapsible_table_group(key, title, copy, items, container_class='library-panels', kicker='补充细表', toggle_label='按需展开') -%}{{ content.render_collapsible_table_group(key, title, copy, items, container_class, kicker, toggle_label) }}{%- endmacro %}
+{% macro render_collapsible_support_group(key, title, copy, papers, kicker='文献支持', toggle_label='展开文献') -%}{{ content.render_collapsible_support_group(key, title, copy, papers, kicker, toggle_label) }}{%- endmacro %}
+{% macro render_figure_card(figure, tier='primary', eager=false) -%}{{ content.render_figure_card(figure, tier, eager) }}{%- endmacro %}
+{% macro render_track_panels(section) -%}{{ content.render_track_panels(section) }}{%- endmacro %}
+{% macro render_track_meta(section, index, mode) -%}{{ content.render_track_meta(section, index, mode) }}{%- endmacro %}
+{% macro render_track_section(section, index, mode) -%}{{ content.render_track_section(section, index, mode) }}{%- endmacro %}
+{% macro render_tracks_section(track_sections, mode) -%}{{ content.render_tracks_section(track_sections, mode) }}{%- endmacro %}
+{% macro render_insight_strip(items) -%}{{ content.render_insight_strip(items) }}{%- endmacro %}
+{% macro render_status_panel(panel) -%}{{ content.render_status_panel(panel) }}{%- endmacro %}
+{% macro render_support_band(papers, title, copy) -%}{{ content.render_support_band(papers, title, copy) }}{%- endmacro %}
+{% macro render_mode_hint(copy) -%}{{ shared.render_mode_hint(copy) }}{%- endmacro %}
+{% macro render_waypoint_navigation(nav_sections, track_sections) -%}{{ overview.render_waypoint_navigation(nav_sections, track_sections) }}{%- endmacro %}
 {% macro render_details_panel(key, kicker, title, copy, toggle_label='展开查看') -%}
-<details class="details-panel" data-details-key="{{ key }}">
-  <summary>
-    <div>
-      <div class="details-kicker">{{ kicker }}</div>
-      <div class="details-title">{{ title }}</div>
-      <div class="details-copy">{{ copy }}</div>
-    </div>
-    <div class="details-toggle" data-details-toggle>{{ toggle_label }}</div>
-  </summary>
-  <div class="details-panel-body">
-    {{ caller() }}
-  </div>
-</details>
+{% call shared.render_details_panel(key, kicker, title, copy, toggle_label) %}
+  {{ caller() }}
+{% endcall %}
 {%- endmacro %}
-
-{% macro render_support_card(paper) -%}
-<div class="support-card">
-  <div class="support-meta">
-    <span class="support-pill">{{ paper.camp }}</span>
-    <span class="support-pill">{{ paper.stance }}</span>
-    <span class="support-pill">{{ paper.market_focus }}</span>
-  </div>
-  <div class="support-citation">{{ paper.citation }}</div>
-  <div class="support-role">{{ paper.one_line_role }}</div>
-  <div class="support-deep-grid">
-    <div class="support-deep">
-      <div class="support-deep-label">识别对象</div>
-      <div class="support-deep-copy">{{ paper.identification_target }}</div>
-    </div>
-    <div class="support-deep">
-      <div class="support-deep-label">挑战的假设</div>
-      <div class="support-deep-copy">{{ paper.challenged_assumption }}</div>
-    </div>
-    <div class="support-deep full">
-      <div class="support-deep-label">争论推进</div>
-      <div class="support-deep-copy">{{ paper.deep_contribution }}</div>
-    </div>
-  </div>
-  <div class="support-detail">
-    <div><strong>方法</strong>{{ paper.method_focus }}</div>
-    <div><strong>作用</strong>{{ paper.practical_use }}</div>
-  </div>
-  {% if paper.pdf_href %}
-  <a class="support-link" href="{{ paper.pdf_href }}" target="_blank" rel="noopener noreferrer">文献讲义</a>
-  {% endif %}
-</div>
-{%- endmacro %}
-
-{% macro render_support_grid(papers) -%}
-<div class="support-grid">
-  {% for paper in papers %}
-  {{ render_support_card(paper) }}
-  {% endfor %}
-</div>
-{%- endmacro %}
+{% macro render_support_card(paper) -%}{{ shared.render_support_card(paper) }}{%- endmacro %}
+{% macro render_support_grid(papers) -%}{{ shared.render_support_grid(papers) }}{%- endmacro %}
