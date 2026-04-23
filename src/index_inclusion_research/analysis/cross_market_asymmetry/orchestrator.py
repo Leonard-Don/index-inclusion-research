@@ -13,7 +13,7 @@ from . import (
     time_series,
 )
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[4]
 REAL_TABLES_DIR = ROOT / "results" / "real_tables"
 REAL_FIGURES_DIR = ROOT / "results" / "real_figures"
 REAL_EVENT_PANEL = ROOT / "data" / "processed" / "real_event_panel.csv"
