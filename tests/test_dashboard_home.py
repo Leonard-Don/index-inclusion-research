@@ -14,7 +14,6 @@ from index_inclusion_research.dashboard_types import (
     TrackResult,
 )
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -27,7 +26,9 @@ def _snapshot_meta() -> SnapshotMeta:
     }
 
 
-def _refresh_payload(mode: str, anchor: str, open_panels: str | None) -> RefreshStatusPayload:
+def _refresh_payload(
+    mode: str, anchor: str, open_panels: str | None
+) -> RefreshStatusPayload:
     return {
         "accepted": True,
         "status": "idle",
@@ -101,15 +102,27 @@ def test_build_highlights_keeps_current_cn_effective_discussion() -> None:
             "validation_error": "",
         },
     )
+    strongest = next(item for item in highlights if item["label"] == "最强结论")
     discussion = next(item for item in highlights if item["label"] == "最值得讨论")
     method = next(item for item in highlights if item["label"] == "方法含义")
 
+    assert (
+        strongest["headline"]
+        == "美股公告日仍有稳定短期正向效应，但更像被压缩后的公开信号。"
+    )
+    assert "提前交易显著压缩" in strongest["copy"]
+    assert discussion["headline"] == "A 股生效阶段更像独立制度场景，而不是美股镜像。"
     assert "但统计上并不显著" in discussion["copy"]
     assert "[0,+120] 窗口下调入与调出的 CAR 差异达到" in discussion["copy"]
-    assert "且统计显著。这说明 A 股市场不能机械套用美股的经典指数纳入叙事。" not in discussion["copy"]
+    assert (
+        "且统计显著。这说明 A 股市场不能机械套用美股的经典指数纳入叙事。"
+        not in discussion["copy"]
+    )
+    assert "制度摩擦更强" in discussion["copy"]
     assert method["headline"] == "中国 RDD 已进入公开数据版证据链。"
     assert "公开重建口径" in method["copy"]
-    assert "当前来源为 公开重建候选样本文件" in method["copy"]
+    assert "制度差异、套利约束和价格发现如何改变结论" in method["copy"]
+    assert "来源：公开重建候选样本文件" in method["copy"]
 
 
 def test_build_home_context_full_mode_assembles_and_caches_sections() -> None:
@@ -122,7 +135,9 @@ def test_build_home_context_full_mode_assembles_and_caches_sections() -> None:
     def _load_or_build_track_section(analysis_id: str) -> TrackResult:
         return {"id": analysis_id, "summary_text": analysis_id}
 
-    def _prepare_track_display(section: TrackDisplaySection, analysis_id: str, demo_mode: bool) -> TrackDisplaySection:
+    def _prepare_track_display(
+        section: TrackDisplaySection, analysis_id: str, demo_mode: bool
+    ) -> TrackDisplaySection:
         display = dict(section)
         display["prepared"] = True
         display["demo_mode"] = demo_mode
@@ -135,7 +150,9 @@ def test_build_home_context_full_mode_assembles_and_caches_sections() -> None:
         analyses=analyses,
         run_cache=run_cache,
         nav_sections_for_mode=lambda mode: [{"anchor": "overview", "label": "总览"}],
-        mode_tabs_for_mode=lambda mode, open_panels: [{"mode": mode, "open_panels": open_panels}],
+        mode_tabs_for_mode=lambda mode, open_panels: [
+            {"mode": mode, "open_panels": open_panels}
+        ],
         build_dashboard_snapshot_meta=_snapshot_meta,
         refresh_status_payload=_refresh_payload,
         overview_notes_for_mode=lambda mode: [{"title": mode, "copy": "note"}],
@@ -147,10 +164,21 @@ def test_build_home_context_full_mode_assembles_and_caches_sections() -> None:
         build_track_notes=lambda analysis_id: [{"name": analysis_id, "copy": "note"}],
         prepare_track_display=_prepare_track_display,
         load_literature_framework_result=lambda: {"id": "paper_framework"},
-        prepare_framework_display=lambda section, demo_mode: {"prepared_framework": True, "demo_mode": demo_mode, **section},
+        prepare_framework_display=lambda section, demo_mode: {
+            "prepared_framework": True,
+            "demo_mode": demo_mode,
+            **section,
+        },
         load_supplement_result=lambda: {"id": "project_supplement"},
-        prepare_supplement_display=lambda section, demo_mode: {"prepared_supplement": True, "demo_mode": demo_mode, **section},
-        build_sample_design_section=lambda demo_mode: {"id": "design", "demo_mode": demo_mode},
+        prepare_supplement_display=lambda section, demo_mode: {
+            "prepared_supplement": True,
+            "demo_mode": demo_mode,
+            **section,
+        },
+        build_sample_design_section=lambda demo_mode: {
+            "id": "design",
+            "demo_mode": demo_mode,
+        },
         build_robustness_section=lambda: {"id": "robustness"},
         build_limits_section=lambda: {"id": "limits"},
         refresh_status_url="/refresh/status",
@@ -189,22 +217,50 @@ def test_build_home_context_brief_mode_collapses_secondary_sections() -> None:
         abstract_points=lambda: [{"title": "point", "copy": "copy"}],
         load_or_build_track_section=lambda analysis_id: {"id": analysis_id},
         build_track_notes=lambda analysis_id: [{"name": analysis_id, "copy": "note"}],
-        prepare_track_display=lambda section, analysis_id, demo_mode: {**section, "demo_mode": demo_mode},
+        prepare_track_display=lambda section, analysis_id, demo_mode: {
+            **section,
+            "demo_mode": demo_mode,
+        },
         load_literature_framework_result=lambda: {"id": "paper_framework"},
-        prepare_framework_display=lambda section, demo_mode: {"prepared_framework": True, **section},
+        prepare_framework_display=lambda section, demo_mode: {
+            "prepared_framework": True,
+            **section,
+        },
         load_supplement_result=lambda: {"id": "project_supplement"},
-        prepare_supplement_display=lambda section, demo_mode: {"prepared_supplement": True, **section},
-        build_sample_design_section=lambda demo_mode: {"id": "design", "demo_mode": demo_mode},
+        prepare_supplement_display=lambda section, demo_mode: {
+            "prepared_supplement": True,
+            **section,
+        },
+        build_sample_design_section=lambda demo_mode: {
+            "id": "design",
+            "demo_mode": demo_mode,
+        },
         build_robustness_section=lambda: {"id": "robustness"},
         build_limits_section=lambda: {"id": "limits"},
         refresh_status_url="/refresh/status",
     )
 
-    assert context["framework_section"] == {"display_summary": "", "display_tables": [], "summary_cards": []}
-    assert context["supplement_section"] == {"display_summary": "", "display_tables": [], "summary_cards": []}
-    assert set(context["framework_section"]) == {"display_summary", "display_tables", "summary_cards"}
+    assert context["framework_section"] == {
+        "display_summary": "",
+        "display_tables": [],
+        "summary_cards": [],
+    }
+    assert context["supplement_section"] == {
+        "display_summary": "",
+        "display_tables": [],
+        "summary_cards": [],
+    }
+    assert set(context["framework_section"]) == {
+        "display_summary",
+        "display_tables",
+        "summary_cards",
+    }
     assert context["design_section"]["demo_mode"] is False
-    assert context["robustness_section"] == {"summary": "", "summary_cards": [], "tables": []}
+    assert context["robustness_section"] == {
+        "summary": "",
+        "summary_cards": [],
+        "tables": [],
+    }
 
 
 def test_dashboard_home_context_builder_builds_and_caches_secondary_sections() -> None:
@@ -214,7 +270,9 @@ def test_dashboard_home_context_builder_builds_and_caches_secondary_sections() -
         analyses={"price_pressure_track": {"title": "短期价格压力与效应减弱"}},
         run_cache=run_cache,
         nav_sections_for_mode=lambda mode: [{"anchor": "overview", "label": "总览"}],
-        mode_tabs_for_mode=lambda mode, open_panels: [{"mode": mode, "open_panels": open_panels}],
+        mode_tabs_for_mode=lambda mode, open_panels: [
+            {"mode": mode, "open_panels": open_panels}
+        ],
         build_dashboard_snapshot_meta=_snapshot_meta,
         refresh_status_payload=_refresh_payload,
         overview_notes_for_mode=lambda mode: [{"title": mode, "copy": "note"}],
@@ -224,12 +282,24 @@ def test_dashboard_home_context_builder_builds_and_caches_secondary_sections() -
         abstract_points=lambda: [{"title": "point", "copy": "copy"}],
         load_or_build_track_section=lambda analysis_id: {"id": analysis_id},
         build_track_notes=lambda analysis_id: [{"name": analysis_id, "copy": "note"}],
-        prepare_track_display=lambda section, analysis_id, demo_mode: {**section, "prepared": True},
+        prepare_track_display=lambda section, analysis_id, demo_mode: {
+            **section,
+            "prepared": True,
+        },
         load_literature_framework_result=lambda: {"id": "paper_framework"},
-        prepare_framework_display=lambda section, demo_mode: {"prepared_framework": True, **section},
+        prepare_framework_display=lambda section, demo_mode: {
+            "prepared_framework": True,
+            **section,
+        },
         load_supplement_result=lambda: {"id": "project_supplement"},
-        prepare_supplement_display=lambda section, demo_mode: {"prepared_supplement": True, **section},
-        build_sample_design_section=lambda demo_mode: {"id": "design", "demo_mode": demo_mode},
+        prepare_supplement_display=lambda section, demo_mode: {
+            "prepared_supplement": True,
+            **section,
+        },
+        build_sample_design_section=lambda demo_mode: {
+            "id": "design",
+            "demo_mode": demo_mode,
+        },
         build_robustness_section=lambda: {"id": "robustness"},
         build_limits_section=lambda: {"id": "limits"},
     )
@@ -248,7 +318,9 @@ def test_dashboard_home_context_builder_builds_and_caches_secondary_sections() -
     assert run_cache["project_supplement"]["prepared_supplement"] is True
 
 
-def test_dashboard_home_context_builder_writes_prepared_secondary_sections_to_live_cache() -> None:
+def test_dashboard_home_context_builder_writes_prepared_secondary_sections_to_live_cache() -> (
+    None
+):
     snapshot_cache: AnalysisCache = {}
     live_cache: AnalysisCache = {}
     builder = DashboardHomeContextBuilder(
@@ -256,7 +328,9 @@ def test_dashboard_home_context_builder_writes_prepared_secondary_sections_to_li
         analyses={"price_pressure_track": {"title": "短期价格压力与效应减弱"}},
         run_cache=snapshot_cache,
         nav_sections_for_mode=lambda mode: [{"anchor": "overview", "label": "总览"}],
-        mode_tabs_for_mode=lambda mode, open_panels: [{"mode": mode, "open_panels": open_panels}],
+        mode_tabs_for_mode=lambda mode, open_panels: [
+            {"mode": mode, "open_panels": open_panels}
+        ],
         build_dashboard_snapshot_meta=_snapshot_meta,
         refresh_status_payload=_refresh_payload,
         overview_notes_for_mode=lambda mode: [{"title": mode, "copy": "note"}],
@@ -266,12 +340,24 @@ def test_dashboard_home_context_builder_writes_prepared_secondary_sections_to_li
         abstract_points=lambda: [{"title": "point", "copy": "copy"}],
         load_or_build_track_section=lambda analysis_id: {"id": analysis_id},
         build_track_notes=lambda analysis_id: [{"name": analysis_id, "copy": "note"}],
-        prepare_track_display=lambda section, analysis_id, demo_mode: {**section, "prepared": True},
+        prepare_track_display=lambda section, analysis_id, demo_mode: {
+            **section,
+            "prepared": True,
+        },
         load_literature_framework_result=lambda: {"id": "paper_framework"},
-        prepare_framework_display=lambda section, demo_mode: {"prepared_framework": True, **section},
+        prepare_framework_display=lambda section, demo_mode: {
+            "prepared_framework": True,
+            **section,
+        },
         load_supplement_result=lambda: {"id": "project_supplement"},
-        prepare_supplement_display=lambda section, demo_mode: {"prepared_supplement": True, **section},
-        build_sample_design_section=lambda demo_mode: {"id": "design", "demo_mode": demo_mode},
+        prepare_supplement_display=lambda section, demo_mode: {
+            "prepared_supplement": True,
+            **section,
+        },
+        build_sample_design_section=lambda demo_mode: {
+            "id": "design",
+            "demo_mode": demo_mode,
+        },
         build_robustness_section=lambda: {"id": "robustness"},
         build_limits_section=lambda: {"id": "limits"},
         write_cache=live_cache,

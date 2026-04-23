@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, MutableMapping
-from flask.typing import ResponseReturnValue
 from pathlib import Path
 from typing import Any, Literal, Protocol, TypeAlias, TypedDict
 
 import pandas as pd
-
+from flask.typing import ResponseReturnValue
 
 ModeName: TypeAlias = Literal["brief", "demo", "full"]
 RefreshStatus: TypeAlias = Literal["idle", "running", "succeeded", "failed"]
@@ -346,7 +345,7 @@ class DashboardSection(TypedDict, total=False):
     display_tables: list[DisplayTable]
     primary_tables: list[DisplayTable]
     detail_tables: list[DisplayTable]
-    section_view: "DesignSectionView | TableSuiteSectionView"
+    section_view: DesignSectionView | TableSuiteSectionView
 
 
 class SectionHeadView(TypedDict):

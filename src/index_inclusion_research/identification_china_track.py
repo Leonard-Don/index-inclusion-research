@@ -3,7 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from index_inclusion_research.hs300_rdd import run_analysis as run_hs300_rdd_analysis
-from index_inclusion_research.hs300_style import run_analysis as run_hs300_style_analysis
+from index_inclusion_research.hs300_style import (
+    run_analysis as run_hs300_style_analysis,
+)
 
 
 def run_analysis(verbose: bool = True) -> dict[str, object]:
@@ -32,7 +34,7 @@ def run_analysis(verbose: bool = True) -> dict[str, object]:
         [
             "# 制度识别与中国市场证据结果包",
             "",
-            "这条研究主线用中性文献与中国市场文献组织识别策略，在同一页里同时展示匹配对照组结果与断点回归扩展结果。",
+            "这条研究主线以中国市场正向证据与识别方法论文献为底，在同一页里同时展示匹配对照组结果与断点回归扩展结果。",
             "",
             "## 第一部分：风格识别",
             style_summary or "暂无风格识别摘要。",
@@ -45,7 +47,7 @@ def run_analysis(verbose: bool = True) -> dict[str, object]:
     return {
         "id": "identification_china_track",
         "title": "制度识别与中国市场证据",
-        "description": "以中性文献和中国市场证据为底，整合匹配对照组、DID 风格分析和 RDD 扩展。",
+        "description": "以中国市场正向证据与识别方法论文献为底，整合匹配对照组、DID 风格分析和 RDD 扩展。",
         "subtitle": "Identification & China Evidence",
         "summary_text": summary_text,
         "tables": combined_tables,

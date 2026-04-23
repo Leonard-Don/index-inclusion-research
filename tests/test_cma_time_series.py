@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 import pandas as pd
 
 from index_inclusion_research.analysis.cross_market_asymmetry.time_series import (
@@ -65,6 +67,25 @@ def test_render_rolling_figure_writes_png(tmp_path):
     out = render_rolling_figure(rolling, output_dir=tmp_path)
     assert out["figure"].exists()
     assert out["aum_overlay"] is False
+
+
+def test_render_rolling_figure_skips_empty_legend_warning(tmp_path):
+    rolling = pd.DataFrame(
+        columns=[
+            "market",
+            "event_phase",
+            "window_end_year",
+            "car_mean",
+        ]
+    )
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        out = render_rolling_figure(rolling, output_dir=tmp_path)
+    assert out["figure"].exists()
+    assert all(
+        "No artists with labels found to put in legend" not in str(w.message)
+        for w in caught
+    )
 
 
 def test_export_time_series_tables_writes_csvs(tmp_path):

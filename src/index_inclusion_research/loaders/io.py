@@ -14,7 +14,6 @@ from .contracts import (
     parse_date_columns,
 )
 
-
 ADDITION_EVENT_TYPES = {"addition", "inclusion", "add", "调入", "纳入"}
 DELETION_EVENT_TYPES = {"deletion", "removal", "exclusion", "delete", "剔除", "调出"}
 

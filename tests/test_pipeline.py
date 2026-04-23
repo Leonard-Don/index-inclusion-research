@@ -9,7 +9,12 @@ from index_inclusion_research.analysis import (
     filter_nonoverlap_event_windows,
     winsorize_event_level_metrics,
 )
-from index_inclusion_research.pipeline import build_event_panel, build_event_sample, build_matched_sample, map_to_trading_date
+from index_inclusion_research.pipeline import (
+    build_event_panel,
+    build_event_sample,
+    build_matched_sample,
+    map_to_trading_date,
+)
 
 
 def _sample_events() -> pd.DataFrame:

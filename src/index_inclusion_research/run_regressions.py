@@ -6,9 +6,13 @@ from pathlib import Path
 import pandas as pd
 
 from index_inclusion_research import load_project_config
-from index_inclusion_research.analysis import build_regression_dataset, run_regressions as run_regressions_bundle
+from index_inclusion_research.analysis import build_regression_dataset
+from index_inclusion_research.analysis import run_regressions as run_regressions_bundle
 from index_inclusion_research.loaders import save_dataframe
-from index_inclusion_research.workflow_profiles import add_profile_argument, resolve_profile_args
+from index_inclusion_research.workflow_profiles import (
+    add_profile_argument,
+    resolve_profile_args,
+)
 
 
 def build_arg_parser() -> argparse.ArgumentParser:

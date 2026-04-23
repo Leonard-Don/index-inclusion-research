@@ -5,12 +5,14 @@ from pathlib import Path
 import pytest
 
 from index_inclusion_research import dashboard_config
-from index_inclusion_research.dashboard_page_outline_runtime import DashboardPageOutlineRuntime
-from index_inclusion_research.dashboard_page_sections_runtime import DashboardPageSectionsRuntime
+from index_inclusion_research.dashboard_page_outline_runtime import (
+    DashboardPageOutlineRuntime,
+)
+from index_inclusion_research.dashboard_page_sections_runtime import (
+    DashboardPageSectionsRuntime,
+)
 from index_inclusion_research.dashboard_runtime import DashboardRuntime
-from index_inclusion_research.dashboard_track_content_runtime import DashboardTrackContentRuntime
-from index_inclusion_research.dashboard_track_display_runtime import DashboardTrackDisplayRuntime
-from index_inclusion_research.dashboard_track_support_runtime import DashboardTrackSupportRuntime
+from index_inclusion_research.dashboard_track_runtime import DashboardTrackRuntime
 
 
 def _build_runtime() -> DashboardRuntime:
@@ -51,9 +53,7 @@ def test_dashboard_runtime_exposes_explicit_facade_methods(monkeypatch) -> None:
     monkeypatch.setattr(runtime.page, "build_highlights", lambda: expected_highlights)
 
     assert "__getattr__" not in DashboardRuntime.__dict__
-    assert isinstance(runtime.track.support, DashboardTrackSupportRuntime)
-    assert isinstance(runtime.track.content, DashboardTrackContentRuntime)
-    assert isinstance(runtime.track.display, DashboardTrackDisplayRuntime)
+    assert isinstance(runtime.track, DashboardTrackRuntime)
     assert isinstance(runtime.page.outline, DashboardPageOutlineRuntime)
     assert isinstance(runtime.page.sections, DashboardPageSectionsRuntime)
     assert runtime.column_labels is runtime.track.column_labels
@@ -69,4 +69,4 @@ def test_dashboard_runtime_missing_attribute_raises_attribute_error() -> None:
     runtime = _build_runtime()
 
     with pytest.raises(AttributeError):
-        getattr(runtime, "prepare_track_display")
+        getattr(runtime, "prepare_track_display")  # noqa: B009 - explicitly probing for attribute existence

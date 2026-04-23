@@ -5,7 +5,10 @@ from pathlib import Path
 import pandas as pd
 
 from index_inclusion_research import prepare_hs300_rdd_candidates as prepare_script
-from index_inclusion_research.analysis.rdd_candidates import prepare_candidate_frame, validate_candidate_frame
+from index_inclusion_research.analysis.rdd_candidates import (
+    prepare_candidate_frame,
+    validate_candidate_frame,
+)
 
 
 def _raw_candidate_frame() -> pd.DataFrame:

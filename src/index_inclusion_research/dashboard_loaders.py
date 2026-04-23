@@ -7,24 +7,19 @@ from typing import Any, cast
 import pandas as pd
 
 from index_inclusion_research.dashboard_media import build_figure_entry
-from index_inclusion_research.results_snapshot import read_cached_csv
-from index_inclusion_research.result_contract import (
-    load_rdd_status as load_shared_rdd_status,
-    load_results_manifest as load_shared_results_manifest,
-)
 from index_inclusion_research.dashboard_types import (
     AnalysesConfig,
     AnalysisDefinition,
     CsvFrameReader,
-    FigureEntry,
     FigureCaptionBuilder,
+    FigureEntry,
     LabelTranslator,
     RawAnalysisResult,
     RawFigureEntry,
-    RelativePathBuilder,
     RddContractCheck,
     RddStatus,
     RddStatusLoader,
+    RelativePathBuilder,
     RenderedTable,
     SavedTablesLoader,
     TableRenderer,
@@ -32,6 +27,13 @@ from index_inclusion_research.dashboard_types import (
     TrackResult,
     TrackResultLoader,
 )
+from index_inclusion_research.result_contract import (
+    load_rdd_status as load_shared_rdd_status,
+)
+from index_inclusion_research.result_contract import (
+    load_results_manifest as load_shared_results_manifest,
+)
+from index_inclusion_research.results_snapshot import read_cached_csv
 
 
 def translate_label(label: str, table_labels: Mapping[str, str]) -> str:

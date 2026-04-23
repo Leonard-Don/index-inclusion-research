@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flask import Flask, request
 import pytest
+from flask import Flask, request
 
 from index_inclusion_research import dashboard_routes
 from index_inclusion_research.dashboard_types import RefreshStatusPayload

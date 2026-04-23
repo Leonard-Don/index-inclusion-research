@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pandas as pd
 
-
 CSI300_CUTOFF = 300
 CSI300_RUNNING_VARIABLE_INTERCEPT = (2 * CSI300_CUTOFF) + 1
 

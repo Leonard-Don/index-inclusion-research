@@ -1,31 +1,31 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { bootstrapDashboard } from "../../scripts/static/dashboard/bootstrap.js";
+import { bootstrapDashboard } from "../../src/index_inclusion_research/web/static/dashboard/bootstrap.js";
 import {
   createNavigationContext,
   createRefreshContext,
   createRuntimeContext,
   createSurfaceContext,
-} from "../../scripts/static/dashboard/context_groups.js";
+} from "../../src/index_inclusion_research/web/static/dashboard/context_groups.js";
 import {
   currentWaypointForHash,
   normalizeHashForAllowedSet,
   waypointTitleText,
-} from "../../scripts/static/dashboard/navigation_helpers.js";
+} from "../../src/index_inclusion_research/web/static/dashboard/navigation_helpers.js";
 import {
   setWaypointMenuOpen,
   syncWaypointMenuState,
   updateWaypointDock,
-} from "../../scripts/static/dashboard/navigation_ui.js";
+} from "../../src/index_inclusion_research/web/static/dashboard/navigation_ui.js";
 import {
   refreshRuntimeCopy,
   refreshSnapshotSourceText,
   refreshStateText,
-} from "../../scripts/static/dashboard/refresh_presenter.js";
-import { fetchRefreshStatus, postRefreshRequest } from "../../scripts/static/dashboard/refresh_requests.js";
-import { createDetailsSurface } from "../../scripts/static/dashboard/surface_details.js";
-import { createTableSurface } from "../../scripts/static/dashboard/surface_tables.js";
+} from "../../src/index_inclusion_research/web/static/dashboard/refresh_presenter.js";
+import { fetchRefreshStatus, postRefreshRequest } from "../../src/index_inclusion_research/web/static/dashboard/refresh_requests.js";
+import { createDetailsSurface } from "../../src/index_inclusion_research/web/static/dashboard/surface_details.js";
+import { createTableSurface } from "../../src/index_inclusion_research/web/static/dashboard/surface_tables.js";
 
 function createClassList(initialValues = []) {
   const values = new Set(initialValues);

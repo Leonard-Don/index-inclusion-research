@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from threading import Lock
 
@@ -80,7 +80,7 @@ def test_build_dashboard_snapshot_meta_uses_latest_timestamp(tmp_path: Path) -> 
 
     assert meta["source_count"] == 2
     assert meta["source_path"] == str(newer)
-    assert meta["label"] == datetime.fromtimestamp(newer_ts, tz=timezone.utc).astimezone().strftime("%Y-%m-%d %H:%M")
+    assert meta["label"] == datetime.fromtimestamp(newer_ts, tz=UTC).astimezone().strftime("%Y-%m-%d %H:%M")
 
 
 def test_refresh_status_payload_reports_duration_error_and_redirect() -> None:

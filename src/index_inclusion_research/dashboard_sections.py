@@ -5,13 +5,12 @@ from pathlib import Path
 
 import pandas as pd
 
-from index_inclusion_research.results_snapshot import ResultsSnapshot
 from index_inclusion_research.dashboard_types import (
     CsvFrameReader,
     DashboardSection,
-    DisplayTableTierSplitter,
-    DisplayTableTiersAttacher,
     DisplayTable,
+    DisplayTableTiersAttacher,
+    DisplayTableTierSplitter,
     FigureEntriesBuilder,
     FormatPct,
     FormatPValue,
@@ -29,6 +28,7 @@ from index_inclusion_research.dashboard_view_models import (
     build_table_suite_section_view,
 )
 from index_inclusion_research.rdd_evidence import rdd_evidence_tier_from_status
+from index_inclusion_research.results_snapshot import ResultsSnapshot
 
 
 def build_sample_design_cards(
@@ -238,7 +238,7 @@ def build_robustness_section(
                     full_title="补充稳健性表",
                     full_copy="长期保留的稳健性结果继续保留，但作为对主结论边界的补充阅读，而不是首要判断依据。",
                     demo_key="demo-robustness-detail-tables",
-                    demo_title="展开稳健性补充表（0 张）",
+                    demo_title="稳健性补充表（0 张）",
                     demo_copy="展示版默认只露出最关键的一张稳健性表，其余补充稳健性结果按需展开。",
                 ),
             ),
@@ -341,7 +341,7 @@ def build_robustness_section(
                 full_title="补充稳健性表",
                 full_copy="长期保留的稳健性结果继续保留，但作为对主结论边界的补充阅读，而不是首要判断依据。",
                 demo_key="demo-robustness-detail-tables",
-                demo_title=f"展开稳健性补充表（{len(detail_tables)} 张）",
+                demo_title=f"稳健性补充表（{len(detail_tables)} 张）",
                 demo_copy="展示版默认只露出最关键的一张稳健性表，其余补充稳健性结果按需展开。",
             ),
         ),
@@ -459,7 +459,7 @@ def build_limits_section(
                 full_title="补充说明表",
                 full_copy="这张表保留更完整的识别范围与口径说明，适合在写作或答疑时回到方法边界逐项核对。",
                 demo_key="demo-limits-detail-tables",
-                demo_title=f"展开研究边界补充表（{len(detail_tables)} 张）",
+                demo_title=f"研究边界补充表（{len(detail_tables)} 张）",
                 demo_copy="展示版默认只保留最关键的边界摘要，完整识别范围说明按需展开，结尾更利落。",
                 container="library-panels",
                 kicker="补充说明",

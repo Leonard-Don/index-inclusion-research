@@ -76,7 +76,7 @@
           <div class="section-kicker">核心解读</div>
           <h2>这篇论文真正贡献了什么</h2>
         </div>
-        <div class="section-intro">这一组卡片分别回答识别对象、挑战假设和争论推进。</div>
+        <div class="section-intro">这一组卡片分别回答识别对象、挑战假设和争论推进，也帮助判断这篇论文是在重估旧结论、改写价格发现，还是强调制度差异。</div>
       </div>
       <div class="insight-grid">
         {% for card in current.summary_cards %}
@@ -95,10 +95,10 @@
     <section class="section">
       <div class="section-head">
         <div>
-          <div class="section-kicker">研究路径</div>
-          <h2>这篇论文在 16 篇链条中的位置</h2>
+          <div class="section-kicker">文献链</div>
+          <h2>这篇论文在文献链中的位置</h2>
         </div>
-        <div class="section-intro">这里主要看它在争论链条里的位置，以及接下来值得继续读哪篇。</div>
+        <div class="section-intro">这里主要看它在整条争论里的位置，以及下一步该补哪篇来接上效应重估、价格发现或中国制度场景。</div>
       </div>
       {% if current.sequence_cards %}
       <div class="timeline-track">
@@ -121,15 +121,7 @@
             {% if card.meta %}<div class="mini-meta">{{ card.meta }}</div>{% endif %}
             <p>{{ card["copy"] }}</p>
             {% if card.href %}
-            <a href="{{ card.href }}">
-              {% if card.kicker == "前一篇" %}
-              看上一篇
-              {% elif card.kicker == "后一篇" %}
-              看下一篇
-              {% else %}
-              看这篇论文
-              {% endif %}
-            </a>
+            <a href="{{ card.href }}">{{ card.action_label or "查看这篇论文" }}</a>
             {% endif %}
           </article>
           {% endfor %}
@@ -151,7 +143,7 @@
           {% if card.meta %}<div class="mini-meta">{{ card.meta }}</div>{% endif %}
           <p>{{ card["copy"] }}</p>
           {% if card.href %}
-          <a href="{{ card.href }}">看相关论文</a>
+          <a href="{{ card.href }}">查看相关论文</a>
           {% endif %}
         </article>
         {% endfor %}
@@ -159,8 +151,8 @@
       {% endif %}
       {% if current.evolution_nav_cards %}
       <div class="evolution-nav">
-        <h3>文献导航</h3>
-        <div class="evolution-nav-copy">这 16 篇文献按不同视角重排。你可以从当前页继续看上一篇、下一篇，也可以直接跳到任意一篇速读。</div>
+        <h3>文献链导航</h3>
+        <div class="evolution-nav-copy">这 16 篇文献按不同视角重排。按阵营最适合看争论如何推进，按主线最适合补机制与识别，按立场最适合组织综述；默认展开当前所在分组。</div>
         <div class="evolution-switcher" role="toolbar" aria-label="文献导航视图">
           <button class="{% if evolution_view == 'camp' %}active{% endif %}" id="evolution-view-button-camp" type="button" data-view-target="camp" aria-pressed="{% if evolution_view == 'camp' %}true{% else %}false{% endif %}" aria-controls="evolution-view-camp">按阵营</button>
           <button class="{% if evolution_view == 'track' %}active{% endif %}" id="evolution-view-button-track" type="button" data-view-target="track" aria-pressed="{% if evolution_view == 'track' %}true{% else %}false{% endif %}" aria-controls="evolution-view-track">按主线</button>
@@ -169,11 +161,21 @@
         {% for view in current.evolution_nav_views %}
         <div class="evolution-view {% if view.id == evolution_view %}active{% endif %}" id="evolution-view-{{ view.id }}" data-view-name="{{ view.id }}" aria-labelledby="evolution-view-button-{{ view.id }}"{% if view.id != evolution_view %} hidden{% endif %}>
           {% for group in view.groups %}
-          <section class="evolution-group">
-            <div class="evolution-group-head">
-              <h4>{{ group.title }}</h4>
-              {% if group.meta %}<div class="group-meta">{{ group.meta }}</div>{% endif %}
-            </div>
+          {% set current_cards = group.cards | selectattr("is_current") | list %}
+          <details class="evolution-group" data-evolution-group="{{ group.title }}"{% if current_cards %} open{% endif %}>
+            <summary>
+              <div class="evolution-group-head">
+                <div class="evolution-group-title-stack">
+                  <h4>{{ group.title }}</h4>
+                  <div class="evolution-group-status">
+                    {% if group.meta %}<div class="group-meta">{{ group.meta }}</div>{% endif %}
+                    {% if current_cards %}<span class="group-pill current">当前文献所在分组</span>{% endif %}
+                  </div>
+                </div>
+                <div class="evolution-group-toggle" aria-hidden="true"></div>
+              </div>
+            </summary>
+            <div class="evolution-group-body">
             <div class="evolution-nav-grid">
               {% for card in group.cards %}
               <a class="evolution-link {% if card.is_current %}current{% endif %}" href="{{ card.href }}">
@@ -188,7 +190,8 @@
               </a>
               {% endfor %}
             </div>
-          </section>
+            </div>
+          </details>
           {% endfor %}
         </div>
         {% endfor %}

@@ -8,7 +8,10 @@ import pandas as pd
 from index_inclusion_research import load_project_config
 from index_inclusion_research.analysis import compute_event_study
 from index_inclusion_research.loaders import save_dataframe
-from index_inclusion_research.workflow_profiles import add_profile_argument, resolve_profile_args
+from index_inclusion_research.workflow_profiles import (
+    add_profile_argument,
+    resolve_profile_args,
+)
 
 
 def build_arg_parser() -> argparse.ArgumentParser:

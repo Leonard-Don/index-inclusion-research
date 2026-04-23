@@ -7,10 +7,18 @@ from pathlib import Path
 
 import pandas as pd
 
-from index_inclusion_research.analysis import compute_event_level_metrics, plot_rdd_bins, run_rdd_suite
+from index_inclusion_research.analysis import (
+    compute_event_level_metrics,
+    plot_rdd_bins,
+    run_rdd_suite,
+)
 from index_inclusion_research.analysis.rdd_candidates import (
     build_candidate_batch_audit as _build_candidate_batch_audit,
+)
+from index_inclusion_research.analysis.rdd_candidates import (
     summarize_candidate_audit as _summarize_candidate_audit,
+)
+from index_inclusion_research.analysis.rdd_candidates import (
     validate_candidate_frame as _validate_candidate_frame,
 )
 from index_inclusion_research.literature_runner import (
@@ -148,7 +156,7 @@ def _load_validated_candidate_source(
     except Exception as exc:
         error = ValueError(f"{failure_prefix}：{exc}")
         if strict_validation:
-            raise error
+            raise error from exc
         return pd.DataFrame(), "missing", str(error)
 
 

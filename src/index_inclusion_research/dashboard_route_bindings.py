@@ -7,8 +7,8 @@ from typing import Any, Protocol
 from index_inclusion_research import dashboard_routes
 from index_inclusion_research.dashboard_types import (
     AnalysesConfig,
-    DashboardRuntimeLike,
     DashboardRouteRegistrationMap,
+    DashboardRuntimeLike,
     EndpointUrlBuilder,
     HomeAnchorUrlBuilder,
     HomeUrlBuilder,

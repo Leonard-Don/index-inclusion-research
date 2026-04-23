@@ -1,96 +1,98 @@
 # 指数效应文献立场分类
 
-这份清单根据你当前的阅读框架，把文献分成三组：
+这份清单根据当前的阅读框架，把文献分成三组：
 
 - `反方`：认为传统指数效应已经减弱、消失，或主要是短期交易冲击
 - `中性`：认为效应存在，但大小、机制或识别条件依赖具体制度与方法
 - `正方`：认为指数纳入会带来显著且具有经济含义的价格效应，且与需求曲线、非完全替代、被动资金冲击等机制一致
 
-## 一、反方文献（前 6 篇）
+下面的路径均假设 `INDEX_INCLUSION_PDF_ROOT` 或默认 `~/Documents/paper/index_effect_pdfs/` 作为 PDF 根目录（见 `src/index_inclusion_research/literature_catalog.py:_resolve_pdf_root`）。
 
-### 1. `/Users/leonardodon/Documents/paper/index_effect_pdfs/con/1-s2.0-S1544612321004244-main.pdf`
+## 一、反方文献（4 篇）
 
-定位：
-偏向质疑传统指数效应是否稳定存在，适合放在“效应是否已经弱化”的综述段落。
-
-### 2. `/Users/leonardodon/Documents/paper/index_effect_pdfs/con/1986_Harris_Gurel_Price_and_Volume_Effects_SP500.pdf`
+### 1. `con/1986_Harris_Gurel_Price_and_Volume_Effects_SP500.pdf`
 
 定位：
-强调短期价格与成交量冲击，更接近 `price pressure` 而非永久性重估。
+公告后价格立即上涨超过 3%、约 2 周内几乎完全反转，是短期价格压力假说的基准文献。
 
-### 3. `/Users/leonardodon/Documents/paper/index_effect_pdfs/con/2011_Kasch_Sarkar_Is_There_an_SP500_Index_Effect.pdf`
-
-定位：
-适合放在“指数效应是否仍显著存在”这一争论点下。
-
-### 4. `/Users/leonardodon/Documents/paper/index_effect_pdfs/con/2022_Coakley_Saffi_Wang_SP500_Index_Inclusion_Effect.pdf`
+### 2. `con/2011_Kasch_Sarkar_Is_There_an_SP500_Index_Effect.pdf`
 
 定位：
-可用于支持“现代市场环境下传统指数纳入效应不再像早期文献那样稳定”的论述。
+控制纳入前盈利、规模和动量等强势表现后，S&P 500 纳入本身并不带来永久性价值提升或共动变化；适合放在"指数效应是否仍显著存在"这一争论点下。
 
-### 5. `/Users/leonardodon/Documents/paper/index_effect_pdfs/con/2022_Greenwood_Sammon_The_Disappearing_Index_Effect.pdf`
-
-定位：
-这篇最适合放在“指数效应正在消失”这一句的核心引用位置。
-
-### 6. `/Users/leonardodon/Documents/paper/index_effect_pdfs/con/Petajisto_2011_index_premium_hidden_cost.pdf`
+### 3. `con/2022_Coakley_Dotsis_Kourtis_Psychoyios_SP500_Inclusion_Options.pdf`
 
 定位：
-更适合接到被动投资、指数溢价和隐藏成本的讨论里，作为“效应未必等于基本面改善”的补充。
+利用期权市场隐含 beta 显示纳入后共动增幅显著小于历史 beta 所暗示的幅度，支持"现代市场环境下传统指数纳入效应不再像早期文献那样稳定"的论述。
 
-## 二、中性文献（中间 3 篇）
-
-### 7. `/Users/leonardodon/Documents/paper/index_effect_pdfs/mid/2003_Madhavan_The_Russell_Reconstitution_Effect.pdf`
+### 4. `con/2022_Greenwood_Sammon_The_Disappearing_Index_Effect.pdf`
 
 定位：
-强调制度安排、重组机制和交易微观结构的重要性，适合放在“不同指数制度下效应不同”的段落。
+S&P 500 纳入异常收益从 1980 年代 3.4%、1990 年代 7.6% 降到近十年 0.8%，剔除端从大幅负值降到 2010–2020 的 −0.6%；"指数效应正在消失"这一句的核心引用。
 
-### 8. `/Users/leonardodon/Documents/paper/index_effect_pdfs/mid/2022_Ahn_Patatoukas_Identifying_the_Effect_of_Stock_Indexing.pdf`
+## 二、中性文献（4 篇）
 
-定位：
-适合用于“识别策略更重要，不能只看普通事件研究”的方法论综述。
-
-### 9. `/Users/leonardodon/Documents/paper/index_effect_pdfs/mid/Wurgler_Zhuravskaya_2002_working_paper.pdf`
+### 5. `mid/2003_Madhavan_The_Russell_Reconstitution_Effect.pdf`
 
 定位：
-更偏机制和市场分割，可作为从“纯事件效应”过渡到“需求曲线与价格弹性”讨论的桥梁。
+Russell 3000 纳入多-剔除空组合 1996–2002 年 7 年累计 +39.28%，7 月月均 −4.97%；强调制度安排、重组机制和交易微观结构对效应形态的影响。
 
-## 三、正方文献（后 7 篇）
-
-### 10. `/Users/leonardodon/Documents/paper/index_effect_pdfs/pro/1-s2.0-S0927538X2100158X-main.pdf`
+### 6. `mid/2022_Ahn_Patatoukas_Identifying_the_Effect_of_Stock_Indexing.pdf`
 
 定位：
-适合纳入“较新的正向证据”部分。
+指数化对大/中盘股价格发现无负面影响，对套利约束较强的微盘股反而通过放松套利约束提升价格发现速度；适合用于"识别策略更重要，不能只看普通事件研究"的方法论综述。
 
-### 11. `/Users/leonardodon/Documents/paper/index_effect_pdfs/pro/1986_Shleifer_Do_Demand_Curves_for_Stocks_Slope_Down.pdf`
-
-定位：
-正方理论核心文献，最适合支撑“需求曲线向下倾斜、指数纳入影响并非完全暂时”的理论机制。
-
-### 12. `/Users/leonardodon/Documents/paper/index_effect_pdfs/pro/1997_Lynch_Mendenhall_New_Evidence_SP500_Index.pdf`
+### 7. `mid/Wurgler_Zhuravskaya_2002_working_paper.pdf`
 
 定位：
-适合放在早期经典正向实证证据部分。
+模型与 S&P 500 截面实证共同表明，缺乏紧密替代品、套利风险更高的股票在纳入时价格跳得更大；更偏机制和套利约束，可作为从"纯事件效应"过渡到"需求曲线与价格弹性"讨论的桥梁。
 
-### 13. `/Users/leonardodon/Documents/paper/index_effect_pdfs/pro/2000_Kaul_Mehrotra_Morck_Demand_Curves_for_Stocks_Do_Slope_Down.pdf`
-
-定位：
-可与 Shleifer 一起作为“需求曲线确实向下倾斜”的连续证据。
-
-### 14. `/Users/leonardodon/Documents/paper/index_effect_pdfs/pro/2014_Chang_Hong_Liskovich_Price_Effects_of_Stock_Market_Indexing.pdf`
+### 8. `con/Petajisto_2011_index_premium_hidden_cost.pdf`
 
 定位：
-适合接在“指数化带来的价格影响具有更广泛资产定价意义”之后。
+1990–2005 年 S&P 500 纳入 +8.8%/剔除 −15.1%、Russell 2000 纳入 +4.7%/剔除 −4.6%；需求曲线斜率接近 Shleifer 早期估计并在 2000 年见顶后回落，对应指数换手成本 21–28 bp（S&P 500）与 38–77 bp（Russell 2000）。PDF 物理位置仍在 `con/`，但立场更接近中性。
 
-### 15. `/Users/leonardodon/Documents/paper/index_effect_pdfs/pro/3439A97D91C0913CDC56FC9521E_597DEABF_14507A.pdf`
+## 三、正方文献（8 篇）
 
-定位：
-中国市场的正向证据，可用来连接沪深300、A 股样本与更强识别策略。
-
-### 16. `/Users/leonardodon/Documents/paper/index_effect_pdfs/pro/Denis_McConnell_Ovtchinnikov_Yu_2003.pdf`
+### 9. `pro/1-s2.0-S0927538X2100158X-main.pdf`（Chu et al. 2021）
 
 定位：
-适合补充“纳入指数不仅影响价格，也可能影响公司层面环境或投资者基础”的正向论证。
+2005–2016 年 CSI 300 样本中调入与调出股在 4 年持有期上都有异常收益且调出显著跑赢调入；通过公司特异性风险、管理者过度自信与国有股权结构三条机制解释。
+
+### 10. `pro/1986_Shleifer_Do_Demand_Curves_for_Stocks_Slope_Down.pdf`
+
+定位：
+公告日异常收益与指数基金买入量正相关但与 S&P 债券评级无关，同时支持需求曲线向下倾斜并否定纯 certification 解释；正方理论核心文献。
+
+### 11. `pro/1997_Lynch_Mendenhall_New_Evidence_SP500_Index.pdf`
+
+定位：
+公告至生效前 CAR 约 +3.807% + 生效后部分反转，直接证明短期价格压力与部分持久效应可以同时存在。
+
+### 12. `pro/2000_Kaul_Mehrotra_Morck_Demand_Curves_for_Stocks_Do_Slope_Down.pdf`
+
+定位：
+TSE 300 权重调整事件中受影响股票在事件周显著上涨 2.34% 且成交量恢复后没有反转，用更干净的权重冲击支持需求曲线向下倾斜。
+
+### 13. `pro/2014_Chang_Hong_Liskovich_Price_Effects_of_Stock_Market_Indexing.pdf`
+
+定位：
+利用 Russell 1000/2000 断点识别指数化冲击的价格效应；方法革命的开山文献。
+
+### 14. `pro/3439A97D91C0913CDC56FC9521E_597DEABF_14507A.pdf`（姚东旻、张日升和李嘉晟）
+
+定位：
+沪深300 RDD + DID 正向证据：调入 +15%、调出公告前 −10% 且公告后第 6 天反转并整体不显著。
+
+### 15. `pro/Denis_McConnell_Ovtchinnikov_Yu_2003.pdf`
+
+定位：
+分析师 EPS 预测显著上调 + 真实盈利改善，说明 S&P 500 纳入并非 information-free；适合补充"纳入指数不仅影响价格，也可能影响公司层面环境或投资者基础"的正向论证。
+
+### 16. `con/1-s2.0-S1544612321004244-main.pdf`（Yao, Zhou and Chen 2022）
+
+定位：
+CSI300 RD + DID 国际期刊版：调入约 +15%、调出公告前 −10% 且公告后反转、整体不显著；中国市场正向证据的英文版。PDF 物理位置仍在 `con/`，但立场已归入正方。
 
 ## 四、如何把这三组文献写进论文
 
@@ -99,20 +101,20 @@
 ### 1. 先写反方
 
 目的：
-说明“指数纳入后一定上涨”并不是无争议事实。
+说明"指数纳入后一定上涨"并不是无争议事实。
 
 可以概括成：
 
-“部分文献认为，传统指数效应更多反映短期交易压力，且在近年市场环境中已有减弱甚至消失的趋势。”
+"部分文献认为，传统指数效应更多反映短期交易压力，且在近年市场环境中已有减弱甚至消失的趋势。"
 
 ### 2. 再写中性
 
 目的：
-把争论推进到“问题不只在于有没有效应，还在于如何识别、在什么制度下识别”。
+把争论推进到"问题不只在于有没有效应，还在于如何识别、在什么制度下识别"。
 
 可以概括成：
 
-“另一些研究认为，指数效应的存在与大小依赖于指数编制规则、调样制度、资金跟踪强度及经验识别方法，因此需要在更清晰的制度环境下进行检验。”
+"另一些研究认为，指数效应的存在与大小依赖于指数编制规则、调样制度、资金跟踪强度及经验识别方法，因此需要在更清晰的制度环境下进行检验。"
 
 ### 3. 最后写正方
 
@@ -121,11 +123,11 @@
 
 可以概括成：
 
-“与此同时，大量理论与实证研究仍支持指数纳入会引致显著价格反应，并表明股票需求曲线并非完全水平，指数化冲击可能带来部分持久的价格影响。”
+"与此同时，大量理论与实证研究仍支持指数纳入会引致显著价格反应，并表明股票需求曲线并非完全水平，指数化冲击可能带来部分持久的价格影响。"
 
 ## 五、对当前项目最直接的用途
 
-结合这份分类，你现在的项目可以这样对应：
+结合这份分类，当前项目可以这样对应：
 
 - `短期价格压力模块`
   对应反方文献，重点看短窗口 `CAR` 与成交量、换手率冲击

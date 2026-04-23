@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import pandas as pd
-
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -70,7 +69,9 @@ def test_dashboard_reads_live_rdd_status_and_exposes_outputs_consistently() -> N
         assert any("hs300_rdd" in figure["path"] for figure in saved["figure_paths"])
     else:
         assert all(not label.startswith("断点回归：") for label in labels)
-        assert all("hs300_rdd" not in figure["path"] for figure in saved["figure_paths"])
+        assert all(
+            "hs300_rdd" not in figure["path"] for figure in saved["figure_paths"]
+        )
 
 
 def test_identification_summary_copy_stays_consistent_with_live_rdd_state() -> None:
@@ -78,14 +79,21 @@ def test_identification_summary_copy_stays_consistent_with_live_rdd_state() -> N
     saved = dashboard.runtime.load_identification_china_saved_result()
 
     if status["mode"] in {"real", "reconstructed"}:
-        assert "当前项目还没有纳入真实 RD 所需的候选样本排名 running variable。" not in saved["summary_text"]
+        assert (
+            "当前项目还没有纳入真实 RD 所需的候选样本排名 running variable。"
+            not in saved["summary_text"]
+        )
         assert f"证据状态：`{status['evidence_status']}`" in saved["summary_text"]
 
 
 def test_exported_identification_scope_matches_live_rdd_status() -> None:
     status = dashboard.runtime.load_rdd_status()
-    identification_scope = pd.read_csv(ROOT / "results" / "real_tables" / "identification_scope.csv")
-    rdd_row = identification_scope.loc[identification_scope["分析层"] == "中国 RDD 扩展"].iloc[0]
+    identification_scope = pd.read_csv(
+        ROOT / "results" / "real_tables" / "identification_scope.csv"
+    )
+    rdd_row = identification_scope.loc[
+        identification_scope["分析层"] == "中国 RDD 扩展"
+    ].iloc[0]
 
     assert "证据等级" in identification_scope.columns
     assert "来源摘要" in identification_scope.columns
@@ -151,6 +159,7 @@ def test_home_dashboard_renders_single_frontend_sections() -> None:
     html = response.get_data(as_text=True)
     status = dashboard.runtime.load_rdd_status()
     assert "把 16 篇文献、真实样本与识别设计放进同一条研究叙述" in html
+    assert "效应被重估而非简单消失" in html
     assert "三条主线，分别回答三个核心问题" in html
     assert "16 篇文献如何连成一条研究链" in html
     assert "把结果放回交易机制与执行场景" in html
@@ -175,7 +184,10 @@ def test_home_dashboard_renders_single_frontend_sections() -> None:
     assert 'width="2684"' in html
     assert 'height="1056"' in html
     assert "中国 RDD" in html
-    assert f"L{3 if status['mode'] == 'real' else 2 if status['mode'] == 'reconstructed' else 1 if status['mode'] == 'demo' else 0}" in html
+    assert (
+        f"L{3 if status['mode'] == 'real' else 2 if status['mode'] == 'reconstructed' else 1 if status['mode'] == 'demo' else 0}"
+        in html
+    )
     assert "built-in method copy of dict object" not in html
 
 
@@ -187,11 +199,13 @@ def test_home_dashboard_supports_full_mode() -> None:
     assert "完整材料" in html
     assert "稳健性检查" in html
     assert 'aria-current="page"' in html
-    assert '>完整材料</a>' in html
-    assert 'data-mode-link' in html
+    assert ">完整材料</a>" in html
+    assert "data-mode-link" in html
 
 
-def test_home_dashboard_demo_mode_collapses_secondary_material_and_marks_lazy_media() -> None:
+def test_home_dashboard_demo_mode_collapses_secondary_material_and_marks_lazy_media() -> (
+    None
+):
     client = dashboard.app.test_client()
     response = client.get("/?mode=demo")
     assert response.status_code == 200
@@ -200,27 +214,27 @@ def test_home_dashboard_demo_mode_collapses_secondary_material_and_marks_lazy_me
     assert 'src="/static/dashboard.js"' in html
     assert 'type="module"' in html
     assert 'data-refresh-status-url="/refresh/status"' in html
-    assert 'data-refresh-form' in html
-    assert 'data-refresh-panel' in html
-    assert 'data-refresh-state-label' in html
-    assert 'data-refresh-scope-label' in html
-    assert 'data-refresh-artifact-list' in html
+    assert "data-refresh-form" in html
+    assert "data-refresh-panel" in html
+    assert "data-refresh-state-label" in html
+    assert "data-refresh-scope-label" in html
+    assert "data-refresh-artifact-list" in html
     assert "只刷新本主线" in html
     assert 'data-details-key="demo-design-detail-figures"' in html
     assert 'data-details-key="demo-framework-detail-tables"' in html
-    assert 'data-details-toggle' in html
-    assert 'data-waypoint-dock' in html
-    assert 'data-waypoint-menu' in html
-    assert 'data-waypoint-menu-toggle' in html
-    assert 'data-reading-progress' in html
-    assert 'data-waypoint-menu-link' in html
+    assert "data-details-toggle" in html
+    assert "data-waypoint-dock" in html
+    assert "data-waypoint-menu" in html
+    assert "data-waypoint-menu-toggle" in html
+    assert "data-reading-progress" in html
+    assert "data-waypoint-menu-link" in html
     assert 'data-waypoint-kind="track"' in html
     assert 'data-waypoint-parent="主线结果"' in html
-    assert 'data-waypoint-next' in html
-    assert 'data-waypoint-top' in html
-    assert 'waypoint-next-action' in html
-    assert 'waypoint-secondary-action' in html
-    assert "展开样本设计补充表" in html
+    assert "data-waypoint-next" in html
+    assert "data-waypoint-top" in html
+    assert "waypoint-next-action" in html
+    assert "waypoint-secondary-action" in html
+    assert "样本设计补充表" in html
     assert "展开文献" in html
     assert 'loading="lazy"' in html
     assert 'fetchpriority="high"' in html
@@ -233,9 +247,28 @@ def test_dashboard_static_assets_are_served() -> None:
     assert css_response.status_code == 200
     css = css_response.get_data(as_text=True)
     assert ".topbar" in css
+    assert ".track-surface-meta" in css
     assert ".waypoint-dock" in css
     assert ".chapter-drawer" in css
     assert ".reading-progress" in css
+    assert "#tracks" in css
+    assert "scroll-margin-top: 84px;" in css
+    assert "text-wrap: wrap;" in css
+    assert "grid-template-columns: minmax(0, 0.94fr) minmax(340px, 1.06fr);" in css
+    assert "#tracks > .section-head .section-side {" in css
+    assert "#tracks > .section-head + .track {" in css
+    assert "#tracks > .section-head + .track .track-meta {" in css
+    assert "#tracks > .section-head + .track .track-takeaway {" in css
+    assert "#tracks > .section-head + .track > .insight-strip .insight-card {" in css
+    assert (
+        "#tracks > .section-head + .track .track-surface-visual .figure-stack {" in css
+    )
+    assert "#tracks > .section-head + .track .thumb img {" in css
+    assert ".track-surface-meta {\n        position: static;" in css
+    assert "#design .details-panel summary {" in css
+    assert "#design .details-panel .details-copy {" in css
+    assert "#design .details-panel + .result-group {" in css
+    assert "#design .details-panel .details-toggle {" in css
 
     js_response = client.get("/static/dashboard.js")
     assert js_response.status_code == 200
@@ -325,15 +358,33 @@ def test_dashboard_static_assets_are_served() -> None:
 
 
 def test_dashboard_template_uses_shared_section_and_figure_macros() -> None:
-    macros = (ROOT / "scripts" / "templates" / "_dashboard_macros.html").read_text(encoding="utf-8")
-    shared_macros = (ROOT / "scripts" / "templates" / "_dashboard_shared_macros.html").read_text(encoding="utf-8")
-    overview_macros = (ROOT / "scripts" / "templates" / "_dashboard_overview_macros.html").read_text(encoding="utf-8")
-    content_macros = (ROOT / "scripts" / "templates" / "_dashboard_content_macros.html").read_text(encoding="utf-8")
-    dashboard_template = (ROOT / "scripts" / "templates" / "dashboard.html").read_text(encoding="utf-8")
+    macros = (ROOT / "src" / "index_inclusion_research" / "web" / "templates" / "_dashboard_macros.html").read_text(
+        encoding="utf-8"
+    )
+    shared_macros = (
+        ROOT / "src" / "index_inclusion_research" / "web" / "templates" / "_dashboard_shared_macros.html"
+    ).read_text(encoding="utf-8")
+    overview_macros = (
+        ROOT / "src" / "index_inclusion_research" / "web" / "templates" / "_dashboard_overview_macros.html"
+    ).read_text(encoding="utf-8")
+    content_macros = (
+        ROOT / "src" / "index_inclusion_research" / "web" / "templates" / "_dashboard_content_macros.html"
+    ).read_text(encoding="utf-8")
+    dashboard_template = (ROOT / "src" / "index_inclusion_research" / "web" / "templates" / "dashboard.html").read_text(
+        encoding="utf-8"
+    )
 
-    assert '{% import "_dashboard_shared_macros.html" as shared with context %}' in macros
-    assert '{% import "_dashboard_overview_macros.html" as overview with context %}' in macros
-    assert '{% import "_dashboard_content_macros.html" as content with context %}' in macros
+    assert (
+        '{% import "_dashboard_shared_macros.html" as shared with context %}' in macros
+    )
+    assert (
+        '{% import "_dashboard_overview_macros.html" as overview with context %}'
+        in macros
+    )
+    assert (
+        '{% import "_dashboard_content_macros.html" as content with context %}'
+        in macros
+    )
     assert "macro render_summary_cards" in shared_macros
     assert "macro render_details_panel" in shared_macros
     assert "macro render_hero_section" in overview_macros
@@ -374,7 +425,9 @@ def test_dashboard_template_uses_shared_section_and_figure_macros() -> None:
     assert "macro render_mode_hint" in macros
     assert "macro render_support_band" in macros
     assert "macro render_waypoint_navigation" in macros
-    assert '{% import "_dashboard_macros.html" as ui with context %}' in dashboard_template
+    assert (
+        '{% import "_dashboard_macros.html" as ui with context %}' in dashboard_template
+    )
     assert "ui.render_topbar(" in dashboard_template
     assert "ui.render_hero_section(" in dashboard_template
     assert "ui.render_core_findings_section(" in dashboard_template
@@ -395,11 +448,11 @@ def test_home_dashboard_keeps_mode_tabs_and_refresh_anchor_logic(monkeypatch) ->
     response = client.get("/?mode=demo")
     assert response.status_code == 200
     html = response.get_data(as_text=True)
-    assert 'data-section-link' in html
+    assert "data-section-link" in html
     assert 'data-section-key="framework"' in html
     assert 'data-section-key="supplement"' in html
     assert 'data-section-key="robustness"' not in html
-    assert 'data-anchor-input' in html
+    assert "data-anchor-input" in html
     assert 'data-base-href="/?mode=brief"' in html
     assert 'data-base-href="/?mode=demo"' in html
     assert 'data-base-href="/?mode=full"' in html
@@ -417,7 +470,11 @@ def test_home_dashboard_keeps_mode_tabs_and_refresh_anchor_logic(monkeypatch) ->
 def test_home_dashboard_async_refresh_returns_json_status(monkeypatch) -> None:
     client = dashboard.app.test_client()
     _reset_refresh_state()
-    monkeypatch.setattr(dashboard.services, "spawn_refresh_worker", lambda runner, scope_label, scope_key: None)
+    monkeypatch.setattr(
+        dashboard.services,
+        "spawn_refresh_worker",
+        lambda runner, scope_label, scope_key: None,
+    )
 
     response = client.post(
         "/refresh?mode=demo",
@@ -446,7 +503,11 @@ def test_home_dashboard_async_refresh_returns_json_status(monkeypatch) -> None:
 def test_track_level_async_refresh_returns_analysis_scope(monkeypatch) -> None:
     client = dashboard.app.test_client()
     _reset_refresh_state()
-    monkeypatch.setattr(dashboard.services, "spawn_refresh_worker", lambda runner, scope_label, scope_key: None)
+    monkeypatch.setattr(
+        dashboard.services,
+        "spawn_refresh_worker",
+        lambda runner, scope_label, scope_key: None,
+    )
 
     response = client.post(
         "/run/price_pressure_track?mode=demo",
@@ -466,9 +527,13 @@ def test_track_level_async_refresh_returns_analysis_scope(monkeypatch) -> None:
 
 def test_track_level_refresh_fallback_redirects_to_track_anchor(monkeypatch) -> None:
     client = dashboard.app.test_client()
-    monkeypatch.setattr(dashboard.services, "run_and_cache_analysis", lambda analysis_id: {})
+    monkeypatch.setattr(
+        dashboard.services, "run_and_cache_analysis", lambda analysis_id: {}
+    )
 
-    response = client.post("/run/demand_curve_track?mode=demo", data={"anchor": "demand_curve_track"})
+    response = client.post(
+        "/run/demand_curve_track?mode=demo", data={"anchor": "demand_curve_track"}
+    )
 
     assert response.status_code == 302
     assert response.headers["Location"].endswith("/?mode=demo#demand_curve_track")
@@ -512,7 +577,10 @@ def test_refresh_status_exposes_redirect_after_success() -> None:
     assert payload["status"] == "succeeded"
     assert payload["redirect_url"].endswith("/?mode=demo#supplement")
     assert payload["duration_seconds"] == 60
-    assert payload["updated_artifacts"][0]["path"] == "results/real_tables/event_study_summary.csv"
+    assert (
+        payload["updated_artifacts"][0]["path"]
+        == "results/real_tables/event_study_summary.csv"
+    )
     _reset_refresh_state()
 
 
@@ -565,9 +633,15 @@ def test_home_dashboard_supports_three_minute_mode() -> None:
     assert "支撑文献" not in html
     assert 'data-section-key="framework"' not in html
     assert 'data-section-key="supplement"' not in html
-    assert 'data-allowed-hashes="#overview,#design,#tracks,#limits,#price_pressure_track,#demand_curve_track,#identification_china_track"' in html
+    assert (
+        'data-allowed-hashes="#overview,#design,#tracks,#limits,#price_pressure_track,#demand_curve_track,#identification_china_track"'
+        in html
+    )
     assert "这一模式把真实样本、三条主线与研究边界压缩到一页里" in html
-    assert "页面同步呈现主线结果、文献框架与机制补充，便于在同一叙述里完成现象、机制与识别的说明" not in html
+    assert (
+        "页面同步呈现主线结果、文献框架与机制补充，便于在同一叙述里完成现象、机制与识别的说明"
+        not in html
+    )
     assert "稳健性检查" not in html
 
 
@@ -576,7 +650,11 @@ def test_highlights_copy_stays_consistent_with_current_cn_effective_results() ->
     discussion = next(item for item in highlights if item["label"] == "最值得讨论")
     assert "但统计上并不显著" in discussion["copy"]
     assert "[0,+120] 窗口下调入与调出的 CAR 差异达到" in discussion["copy"]
-    assert "且统计显著。这说明 A 股市场不能机械套用美股的经典指数纳入叙事。" not in discussion["copy"]
+    assert (
+        "且统计显著。这说明 A 股市场不能机械套用美股的经典指数纳入叙事。"
+        not in discussion["copy"]
+    )
+    assert "制度摩擦更强" in discussion["copy"]
 
 
 def test_paper_route_now_renders_brief_before_pdf() -> None:
@@ -589,8 +667,8 @@ def test_paper_route_now_renders_brief_before_pdf() -> None:
     assert "<title>Lawrence Harris 等（1986）｜指数纳入效应研究界面</title>" in html
     assert "单篇文献速读" in html
     assert "核心解读" in html
-    assert "研究路径" in html
-    assert "这篇论文在 16 篇链条中的位置" in html
+    assert "文献链" in html
+    assert "这篇论文在文献链中的位置" in html
     assert "结构化信息" in html
     assert "论文信息与深度解读" in html
     assert "首页总览" in html
@@ -602,18 +680,28 @@ def test_paper_route_now_renders_brief_before_pdf() -> None:
     assert "前一篇" in html
     assert "后一篇" in html
     assert "当前这篇" in html
-    assert "相关论文" in html
-    assert "看上一篇" in html
-    assert "看下一篇" in html
-    assert "看相关论文" in html
-    assert "文献导航" in html
+    assert "同主线延伸" in html or "同阵营延伸" in html or "跨主线参照" in html
+    assert "回看上一环" in html
+    assert "继续下一环" in html
+    assert "查看相关论文" in html
+    assert "文献链导航" in html
+    assert "默认展开当前所在分组" in html
+    assert "效应重估、价格发现或中国制度场景" in html
+    assert "按阵营最适合看争论如何推进" in html
+    assert "如果你想回看当前这条争论是从哪里起步的" in html
+    assert '<details class="evolution-group"' in html
+    assert "当前文献所在分组" in html
     assert "01 ·" in html
     assert "按阵营" in html
     assert "按主线" in html
     assert "按立场" in html
-    assert "短期价格压力与效应减弱" in html or "需求曲线与长期保留" in html or "制度识别与中国市场证据" in html
+    assert (
+        "短期价格压力与效应减弱" in html
+        or "需求曲线与长期保留" in html
+        or "制度识别与中国市场证据" in html
+    )
     assert "built-in method copy" not in html
-    assert "把指数效应首先解释成短期价格压力" in html
+    assert "公告后股价立即上涨逾 3%" in html
     assert "研究模块" not in html
     assert "文献页面" not in html
 
@@ -664,7 +752,9 @@ def test_old_underscore_compat_exports_have_been_removed() -> None:
     assert not hasattr(dashboard, "_build_dashboard_snapshot_meta")
 
 
-def test_dashboard_snapshot_meta_uses_latest_available_file(tmp_path: Path, monkeypatch) -> None:
+def test_dashboard_snapshot_meta_uses_latest_available_file(
+    tmp_path: Path, monkeypatch
+) -> None:
     older = tmp_path / "older.csv"
     newer = tmp_path / "newer.md"
     older.write_text("older\n", encoding="utf-8")

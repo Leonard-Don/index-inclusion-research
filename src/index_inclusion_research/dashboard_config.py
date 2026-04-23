@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from index_inclusion_research.dashboard_types import AnalysesConfig, AnalysisRunner, DashboardCard
+from index_inclusion_research.dashboard_types import (
+    AnalysesConfig,
+    AnalysisRunner,
+    DashboardCard,
+)
 
 
 def build_analyses(
@@ -27,7 +31,7 @@ def build_analyses(
         "identification_china_track": {
             "title": "制度识别与中国市场证据",
             "subtitle": "Identification & China Evidence",
-            "description_zh": "以中性文献和中国市场证据为底，整合匹配对照组、DID 风格分析和 RDD 扩展",
+            "description_zh": "以中国市场正向证据与识别方法论文献为底，整合匹配对照组、DID 风格分析和 RDD 扩展",
             "project_module": "沪深300论文复现",
             "runner": run_identification_china_track,
         },
