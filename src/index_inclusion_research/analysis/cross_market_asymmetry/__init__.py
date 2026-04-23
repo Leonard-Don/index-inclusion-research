@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from . import (
+    dashboard_section,
     gap_period,
     heterogeneity,
     hypotheses,
@@ -11,6 +12,7 @@ from . import (
 )
 
 __all__ = [
+    "dashboard_section",
     "gap_period",
     "heterogeneity",
     "hypotheses",
