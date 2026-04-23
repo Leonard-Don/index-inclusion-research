@@ -2,17 +2,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from index_inclusion_research import dashboard_metrics
-from index_inclusion_research import dashboard_presenters
+from index_inclusion_research import dashboard_metrics, dashboard_presenters
 from index_inclusion_research.dashboard_types import (
-    AnalysisCache,
     AnalysesConfig,
+    AnalysisCache,
     AnalysisDefinition,
     FigureEntriesBuilder,
     FormatPct,
     FormatPValue,
     FrameworkResultLoader,
     RawAnalysisResult,
+    RddContractCheckLoader,
+    RddStatusLoader,
     SavedTrackResultLoader,
     SupplementResultLoader,
     TableRenderer,
@@ -21,11 +22,9 @@ from index_inclusion_research.dashboard_types import (
     TrackContextAttacher,
     TrackDisplaySection,
     TrackLibraryResultLoader,
+    TrackResult,
     TrackResultNormalizer,
     TrackReviewResultLoader,
-    TrackResult,
-    RddContractCheckLoader,
-    RddStatusLoader,
 )
 
 

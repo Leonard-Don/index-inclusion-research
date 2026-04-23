@@ -24,7 +24,7 @@ def test_build_table_suite_section_view_keeps_head_primary_and_detail() -> None:
             full_title="补充说明表",
             full_copy="完整说明",
             demo_key="demo-limits-detail-tables",
-            demo_title="展开研究边界补充表（1 张）",
+            demo_title="研究边界补充表（1 张）",
             demo_copy="折叠说明",
             kicker="补充说明",
         ),
@@ -43,9 +43,12 @@ def test_build_sample_design_view_uses_counts_in_demo_titles() -> None:
     )
 
     assert view["head"]["section_id"] == "design"
-    assert view["detail_figures_title"] == "展开其余样本设计图表（2 张）"
+    assert view["detail_figures_title"] == "样本设计补充图表（2 张）"
+    assert view["detail_figures_copy"] == "默认收起其余样本图表，按需展开。"
     assert view["primary"]["key"] == "demo-design-primary-tables"
-    assert view["detail"]["demo_title"] == "展开样本设计补充表（3 张）"
+    assert view["primary"]["collapsed_copy"] == "默认先显示样本范围总表，其余主表按需展开。"
+    assert view["detail"]["demo_title"] == "样本设计补充表（3 张）"
+    assert view["detail"]["demo_copy"] == "默认收起年份分布和来源细表，问答时再开。"
     assert "3 分钟汇报只保留样本摘要" in view["brief_mode_hint"]
 
 
@@ -59,5 +62,5 @@ def test_build_track_section_view_uses_anchor_and_counts() -> None:
 
     assert view["meta"]["refresh_running_label"] == "主线刷新中…"
     assert view["primary"]["key"] == "demo-price_pressure_track-primary-tables"
-    assert view["detail"]["demo_title"] == "展开 价格压力主线 的补充细表（4 张）"
+    assert view["detail"]["demo_title"] == "价格压力主线补充细表（4 张）"
     assert view["support_demo_title"] == "支撑文献（5 篇）"

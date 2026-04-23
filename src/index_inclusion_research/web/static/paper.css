@@ -787,20 +787,47 @@ table.dataframe tbody tr:hover td:first-child {
 }
 
 .evolution-group {
-  margin-top: 18px;
+  margin-top: 16px;
+  border: 1px solid rgba(31, 42, 55, 0.08);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.86), rgba(255,255,255,0.58));
+  overflow: hidden;
 }
 
 .evolution-group:first-of-type {
   margin-top: 0;
 }
 
+.evolution-group summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 14px 16px;
+}
+
+.evolution-group summary::-webkit-details-marker {
+  display: none;
+}
+
+.evolution-group summary::marker {
+  content: "";
+}
+
+.evolution-group[open] summary {
+  border-bottom: 1px solid rgba(31, 42, 55, 0.08);
+}
+
 .evolution-group-head {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  align-items: baseline;
-  margin-bottom: 10px;
+  align-items: center;
   flex-wrap: wrap;
+}
+
+.evolution-group-title-stack {
+  display: grid;
+  gap: 8px;
+  flex: 1 1 240px;
 }
 
 .evolution-group-head h4 {
@@ -810,10 +837,69 @@ table.dataframe tbody tr:hover td:first-child {
   color: #1d2a37;
 }
 
+.evolution-group-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
 .evolution-group-head .group-meta {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.6;
+}
+
+.group-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 700;
+  border: 1px solid rgba(31, 42, 55, 0.10);
+  background: rgba(255,255,255,0.84);
+  color: #5f4d37;
+}
+
+.group-pill.current {
+  color: var(--accent-2);
+  border-color: rgba(174,32,18,0.18);
+  background: rgba(174,32,18,0.07);
+}
+
+.evolution-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(31, 42, 55, 0.12);
+  background: rgba(255,255,255,0.84);
+  color: #5f4d37;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.evolution-group-toggle::before {
+  content: "展开本组";
+}
+
+.evolution-group[open] .evolution-group-toggle {
+  color: var(--accent);
+  border-color: rgba(0,95,115,0.18);
+  background: rgba(0,95,115,0.06);
+}
+
+.evolution-group[open] .evolution-group-toggle::before {
+  content: "收起本组";
+}
+
+.evolution-group-body {
+  padding: 14px 16px 16px;
 }
 
 .evolution-nav-grid {
@@ -907,6 +993,30 @@ table.dataframe tbody tr:hover td:first-child {
   .hero-grid,
   .hero-fact-grid {
     grid-template-columns: 1fr;
+  }
+
+  .evolution-group summary {
+    padding: 13px 14px;
+  }
+
+  .evolution-group-toggle {
+    justify-self: start;
+  }
+
+  .evolution-group-body {
+    padding: 12px 14px 14px;
+  }
+
+  .table-density-label {
+    font-size: 11px;
+  }
+
+  .table-density-note,
+  .hero-aside-kicker,
+  .hero-fact-label,
+  .mini-kicker,
+  .evolution-link .eyebrow {
+    font-size: 12px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

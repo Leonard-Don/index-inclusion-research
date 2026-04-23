@@ -4,9 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from index_inclusion_research import dashboard_presenters
-from index_inclusion_research import dashboard_sections
-
+from index_inclusion_research import dashboard_presenters, dashboard_sections
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -43,9 +41,9 @@ def test_build_sample_design_section_uses_real_inputs_and_demo_split() -> None:
         "数据来源与口径",
     ]
     assert section["section_view"]["head"]["section_id"] == "design"
-    assert section["section_view"]["detail_figures_title"] == "展开其余样本设计图表（1 张）"
+    assert section["section_view"]["detail_figures_title"] == "样本设计补充图表（1 张）"
     assert section["section_view"]["primary"]["key"] == "demo-design-primary-tables"
-    assert section["section_view"]["detail"]["demo_title"] == "展开样本设计补充表（2 张）"
+    assert section["section_view"]["detail"]["demo_title"] == "样本设计补充表（2 张）"
 
 
 def test_build_robustness_section_returns_expected_table_blocks() -> None:
@@ -69,7 +67,7 @@ def test_build_robustness_section_returns_expected_table_blocks() -> None:
     assert section["section_view"]["head"]["section_id"] == "robustness"
     assert section["section_view"]["show_suite"] is True
     assert section["section_view"]["primary"]["key"] == "demo-robustness-primary-tables"
-    assert section["section_view"]["detail"]["demo_title"] == "展开稳健性补充表（1 张）"
+    assert section["section_view"]["detail"]["demo_title"] == "稳健性补充表（1 张）"
 
 
 def test_build_limits_section_returns_scope_and_identification_tables() -> None:
@@ -90,7 +88,7 @@ def test_build_limits_section_returns_scope_and_identification_tables() -> None:
     assert section["section_view"]["head"]["section_id"] == "limits"
     assert section["section_view"]["show_suite"] is True
     assert section["section_view"]["primary"]["key"] == "demo-limits-primary-tables"
-    assert section["section_view"]["detail"]["demo_title"] == "展开研究边界补充表（1 张）"
+    assert section["section_view"]["detail"]["demo_title"] == "研究边界补充表（1 张）"
 
 
 def test_build_limits_section_derives_live_rdd_tier_for_summary_cards_and_scope_table() -> None:

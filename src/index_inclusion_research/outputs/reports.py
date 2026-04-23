@@ -120,12 +120,17 @@ def _summarise_event_sources(events: pd.DataFrame) -> str:
 
 def build_data_source_table(
     events: pd.DataFrame,
-    prices: pd.DataFrame = pd.DataFrame(),
-    benchmarks: pd.DataFrame = pd.DataFrame(),
-    metadata: pd.DataFrame = pd.DataFrame(),
-    panel: pd.DataFrame = pd.DataFrame(),
-    matched_panel: pd.DataFrame = pd.DataFrame(),
+    prices: pd.DataFrame | None = None,
+    benchmarks: pd.DataFrame | None = None,
+    metadata: pd.DataFrame | None = None,
+    panel: pd.DataFrame | None = None,
+    matched_panel: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
+    prices = pd.DataFrame() if prices is None else prices
+    benchmarks = pd.DataFrame() if benchmarks is None else benchmarks
+    metadata = pd.DataFrame() if metadata is None else metadata
+    panel = pd.DataFrame() if panel is None else panel
+    matched_panel = pd.DataFrame() if matched_panel is None else matched_panel
     rows: list[dict[str, object]] = []
 
     if not events.empty:
@@ -231,10 +236,13 @@ def build_data_source_table(
 def build_sample_scope_table(
     events: pd.DataFrame,
     panel: pd.DataFrame,
-    matched_panel: pd.DataFrame = pd.DataFrame(),
-    long_panel: pd.DataFrame = pd.DataFrame(),
-    long_event_level: pd.DataFrame = pd.DataFrame(),
+    matched_panel: pd.DataFrame | None = None,
+    long_panel: pd.DataFrame | None = None,
+    long_event_level: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
+    matched_panel = pd.DataFrame() if matched_panel is None else matched_panel
+    long_panel = pd.DataFrame() if long_panel is None else long_panel
+    long_event_level = pd.DataFrame() if long_event_level is None else long_event_level
     rows: list[dict[str, object]] = []
     if not events.empty:
         event_start, event_end = _date_range_from_frame(events, ["announce_date", "effective_date"])
@@ -316,11 +324,13 @@ def build_sample_scope_table(
 def build_identification_scope_table(
     events: pd.DataFrame,
     panel: pd.DataFrame,
-    matched_panel: pd.DataFrame = pd.DataFrame(),
-    rdd_summary: pd.DataFrame = pd.DataFrame(),
+    matched_panel: pd.DataFrame | None = None,
+    rdd_summary: pd.DataFrame | None = None,
     rdd_status: Mapping[str, object] | None = None,
     rdd_mode: str = "unavailable",
 ) -> pd.DataFrame:
+    matched_panel = pd.DataFrame() if matched_panel is None else matched_panel
+    rdd_summary = pd.DataFrame() if rdd_summary is None else rdd_summary
     event_count = _safe_int(len(events)) if not events.empty else pd.NA
     panel_windows = (
         _safe_int(panel[["event_id", "event_phase"]].drop_duplicates().shape[0])
@@ -536,8 +546,9 @@ def build_time_series_event_study_summary(event_level: pd.DataFrame) -> pd.DataF
 
 def build_asymmetry_summary(
     event_level: pd.DataFrame,
-    long_event_level: pd.DataFrame = pd.DataFrame(),
+    long_event_level: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
+    long_event_level = pd.DataFrame() if long_event_level is None else long_event_level
     if event_level.empty:
         return pd.DataFrame()
     treated = event_level.copy()
@@ -619,11 +630,13 @@ def _filter_nonoverlap_regression_dataset(dataset: pd.DataFrame, *, days: int = 
 
 def build_sample_filter_summary(
     short_event_level: pd.DataFrame,
-    long_event_level: pd.DataFrame = pd.DataFrame(),
-    regression_dataset: pd.DataFrame = pd.DataFrame(),
+    long_event_level: pd.DataFrame | None = None,
+    regression_dataset: pd.DataFrame | None = None,
     *,
     overlap_window_days: int = 120,
 ) -> pd.DataFrame:
+    long_event_level = pd.DataFrame() if long_event_level is None else long_event_level
+    regression_dataset = pd.DataFrame() if regression_dataset is None else regression_dataset
     if short_event_level.empty:
         return pd.DataFrame()
 
@@ -663,11 +676,12 @@ def build_sample_filter_summary(
 
 def build_robustness_event_study_summary(
     short_event_level: pd.DataFrame,
-    long_event_level: pd.DataFrame = pd.DataFrame(),
+    long_event_level: pd.DataFrame | None = None,
     *,
     overlap_window_days: int = 120,
     winsor_quantile: float = 0.01,
 ) -> pd.DataFrame:
+    long_event_level = pd.DataFrame() if long_event_level is None else long_event_level
     if short_event_level.empty:
         return pd.DataFrame()
 

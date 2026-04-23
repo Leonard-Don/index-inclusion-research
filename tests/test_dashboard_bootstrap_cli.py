@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 import tomllib
+from pathlib import Path
 
 from index_inclusion_research import cli
 from index_inclusion_research.dashboard_bootstrap import bootstrap_dashboard_paths
-from index_inclusion_research.dashboard_cli import parse_dashboard_args, run_dashboard_app
-
+from index_inclusion_research.literature_dashboard import (
+    parse_dashboard_args,
+    run_dashboard_app,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -16,13 +18,12 @@ def test_bootstrap_dashboard_paths_resolves_repo_layout() -> None:
     current_file = Path("/tmp/example/src/index_inclusion_research/dashboard_app.py")
     paths = bootstrap_dashboard_paths(current_file)
     expected_root = current_file.resolve().parents[2]
+    expected_web = expected_root / "src" / "index_inclusion_research" / "web"
 
     assert paths.root == expected_root
-    assert paths.scripts == expected_root / "scripts"
     assert paths.src == expected_root / "src"
-    assert paths.templates == expected_root / "scripts" / "templates"
-    assert paths.static == expected_root / "scripts" / "static"
-    assert str(paths.scripts) in sys.path
+    assert paths.templates == expected_web / "templates"
+    assert paths.static == expected_web / "static"
     assert str(paths.src) in sys.path
 
 

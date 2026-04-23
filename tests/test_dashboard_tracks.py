@@ -5,7 +5,6 @@ from pathlib import Path
 from index_inclusion_research import dashboard_tracks
 from index_inclusion_research.dashboard_types import AnalysisCache, RddStatus
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 

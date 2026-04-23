@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from index_inclusion_research.harris_gurel import run_analysis as run_harris_gurel_analysis
+from index_inclusion_research.harris_gurel import (
+    run_analysis as run_harris_gurel_analysis,
+)
 
 
 def run_analysis(verbose: bool = True) -> dict[str, object]:

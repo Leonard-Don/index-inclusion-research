@@ -4,16 +4,22 @@ import time
 
 from flask import request, url_for
 
-from index_inclusion_research.dashboard_application import build_dashboard_application
 from index_inclusion_research.dashboard_bootstrap import bootstrap_dashboard_paths
+from index_inclusion_research.dashboard_factory import build_dashboard_application
 
 PATHS = bootstrap_dashboard_paths(__file__)
 ROOT = PATHS.root
 
-from index_inclusion_research.demand_curve_track import run_analysis as run_demand_curve_track
-from index_inclusion_research.identification_china_track import run_analysis as run_identification_china_track
+from index_inclusion_research.demand_curve_track import (
+    run_analysis as run_demand_curve_track,
+)
+from index_inclusion_research.identification_china_track import (
+    run_analysis as run_identification_china_track,
+)
 from index_inclusion_research.literature_catalog import get_literature_paper
-from index_inclusion_research.price_pressure_track import run_analysis as run_price_pressure_track
+from index_inclusion_research.price_pressure_track import (
+    run_analysis as run_price_pressure_track,
+)
 
 dashboard_application = build_dashboard_application(
     import_name=__name__,

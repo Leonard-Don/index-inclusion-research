@@ -6,7 +6,11 @@ from pathlib import Path
 import pandas as pd
 
 from index_inclusion_research.loaders import save_dataframe
-from index_inclusion_research.result_contract import build_results_manifest, load_rdd_status, load_results_manifest
+from index_inclusion_research.result_contract import (
+    build_results_manifest,
+    load_rdd_status,
+    load_results_manifest,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 

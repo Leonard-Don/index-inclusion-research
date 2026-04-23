@@ -3,9 +3,17 @@ from __future__ import annotations
 import argparse
 
 from index_inclusion_research import load_project_config
-from index_inclusion_research.loaders import load_benchmarks, load_events, load_prices, save_dataframe
+from index_inclusion_research.loaders import (
+    load_benchmarks,
+    load_events,
+    load_prices,
+    save_dataframe,
+)
 from index_inclusion_research.pipeline import build_event_panel
-from index_inclusion_research.workflow_profiles import add_profile_argument, resolve_profile_args
+from index_inclusion_research.workflow_profiles import (
+    add_profile_argument,
+    resolve_profile_args,
+)
 
 
 def build_arg_parser() -> argparse.ArgumentParser:

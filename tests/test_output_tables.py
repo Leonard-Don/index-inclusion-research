@@ -10,8 +10,8 @@ from index_inclusion_research.outputs import (
     build_robustness_event_study_summary,
     build_robustness_regression_summary,
     build_robustness_retention_summary,
-    build_sample_scope_table,
     build_sample_filter_summary,
+    build_sample_scope_table,
     build_time_series_event_study_summary,
 )
 

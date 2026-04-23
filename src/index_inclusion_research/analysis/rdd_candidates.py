@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 import re
+from collections.abc import Mapping
 from pathlib import Path
 
 import pandas as pd
-
 
 REQUIRED_COLUMNS = [
     "batch_id",

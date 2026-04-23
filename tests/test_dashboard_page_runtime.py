@@ -3,9 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
-from index_inclusion_research.dashboard_page_outline_runtime import DashboardPageOutlineRuntime
+from index_inclusion_research.dashboard_page_outline_runtime import (
+    DashboardPageOutlineRuntime,
+)
 from index_inclusion_research.dashboard_page_runtime import DashboardPageRuntime
-from index_inclusion_research.dashboard_page_sections_runtime import DashboardPageSectionsRuntime
+from index_inclusion_research.dashboard_page_sections_runtime import (
+    DashboardPageSectionsRuntime,
+)
 
 
 def test_dashboard_page_runtime_composes_outline_and_sections(monkeypatch) -> None:

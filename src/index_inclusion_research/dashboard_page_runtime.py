@@ -1,7 +1,11 @@
 from __future__ import annotations
 
-from index_inclusion_research.dashboard_page_outline_runtime import DashboardPageOutlineRuntime
-from index_inclusion_research.dashboard_page_sections_runtime import DashboardPageSectionsRuntime
+from index_inclusion_research.dashboard_page_outline_runtime import (
+    DashboardPageOutlineRuntime,
+)
+from index_inclusion_research.dashboard_page_sections_runtime import (
+    DashboardPageSectionsRuntime,
+)
 from index_inclusion_research.dashboard_types import (
     AbstractPoint,
     DashboardSection,
@@ -10,8 +14,8 @@ from index_inclusion_research.dashboard_types import (
     HomeContext,
     ModeName,
     ModeTab,
-    ModeTabUrlBuilder,
     ModeTabsBuilder,
+    ModeTabUrlBuilder,
     NavSection,
     NoteItem,
     OverviewMetric,

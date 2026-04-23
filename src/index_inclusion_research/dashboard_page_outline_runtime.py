@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from index_inclusion_research import dashboard_home
-from index_inclusion_research import dashboard_presenters
+from index_inclusion_research import dashboard_home, dashboard_presenters
 from index_inclusion_research.dashboard_types import (
     AbstractPoint,
     HighlightItem,

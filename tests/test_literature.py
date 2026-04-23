@@ -3,7 +3,10 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from index_inclusion_research.literature import compute_did_summary, compute_retention_summary
+from index_inclusion_research.literature import (
+    compute_did_summary,
+    compute_retention_summary,
+)
 
 
 def test_compute_retention_summary_reports_reversal_and_ratio() -> None:

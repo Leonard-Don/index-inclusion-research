@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from index_inclusion_research.dashboard_refresh_coordinator import DashboardRefreshCoordinator
+from index_inclusion_research.dashboard_refresh_coordinator import (
+    DashboardRefreshCoordinator,
+)
 from index_inclusion_research.dashboard_types import (
     DashboardRuntimeLike,
     HomeUrlBuilder,

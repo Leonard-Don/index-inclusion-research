@@ -6,10 +6,7 @@ import pandas as pd
 import pytest
 
 from index_inclusion_research import dashboard_config
-from index_inclusion_research.dashboard_track_content_runtime import DashboardTrackContentRuntime
-from index_inclusion_research.dashboard_track_display_runtime import DashboardTrackDisplayRuntime
 from index_inclusion_research.dashboard_track_runtime import DashboardTrackRuntime
-from index_inclusion_research.dashboard_track_support_runtime import DashboardTrackSupportRuntime
 
 
 def _build_track_runtime() -> DashboardTrackRuntime:
@@ -29,17 +26,14 @@ def _build_track_runtime() -> DashboardTrackRuntime:
     )
 
 
-def test_dashboard_track_runtime_composes_support_content_and_display(monkeypatch) -> None:
+def test_dashboard_track_runtime_exposes_unified_surface(monkeypatch) -> None:
     track = _build_track_runtime()
     expected_library = {"id": "paper_library"}
 
-    monkeypatch.setattr(track.content, "load_literature_library_result", lambda: expected_library)
-    monkeypatch.setattr(track.display, "run_and_cache_analysis", lambda analysis_id: {"id": analysis_id})
+    monkeypatch.setattr(track, "load_literature_library_result", lambda: expected_library)
+    monkeypatch.setattr(track, "run_and_cache_analysis", lambda analysis_id: {"id": analysis_id})
 
-    assert isinstance(track.support, DashboardTrackSupportRuntime)
-    assert isinstance(track.content, DashboardTrackContentRuntime)
-    assert isinstance(track.display, DashboardTrackDisplayRuntime)
-    assert track.table_labels is track.support.table_labels
+    assert track.table_labels  # non-empty formatting dict
     assert track.load_literature_library_result() is expected_library
     assert track.run_and_cache_analysis("price_pressure_track") == {"id": "price_pressure_track"}
 
@@ -53,7 +47,7 @@ def test_apply_live_rdd_status_updates_evidence_tier_column(monkeypatch) -> None
         ]
     )
     monkeypatch.setattr(
-        track.content,
+        track,
         "load_rdd_status",
         lambda output_dir=None: {
             "mode": "reconstructed",
@@ -79,7 +73,7 @@ def test_apply_live_rdd_status_updates_evidence_tier_column(monkeypatch) -> None
         },
     )
 
-    updated = track.content.apply_live_rdd_status_to_identification_scope(frame)
+    updated = track.apply_live_rdd_status_to_identification_scope(frame)
     rdd_row = updated.loc[updated["分析层"] == "中国 RDD 扩展"].iloc[0]
 
     assert rdd_row["证据等级"] == "L2"
@@ -99,7 +93,7 @@ def test_load_rdd_contract_check_delegates_to_content(monkeypatch) -> None:
         "live_status": {"mode": "reconstructed"},
         "manifest": {"rdd_mode": "reconstructed"},
     }
-    monkeypatch.setattr(track.content, "load_rdd_contract_check", lambda **kwargs: expected)
+    monkeypatch.setattr(track, "load_rdd_contract_check", lambda **kwargs: expected)
 
     assert track.load_rdd_contract_check() is expected
 

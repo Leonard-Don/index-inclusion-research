@@ -12,7 +12,6 @@ from index_inclusion_research.analysis.rdd_candidates import (
 )
 from index_inclusion_research.loaders import save_dataframe
 
-
 ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_OUTPUT = ROOT / "data" / "raw" / "hs300_rdd_candidates.csv"

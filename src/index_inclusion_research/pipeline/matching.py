@@ -147,8 +147,9 @@ def build_matched_sample(
         if relaxed_sector:
             sector_candidates = candidate_frame.copy()
 
+        target = target_snapshot
         sector_candidates["distance"] = sector_candidates.apply(
-            lambda row: _distance_score(target_snapshot, row.to_dict()),
+            lambda row, target=target: _distance_score(target, row.to_dict()),
             axis=1,
         )
         sector_candidates = sector_candidates.replace([np.inf, -np.inf], np.nan).dropna(subset=["distance"])

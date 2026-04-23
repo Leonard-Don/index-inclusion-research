@@ -8,7 +8,11 @@ import akshare as ak
 import pandas as pd
 import yfinance as yf
 
-from index_inclusion_research.analysis.rdd_candidates import build_candidate_batch_audit, summarize_candidate_audit, validate_candidate_frame
+from index_inclusion_research.analysis.rdd_candidates import (
+    build_candidate_batch_audit,
+    summarize_candidate_audit,
+    validate_candidate_frame,
+)
 from index_inclusion_research.analysis.rdd_reconstruction import (
     build_reconstructed_candidate_frame,
     load_cached_proxy_market_caps,
@@ -16,7 +20,6 @@ from index_inclusion_research.analysis.rdd_reconstruction import (
     reconstruct_batch_membership,
 )
 from index_inclusion_research.loaders import save_dataframe
-
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -66,7 +69,7 @@ def _fetch_missing_proxy_market_caps(
         group_by="ticker",
     )
     close_map: dict[str, float] = {}
-    for ticker, symbol in zip(tickers, symbols):
+    for ticker, symbol in zip(tickers, symbols, strict=True):
         try:
             history_frame = history[symbol] if len(symbols) > 1 else history
         except Exception:
@@ -95,7 +98,7 @@ def _fetch_missing_proxy_market_caps(
     shares_map: dict[str, float] = {}
     uncached_symbols = [
         (ticker, symbol)
-        for ticker, symbol in zip(tickers, symbols)
+        for ticker, symbol in zip(tickers, symbols, strict=True)
         if ticker in close_map and ticker not in cache
     ]
     with ThreadPoolExecutor(max_workers=min(24, len(symbols) or 1)) as executor:

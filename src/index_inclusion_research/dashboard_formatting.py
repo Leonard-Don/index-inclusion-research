@@ -6,7 +6,6 @@ import pandas as pd
 
 from index_inclusion_research import dashboard_loaders
 
-
 TABLE_LABELS = {
     "event_study_summary": "事件研究汇总表",
     "mechanism_summary": "机制变量汇总表",

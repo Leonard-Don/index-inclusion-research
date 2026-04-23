@@ -4,7 +4,11 @@ from pathlib import Path
 
 import pandas as pd
 
-from index_inclusion_research.analysis import build_regression_dataset, compute_event_study, run_regressions
+from index_inclusion_research.analysis import (
+    build_regression_dataset,
+    compute_event_study,
+    run_regressions,
+)
 from index_inclusion_research.loaders import (
     load_benchmarks,
     load_events,
@@ -12,7 +16,11 @@ from index_inclusion_research.loaders import (
     save_dataframe,
 )
 from index_inclusion_research.outputs import plot_average_paths
-from index_inclusion_research.pipeline import build_event_panel, build_event_sample, build_matched_sample
+from index_inclusion_research.pipeline import (
+    build_event_panel,
+    build_event_sample,
+    build_matched_sample,
+)
 from index_inclusion_research.real_data import build_real_dataset
 
 ROOT = Path(__file__).resolve().parents[2]

@@ -122,7 +122,9 @@ def render_rolling_figure(
     ax.set_xlabel("rolling window end year")
     ax.set_ylabel("CAR[-1,+1] mean")
     ax.set_title("Rolling CAR by market and event phase")
-    ax.legend()
+    handles, labels = ax.get_legend_handles_labels()
+    if any(label and not label.startswith("_") for label in labels):
+        ax.legend()
 
     aum_overlay = False
     if aum_frame is not None and not aum_frame.empty:
@@ -136,7 +138,9 @@ def render_rolling_figure(
                 label=f"AUM {market}",
             )
         ax2.set_ylabel("passive AUM (trillion)")
-        ax2.legend(loc="lower right")
+        aum_handles, aum_labels = ax2.get_legend_handles_labels()
+        if any(label and not label.startswith("_") for label in aum_labels):
+            ax2.legend(loc="lower right")
         aum_overlay = True
 
     fig.tight_layout()

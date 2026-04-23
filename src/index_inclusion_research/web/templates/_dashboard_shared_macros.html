@@ -85,8 +85,8 @@
 </div>
 {%- endmacro %}
 
-{% macro render_details_panel(key, kicker, title, copy, toggle_label='展开查看') -%}
-<details class="details-panel" data-details-key="{{ key }}">
+{% macro render_details_panel(key, kicker, title, copy, toggle_label='展开查看', panel_class='') -%}
+<details class="details-panel{% if panel_class %} {{ panel_class }}{% endif %}" data-details-key="{{ key }}">
   <summary>
     <div>
       <div class="details-kicker">{{ kicker }}</div>
@@ -108,8 +108,15 @@
     <span class="support-pill">{{ paper.stance }}</span>
     <span class="support-pill">{{ paper.market_focus }}</span>
   </div>
-  <div class="support-citation">{{ paper.citation }}</div>
-  <div class="support-role">{{ paper.one_line_role }}</div>
+  <div class="support-headline">
+    <div class="support-head-copy">
+      <div class="support-citation">{{ paper.citation }}</div>
+      <div class="support-role">{{ paper.one_line_role }}</div>
+    </div>
+    {% if paper.pdf_href %}
+    <a class="support-link" href="{{ paper.pdf_href }}" target="_blank" rel="noopener noreferrer">查看这篇速读</a>
+    {% endif %}
+  </div>
   <div class="support-deep-grid">
     <div class="support-deep">
       <div class="support-deep-label">识别对象</div>
@@ -128,9 +135,6 @@
     <div><strong>方法</strong>{{ paper.method_focus }}</div>
     <div><strong>作用</strong>{{ paper.practical_use }}</div>
   </div>
-  {% if paper.pdf_href %}
-  <a class="support-link" href="{{ paper.pdf_href }}" target="_blank" rel="noopener noreferrer">查看这篇速读</a>
-  {% endif %}
 </div>
 {%- endmacro %}
 

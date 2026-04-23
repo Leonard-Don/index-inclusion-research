@@ -8,8 +8,8 @@ from flask import Flask, request, url_for
 from index_inclusion_research.dashboard_route_bindings import (
     DashboardRouteDependencies,
     DashboardRouteFactory,
-    build_dashboard_route_views,
     build_dashboard_route_dependencies,
+    build_dashboard_route_views,
     build_home_url_builder,
 )
 

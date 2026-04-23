@@ -119,8 +119,8 @@ def create_identification_figures(
     load_rdd_status: RddStatusLoader,
     to_relative: RelativePathBuilder,
 ) -> list[FigureEntry]:
-    import numpy as np
     import matplotlib
+    import numpy as np
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -264,8 +264,8 @@ def create_sample_design_figures(
     import matplotlib
 
     matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
     import matplotlib.dates as mdates
+    import matplotlib.pyplot as plt
     from matplotlib.colors import LinearSegmentedColormap, TwoSlopeNorm
 
     plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
@@ -334,14 +334,24 @@ def create_sample_design_figures(
     ax.xaxis.set_major_locator(mdates.YearLocator(base=locator_interval))
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
     ax.tick_params(axis="x", labelrotation=0)
-    ax.set_title("真实调入调出事件时间线", fontsize=16, pad=14)
+    ax.set_title("真实调入调出事件时间线", fontsize=16, pad=18)
     ax.set_xlabel("事件日期")
     ax.set_ylabel("样本分层")
     ax.grid(axis="x", alpha=0.25)
     handles, labels = ax.get_legend_handles_labels()
-    unique = dict(zip(labels, handles))
-    ax.legend(unique.values(), unique.keys(), ncol=2, loc="upper left", frameon=False, fontsize=10)
-    fig.tight_layout()
+    unique = dict(zip(labels, handles, strict=False))
+    fig.legend(
+        unique.values(),
+        unique.keys(),
+        ncol=4,
+        loc="upper center",
+        bbox_to_anchor=(0.5, 0.965),
+        frameon=False,
+        fontsize=10,
+        columnspacing=1.4,
+        handletextpad=0.6,
+    )
+    fig.tight_layout(rect=(0, 0, 1, 0.89))
     fig.savefig(timeline_path, dpi=220)
     plt.close(fig)
 
@@ -438,7 +448,7 @@ def create_sample_design_figures(
     mechanism["phase_label"] = mechanism["event_phase"].map(phase_labels)
     mechanism["ci"] = 1.96 * mechanism["std_error"]
     fig, axes = plt.subplots(1, 2, figsize=(12.8, 6.0))
-    for ax, market in zip(axes, ["CN", "US"]):
+    for ax, market in zip(axes, ["CN", "US"], strict=True):
         subset = mechanism.loc[mechanism["market"] == market].copy()
         subset["label"] = subset["phase_label"] + " · " + subset["metric_label"]
         order = [

@@ -4,10 +4,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from index_inclusion_research import dashboard_loaders
-from index_inclusion_research import dashboard_media
+from index_inclusion_research import dashboard_loaders, dashboard_media
 from index_inclusion_research.result_contract import build_results_manifest
-
 
 ROOT = Path(__file__).resolve().parents[1]
 TINY_PNG = (

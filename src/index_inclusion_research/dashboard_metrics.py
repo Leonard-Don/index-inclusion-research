@@ -5,20 +5,23 @@ from pathlib import Path
 import pandas as pd
 
 from index_inclusion_research import dashboard_loaders
-from index_inclusion_research.results_snapshot import ResultsSnapshot
 from index_inclusion_research.dashboard_types import (
     FormatPct,
     FormatPValue,
-    ResultCard,
-    RenderedTable,
     RddContractCheck,
     RddStatus,
+    RenderedTable,
+    ResultCard,
     StatusPanel,
     SummaryCard,
     TableRenderer,
 )
 from index_inclusion_research.literature_catalog import build_camp_summary_frame
-from index_inclusion_research.rdd_evidence import rdd_evidence_tier, rdd_provenance_summary
+from index_inclusion_research.rdd_evidence import (
+    rdd_evidence_tier,
+    rdd_provenance_summary,
+)
+from index_inclusion_research.results_snapshot import ResultsSnapshot
 from index_inclusion_research.supplementary import (
     build_case_playbook_frame,
     build_event_clock_frame,
@@ -58,7 +61,11 @@ def _build_retention_ratio_card(
         return {"label": label, "value": f"{float(raw_ratio):.2f}", "copy": valid_copy}
 
     raw_note = row.get("retention_note")
-    note = str(raw_note).strip() if pd.notna(raw_note) and str(raw_note).strip() else "短窗口基数过小，不适合解释保留率。"
+    note = (
+        str(raw_note).strip()
+        if pd.notna(raw_note) and str(raw_note).strip()
+        else "短窗口基数过小，不适合解释保留率。"
+    )
     return {"label": label, "value": "暂不解释", "copy": note}
 
 
@@ -87,7 +94,7 @@ def build_framework_summary_cards() -> list[SummaryCard]:
             {
                 "kicker": "文献阵营",
                 "title": str(row["阵营"]),
-                "meta": f'{row["副标题"]} · {int(row["文献数量"])} 篇',
+                "meta": f"{row['副标题']} · {int(row['文献数量'])} 篇",
                 "copy": str(row["核心问题"]),
                 "foot": "这一阵营中的文献围绕同一类问题展开，可作为对应研究争论的集中概括。",
             }
@@ -101,19 +108,19 @@ def build_review_summary_cards() -> list[SummaryCard]:
             "kicker": "反方文献",
             "title": "重新审视永久效应",
             "meta": "价格压力、动量错觉与效应弱化",
-            "copy": "反方文献把早期上涨重新解释为短期流动性冲击、纳入前强势表现或现代市场中的提前定价。",
+            "copy": "反方文献并不是简单否定指数效应，而是把早期上涨重新解释为短期流动性冲击、纳入前强势表现，或现代市场里被提前交易后的压缩信号。",
         },
         {
             "kicker": "中性文献",
             "title": "争论如何转向识别",
-            "meta": "制度差异、套利约束与价格发现",
-            "copy": "中性文献的重要性不在于表态，而在于说明结论会随着指数制度、市场摩擦和识别设计而改变。",
+            "meta": "制度差异、套利约束、价格发现与隐性换手成本",
+            "copy": "中性文献的重要性不在于表态，而在于说明结论会随着指数制度、市场摩擦、识别设计、价格发现条件以及被动基金隐性换手成本而改变。",
         },
         {
             "kicker": "正方文献",
             "title": "哪些机制仍然成立",
             "meta": "需求曲线、长期保留与中国证据",
-            "copy": "正方文献并不只是重复“会涨”，而是在更强设计下继续保留部分永久性、信息背书和中国市场不对称证据。",
+            "copy": "正方文献并不只是重复“会涨”，而是在更强设计下继续保留部分长期保留、信息背书和中国市场不对称证据。",
         },
     ]
 
@@ -136,7 +143,7 @@ def build_supplement_summary_cards() -> list[SummaryCard]:
             "title": str(mechanism["机制环节"]),
             "meta": str(mechanism["学术对应"]),
             "copy": str(mechanism["交易台语言"]),
-            "foot": f'对应变量：{mechanism["项目变量"]}',
+            "foot": f"对应变量：{mechanism['项目变量']}",
         },
         {
             "kicker": "冲击估算",
@@ -164,7 +171,9 @@ def build_price_pressure_cards(
 ) -> list[ResultCard]:
     current_snapshot = snapshot or ResultsSnapshot(root)
     event = current_snapshot.csv("results", "real_tables", "event_study_summary.csv")
-    mechanism = dashboard_loaders.load_single_csv(root / "results" / "literature" / "harris_gurel", "mechanism_summary.csv")
+    mechanism = dashboard_loaders.load_single_csv(
+        root / "results" / "literature" / "harris_gurel", "mechanism_summary.csv"
+    )
     cards: list[ResultCard] = []
     if event is not None:
         us_announce = event.loc[
@@ -181,23 +190,51 @@ def build_price_pressure_cards(
         ]
         if not us_announce.empty:
             row = us_announce.iloc[0]
-            cards.append({"label": "美股公告日 CAR[-1,+1]", "value": format_pct(float(row["mean_car"])), "copy": format_p_value(float(row["p_value"]))})
+            cards.append(
+                {
+                    "label": "美股公告日 CAR[-1,+1]",
+                    "value": format_pct(float(row["mean_car"])),
+                    "copy": format_p_value(float(row["p_value"])),
+                }
+            )
         if not cn_effective.empty:
             row = cn_effective.iloc[0]
-            cards.append({"label": "A 股生效日 CAR[-1,+1]", "value": format_pct(float(row["mean_car"])), "copy": format_p_value(float(row["p_value"]))})
+            cards.append(
+                {
+                    "label": "A 股生效日 CAR[-1,+1]",
+                    "value": format_pct(float(row["mean_car"])),
+                    "copy": format_p_value(float(row["p_value"])),
+                }
+            )
     if mechanism is not None:
         us_announce_mech = mechanism.loc[
-            (mechanism["market"] == "US") & (mechanism["event_phase"] == "announce") & (mechanism["inclusion"] == 1)
+            (mechanism["market"] == "US")
+            & (mechanism["event_phase"] == "announce")
+            & (mechanism["inclusion"] == 1)
         ]
         cn_effective_mech = mechanism.loc[
-            (mechanism["market"] == "CN") & (mechanism["event_phase"] == "effective") & (mechanism["inclusion"] == 1)
+            (mechanism["market"] == "CN")
+            & (mechanism["event_phase"] == "effective")
+            & (mechanism["inclusion"] == 1)
         ]
         if not us_announce_mech.empty:
             row = us_announce_mech.iloc[0]
-            cards.append({"label": "美股公告日成交量变化", "value": format_pct(float(row["mean_volume_change"])), "copy": "反映短期建仓冲击强度"})
+            cards.append(
+                {
+                    "label": "美股公告日成交量变化",
+                    "value": format_pct(float(row["mean_volume_change"])),
+                    "copy": "反映短期建仓冲击强度",
+                }
+            )
         if not cn_effective_mech.empty:
             row = cn_effective_mech.iloc[0]
-            cards.append({"label": "A 股生效日成交量变化", "value": format_pct(float(row["mean_volume_change"])), "copy": "用于观察中国样本的调仓压力"})
+            cards.append(
+                {
+                    "label": "A 股生效日成交量变化",
+                    "value": format_pct(float(row["mean_volume_change"])),
+                    "copy": "用于观察中国样本的调仓压力",
+                }
+            )
     return cards[:4]
 
 
@@ -209,15 +246,21 @@ def build_demand_curve_cards(
     snapshot: ResultsSnapshot | None = None,
 ) -> list[ResultCard]:
     current_snapshot = snapshot or ResultsSnapshot(root)
-    event = current_snapshot.csv("results", "real_tables", "long_window_event_study_summary.csv")
+    event = current_snapshot.csv(
+        "results", "real_tables", "long_window_event_study_summary.csv"
+    )
     retention = current_snapshot.csv("results", "real_tables", "retention_summary.csv")
     cards: list[ResultCard] = []
     if retention is not None:
         us_announce = retention.loc[
-            (retention["market"] == "US") & (retention["event_phase"] == "announce") & (retention["inclusion"] == 1)
+            (retention["market"] == "US")
+            & (retention["event_phase"] == "announce")
+            & (retention["inclusion"] == 1)
         ]
         cn_effective = retention.loc[
-            (retention["market"] == "CN") & (retention["event_phase"] == "effective") & (retention["inclusion"] == 1)
+            (retention["market"] == "CN")
+            & (retention["event_phase"] == "effective")
+            & (retention["inclusion"] == 1)
         ]
         if not us_announce.empty:
             row = us_announce.iloc[0]
@@ -252,10 +295,22 @@ def build_demand_curve_cards(
         ]
         if not us_long.empty:
             row = us_long.iloc[0]
-            cards.append({"label": "美股公告日 CAR[0,+120]", "value": format_pct(float(row["mean_car"])), "copy": format_p_value(float(row["p_value"]))})
+            cards.append(
+                {
+                    "label": "美股公告日 CAR[0,+120]",
+                    "value": format_pct(float(row["mean_car"])),
+                    "copy": format_p_value(float(row["p_value"])),
+                }
+            )
         if not cn_long.empty:
             row = cn_long.iloc[0]
-            cards.append({"label": "A 股公告日 CAR[0,+120]", "value": format_pct(float(row["mean_car"])), "copy": format_p_value(float(row["p_value"]))})
+            cards.append(
+                {
+                    "label": "A 股公告日 CAR[0,+120]",
+                    "value": format_pct(float(row["mean_car"])),
+                    "copy": format_p_value(float(row["p_value"])),
+                }
+            )
     return cards[:4]
 
 
@@ -272,10 +327,18 @@ def build_identification_cards(
     event = current_snapshot.csv("results", "real_tables", "event_study_summary.csv")
     asymmetry = current_snapshot.csv("results", "real_tables", "asymmetry_summary.csv")
     did = dashboard_loaders.load_single_csv(style_dir, "did_summary.csv")
-    regression = current_snapshot.csv("results", "real_regressions", "regression_coefficients.csv")
-    current_rdd_status = dict(rdd_status) if rdd_status is not None else dashboard_loaders.load_rdd_status(root)
+    regression = current_snapshot.csv(
+        "results", "real_regressions", "regression_coefficients.csv"
+    )
+    current_rdd_status = (
+        dict(rdd_status)
+        if rdd_status is not None
+        else dashboard_loaders.load_rdd_status(root)
+    )
     rdd = (
-        dashboard_loaders.load_single_csv(dashboard_loaders.rdd_output_dir(root), "rdd_summary.csv")
+        dashboard_loaders.load_single_csv(
+            dashboard_loaders.rdd_output_dir(root), "rdd_summary.csv"
+        )
         if current_rdd_status["mode"] in {"real", "reconstructed"}
         else None
     )
@@ -288,16 +351,40 @@ def build_identification_cards(
     ]
     if not announce.empty:
         row = announce.iloc[0]
-        cards.append({"label": "中国样本公告日 CAR[-1,+1]", "value": format_pct(float(row["mean_car"])), "copy": format_p_value(float(row["p_value"]))})
-    announce_gap = asymmetry.loc[(asymmetry["market"] == "CN") & (asymmetry["event_phase"] == "announce")]
+        cards.append(
+            {
+                "label": "中国样本公告日 CAR[-1,+1]",
+                "value": format_pct(float(row["mean_car"])),
+                "copy": format_p_value(float(row["p_value"])),
+            }
+        )
+    announce_gap = asymmetry.loc[
+        (asymmetry["market"] == "CN") & (asymmetry["event_phase"] == "announce")
+    ]
     if not announce_gap.empty:
         row = announce_gap.iloc[0]
-        cards.append({"label": "中国公告日非对称差值", "value": format_pct(float(row["asymmetry_car_m1_p1"])), "copy": "比较调入与调出短窗口反应差异"})
+        cards.append(
+            {
+                "label": "中国公告日非对称差值",
+                "value": format_pct(float(row["asymmetry_car_m1_p1"])),
+                "copy": "比较调入与调出短窗口反应差异",
+            }
+        )
     if did is not None:
-        ar = did.loc[(did["event_phase"] == "announce") & (did["metric"] == "abnormal_return") & (did["inclusion"] == 1)]
+        ar = did.loc[
+            (did["event_phase"] == "announce")
+            & (did["metric"] == "abnormal_return")
+            & (did["inclusion"] == 1)
+        ]
         if not ar.empty:
             row = ar.iloc[0]
-            cards.append({"label": "DID 异常收益估计", "value": format_pct(float(row["did_estimate"])), "copy": f"处理组 {int(row['n_treated'])} / 对照组 {int(row['n_control'])}"})
+            cards.append(
+                {
+                    "label": "DID 异常收益估计",
+                    "value": format_pct(float(row["did_estimate"])),
+                    "copy": f"处理组 {int(row['n_treated'])} / 对照组 {int(row['n_control'])}",
+                }
+            )
     inc = regression.loc[
         (regression["parameter"] == "treatment_group")
         & (regression["specification"] == "main_car")
@@ -306,12 +393,24 @@ def build_identification_cards(
     ]
     if not inc.empty:
         row = inc.iloc[0]
-        cards.append({"label": "匹配回归处理组系数", "value": f"{float(row['coefficient']):.4f}", "copy": format_p_value(float(row["p_value"]))})
+        cards.append(
+            {
+                "label": "匹配回归处理组系数",
+                "value": f"{float(row['coefficient']):.4f}",
+                "copy": format_p_value(float(row["p_value"])),
+            }
+        )
     if rdd is not None:
         tau = rdd.loc[rdd["outcome"] == "car_m1_p1"]
         if not tau.empty:
             row = tau.iloc[0]
-            cards.append({"label": "RDD 断点效应", "value": f"{float(row['tau']):.4f}", "copy": format_p_value(float(row["p_value"]))})
+            cards.append(
+                {
+                    "label": "RDD 断点效应",
+                    "value": f"{float(row['tau']):.4f}",
+                    "copy": format_p_value(float(row["p_value"])),
+                }
+            )
     return cards[:4]
 
 
@@ -341,7 +440,9 @@ def _contract_consistency_copy(contract_check: RddContractCheck | None) -> str:
         return f"未找到 {manifest_path}；页面展示以当前识别状态为准。"
     if contract_check["matches"]:
         return f"已校验：{manifest_path} 与当前识别状态一致。"
-    mismatch_labels = "、".join(_contract_field_label(field) for field in contract_check["mismatched_fields"])
+    mismatch_labels = "、".join(
+        _contract_field_label(field) for field in contract_check["mismatched_fields"]
+    )
     return (
         f"发现 {manifest_path} 与当前识别状态在 {mismatch_labels} 上不一致；"
         "页面展示仍以当前识别状态为准，建议重跑 index-inclusion-make-figures-tables 和 "
@@ -384,10 +485,16 @@ def build_identification_status_panel(
         "必需列已固定为 batch_id、announce_date、running_variable、cutoff、inclusion 等字段。"
     )
     if rdd_status.get("audit_file"):
-        contract_copy = f"{contract_copy} 当前已生成候选样本审计：{rdd_status['audit_file']}。"
+        contract_copy = (
+            f"{contract_copy} 当前已生成候选样本审计：{rdd_status['audit_file']}。"
+        )
     provenance_summary = rdd_provenance_summary(rdd_status)
-    source_meta = provenance_summary or str(rdd_status.get("source_label", "")) or "待补候选样本"
-    source_file = str(rdd_status.get("source_file", "")) or str(rdd_status.get("input_file", ""))
+    source_meta = (
+        provenance_summary or str(rdd_status.get("source_label", "")) or "待补候选样本"
+    )
+    source_file = str(rdd_status.get("source_file", "")) or str(
+        rdd_status.get("input_file", "")
+    )
     if source_file:
         source_meta = f"{source_meta} · 文件 {source_file}"
     if rdd_status.get("generated_at"):
@@ -397,7 +504,9 @@ def build_identification_status_panel(
     if mode == "real":
         tone = "official"
         signal_value = f"{tier} · 正式边界样本"
-        signal_copy = "正式候选样本已经通过校验，这里的 RDD 可以按官方口径直接纳入主结论。"
+        signal_copy = (
+            "正式候选样本已经通过校验，这里的 RDD 可以按官方口径直接纳入主结论。"
+        )
         panel_copy = f"{rdd_status['message']} 当前这版 RDD 已进入正式证据链，可与事件研究和匹配回归并列作为更强识别证据。"
         entry_condition = "已满足：正式候选样本文件已通过字段与日期校验。"
     elif mode == "reconstructed":
@@ -417,16 +526,22 @@ def build_identification_status_panel(
             f"{rdd_status['message']} 退出 demo 模式后，可以通过正式候选样本进入 L3，"
             "也可以先通过公开重建样本进入 L2。"
         )
-        entry_condition = "退出 demo 模式，并提供正式候选样本通过校验，或先生成公开重建样本文件。"
+        entry_condition = (
+            "退出 demo 模式，并提供正式候选样本通过校验，或先生成公开重建样本文件。"
+        )
     else:
         tone = "missing"
         signal_value = f"{tier} · 待补正式样本"
-        signal_copy = "当前首页只能展示事件研究与匹配回归；RDD 还没有进入正式或公开重建证据链。"
+        signal_copy = (
+            "当前首页只能展示事件研究与匹配回归；RDD 还没有进入正式或公开重建证据链。"
+        )
         panel_copy = (
             f"{rdd_status['message']} 当前还没有进入可读的边界证据；"
             "后续可以通过正式候选样本进入 L3，或先通过公开重建样本进入 L2。"
         )
-        entry_condition = "提供正式候选样本文件并通过字段与日期校验，或先生成公开重建样本文件。"
+        entry_condition = (
+            "提供正式候选样本文件并通过字段与日期校验，或先生成公开重建样本文件。"
+        )
     return {
         "kicker": "证据等级",
         "title": str(rdd_status["evidence_status"]),
@@ -437,7 +552,10 @@ def build_identification_status_panel(
         "copy": panel_copy,
         "meta": [
             {"label": "样本来源", "value": source_meta},
-            {"label": "状态一致性", "value": _contract_consistency_copy(contract_check)},
+            {
+                "label": "状态一致性",
+                "value": _contract_consistency_copy(contract_check),
+            },
             {"label": "覆盖说明", "value": coverage_meta},
             {"label": "样本状态", "value": sample_overview},
             {"label": "推荐下一步", "value": next_step_copy},
@@ -462,17 +580,28 @@ def build_price_pressure_tables(
             ["market", "event_phase", "window", "mean_car", "p_value", "n_events"],
         ]
         tables.append(("短窗口 CAR 摘要", render_table(focus, compact=True)))
-    time_series = current_snapshot.csv("results", "real_tables", "time_series_event_study_summary.csv")
+    time_series = current_snapshot.csv(
+        "results", "real_tables", "time_series_event_study_summary.csv"
+    )
     focus_time = time_series.loc[
         (time_series["inclusion"] == 1) & (time_series["event_phase"] == "announce"),
         ["market", "announce_year", "mean_car_m1_p1", "mean_car_m3_p3", "n_events"],
     ]
     tables.append(("时间变化摘要", render_table(focus_time, compact=True)))
-    mechanism = dashboard_loaders.load_single_csv(root / "results" / "literature" / "harris_gurel", "mechanism_summary.csv")
+    mechanism = dashboard_loaders.load_single_csv(
+        root / "results" / "literature" / "harris_gurel", "mechanism_summary.csv"
+    )
     if mechanism is not None:
         focus = mechanism.loc[
             mechanism["inclusion"] == 1,
-            ["market", "event_phase", "mean_turnover_change", "mean_volume_change", "mean_volatility_change", "n_events"],
+            [
+                "market",
+                "event_phase",
+                "mean_turnover_change",
+                "mean_volume_change",
+                "mean_volatility_change",
+                "n_events",
+            ],
         ]
         tables.append(("机制变量变化", render_table(focus, compact=True)))
     return tables
@@ -486,10 +615,13 @@ def build_demand_curve_tables(
 ) -> list[RenderedTable]:
     tables: list[RenderedTable] = []
     current_snapshot = snapshot or ResultsSnapshot(root)
-    event = current_snapshot.csv("results", "real_tables", "long_window_event_study_summary.csv")
+    event = current_snapshot.csv(
+        "results", "real_tables", "long_window_event_study_summary.csv"
+    )
     if event is not None:
         focus = event.loc[
-            (event["inclusion"] == 1) & event["window_slug"].isin(["m1_p1", "p0_p20", "p0_p120"]),
+            (event["inclusion"] == 1)
+            & event["window_slug"].isin(["m1_p1", "p0_p20", "p0_p120"]),
             ["market", "event_phase", "window", "mean_car", "p_value", "n_events"],
         ]
         tables.append(("长短窗口 CAR 对比", render_table(focus, compact=True)))
@@ -497,7 +629,14 @@ def build_demand_curve_tables(
     if retention is not None:
         focus = retention.loc[
             retention["inclusion"] == 1,
-            ["market", "event_phase", "short_mean_car", "long_mean_car", "car_reversal", "retention_ratio"],
+            [
+                "market",
+                "event_phase",
+                "short_mean_car",
+                "long_mean_car",
+                "car_reversal",
+                "retention_ratio",
+            ],
         ]
         tables.append(("保留率与回吐", render_table(focus, compact=True)))
     return tables
@@ -524,14 +663,33 @@ def build_identification_tables(
     if asymmetry is not None:
         focus = asymmetry.loc[
             asymmetry["market"] == "CN",
-            ["event_phase", "n_additions", "n_deletions", "addition_car_m1_p1", "deletion_car_m1_p1", "asymmetry_car_m1_p1"],
+            [
+                "event_phase",
+                "n_additions",
+                "n_deletions",
+                "addition_car_m1_p1",
+                "deletion_car_m1_p1",
+                "asymmetry_car_m1_p1",
+            ],
         ]
         tables.append(("调入调出非对称性", render_table(focus, compact=True)))
     did = dashboard_loaders.load_single_csv(style_dir, "did_summary.csv")
     if did is not None:
-        focus = did.loc[:, ["event_phase", "inclusion", "metric", "did_estimate", "n_treated", "n_control"]]
+        focus = did.loc[
+            :,
+            [
+                "event_phase",
+                "inclusion",
+                "metric",
+                "did_estimate",
+                "n_treated",
+                "n_control",
+            ],
+        ]
         tables.append(("DID 摘要", render_table(focus, compact=True)))
-    regression = current_snapshot.csv("results", "real_regressions", "regression_coefficients.csv")
+    regression = current_snapshot.csv(
+        "results", "real_regressions", "regression_coefficients.csv"
+    )
     if regression is not None:
         focus = regression.loc[
             (regression["market"] == "CN")
@@ -540,9 +698,15 @@ def build_identification_tables(
             ["event_phase", "dependent_variable", "coefficient", "p_value"],
         ]
         tables.append(("匹配回归核心系数", render_table(focus, compact=True)))
-    current_rdd_status = dict(rdd_status) if rdd_status is not None else dashboard_loaders.load_rdd_status(root)
+    current_rdd_status = (
+        dict(rdd_status)
+        if rdd_status is not None
+        else dashboard_loaders.load_rdd_status(root)
+    )
     rdd = (
-        dashboard_loaders.load_single_csv(dashboard_loaders.rdd_output_dir(root), "rdd_summary.csv")
+        dashboard_loaders.load_single_csv(
+            dashboard_loaders.rdd_output_dir(root), "rdd_summary.csv"
+        )
         if current_rdd_status["mode"] in {"real", "reconstructed"}
         else None
     )
