@@ -65,3 +65,41 @@ def test_build_daily_ar_panel_adds_cumulative_car():
 def test_build_daily_ar_panel_requires_columns():
     with pytest.raises(ValueError, match="missing columns"):
         build_daily_ar_panel(pd.DataFrame({"ar": [0.0]}))
+
+
+def test_compute_average_paths_schema():
+    raw = _make_panel_frame()
+    ar_panel = build_daily_ar_panel(raw)
+    from index_inclusion_research.analysis.cross_market_asymmetry.paths import (
+        compute_average_paths,
+    )
+    avg = compute_average_paths(ar_panel)
+    expected_columns = {
+        "market",
+        "event_phase",
+        "relative_day",
+        "n_events",
+        "ar_mean",
+        "ar_se",
+        "ar_t",
+        "car_mean",
+        "car_se",
+        "car_t",
+    }
+    assert expected_columns.issubset(set(avg.columns))
+
+
+def test_compute_average_paths_computes_mean_correctly():
+    raw = _make_panel_frame()
+    ar_panel = build_daily_ar_panel(raw)
+    from index_inclusion_research.analysis.cross_market_asymmetry.paths import (
+        compute_average_paths,
+    )
+    avg = compute_average_paths(ar_panel)
+    cn_announce_day_zero = avg.loc[
+        (avg["market"] == "CN")
+        & (avg["event_phase"] == "announce")
+        & (avg["relative_day"] == 0)
+    ]
+    assert cn_announce_day_zero["ar_mean"].iloc[0] == pytest.approx(0.015, abs=1e-9)
+    assert cn_announce_day_zero["n_events"].iloc[0] == 2

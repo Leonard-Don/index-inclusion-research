@@ -27,3 +27,20 @@ def build_daily_ar_panel(panel: pd.DataFrame) -> pd.DataFrame:
     ).reset_index(drop=True)
     work["car"] = work.groupby(["event_id", "market", "event_phase"])["ar"].cumsum()
     return work
+
+
+def compute_average_paths(ar_panel: pd.DataFrame) -> pd.DataFrame:
+    grouped = ar_panel.groupby(
+        ["market", "event_phase", "relative_day"], as_index=False
+    ).agg(
+        n_events=("event_id", "nunique"),
+        ar_mean=("ar", "mean"),
+        ar_std=("ar", "std"),
+        car_mean=("car", "mean"),
+        car_std=("car", "std"),
+    )
+    grouped["ar_se"] = grouped["ar_std"] / grouped["n_events"].pow(0.5)
+    grouped["car_se"] = grouped["car_std"] / grouped["n_events"].pow(0.5)
+    grouped["ar_t"] = grouped["ar_mean"] / grouped["ar_se"].replace(0.0, pd.NA)
+    grouped["car_t"] = grouped["car_mean"] / grouped["car_se"].replace(0.0, pd.NA)
+    return grouped.drop(columns=["ar_std", "car_std"])
