@@ -21,12 +21,13 @@
 {% macro render_supplement_section(mode, supplement_section) -%}{{ content.render_supplement_section(mode, supplement_section) }}{%- endmacro %}
 {% macro render_robustness_section(robustness_section) -%}{{ content.render_robustness_section(robustness_section) }}{%- endmacro %}
 {% macro render_limits_section(mode, limits_section) -%}{{ content.render_limits_section(mode, limits_section) }}{%- endmacro %}
+{% macro render_cma_section(mode, cma_section) -%}{{ content.render_cma_section(mode, cma_section) }}{%- endmacro %}
 {% macro render_table_cards(items, container_class) -%}{{ content.render_table_cards(items, container_class) }}{%- endmacro %}
 {% macro render_result_group(title, copy, items, container_class='library-panels') -%}{{ content.render_result_group(title, copy, items, container_class) }}{%- endmacro %}
 {% macro render_section_table_suite(mode, summary_cards, primary, primary_tables, detail, detail_tables) -%}{{ content.render_section_table_suite(mode, summary_cards, primary, primary_tables, detail, detail_tables) }}{%- endmacro %}
 {% macro render_table_suite_section(mode, section) -%}{{ content.render_table_suite_section(mode, section) }}{%- endmacro %}
 {% macro render_figure_cards(figures, tier='primary', container_class='library-panels', eager_first=false) -%}{{ content.render_figure_cards(figures, tier, container_class, eager_first) }}{%- endmacro %}
-{% macro render_primary_result_group(key, title, copy, items, container_class='library-panels', collapse_in_demo=false, collapsed_copy='展示版默认只露出最关键的一张主表，其余主表收进折叠层。', toggle_label='按需展开') -%}{{ content.render_primary_result_group(key, title, copy, items, container_class, collapse_in_demo, collapsed_copy, toggle_label) }}{%- endmacro %}
+{% macro render_primary_result_group(key, title, copy, items, container_class='library-panels', collapse_in_demo=false, collapsed_copy='默认先放一张主表，其余主表按需展开。', toggle_label='按需展开') -%}{{ content.render_primary_result_group(key, title, copy, items, container_class, collapse_in_demo, collapsed_copy, toggle_label) }}{%- endmacro %}
 {% macro render_collapsible_figure_group(key, title, copy, figures, kicker='补充图表', toggle_label='展开查看', tier='detail', container_class='library-panels') -%}{{ content.render_collapsible_figure_group(key, title, copy, figures, kicker, toggle_label, tier, container_class) }}{%- endmacro %}
 {% macro render_collapsible_table_group(key, title, copy, items, container_class='library-panels', kicker='补充细表', toggle_label='按需展开') -%}{{ content.render_collapsible_table_group(key, title, copy, items, container_class, kicker, toggle_label) }}{%- endmacro %}
 {% macro render_collapsible_support_group(key, title, copy, papers, kicker='文献支持', toggle_label='展开文献') -%}{{ content.render_collapsible_support_group(key, title, copy, papers, kicker, toggle_label) }}{%- endmacro %}
@@ -40,8 +41,8 @@
 {% macro render_support_band(papers, title, copy) -%}{{ content.render_support_band(papers, title, copy) }}{%- endmacro %}
 {% macro render_mode_hint(copy) -%}{{ shared.render_mode_hint(copy) }}{%- endmacro %}
 {% macro render_waypoint_navigation(nav_sections, track_sections) -%}{{ overview.render_waypoint_navigation(nav_sections, track_sections) }}{%- endmacro %}
-{% macro render_details_panel(key, kicker, title, copy, toggle_label='展开查看') -%}
-{% call shared.render_details_panel(key, kicker, title, copy, toggle_label) %}
+{% macro render_details_panel(key, kicker, title, copy, toggle_label='展开查看', panel_class='') -%}
+{% call shared.render_details_panel(key, kicker, title, copy, toggle_label, panel_class) %}
   {{ caller() }}
 {% endcall %}
 {%- endmacro %}
