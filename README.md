@@ -26,10 +26,10 @@
 
 如果你是第一次点进这个仓库，建议先看这 4 件事：
 
-1. 看下面的“界面预览”，先知道项目最终交付长什么样。
-2. 看“快速开始”，在本地把 dashboard 拉起来。
+1. 看下面的”界面预览”，先知道项目最终交付长什么样。
+2. 看”快速开始”，在本地把 dashboard 拉起来。
 3. 看 [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)，理解 16 篇文献如何映射到当前项目。
-4. 如果你要继续维护 dashboard 主干，再看 [docs/dashboard_architecture.md](docs/dashboard_architecture.md) 和 [docs/dashboard_commit_boundary.md](docs/dashboard_commit_boundary.md)。
+4. 如果你要继续维护 dashboard 主干，再看 [docs/dashboard_architecture.md](docs/dashboard_architecture.md)。
 
 ## 界面预览
 
@@ -89,7 +89,6 @@ RUN_BROWSER_SMOKE=1 pytest -q tests/test_dashboard_browser_smoke.py
    这里解释 16 篇文献如何统一映射到当前项目。
 2. 如果你要维护 dashboard 主干，再看：
    [docs/dashboard_architecture.md](docs/dashboard_architecture.md)
-   和 [docs/dashboard_commit_boundary.md](docs/dashboard_commit_boundary.md)
 3. 启动界面：
    ```bash
    index-inclusion-dashboard
@@ -128,13 +127,13 @@ results/
   real_tables/         真实样本主结果表、数据来源表、样本范围表
   literature/          仪表盘三条主线对应的结果包
 
-scripts/
-  历史兼容脚本与本地 bootstrap 薄 wrapper
-
 src/index_inclusion_research/
   analysis/            事件研究、回归、RDD
   loaders/             数据读写
   pipeline/            样本构建与匹配
+  web/
+    templates/         Flask Jinja 模板
+    static/            CSS / JS / 图标
   literature.py        机制与汇总逻辑
   literature_catalog.py 16 篇文献目录与项目映射
 
@@ -142,19 +141,14 @@ tests/
   测试
 ```
 
-## 推荐入口与兼容层
+## 推荐入口
 
 当前推荐的运行面只有两类：
 
 - 已安装项目时：优先使用 `index-inclusion-*` 这组 CLI。
 - 未安装 console script 时：优先使用 `python3 -m index_inclusion_research.<module>`。
 
-`scripts/*.py` 现在只保留历史兼容意义：
-
-- 方便旧命令、旧笔记和已有本地工作流继续运行。
-- 本身不再承载主要业务实现，默认不应把它们当成首选入口。
-
-下面正文默认只写当前推荐入口；历史兼容脚本统一放到文末附录。
+模板与静态资源位于 `src/index_inclusion_research/web/`（通过 `setuptools.package-data` 一并打包）。
 
 ## 16 篇文献驱动的三条主线
 
@@ -504,27 +498,7 @@ index-inclusion-prepare-hs300-rdd
 index-inclusion-reconstruct-hs300-rdd
 ```
 
-前五个分别覆盖清洗事件、构面板、匹配对照、事件研究和回归；接着四个分别覆盖示例数据、真实数据、图表表格导出和研究摘要；中间四个对应 dashboard 与三条研究主线；最后三个分别对应 HS300 RDD 运行、候选样本导入和公开口径重建。默认调用面应该是 CLI；`scripts/` 只保留历史兼容。
-
-## 历史兼容脚本附录
-
-只有在你需要复用旧命令、旧笔记或已有本地脚本时，才建议直接碰这些文件：
-
-- `index-inclusion-dashboard` 对应 `scripts/start_literature_dashboard.py`
-- `index-inclusion-price-pressure` 对应 `scripts/start_harris_gurel.py`
-- `index-inclusion-demand-curve` 对应 `scripts/start_shleifer.py`
-- `index-inclusion-identification` 对应 `scripts/start_hs300_style.py` 与 `scripts/start_hs300_rdd.py`
-- `index-inclusion-build-event-sample` 对应 `scripts/build_event_sample.py`
-- `index-inclusion-build-price-panel` 对应 `scripts/build_price_panel.py`
-- `index-inclusion-match-controls` 对应 `scripts/match_controls.py`
-- `index-inclusion-run-event-study` 对应 `scripts/run_event_study.py`
-- `index-inclusion-run-regressions` 对应 `scripts/run_regressions.py`
-- `index-inclusion-generate-sample-data` 对应 `scripts/generate_sample_data.py`
-- `index-inclusion-download-real-data` 对应 `scripts/download_real_data.py`
-- `index-inclusion-make-figures-tables` 对应 `scripts/make_figures_tables.py`
-- `index-inclusion-generate-research-report` 对应 `scripts/generate_research_report.py`
-- `index-inclusion-prepare-hs300-rdd` 对应 `scripts/prepare_hs300_rdd_candidates.py`
-- `index-inclusion-reconstruct-hs300-rdd` 对应 `scripts/reconstruct_hs300_rdd_candidates.py`
+前五个分别覆盖清洗事件、构面板、匹配对照、事件研究和回归；接着四个分别覆盖示例数据、真实数据、图表表格导出和研究摘要；中间四个对应 dashboard 与三条研究主线；最后三个分别对应 HS300 RDD 运行、候选样本导入和公开口径重建。所有入口均通过 `pyproject.toml` 的 console scripts 或 `python3 -m index_inclusion_research.<module>` 调用。
 
 ## 开发与验证
 
@@ -556,7 +530,6 @@ RUN_BROWSER_SMOKE=1 pytest -q tests/test_dashboard_browser_smoke.py
 如果你准备继续改 dashboard 主干，先看：
 
 - [docs/dashboard_architecture.md](docs/dashboard_architecture.md)
-- [docs/dashboard_commit_boundary.md](docs/dashboard_commit_boundary.md)
 
 ### 10. 直接运行三条研究主线
 
@@ -566,6 +539,39 @@ index-inclusion-demand-curve
 index-inclusion-identification
 ```
 
+### 11. 跨市场不对称（CMA）扩展
+
+`index-inclusion-cma` 在 CN / US × announce / effective 四象限上系统化对比事件集中度差异（M1 事件窗口路径 / M2 公告—生效空窗期 / M3 机制回归 / M4 异质性矩阵 / M5 时序演变 + 结构假设表）。
+
+```bash
+index-inclusion-cma
+```
+
+它依赖真实样本（`real_event_panel.csv`、`real_matched_event_panel.csv`、`real_events_clean.csv`）；任何一个缺失都会直接报错，不回退 demo（和 RDD L3 契约一致）。
+
+产出：
+
+- `results/real_tables/cma_*.csv`（ar/car path、window summary、gap event/summary、mechanism panel、4 个 heterogeneity 维度、rolling、break、hypothesis map）
+- `results/real_tables/cma_mechanism_panel.tex`（论文可直接插入）
+- `results/real_figures/cma_*.png`（7 张主图）
+- `results/real_tables/research_summary.md` 新增章节"六、美股 vs A股 不对称"（幂等追加，不会重复）
+
+只想重新生成 LaTeX 而跳过计算：
+
+```bash
+index-inclusion-cma --tex-only
+```
+
+需要叠加被动基金 AUM 到时序图：准备 `data/raw/passive_aum.csv`（列：`market, year, aum_trillion`）后
+
+```bash
+index-inclusion-cma --aum data/raw/passive_aum.csv
+```
+
+`index-inclusion-make-figures-tables` 跑完标准表格后，如果检测到已存在的 `cma_mechanism_panel.csv`，会自动调 `regenerate_tex_only` 把 `.tex` 刷新到最新。
+
+CMA 的 dashboard 集成以**自包含 helper** 形式交付：`index_inclusion_research.analysis.cross_market_asymmetry.dashboard_section.build_cross_market_section(tables_dir=..., figures_dir=..., mode=...)` 返回一个 presenter-agnostic 的 section context，dashboard 层可以在任何 mode（`brief` / `demo` / `full`）下直接接入。
+
 ## 哪些文件是“核心文件”
 
 如果你时间不多，优先看这几项：
@@ -573,7 +579,6 @@ index-inclusion-identification
 - [README.md](README.md)
 - [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)
 - [docs/dashboard_architecture.md](docs/dashboard_architecture.md)
-- [docs/dashboard_commit_boundary.md](docs/dashboard_commit_boundary.md)
 - [docs/literature_review_author_year_cn.md](docs/literature_review_author_year_cn.md)
 - [src/index_inclusion_research/literature_dashboard.py](src/index_inclusion_research/literature_dashboard.py)
 - [src/index_inclusion_research/literature_catalog.py](src/index_inclusion_research/literature_catalog.py)
@@ -595,8 +600,6 @@ index-inclusion-identification
 - `src/index_inclusion_research/`
 - `docs/`
 - `config/markets.yml`
-
-`scripts/` 仍然值得保留，但更适合作为兼容层，而不是默认开发入口。
 
 ## 论文写作建议
 
