@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from index_inclusion_research.analysis.cross_market_asymmetry.mechanism_panel import (
     assemble_mechanism_comparison_table,
