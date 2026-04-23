@@ -38,10 +38,20 @@ FULL_FIGURES = BRIEF_FIGURES + (
 )
 
 
+HET_DIMS: tuple[str, ...] = ("size", "liquidity", "sector", "gap_bucket")
+
+
 def _safe_read(path: Path) -> pd.DataFrame:
     if path.exists():
         return pd.read_csv(path)
     return pd.DataFrame()
+
+
+def _frame_to_payload(frame: pd.DataFrame) -> dict[str, object]:
+    return {
+        "columns": list(frame.columns),
+        "rows": frame.to_dict(orient="records"),
+    }
 
 
 def build_cross_market_section(
@@ -73,6 +83,14 @@ def build_cross_market_section(
 
     gap_summary = _safe_read(tables_dir / "cma_gap_summary.csv")
     hypothesis_map = _safe_read(tables_dir / "cma_hypothesis_map.csv")
+    mechanism_panel = _safe_read(tables_dir / "cma_mechanism_panel.csv")
+    heterogeneity: dict[str, pd.DataFrame] = {
+        dim: _safe_read(tables_dir / f"cma_heterogeneity_{dim}.csv") for dim in HET_DIMS
+    }
+    time_series_rolling = _safe_read(tables_dir / "cma_time_series_rolling.csv")
+    time_series_break = _safe_read(tables_dir / "cma_time_series_break.csv")
+    ar_path = _safe_read(tables_dir / "cma_ar_path.csv")
+    car_path = _safe_read(tables_dir / "cma_car_path.csv")
 
     if mode == "brief":
         figure_names = ()
@@ -86,6 +104,19 @@ def build_cross_market_section(
         for name in figure_names
         if (figures_dir / name).exists()
     }
+
+    detail_tables: dict[str, dict[str, object]] = {}
+    if mode == "full":
+        detail_tables = {
+            "window_summary_all": _frame_to_payload(window_summary),
+            "mechanism_panel": _frame_to_payload(mechanism_panel),
+            "time_series_rolling": _frame_to_payload(time_series_rolling),
+            "time_series_break": _frame_to_payload(time_series_break),
+            "ar_path": _frame_to_payload(ar_path),
+            "car_path": _frame_to_payload(car_path),
+        }
+        for dim, frame in heterogeneity.items():
+            detail_tables[f"heterogeneity_{dim}"] = _frame_to_payload(frame)
 
     return {
         "id": SECTION_ID,
@@ -101,11 +132,12 @@ def build_cross_market_section(
         },
         "gap_summary": {
             "columns": list(gap_summary.columns),
-            "rows": gap_summary.to_dict(orient="records"),
+            "rows": gap_summary.to_dict(orient="records") if mode != "brief" else [],
         },
         "figures": figures,
         "hypothesis_map": {
             "columns": list(hypothesis_map.columns),
             "rows": hypothesis_map.to_dict(orient="records") if mode == "full" else [],
         },
+        "detail_tables": detail_tables,
     }

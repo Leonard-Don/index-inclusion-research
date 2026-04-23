@@ -714,7 +714,7 @@ def test_dashboard_browser_smoke() -> None:
 
 def test_cross_market_section_renders_in_full_mode() -> None:
     """CMA section should render in full mode with quadrant table, figures,
-    and hypothesis map."""
+    hypothesis map, and all detail tables in collapsibles."""
 
     with (
         _running_dashboard_server() as base_url,
@@ -745,6 +745,33 @@ def test_cross_market_section_renders_in_full_mode() -> None:
 
             hypothesis_rows = section.locator(".cma-hypothesis table tbody tr")
             assert hypothesis_rows.count() == 6
+
+            collapsibles = section.locator("details.cma-collapsible")
+            assert collapsibles.count() >= 10
+
+            summaries = [
+                "窗口摘要全集",
+                "机制回归面板",
+                "异质性 · 市值五分位",
+                "异质性 · 流动性五分位",
+                "异质性 · 行业",
+                "异质性 · 空窗期分桶",
+                "滚动时序",
+                "结构变点",
+                "日度 AR 路径",
+                "日度 CAR 路径",
+            ]
+            for label in summaries:
+                summary = section.locator(
+                    f"details.cma-collapsible summary:has-text('{label}')"
+                )
+                assert summary.count() >= 1, f"missing collapsible label: {label}"
+
+            first_collapsible = collapsibles.first
+            first_collapsible.evaluate("el => { el.open = true; }")
+            first_collapsible.locator("table tbody tr").first.wait_for(
+                state="visible", timeout=2000
+            )
         finally:
             browser.close()
 
