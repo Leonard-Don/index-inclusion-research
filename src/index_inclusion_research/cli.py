@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 
+
 def _run_package_main(module_name: str) -> None:
     module = importlib.import_module(module_name)
     module.main()
@@ -69,3 +70,7 @@ def run_make_figures_tables_main() -> None:
 
 def run_generate_research_report_main() -> None:
     _run_package_main("index_inclusion_research.research_report")
+
+
+def run_cma_main() -> None:
+    _run_package_main("index_inclusion_research.cross_market_asymmetry")
