@@ -1,15 +1,16 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from index_inclusion_research import dashboard_loaders
-from index_inclusion_research.results_snapshot import ResultsSnapshot, require_first_row
 from index_inclusion_research.dashboard_types import (
     AbstractLeadBuilder,
     AbstractPointsBuilder,
-    AnalysisCache,
     AnalysesConfig,
+    AnalysisCache,
     CtaCopyBuilder,
     DashboardSectionBuilder,
     DemoModeSectionBuilder,
@@ -18,9 +19,10 @@ from index_inclusion_research.dashboard_types import (
     ModeName,
     ModeTabsBuilder,
     NavSectionsBuilder,
-    OverviewNotesBuilder,
     OverviewMetric,
+    OverviewNotesBuilder,
     OverviewSummaryBuilder,
+    RddStatus,
     RefreshStatusPayloadBuilder,
     RobustnessSection,
     RobustnessSectionBuilder,
@@ -32,36 +34,43 @@ from index_inclusion_research.dashboard_types import (
     TrackDisplaySection,
     TrackNotesBuilder,
     TrackSectionLoader,
-    RddStatus,
 )
-from index_inclusion_research.rdd_evidence import rdd_evidence_tier, rdd_provenance_summary
+from index_inclusion_research.rdd_evidence import (
+    rdd_evidence_tier,
+    rdd_provenance_summary,
+)
+from index_inclusion_research.results_snapshot import ResultsSnapshot, require_first_row
 
 
 def _overview_rdd_metric(rdd_status: RddStatus) -> OverviewMetric:
     meta = rdd_provenance_summary(rdd_status)
     if rdd_status["mode"] == "real":
         return {
-            "value": str(rdd_status.get("evidence_tier", "")) or rdd_evidence_tier(rdd_status["mode"]),
+            "value": str(rdd_status.get("evidence_tier", ""))
+            or rdd_evidence_tier(rdd_status["mode"]),
             "label": "中国 RDD 已进入正式边界样本",
             "tone": "official",
             "meta": meta,
         }
     if rdd_status["mode"] == "reconstructed":
         return {
-            "value": str(rdd_status.get("evidence_tier", "")) or rdd_evidence_tier(rdd_status["mode"]),
+            "value": str(rdd_status.get("evidence_tier", ""))
+            or rdd_evidence_tier(rdd_status["mode"]),
             "label": "中国 RDD 当前为公开重建样本",
             "tone": "reconstructed",
             "meta": meta,
         }
     if rdd_status["mode"] == "demo":
         return {
-            "value": str(rdd_status.get("evidence_tier", "")) or rdd_evidence_tier(rdd_status["mode"]),
+            "value": str(rdd_status.get("evidence_tier", ""))
+            or rdd_evidence_tier(rdd_status["mode"]),
             "label": "中国 RDD 当前仅为方法展示",
             "tone": "demo",
             "meta": meta,
         }
     return {
-        "value": str(rdd_status.get("evidence_tier", "")) or rdd_evidence_tier(rdd_status["mode"]),
+        "value": str(rdd_status.get("evidence_tier", ""))
+        or rdd_evidence_tier(rdd_status["mode"]),
         "label": "中国 RDD 仍待补正式样本",
         "tone": "missing",
         "meta": meta,
@@ -77,7 +86,11 @@ def build_overview_metrics(
     current_snapshot = snapshot or ResultsSnapshot(root)
     event_counts = current_snapshot.csv("results", "real_tables", "event_counts.csv")
     total_events = int(event_counts["n_events"].sum())
-    current_rdd_status = dict(rdd_status) if rdd_status is not None else dashboard_loaders.load_rdd_status(root)
+    current_rdd_status = (
+        dict(rdd_status)
+        if rdd_status is not None
+        else dashboard_loaders.load_rdd_status(root)
+    )
     return [
         {"value": "16", "label": "篇核心文献，构成理论基础"},
         {"value": "3", "label": "条研究主线，对应主要实证模块"},
@@ -96,7 +109,11 @@ def build_highlights(
     current_snapshot = snapshot or ResultsSnapshot(root)
     summary = current_snapshot.csv("results", "real_tables", "event_study_summary.csv")
     asymmetry = current_snapshot.csv("results", "real_tables", "asymmetry_summary.csv")
-    current_rdd_status = dict(rdd_status) if rdd_status is not None else dashboard_loaders.load_rdd_status(root)
+    current_rdd_status = (
+        dict(rdd_status)
+        if rdd_status is not None
+        else dashboard_loaders.load_rdd_status(root)
+    )
     us_announce = require_first_row(
         summary.loc[
             (summary["market"] == "US")
@@ -124,14 +141,14 @@ def build_highlights(
     if float(cn_effective["p_value"]) < 0.05:
         cn_discussion = (
             f"中国 A 股在生效日 CAR[-1,+1] 平均值为 {cn_effective['mean_car']:.2%}，"
-            f"且统计显著。这说明 A 股市场不能机械套用美股的经典指数纳入叙事。"
+            "且统计显著，说明 A 股不能机械套用美股的经典指数纳入叙事，更像一个制度摩擦更强的独立场景。"
         )
     else:
         cn_discussion = (
             f"中国 A 股在生效日 CAR[-1,+1] 平均值为 {cn_effective['mean_car']:.2%}，"
-            f"但统计上并不显著；更值得关注的是 [0,+120] 窗口下调入与调出的 CAR 差异达到 "
-            f"{cn_effective_asymmetry['asymmetry_car_p0_p120']:.2%}。"
-            "这说明中国市场的关键分化更多体现在生效后的长期路径，而不是简单复制美股的短期公告效应。"
+            f"但统计上并不显著；[0,+120] 窗口下调入与调出的 CAR 差异达到 "
+            f"{cn_effective_asymmetry['asymmetry_car_p0_p120']:.2%}，"
+            "说明关键分化更多出现在生效后的长期路径，也更符合套利更慢、制度摩擦更强的市场图景。"
         )
     if current_rdd_status["mode"] == "real":
         method_headline = "中国 RDD 已进入正式边界样本口径。"
@@ -158,23 +175,26 @@ def build_highlights(
             "但还需要正式候选样本或公开重建样本，才能进入可读的边界证据。"
         )
     provenance_summary = rdd_provenance_summary(current_rdd_status)
+    method_copy = f"{method_copy} 这也对应新增文献把争论从“涨不涨”推进到“制度差异、套利约束和价格发现如何改变结论”。"
     if provenance_summary:
         method_copy = f"{method_copy} 当前来源为 {provenance_summary}。"
     return [
         {
             "label": "最强结论",
-            "headline": "美股公告日仍然呈现最稳定的短期正向效应。",
-            "copy": f"当前真实样本里，美国市场公告日 CAR[-1,+1] 平均值为 {us_announce['mean_car']:.2%}，p 值为 {us_announce['p_value']:.4f}，是整套结果里最稳的短期正向证据。",
+            "headline": "美股公告日仍有稳定短期正向效应，但更像被压缩后的公开信号。",
+            "copy": f"美国公告日 CAR[-1,+1] 均值为 {us_announce['mean_car']:.2%}，p 值为 {us_announce['p_value']:.4f}，仍是整套结果里最稳的短期正向证据；更合理的解释是短期冲击仍在，但可见 alpha 已被更成熟的提前交易显著压缩。",
         },
         {
             "label": "最值得讨论",
-            "headline": "A 股生效日并不简单重复美股叙事。",
+            "headline": "A 股生效阶段更像独立制度场景，而不是美股镜像。",
             "copy": cn_discussion,
         },
         {
             "label": "方法含义",
             "headline": method_headline,
-            "copy": method_copy,
+            "copy": method_copy.replace("当前首页展示的不再只是方法框架。", "")
+            .replace("当前来源为 ", "来源：")
+            .strip(),
         },
     ]
 
@@ -203,6 +223,7 @@ class DashboardHomeContextBuilder:
     build_sample_design_section: DemoModeSectionBuilder
     build_robustness_section: RobustnessSectionBuilder
     build_limits_section: DashboardSectionBuilder
+    build_cross_market_section: Callable[[ModeName], dict[str, Any]] | None = None
     write_cache: AnalysisCache | None = None
 
     @staticmethod
@@ -216,7 +237,9 @@ class DashboardHomeContextBuilder:
     def _build_track_sections(self, *, demo_mode: bool) -> list[TrackDisplaySection]:
         track_sections: list[TrackDisplaySection] = []
         for analysis_id in self.analyses:
-            section: TrackDisplaySection = dict(self.load_or_build_track_section(analysis_id))
+            section: TrackDisplaySection = dict(
+                self.load_or_build_track_section(analysis_id)
+            )
             section["anchor"] = analysis_id
             section["notes"] = self.build_track_notes(analysis_id)
             section = self.prepare_track_display(section, analysis_id, demo_mode)
@@ -281,7 +304,9 @@ class DashboardHomeContextBuilder:
             "nav_sections": self.nav_sections_for_mode(display_mode),
             "mode_tabs": self.mode_tabs_for_mode(display_mode, current_open_panels),
             "snapshot_meta": self.build_dashboard_snapshot_meta(),
-            "refresh_meta": self.refresh_status_payload(display_mode, "overview", current_open_panels),
+            "refresh_meta": self.refresh_status_payload(
+                display_mode, "overview", current_open_panels
+            ),
             "refresh_status_url": refresh_status_url,
             "current_open_panels": current_open_panels,
             "overview_metrics": build_overview_metrics(self.root, snapshot=snapshot),
@@ -301,6 +326,11 @@ class DashboardHomeContextBuilder:
                 else self._empty_robustness_section()
             ),
             "limits_section": self.build_limits_section(),
+            "cma_section": (
+                self.build_cross_market_section(display_mode)
+                if self.build_cross_market_section is not None
+                else None
+            ),
         }
 
 
