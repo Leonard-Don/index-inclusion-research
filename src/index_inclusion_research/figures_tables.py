@@ -7,7 +7,12 @@ import pandas as pd
 
 from index_inclusion_research.analysis import compute_event_study
 from index_inclusion_research.literature import compute_retention_summary
-from index_inclusion_research.loaders import load_benchmarks, load_events, load_prices, save_dataframe
+from index_inclusion_research.loaders import (
+    load_benchmarks,
+    load_events,
+    load_prices,
+    save_dataframe,
+)
 from index_inclusion_research.outputs import (
     build_asymmetry_summary,
     build_data_source_table,
@@ -23,8 +28,11 @@ from index_inclusion_research.outputs import (
     export_latex_tables,
     plot_average_paths,
 )
-from index_inclusion_research.result_contract import build_results_manifest, load_rdd_status
 from index_inclusion_research.pipeline import build_event_panel
+from index_inclusion_research.result_contract import (
+    build_results_manifest,
+    load_rdd_status,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -284,6 +292,17 @@ def main(argv: list[str] | None = None) -> None:
         frames["results_manifest"] = results_manifest
 
     export_latex_tables(frames, args.tables_dir)
+
+    try:
+        from index_inclusion_research.analysis.cross_market_asymmetry import (
+            orchestrator as _cma,
+        )
+        cma_csv = Path(args.tables_dir) / "cma_mechanism_panel.csv"
+        if cma_csv.exists():
+            _cma.regenerate_tex_only(tables_dir=Path(args.tables_dir))
+    except Exception as exc:  # noqa: BLE001
+        print(f"[figures_tables] CMA tex regeneration skipped: {exc}")
+
     print(f"Saved figures to {args.figures_dir} and tables to {args.tables_dir} (profile: {args.profile})")
 
 
