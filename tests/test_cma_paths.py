@@ -103,3 +103,45 @@ def test_compute_average_paths_computes_mean_correctly():
     ]
     assert cn_announce_day_zero["ar_mean"].iloc[0] == pytest.approx(0.015, abs=1e-9)
     assert cn_announce_day_zero["n_events"].iloc[0] == 2
+
+
+def test_compute_window_summary_produces_expected_rows():
+    raw = _make_panel_frame()
+    ar_panel = build_daily_ar_panel(raw)
+    from index_inclusion_research.analysis.cross_market_asymmetry.paths import (
+        compute_window_summary,
+    )
+    summary = compute_window_summary(ar_panel, windows=[(-1, 1), (-3, 3)])
+    assert {
+        "market",
+        "event_phase",
+        "window_start",
+        "window_end",
+        "car_mean",
+        "car_se",
+        "car_t",
+        "p_value",
+        "n_events",
+    }.issubset(summary.columns)
+    assert len(summary) == 8
+
+
+def test_compute_window_summary_respects_window_bounds():
+    rows = []
+    for rel in range(-5, 6):
+        rows.append(
+            {
+                "event_id": 1,
+                "market": "CN",
+                "event_phase": "announce",
+                "event_type": "addition",
+                "relative_day": rel,
+                "ar": 0.01,
+            }
+        )
+    ar_panel = build_daily_ar_panel(pd.DataFrame(rows))
+    from index_inclusion_research.analysis.cross_market_asymmetry.paths import (
+        compute_window_summary,
+    )
+    summary = compute_window_summary(ar_panel, windows=[(-1, 1)])
+    assert summary["car_mean"].iloc[0] == pytest.approx(0.03, abs=1e-9)
