@@ -1,7 +1,13 @@
 from __future__ import annotations
 
-import pandas as pd
-from scipy import stats
+from pathlib import Path
+
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
+import pandas as pd  # noqa: E402
+from scipy import stats  # noqa: E402
 
 REQUIRED_PANEL_COLUMNS: tuple[str, ...] = (
     "event_id",
@@ -98,3 +104,71 @@ def compute_window_summary(
             "n_events",
         ]
     ]
+
+
+_QUADRANTS: tuple[tuple[str, str], ...] = (
+    ("CN", "announce"),
+    ("CN", "effective"),
+    ("US", "announce"),
+    ("US", "effective"),
+)
+
+
+def _plot_quadrant(ax, data: pd.DataFrame, x_col: str, y_col: str, title: str) -> None:
+    ax.plot(data[x_col], data[y_col], color="#1f6feb", linewidth=2)
+    ax.axhline(0.0, color="#999", linestyle="--", linewidth=0.8)
+    ax.axvline(0.0, color="#999", linestyle="--", linewidth=0.8)
+    ax.set_title(title, fontsize=10)
+    ax.set_xlabel("relative_day")
+
+
+def _render_grid(avg: pd.DataFrame, value_col: str, ylabel: str) -> plt.Figure:
+    fig, axes = plt.subplots(2, 2, figsize=(10, 7), sharex=True, sharey=True)
+    for (market, phase), ax in zip(_QUADRANTS, axes.flat, strict=True):
+        sub = avg.loc[
+            (avg["market"] == market) & (avg["event_phase"] == phase)
+        ].sort_values("relative_day")
+        _plot_quadrant(ax, sub, "relative_day", value_col, f"{market} · {phase}")
+        if ax in axes[:, 0]:
+            ax.set_ylabel(ylabel)
+    fig.suptitle(f"CMA {ylabel} path comparison", fontsize=12)
+    fig.tight_layout()
+    return fig
+
+
+def render_path_figures(avg: pd.DataFrame, *, output_dir: Path) -> dict[str, Path]:
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    ar_fig = _render_grid(avg, "ar_mean", "AR")
+    ar_path = output_dir / "cma_ar_path_comparison.png"
+    ar_fig.savefig(ar_path, dpi=150)
+    plt.close(ar_fig)
+    car_fig = _render_grid(avg, "car_mean", "CAR")
+    car_path = output_dir / "cma_car_path_comparison.png"
+    car_fig.savefig(car_path, dpi=150)
+    plt.close(car_fig)
+    return {"ar": ar_path, "car": car_path}
+
+
+def export_path_tables(
+    ar_panel: pd.DataFrame,
+    avg: pd.DataFrame,
+    window_summary: pd.DataFrame,
+    *,
+    output_dir: Path,
+) -> dict[str, Path]:
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    ar_rows = avg[
+        ["market", "event_phase", "relative_day", "n_events", "ar_mean", "ar_se", "ar_t"]
+    ]
+    car_rows = avg[
+        ["market", "event_phase", "relative_day", "n_events", "car_mean", "car_se", "car_t"]
+    ]
+    ar_path = output_dir / "cma_ar_path.csv"
+    car_path = output_dir / "cma_car_path.csv"
+    win_path = output_dir / "cma_window_summary.csv"
+    ar_rows.to_csv(ar_path, index=False)
+    car_rows.to_csv(car_path, index=False)
+    window_summary.to_csv(win_path, index=False)
+    return {"ar_path": ar_path, "car_path": car_path, "window_summary": win_path}

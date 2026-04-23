@@ -145,3 +145,39 @@ def test_compute_window_summary_respects_window_bounds():
     )
     summary = compute_window_summary(ar_panel, windows=[(-1, 1)])
     assert summary["car_mean"].iloc[0] == pytest.approx(0.03, abs=1e-9)
+
+
+def test_render_path_figures_writes_png(tmp_path):
+    raw = _make_panel_frame()
+    ar_panel = build_daily_ar_panel(raw)
+    from index_inclusion_research.analysis.cross_market_asymmetry.paths import (
+        compute_average_paths,
+        render_path_figures,
+    )
+    avg = compute_average_paths(ar_panel)
+    figure_dir = tmp_path / "figures"
+    outputs = render_path_figures(avg, output_dir=figure_dir)
+    ar_png = figure_dir / "cma_ar_path_comparison.png"
+    car_png = figure_dir / "cma_car_path_comparison.png"
+    assert ar_png.exists() and ar_png.stat().st_size > 0
+    assert car_png.exists() and car_png.stat().st_size > 0
+    assert outputs == {"ar": ar_png, "car": car_png}
+
+
+def test_export_path_tables_writes_csvs(tmp_path):
+    raw = _make_panel_frame()
+    ar_panel = build_daily_ar_panel(raw)
+    from index_inclusion_research.analysis.cross_market_asymmetry.paths import (
+        compute_average_paths,
+        compute_window_summary,
+        export_path_tables,
+    )
+    avg = compute_average_paths(ar_panel)
+    window = compute_window_summary(ar_panel, windows=[(-1, 1)])
+    paths = export_path_tables(ar_panel, avg, window, output_dir=tmp_path)
+    for key in ("ar_path", "car_path", "window_summary"):
+        assert paths[key].exists()
+    ar_df = pd.read_csv(paths["ar_path"])
+    assert {"market", "event_phase", "relative_day", "n_events", "ar_mean"}.issubset(
+        ar_df.columns
+    )
