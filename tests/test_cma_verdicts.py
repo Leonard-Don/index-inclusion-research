@@ -271,6 +271,138 @@ def test_h4_falls_back_to_summary_logic_when_regression_missing() -> None:
     assert "regression" not in h4["metric_snapshot"]
 
 
+def test_h3_requires_both_channels_when_table_provided() -> None:
+    channel = pd.DataFrame(
+        [
+            # US announce: both sig
+            {"market": "US", "event_phase": "announce", "turnover_coef": 0.03,
+             "turnover_p": 0.0, "volume_coef": 8e6, "volume_p": 0.0,
+             "turnover_sig": True, "volume_sig": True, "both_channels_sig": True},
+            # CN effective: both sig
+            {"market": "CN", "event_phase": "effective", "turnover_coef": 0.0014,
+             "turnover_p": 0.007, "volume_coef": 5e6, "volume_p": 0.036,
+             "turnover_sig": True, "volume_sig": True, "both_channels_sig": True},
+            # CN announce: turnover only
+            {"market": "CN", "event_phase": "announce", "turnover_coef": 0.001,
+             "turnover_p": 0.03, "volume_coef": 1e7, "volume_p": 0.32,
+             "turnover_sig": True, "volume_sig": False, "both_channels_sig": False},
+            # US effective: neither
+            {"market": "US", "event_phase": "effective", "turnover_coef": 0.002,
+             "turnover_p": 0.13, "volume_coef": 3e5, "volume_p": 0.62,
+             "turnover_sig": False, "volume_sig": False, "both_channels_sig": False},
+        ]
+    )
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+        channel_concentration=channel,
+    )
+    h3 = verdicts.set_index("hid").loc["H3"]
+    assert h3["verdict"] == "支持"
+    assert h3["confidence"] == "高"
+    assert "2/4" in h3["metric_snapshot"]
+
+
+def test_h3_partial_when_only_one_quadrant_has_both_channels() -> None:
+    channel = pd.DataFrame(
+        [
+            {"market": "US", "event_phase": "announce", "turnover_coef": 0.03,
+             "turnover_p": 0.0, "volume_coef": 8e6, "volume_p": 0.0,
+             "turnover_sig": True, "volume_sig": True, "both_channels_sig": True},
+            {"market": "CN", "event_phase": "effective", "turnover_coef": 0.0014,
+             "turnover_p": 0.007, "volume_coef": 5e6, "volume_p": 0.13,
+             "turnover_sig": True, "volume_sig": False, "both_channels_sig": False},
+            {"market": "CN", "event_phase": "announce", "turnover_coef": 0.001,
+             "turnover_p": 0.03, "volume_coef": 1e7, "volume_p": 0.32,
+             "turnover_sig": True, "volume_sig": False, "both_channels_sig": False},
+            {"market": "US", "event_phase": "effective", "turnover_coef": 0.002,
+             "turnover_p": 0.13, "volume_coef": 3e5, "volume_p": 0.62,
+             "turnover_sig": False, "volume_sig": False, "both_channels_sig": False},
+        ]
+    )
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+        channel_concentration=channel,
+    )
+    h3 = verdicts.set_index("hid").loc["H3"]
+    assert h3["verdict"] == "部分支持"
+    assert "1/4" in h3["metric_snapshot"]
+
+
+def test_h5_upgrades_to_full_support_when_limit_regression_significant() -> None:
+    limit_regression = {
+        "limit_coef": 0.034,
+        "limit_se": 0.009,
+        "limit_t": 3.8,
+        "limit_p_value": 0.0002,
+        "n_obs": 118,
+        "r_squared": 0.12,
+    }
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+        limit_regression=limit_regression,
+    )
+    h5 = verdicts.set_index("hid").loc["H5"]
+    assert h5["verdict"] == "支持"
+    assert h5["confidence"] == "高"
+    assert "limit_coef" in h5["metric_snapshot"]
+
+
+def test_h5_证据不足_when_limit_regression_insignificant() -> None:
+    limit_regression = {
+        "limit_coef": 0.005,
+        "limit_se": 0.012,
+        "limit_t": 0.4,
+        "limit_p_value": 0.62,
+        "n_obs": 118,
+        "r_squared": 0.001,
+    }
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+        limit_regression=limit_regression,
+    )
+    h5 = verdicts.set_index("hid").loc["H5"]
+    assert h5["verdict"] == "证据不足"
+    assert "0.62" in h5["metric_snapshot"]
+
+
+def test_h5_falls_back_to_summary_logic_when_regression_missing() -> None:
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+    )
+    h5 = verdicts.set_index("hid").loc["H5"]
+    # legacy logic with fixture: 证据不足
+    assert h5["verdict"] == "证据不足"
+    assert "limit_coef" not in h5["metric_snapshot"]
+
+
+def test_h3_falls_back_to_single_channel_logic_when_table_missing() -> None:
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+    )
+    h3 = verdicts.set_index("hid").loc["H3"]
+    # Original fixture-driven verdict
+    assert h3["verdict"] == "支持"
+    assert "channel" not in h3["metric_snapshot"]
+
+
 def test_export_hypothesis_verdicts_writes_csv(tmp_path) -> None:
     out = export_hypothesis_verdicts(
         output_dir=tmp_path,

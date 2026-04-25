@@ -130,6 +130,14 @@ def run_cma_pipeline(
     mech_table = mechanism_panel.assemble_mechanism_comparison_table(mech_panel)
     mechanism_panel.export_mechanism_tables(mech_table, output_dir=tables_dir)
     mechanism_panel.render_mechanism_heatmap(mech_table, output_dir=figures_dir)
+    channel_concentration = mechanism_panel.compute_channel_concentration_table(mech_table)
+    mechanism_panel.export_channel_concentration_table(
+        channel_concentration, output_dir=tables_dir
+    )
+    limit_regression = mechanism_panel.compute_h5_limit_predictive_regression(mech_panel)
+    mechanism_panel.export_h5_limit_predictive_regression_table(
+        limit_regression, output_dir=tables_dir
+    )
 
     het_tables: dict[str, pd.DataFrame] = {}
     for dim in ("size", "liquidity", "sector", "gap_bucket"):
@@ -170,6 +178,8 @@ def run_cma_pipeline(
         aum_frame=aum_frame,
         pre_runup_bootstrap=pre_runup_bootstrap,
         gap_drift_regression=gap_drift_regression,
+        channel_concentration=channel_concentration,
+        limit_regression=limit_regression,
     )
     hypothesis_verdicts.to_csv(tables_dir / "cma_hypothesis_verdicts.csv", index=False)
 

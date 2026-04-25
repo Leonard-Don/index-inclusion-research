@@ -219,6 +219,146 @@ def render_mechanism_heatmap(
     return out_path
 
 
+CHANNEL_SIG_LEVEL = 0.10
+
+
+def compute_h5_limit_predictive_regression(
+    mech_panel: pd.DataFrame,
+    *,
+    market: str = "CN",
+) -> dict[str, float]:
+    """OLS HC3 regression: car_1_1 ~ const + price_limit_hit_share + log_mktcap_pre.
+
+    Tests H5 (涨跌停限制) by asking whether per-event price-limit-hit
+    exposure predicts the announce-day CAR within the CN sub-sample
+    (only CN has price-limit rules). Reports limit_coef and HC3 p-value
+    plus n_obs, r_squared. NaN-safe guards for empty / underdetermined.
+    """
+    sub = mech_panel.dropna(
+        subset=["car_1_1", "price_limit_hit_share", "log_mktcap_pre", "market"]
+    ).copy()
+    sub = sub.loc[sub["market"] == market]
+    n_obs = int(len(sub))
+    base = {
+        "limit_coef": float("nan"),
+        "limit_se": float("nan"),
+        "limit_t": float("nan"),
+        "limit_p_value": float("nan"),
+        "n_obs": n_obs,
+        "r_squared": float("nan"),
+    }
+    if n_obs < 5:
+        return base
+
+    X = pd.DataFrame(
+        {
+            "price_limit_hit_share": sub["price_limit_hit_share"].astype(float).to_numpy(),
+            "log_mktcap_pre": sub["log_mktcap_pre"].astype(float).to_numpy(),
+        }
+    )
+    finite = np.isfinite(X.to_numpy()).all(axis=1)
+    sub = sub.loc[finite].copy()
+    X = X.loc[finite]
+    n_obs = int(len(sub))
+    if n_obs <= X.shape[1] + 2:
+        return {**base, "n_obs": n_obs}
+
+    X = sm.add_constant(X, has_constant="add")
+    y = sub["car_1_1"].astype(float).to_numpy()
+    if float(y.var(ddof=0)) == 0.0:
+        return {**base, "n_obs": n_obs}
+    try:
+        model = sm.OLS(y, X).fit(cov_type="HC3")
+    except (np.linalg.LinAlgError, ValueError):
+        return {**base, "n_obs": n_obs}
+    return {
+        "limit_coef": float(model.params.get("price_limit_hit_share", float("nan"))),
+        "limit_se": float(model.bse.get("price_limit_hit_share", float("nan"))),
+        "limit_t": float(model.tvalues.get("price_limit_hit_share", float("nan"))),
+        "limit_p_value": float(model.pvalues.get("price_limit_hit_share", float("nan"))),
+        "n_obs": int(model.nobs),
+        "r_squared": float(model.rsquared),
+    }
+
+
+def export_h5_limit_predictive_regression_table(
+    result: dict[str, float],
+    *,
+    output_dir: Path,
+) -> Path:
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    out_path = output_dir / "cma_h5_limit_predictive_regression.csv"
+    pd.DataFrame([result]).to_csv(out_path, index=False)
+    return out_path
+
+
+def compute_channel_concentration_table(
+    table: pd.DataFrame,
+    *,
+    spec: str = "no_fe",
+) -> pd.DataFrame:
+    """Combine turnover_change and volume_change into one row per quadrant.
+
+    Reads the wide mechanism comparison table (one row per market × phase ×
+    outcome × spec) and pivots both turnover_change and volume_change onto
+    a single row per (market, event_phase). The resulting frame is used by
+    H3 to require BOTH channels to be significant before claiming
+    institutional-vs-retail concentration; single-channel evidence is then
+    explicitly reported as such.
+    """
+    sub = table.loc[
+        (table["spec"] == spec)
+        & (table["outcome"].isin({"turnover_change", "volume_change"}))
+    ].copy()
+    if sub.empty:
+        return pd.DataFrame(
+            columns=[
+                "market", "event_phase",
+                "turnover_coef", "turnover_t", "turnover_p",
+                "volume_coef", "volume_t", "volume_p",
+                "turnover_sig", "volume_sig", "both_channels_sig",
+            ]
+        )
+    rows: list[dict[str, object]] = []
+    for (market, phase), group in sub.groupby(["market", "event_phase"], dropna=False):
+        by_outcome = {row["outcome"]: row for _, row in group.iterrows()}
+        turnover = by_outcome.get("turnover_change")
+        volume = by_outcome.get("volume_change")
+        turnover_p = float(turnover["p_value"]) if turnover is not None else float("nan")
+        volume_p = float(volume["p_value"]) if volume is not None else float("nan")
+        turnover_sig = bool(turnover_p == turnover_p and turnover_p < CHANNEL_SIG_LEVEL)
+        volume_sig = bool(volume_p == volume_p and volume_p < CHANNEL_SIG_LEVEL)
+        rows.append(
+            {
+                "market": market,
+                "event_phase": phase,
+                "turnover_coef": float(turnover["coef"]) if turnover is not None else float("nan"),
+                "turnover_t": float(turnover["t"]) if turnover is not None else float("nan"),
+                "turnover_p": turnover_p,
+                "volume_coef": float(volume["coef"]) if volume is not None else float("nan"),
+                "volume_t": float(volume["t"]) if volume is not None else float("nan"),
+                "volume_p": volume_p,
+                "turnover_sig": turnover_sig,
+                "volume_sig": volume_sig,
+                "both_channels_sig": turnover_sig and volume_sig,
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def export_channel_concentration_table(
+    table: pd.DataFrame,
+    *,
+    output_dir: Path,
+) -> Path:
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    out_path = output_dir / "cma_h3_channel_concentration.csv"
+    table.to_csv(out_path, index=False)
+    return out_path
+
+
 def export_mechanism_tables(
     table: pd.DataFrame,
     *,
