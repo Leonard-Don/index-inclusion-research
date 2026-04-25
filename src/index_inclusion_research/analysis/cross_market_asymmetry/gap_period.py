@@ -6,6 +6,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from scipy import stats  # noqa: E402
 
@@ -150,3 +151,77 @@ def export_gap_tables(
     gap.to_csv(event_path, index=False)
     summary.to_csv(summary_path, index=False)
     return {"event_level": event_path, "summary": summary_path}
+
+
+def compute_pre_runup_bootstrap_test(
+    gap_event_level: pd.DataFrame,
+    *,
+    n_boot: int = 5000,
+    seed: int = 0,
+) -> dict[str, float]:
+    """Bootstrap test for H0: mean(CN pre_announce_runup) == mean(US pre_announce_runup).
+
+    Resamples each market with replacement n_boot times, builds the empirical
+    distribution of (CN_mean - US_mean), and reports a percentile two-sided
+    p-value plus 95% CI. Returns NaN values when either market has < 2 events.
+    """
+    cn_values = (
+        gap_event_level.loc[gap_event_level["market"] == "CN", "pre_announce_runup"]
+        .dropna()
+        .to_numpy()
+    )
+    us_values = (
+        gap_event_level.loc[gap_event_level["market"] == "US", "pre_announce_runup"]
+        .dropna()
+        .to_numpy()
+    )
+    n_cn = int(cn_values.size)
+    n_us = int(us_values.size)
+    base = {
+        "cn_mean": float(cn_values.mean()) if n_cn else float("nan"),
+        "us_mean": float(us_values.mean()) if n_us else float("nan"),
+        "diff_mean": float("nan"),
+        "boot_p_value": float("nan"),
+        "boot_ci_low": float("nan"),
+        "boot_ci_high": float("nan"),
+        "n_cn": n_cn,
+        "n_us": n_us,
+        "n_boot": 0,
+    }
+    if n_cn < 2 or n_us < 2:
+        return base
+
+    rng = np.random.default_rng(seed)
+    cn_idx = rng.integers(0, n_cn, size=(n_boot, n_cn))
+    us_idx = rng.integers(0, n_us, size=(n_boot, n_us))
+    diffs = cn_values[cn_idx].mean(axis=1) - us_values[us_idx].mean(axis=1)
+    diff_mean = float(cn_values.mean() - us_values.mean())
+    if diff_mean > 0:
+        p_one = float((diffs <= 0).mean())
+    elif diff_mean < 0:
+        p_one = float((diffs >= 0).mean())
+    else:
+        p_one = 0.5
+    return {
+        "cn_mean": float(cn_values.mean()),
+        "us_mean": float(us_values.mean()),
+        "diff_mean": diff_mean,
+        "boot_p_value": float(min(2 * p_one, 1.0)),
+        "boot_ci_low": float(np.percentile(diffs, 2.5)),
+        "boot_ci_high": float(np.percentile(diffs, 97.5)),
+        "n_cn": n_cn,
+        "n_us": n_us,
+        "n_boot": n_boot,
+    }
+
+
+def export_pre_runup_bootstrap_table(
+    result: dict[str, float],
+    *,
+    output_dir: Path,
+) -> Path:
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    out_path = output_dir / "cma_pre_runup_bootstrap.csv"
+    pd.DataFrame([result]).to_csv(out_path, index=False)
+    return out_path

@@ -135,6 +135,90 @@ def test_render_gap_figures_writes_png(tmp_path):
         assert outs[key].exists()
 
 
+def _gap_event_level(cn_runups, us_runups):
+    rows = []
+    for i, value in enumerate(cn_runups):
+        rows.append({"market": "CN", "pre_announce_runup": value, "event_id": f"cn-{i}"})
+    for i, value in enumerate(us_runups):
+        rows.append({"market": "US", "pre_announce_runup": value, "event_id": f"us-{i}"})
+    return pd.DataFrame(rows)
+
+
+def test_compute_pre_runup_bootstrap_returns_significant_p_for_clear_difference():
+    from index_inclusion_research.analysis.cross_market_asymmetry.gap_period import (
+        compute_pre_runup_bootstrap_test,
+    )
+    cn_runups = [0.05] * 60
+    us_runups = [0.00] * 60
+    result = compute_pre_runup_bootstrap_test(
+        _gap_event_level(cn_runups, us_runups), n_boot=2000, seed=0
+    )
+    assert result["n_cn"] == 60
+    assert result["n_us"] == 60
+    assert result["diff_mean"] == pytest.approx(0.05, abs=1e-9)
+    assert result["boot_p_value"] < 0.01
+    assert result["boot_ci_low"] > 0
+
+
+def test_compute_pre_runup_bootstrap_returns_high_p_when_no_difference():
+    from index_inclusion_research.analysis.cross_market_asymmetry.gap_period import (
+        compute_pre_runup_bootstrap_test,
+    )
+    rng = __import__("numpy").random.default_rng(123)
+    cn_runups = list(rng.normal(0.0, 0.02, size=80))
+    us_runups = list(rng.normal(0.0, 0.02, size=80))
+    result = compute_pre_runup_bootstrap_test(
+        _gap_event_level(cn_runups, us_runups), n_boot=2000, seed=0
+    )
+    assert result["boot_p_value"] > 0.20
+    assert result["boot_ci_low"] < 0 < result["boot_ci_high"]
+
+
+def test_compute_pre_runup_bootstrap_handles_small_sample():
+    from index_inclusion_research.analysis.cross_market_asymmetry.gap_period import (
+        compute_pre_runup_bootstrap_test,
+    )
+    result = compute_pre_runup_bootstrap_test(
+        _gap_event_level([0.01], [0.02]), n_boot=2000, seed=0
+    )
+    import math
+
+    assert result["n_cn"] == 1
+    assert result["n_us"] == 1
+    assert math.isnan(result["boot_p_value"])
+    assert result["n_boot"] == 0
+
+
+def test_compute_pre_runup_bootstrap_seed_reproducible():
+    from index_inclusion_research.analysis.cross_market_asymmetry.gap_period import (
+        compute_pre_runup_bootstrap_test,
+    )
+    cn = [0.03, 0.04, -0.01, 0.02, 0.05, 0.01]
+    us = [0.00, 0.01, -0.02, 0.02, -0.01, 0.00]
+    a = compute_pre_runup_bootstrap_test(_gap_event_level(cn, us), n_boot=1000, seed=42)
+    b = compute_pre_runup_bootstrap_test(_gap_event_level(cn, us), n_boot=1000, seed=42)
+    assert a["boot_p_value"] == b["boot_p_value"]
+    assert a["boot_ci_low"] == b["boot_ci_low"]
+    assert a["boot_ci_high"] == b["boot_ci_high"]
+
+
+def test_export_pre_runup_bootstrap_table_writes_csv(tmp_path):
+    from index_inclusion_research.analysis.cross_market_asymmetry.gap_period import (
+        compute_pre_runup_bootstrap_test,
+        export_pre_runup_bootstrap_table,
+    )
+    result = compute_pre_runup_bootstrap_test(
+        _gap_event_level([0.05] * 30, [0.0] * 30), n_boot=500, seed=0
+    )
+    out = export_pre_runup_bootstrap_table(result, output_dir=tmp_path)
+    assert out.exists()
+    written = pd.read_csv(out)
+    assert {"cn_mean", "us_mean", "diff_mean", "boot_p_value", "n_cn", "n_us"}.issubset(
+        written.columns
+    )
+    assert len(written) == 1
+
+
 def test_export_gap_tables_writes_csvs(tmp_path):
     events, panel = _build_events_and_panel()
     from index_inclusion_research.analysis.cross_market_asymmetry.gap_period import (
