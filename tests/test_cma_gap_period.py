@@ -202,6 +202,95 @@ def test_compute_pre_runup_bootstrap_seed_reproducible():
     assert a["boot_ci_high"] == b["boot_ci_high"]
 
 
+def test_compute_gap_drift_cross_market_regression_finds_clear_cn_effect():
+    from index_inclusion_research.analysis.cross_market_asymmetry.gap_period import (
+        compute_gap_drift_cross_market_regression,
+    )
+    rows = []
+    for i in range(80):
+        rows.append({"market": "CN", "gap_drift": 0.04 + 0.001 * i, "gap_length_days": 14})
+    for i in range(80):
+        rows.append({"market": "US", "gap_drift": -0.001 + 0.0005 * i, "gap_length_days": 7})
+    panel = pd.DataFrame(rows)
+    result = compute_gap_drift_cross_market_regression(panel)
+    assert result["cn_coef"] > 0.02
+    assert result["cn_p_value"] < 0.001
+    assert result["n_obs"] == 160
+
+
+def test_compute_gap_drift_cross_market_regression_returns_high_p_for_no_difference():
+    from index_inclusion_research.analysis.cross_market_asymmetry.gap_period import (
+        compute_gap_drift_cross_market_regression,
+    )
+    np_mod = __import__("numpy")
+    rng = np_mod.random.default_rng(7)
+    rows = []
+    for _ in range(120):
+        rows.append({"market": "CN", "gap_drift": float(rng.normal(0, 0.05)), "gap_length_days": 14})
+    for _ in range(120):
+        rows.append({"market": "US", "gap_drift": float(rng.normal(0, 0.05)), "gap_length_days": float(rng.integers(0, 21))})
+    panel = pd.DataFrame(rows)
+    result = compute_gap_drift_cross_market_regression(panel)
+    assert result["cn_p_value"] > 0.10
+    assert result["n_obs"] == 240
+
+
+def test_compute_gap_drift_cross_market_regression_handles_small_sample():
+    from index_inclusion_research.analysis.cross_market_asymmetry.gap_period import (
+        compute_gap_drift_cross_market_regression,
+    )
+    panel = pd.DataFrame(
+        [
+            {"market": "CN", "gap_drift": 0.01, "gap_length_days": 14},
+            {"market": "US", "gap_drift": 0.0, "gap_length_days": 7},
+        ]
+    )
+    import math
+
+    result = compute_gap_drift_cross_market_regression(panel)
+    assert math.isnan(result["cn_coef"])
+    assert result["n_obs"] == 2
+
+
+def test_compute_gap_drift_cross_market_regression_drops_nan_rows():
+    from index_inclusion_research.analysis.cross_market_asymmetry.gap_period import (
+        compute_gap_drift_cross_market_regression,
+    )
+    rows = []
+    for i in range(40):
+        rows.append({"market": "CN", "gap_drift": 0.03 if i % 3 else float("nan"), "gap_length_days": 14})
+        rows.append({"market": "US", "gap_drift": 0.0 if i % 3 else 0.01, "gap_length_days": float("nan") if i % 5 == 0 else 7})
+    panel = pd.DataFrame(rows)
+    result = compute_gap_drift_cross_market_regression(panel)
+    # Each input has NaN drops; n_obs should be < 80 but > 0 and finite coef
+    assert result["n_obs"] > 0
+    assert result["n_obs"] < 80
+    import math
+
+    assert not math.isnan(result["cn_coef"])
+
+
+def test_export_gap_drift_cross_market_regression_table_writes_csv(tmp_path):
+    from index_inclusion_research.analysis.cross_market_asymmetry.gap_period import (
+        compute_gap_drift_cross_market_regression,
+        export_gap_drift_cross_market_regression_table,
+    )
+    rows = []
+    for _ in range(50):
+        rows.append({"market": "CN", "gap_drift": 0.03, "gap_length_days": 14})
+        rows.append({"market": "US", "gap_drift": 0.0, "gap_length_days": 7})
+    panel = pd.DataFrame(rows)
+    result = compute_gap_drift_cross_market_regression(panel)
+    out = export_gap_drift_cross_market_regression_table(result, output_dir=tmp_path)
+    assert out.exists()
+    assert out.name == "cma_gap_drift_market_regression.csv"
+    written = pd.read_csv(out)
+    assert {"cn_coef", "cn_p_value", "gap_length_coef", "n_obs", "r_squared"}.issubset(
+        written.columns
+    )
+    assert len(written) == 1
+
+
 def test_export_pre_runup_bootstrap_table_writes_csv(tmp_path):
     from index_inclusion_research.analysis.cross_market_asymmetry.gap_period import (
         compute_pre_runup_bootstrap_test,

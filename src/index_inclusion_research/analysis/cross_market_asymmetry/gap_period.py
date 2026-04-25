@@ -8,6 +8,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
+import statsmodels.api as sm  # noqa: E402
 from scipy import stats  # noqa: E402
 
 _METRIC_COLUMNS: tuple[str, ...] = (
@@ -223,5 +224,74 @@ def export_pre_runup_bootstrap_table(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     out_path = output_dir / "cma_pre_runup_bootstrap.csv"
+    pd.DataFrame([result]).to_csv(out_path, index=False)
+    return out_path
+
+
+def compute_gap_drift_cross_market_regression(
+    gap_event_level: pd.DataFrame,
+) -> dict[str, float]:
+    """OLS HC3 regression: gap_drift ~ const + cn_dummy + gap_length_days.
+
+    Tests H4 (short-sell constraints) by asking whether CN events have higher
+    announce-to-effective drift than US events after controlling for the gap
+    window length. Returns NaN-filled dict for empty / single-market /
+    underdetermined inputs.
+    """
+    sub = gap_event_level.dropna(
+        subset=["gap_drift", "gap_length_days", "market"]
+    ).copy()
+    sub = sub.loc[sub["market"].isin({"CN", "US"})]
+    n_obs = int(len(sub))
+    base = {
+        "cn_coef": float("nan"),
+        "cn_se": float("nan"),
+        "cn_t": float("nan"),
+        "cn_p_value": float("nan"),
+        "gap_length_coef": float("nan"),
+        "gap_length_p_value": float("nan"),
+        "n_obs": n_obs,
+        "r_squared": float("nan"),
+    }
+    if n_obs < 4 or sub["market"].nunique() < 2:
+        return base
+    X = pd.DataFrame(
+        {
+            "cn": (sub["market"] == "CN").astype(float).to_numpy(),
+            "gap_length_days": sub["gap_length_days"].astype(float).to_numpy(),
+        }
+    )
+    X = sm.add_constant(X, has_constant="add")
+    y = sub["gap_drift"].astype(float).to_numpy()
+    if float(y.var(ddof=0)) == 0.0 or n_obs <= X.shape[1] + 1:
+        return base
+    try:
+        model = sm.OLS(y, X).fit(cov_type="HC3")
+    except (np.linalg.LinAlgError, ValueError):
+        return base
+    return {
+        "cn_coef": float(model.params.get("cn", float("nan"))),
+        "cn_se": float(model.bse.get("cn", float("nan"))),
+        "cn_t": float(model.tvalues.get("cn", float("nan"))),
+        "cn_p_value": float(model.pvalues.get("cn", float("nan"))),
+        "gap_length_coef": float(
+            model.params.get("gap_length_days", float("nan"))
+        ),
+        "gap_length_p_value": float(
+            model.pvalues.get("gap_length_days", float("nan"))
+        ),
+        "n_obs": int(model.nobs),
+        "r_squared": float(model.rsquared),
+    }
+
+
+def export_gap_drift_cross_market_regression_table(
+    result: dict[str, float],
+    *,
+    output_dir: Path,
+) -> Path:
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    out_path = output_dir / "cma_gap_drift_market_regression.csv"
     pd.DataFrame([result]).to_csv(out_path, index=False)
     return out_path

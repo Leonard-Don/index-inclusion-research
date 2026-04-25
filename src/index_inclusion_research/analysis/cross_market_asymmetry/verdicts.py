@@ -337,7 +337,12 @@ def _h3(hypothesis: StructuralHypothesis, mechanism_panel: pd.DataFrame) -> dict
     )
 
 
-def _h4(hypothesis: StructuralHypothesis, gap_summary: pd.DataFrame) -> dict[str, object]:
+def _h4(
+    hypothesis: StructuralHypothesis,
+    gap_summary: pd.DataFrame,
+    *,
+    regression: Mapping[str, object] | None = None,
+) -> dict[str, object]:
     cn = _row(gap_summary, market="CN", metric="gap_drift")
     us = _row(gap_summary, market="US", metric="gap_drift")
     cn_mean = _num(cn, "mean")
@@ -347,6 +352,15 @@ def _h4(hypothesis: StructuralHypothesis, gap_summary: pd.DataFrame) -> dict[str
             hypothesis,
             "缺少 CN/US gap_drift 汇总，无法判断公告到生效之间是否被套利压平。",
             "重跑 CMA M2 空窗期分析，保留 gap_drift 指标。",
+        )
+    reg_p = _regression_p(regression)
+    if reg_p is not None:
+        return _h4_from_regression(
+            hypothesis,
+            cn_mean=cn_mean,
+            us_mean=us_mean,
+            regression=regression,
+            reg_p=reg_p,
         )
     if cn_mean > 0 and us_mean <= 0 and _sig(cn):
         verdict = "支持"
@@ -370,6 +384,66 @@ def _h4(hypothesis: StructuralHypothesis, gap_summary: pd.DataFrame) -> dict[str
             f"US gap_drift={_fmt_pct(us_mean)}, t={_fmt_num(_num(us, 't'))}"
         ),
         next_step="增加 event-level gap_drift 的跨市场差异回归，并控制 gap_length_days。",
+    )
+
+
+def _regression_p(regression: Mapping[str, object] | None) -> float | None:
+    if not regression:
+        return None
+    raw = regression.get("cn_p_value")
+    if raw is None:
+        return None
+    try:
+        value = float(raw)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    if value != value:
+        return None
+    return value
+
+
+def _h4_from_regression(
+    hypothesis: StructuralHypothesis,
+    *,
+    cn_mean: float,
+    us_mean: float,
+    regression: Mapping[str, object],
+    reg_p: float,
+) -> dict[str, object]:
+    cn_coef = float(regression.get("cn_coef", 0.0))  # type: ignore[arg-type]
+    n_obs = int(regression.get("n_obs", 0))  # type: ignore[arg-type]
+    if cn_coef > 0 and reg_p < 0.05:
+        verdict = "支持"
+        confidence = "高"
+        summary = (
+            f"控制 gap_length_days 后 CN gap_drift 比 US 高 {_fmt_pct(cn_coef)} "
+            f"(回归 p={reg_p:.3f})，跨市场差异稳健，符合 H4 套利约束解释。"
+        )
+    elif cn_coef > 0 and reg_p < 0.10:
+        verdict = "部分支持"
+        confidence = "中"
+        summary = (
+            f"控制 gap_length_days 后 CN gap_drift 比 US 高 {_fmt_pct(cn_coef)} "
+            f"边际显著 (p={reg_p:.3f})，方向支持 H4 但稳健性仍需观察。"
+        )
+    else:
+        verdict = "证据不足"
+        confidence = "中"
+        summary = (
+            f"控制 gap_length_days 后 CN-US gap_drift 差异 {_fmt_pct(cn_coef)} 不显著 "
+            f"(p={reg_p:.3f})，跨市场差异口径无法支持 H4 套利约束解释。"
+        )
+    metric_snapshot = (
+        f"CN gap_drift={_fmt_pct(cn_mean)}; US gap_drift={_fmt_pct(us_mean)}; "
+        f"regression cn_coef={_fmt_pct(cn_coef)}, p={reg_p:.3f}, n={n_obs}"
+    )
+    return _make_verdict(
+        hypothesis,
+        verdict=verdict,
+        confidence=confidence,
+        evidence_summary=summary,
+        metric_snapshot=metric_snapshot,
+        next_step="可继续叠加 sector / size 等协变量,或检验非线性 gap_length 项的稳健性。",
     )
 
 
@@ -467,13 +541,14 @@ def build_hypothesis_verdicts(
     time_series_rolling: pd.DataFrame,
     aum_frame: pd.DataFrame | None = None,
     pre_runup_bootstrap: Mapping[str, object] | None = None,
+    gap_drift_regression: Mapping[str, object] | None = None,
 ) -> pd.DataFrame:
     hypotheses = {h.hid: h for h in HYPOTHESES}
     rows = [
         _h1(hypotheses["H1"], gap_summary, bootstrap=pre_runup_bootstrap),
         _h2(hypotheses["H2"], time_series_rolling, aum_frame=aum_frame),
         _h3(hypotheses["H3"], mechanism_panel),
-        _h4(hypotheses["H4"], gap_summary),
+        _h4(hypotheses["H4"], gap_summary, regression=gap_drift_regression),
         _h5(hypotheses["H5"], mechanism_panel),
         _h6(hypotheses["H6"], heterogeneity_size),
     ]
@@ -489,6 +564,7 @@ def export_hypothesis_verdicts(
     time_series_rolling: pd.DataFrame,
     aum_frame: pd.DataFrame | None = None,
     pre_runup_bootstrap: Mapping[str, object] | None = None,
+    gap_drift_regression: Mapping[str, object] | None = None,
 ) -> Path:
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -500,6 +576,7 @@ def export_hypothesis_verdicts(
         time_series_rolling=time_series_rolling,
         aum_frame=aum_frame,
         pre_runup_bootstrap=pre_runup_bootstrap,
+        gap_drift_regression=gap_drift_regression,
     )
     verdicts.to_csv(out_path, index=False)
     return out_path

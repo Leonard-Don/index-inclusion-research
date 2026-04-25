@@ -75,6 +75,7 @@ def test_orchestrator_runs_on_toy_data(tmp_path):
         "cma_gap_event_level.csv",
         "cma_gap_summary.csv",
         "cma_pre_runup_bootstrap.csv",
+        "cma_gap_drift_market_regression.csv",
         "cma_mechanism_panel.csv",
         "cma_mechanism_panel.tex",
         "cma_heterogeneity_size.csv",
