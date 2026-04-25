@@ -119,6 +119,8 @@ def run_cma_pipeline(
     gap_summary = gap_period.summarize_gap_metrics(gap)
     gap_period.export_gap_tables(gap, gap_summary, output_dir=tables_dir)
     gap_period.render_gap_figures(gap, gap_summary, output_dir=figures_dir)
+    pre_runup_bootstrap = gap_period.compute_pre_runup_bootstrap_test(gap)
+    gap_period.export_pre_runup_bootstrap_table(pre_runup_bootstrap, output_dir=tables_dir)
 
     mech_panel = mechanism_panel.build_mechanism_panel(matched_panel)
     mech_table = mechanism_panel.assemble_mechanism_comparison_table(mech_panel)
@@ -162,6 +164,7 @@ def run_cma_pipeline(
         heterogeneity_size=het_tables.get("size", pd.DataFrame()),
         time_series_rolling=rolling,
         aum_frame=aum_frame,
+        pre_runup_bootstrap=pre_runup_bootstrap,
     )
     hypothesis_verdicts.to_csv(tables_dir / "cma_hypothesis_verdicts.csv", index=False)
 

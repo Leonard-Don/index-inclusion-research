@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 
 import pandas as pd
@@ -96,7 +97,12 @@ def _pending(hypothesis: StructuralHypothesis, reason: str, next_step: str) -> d
     )
 
 
-def _h1(hypothesis: StructuralHypothesis, gap_summary: pd.DataFrame) -> dict[str, object]:
+def _h1(
+    hypothesis: StructuralHypothesis,
+    gap_summary: pd.DataFrame,
+    *,
+    bootstrap: Mapping[str, object] | None = None,
+) -> dict[str, object]:
     cn = _row(gap_summary, market="CN", metric="pre_announce_runup")
     us = _row(gap_summary, market="US", metric="pre_announce_runup")
     cn_mean = _num(cn, "mean")
@@ -106,6 +112,11 @@ def _h1(hypothesis: StructuralHypothesis, gap_summary: pd.DataFrame) -> dict[str
             hypothesis,
             "缺少 CN/US 公告前漂移汇总，暂时无法比较信息预运行。",
             "重跑 CMA M2 空窗期分析，生成 cma_gap_summary.csv。",
+        )
+    boot_p = _bootstrap_p(bootstrap)
+    if boot_p is not None:
+        return _h1_from_bootstrap(
+            hypothesis, cn_mean=cn_mean, us_mean=us_mean, bootstrap=bootstrap, boot_p=boot_p
         )
     directional = cn_mean > us_mean
     if directional and _sig(cn):
@@ -130,6 +141,69 @@ def _h1(hypothesis: StructuralHypothesis, gap_summary: pd.DataFrame) -> dict[str
             f"US pre-runup={_fmt_pct(us_mean)}, t={_fmt_num(_num(us, 't'))}"
         ),
         next_step="加入 CN-US pre-runup 差异的 bootstrap 或回归检验，避免只比较两个均值。",
+    )
+
+
+def _bootstrap_p(bootstrap: Mapping[str, object] | None) -> float | None:
+    if not bootstrap:
+        return None
+    raw = bootstrap.get("boot_p_value")
+    if raw is None:
+        return None
+    try:
+        value = float(raw)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    if value != value:  # NaN guard
+        return None
+    return value
+
+
+def _h1_from_bootstrap(
+    hypothesis: StructuralHypothesis,
+    *,
+    cn_mean: float,
+    us_mean: float,
+    bootstrap: Mapping[str, object],
+    boot_p: float,
+) -> dict[str, object]:
+    diff_raw = bootstrap.get("diff_mean", cn_mean - us_mean)
+    diff = float(diff_raw) if diff_raw is not None else cn_mean - us_mean
+    ci_low = float(bootstrap.get("boot_ci_low", float("nan")))  # type: ignore[arg-type]
+    ci_high = float(bootstrap.get("boot_ci_high", float("nan")))  # type: ignore[arg-type]
+    if diff > 0 and boot_p < 0.05:
+        verdict = "支持"
+        confidence = "高"
+        summary = (
+            f"CN-US pre-runup 差异 {_fmt_pct(diff)} 在 bootstrap 下显著 (p={boot_p:.3f}, "
+            f"CI95=[{_fmt_pct(ci_low)}, {_fmt_pct(ci_high)}])，支持 H1 信息预运行。"
+        )
+    elif diff > 0 and boot_p < 0.10:
+        verdict = "部分支持"
+        confidence = "中"
+        summary = (
+            f"CN-US pre-runup 差异 {_fmt_pct(diff)} 边际显著 (p={boot_p:.3f}, "
+            f"CI95=[{_fmt_pct(ci_low)}, {_fmt_pct(ci_high)}])，弱支持 H1。"
+        )
+    else:
+        verdict = "证据不足"
+        confidence = "中"
+        summary = (
+            f"CN-US pre-runup 差异 {_fmt_pct(diff)} 在 bootstrap 下不显著 (p={boot_p:.3f}, "
+            f"CI95=[{_fmt_pct(ci_low)}, {_fmt_pct(ci_high)}])，方向偏 CN 但跨市场差异口径无法归因为信息泄露。"
+        )
+    metric_snapshot = (
+        f"CN pre-runup={_fmt_pct(cn_mean)}; US pre-runup={_fmt_pct(us_mean)}; "
+        f"diff={_fmt_pct(diff)}, bootstrap p={boot_p:.3f}, "
+        f"CI95=[{_fmt_pct(ci_low)}, {_fmt_pct(ci_high)}]"
+    )
+    return _make_verdict(
+        hypothesis,
+        verdict=verdict,
+        confidence=confidence,
+        evidence_summary=summary,
+        metric_snapshot=metric_snapshot,
+        next_step="如需更强结论,可叠加事件级回归并控制 gap_length_days / sector / size 等协变量。",
     )
 
 
@@ -392,10 +466,11 @@ def build_hypothesis_verdicts(
     heterogeneity_size: pd.DataFrame,
     time_series_rolling: pd.DataFrame,
     aum_frame: pd.DataFrame | None = None,
+    pre_runup_bootstrap: Mapping[str, object] | None = None,
 ) -> pd.DataFrame:
     hypotheses = {h.hid: h for h in HYPOTHESES}
     rows = [
-        _h1(hypotheses["H1"], gap_summary),
+        _h1(hypotheses["H1"], gap_summary, bootstrap=pre_runup_bootstrap),
         _h2(hypotheses["H2"], time_series_rolling, aum_frame=aum_frame),
         _h3(hypotheses["H3"], mechanism_panel),
         _h4(hypotheses["H4"], gap_summary),
@@ -413,6 +488,7 @@ def export_hypothesis_verdicts(
     heterogeneity_size: pd.DataFrame,
     time_series_rolling: pd.DataFrame,
     aum_frame: pd.DataFrame | None = None,
+    pre_runup_bootstrap: Mapping[str, object] | None = None,
 ) -> Path:
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -423,6 +499,7 @@ def export_hypothesis_verdicts(
         heterogeneity_size=heterogeneity_size,
         time_series_rolling=time_series_rolling,
         aum_frame=aum_frame,
+        pre_runup_bootstrap=pre_runup_bootstrap,
     )
     verdicts.to_csv(out_path, index=False)
     return out_path

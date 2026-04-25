@@ -146,6 +146,70 @@ def test_h2_uses_aum_when_available() -> None:
     assert "US AUM" in h2["metric_snapshot"]
 
 
+def test_h1_upgrades_to_full_support_when_bootstrap_significant() -> None:
+    bootstrap = {
+        "cn_mean": 0.035,
+        "us_mean": 0.020,
+        "diff_mean": 0.015,
+        "boot_p_value": 0.012,
+        "boot_ci_low": 0.004,
+        "boot_ci_high": 0.026,
+        "n_cn": 130,
+        "n_us": 310,
+        "n_boot": 5000,
+    }
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+        pre_runup_bootstrap=bootstrap,
+    )
+    h1 = verdicts.set_index("hid").loc["H1"]
+    assert h1["verdict"] == "支持"
+    assert h1["confidence"] == "高"
+    assert "bootstrap" in h1["metric_snapshot"]
+    assert "0.012" in h1["metric_snapshot"]
+
+
+def test_h1_downgrades_to_证据不足_when_bootstrap_p_above_threshold() -> None:
+    bootstrap = {
+        "cn_mean": 0.035,
+        "us_mean": 0.020,
+        "diff_mean": 0.015,
+        "boot_p_value": 0.42,
+        "boot_ci_low": -0.010,
+        "boot_ci_high": 0.040,
+        "n_cn": 130,
+        "n_us": 310,
+        "n_boot": 5000,
+    }
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+        pre_runup_bootstrap=bootstrap,
+    )
+    h1 = verdicts.set_index("hid").loc["H1"]
+    assert h1["verdict"] == "证据不足"
+    assert "0.42" in h1["metric_snapshot"]
+
+
+def test_h1_falls_back_to_single_market_significance_when_bootstrap_missing() -> None:
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+    )
+    h1 = verdicts.set_index("hid").loc["H1"]
+    # Fixture has CN > US directional + CN sig (t=3.1), legacy logic = 部分支持/中
+    assert h1["verdict"] == "部分支持"
+    assert h1["confidence"] == "中"
+    assert "bootstrap" not in h1["metric_snapshot"]
+
+
 def test_export_hypothesis_verdicts_writes_csv(tmp_path) -> None:
     out = export_hypothesis_verdicts(
         output_dir=tmp_path,
