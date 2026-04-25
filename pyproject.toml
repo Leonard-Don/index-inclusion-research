@@ -46,6 +46,7 @@ index-inclusion-cma = "index_inclusion_research.cli:run_cma_main"
 dev = [
   "playwright>=1.54",
   "pytest>=8.0",
+  "pytest-cov>=6.0",
   "ruff>=0.15",
 ]
 

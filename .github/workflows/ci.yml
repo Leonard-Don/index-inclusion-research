@@ -22,8 +22,12 @@ jobs:
       - name: Run Ruff
         run: python -m ruff check .
 
-      - name: Run pytest
-        run: pytest -q
+      - name: Run pytest with coverage
+        run: pytest -q --cov=index_inclusion_research --cov-report=term-missing --cov-report=xml:coverage.xml
+
+      - name: Coverage summary
+        if: always()
+        run: python -m coverage report --format=total || true
 
   dashboard-browser-smoke:
     runs-on: ubuntu-latest
