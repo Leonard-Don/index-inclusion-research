@@ -135,6 +135,12 @@
     <p class="section-intro">{{ cma_section.lead }}</p>
   </header>
 
+  {% if mode != 'brief' %}
+  <div class="echart-panel">
+    <div data-echart="car_path" class="echart-container echart-container-wide"></div>
+  </div>
+  {% endif %}
+
   {% if cma_section.quadrant_table and cma_section.quadrant_table.rows %}
   <div class="result-card primary">
     <div class="table-label">4 象限 CAR[-1,+1] 摘要</div>
@@ -379,6 +385,12 @@
 <div class="result-card {{ figure.layout_class }} {{ tier }}">
   <div class="table-label">{{ figure.label }}</div>
   <div class="result-figure">
+    {% if figure.echart_id %}
+    <div class="echart-panel">
+      <div data-echart="{{ figure.echart_id }}" class="echart-container{% if figure.layout_class == 'wide' %} echart-container-wide{% endif %}"></div>
+    </div>
+    <div class="echart-fallback">
+    {% endif %}
     <div class="figure-media-shell">
       <img
         src="{{ url_for('serve_result_file', subpath=figure.path) }}"
@@ -388,6 +400,9 @@
         {% if eager %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
       >
     </div>
+    {% if figure.echart_id %}
+    </div>
+    {% endif %}
     <div class="figure-copy-panel">
       <div class="figure-copy-block">
         <div class="figure-copy-kicker">图意</div>

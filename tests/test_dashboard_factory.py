@@ -46,6 +46,7 @@ def test_create_dashboard_app_and_register_routes() -> None:
 
     register_dashboard_routes(
         app,
+        root=Path("/tmp/example"),
         favicon_view=lambda: ("", 204),
         home_view=_ok,
         refresh_dashboard_view=_ok,
@@ -68,6 +69,7 @@ def test_create_dashboard_app_and_register_routes() -> None:
     assert "/refresh" in rules
     assert "/run/<analysis_id>" in rules
     assert "/paper/<paper_id>/pdf" in rules
+    assert "/api/chart/<chart_id>" in rules
 
 
 def test_register_dashboard_routes_uses_stable_endpoint_names() -> None:
@@ -86,6 +88,7 @@ def test_register_dashboard_routes_uses_stable_endpoint_names() -> None:
 
     register_dashboard_routes(
         app,
+        root=Path("/tmp/example"),
         favicon_view=lambda: ("", 204),
         home_view=_named("home"),
         refresh_dashboard_view=_named("refresh"),

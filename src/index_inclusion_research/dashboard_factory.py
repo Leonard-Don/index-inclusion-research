@@ -6,6 +6,7 @@ from pathlib import Path
 from flask import Flask
 
 from index_inclusion_research import dashboard_config
+from index_inclusion_research.chart_data import build_chart_data
 from index_inclusion_research.dashboard_refresh_coordinator import (
     DashboardRefreshCoordinator,
 )
@@ -160,6 +161,7 @@ def build_dashboard_shell(
 def register_dashboard_routes(
     app: Flask,
     *,
+    root: Path,
     favicon_view: RouteView,
     home_view: RouteView,
     refresh_dashboard_view: RouteView,
@@ -187,7 +189,22 @@ def register_dashboard_routes(
     app.add_url_rule("/files/<path:subpath>", endpoint="serve_result_file", view_func=serve_result_file_view, methods=["GET"])
     app.add_url_rule("/paper/<paper_id>", endpoint="show_paper_brief", view_func=show_paper_brief_view, methods=["GET"])
     app.add_url_rule("/paper/<paper_id>/pdf", endpoint="serve_library_pdf", view_func=serve_library_pdf_view, methods=["GET"])
+    _register_chart_api(app, root)
     return app
+
+
+def _register_chart_api(app: Flask, root: Path) -> None:
+    """Register the ``/api/chart/<chart_id>`` JSON endpoint."""
+    from flask import abort, jsonify
+
+    def chart_api(chart_id: str):
+        data = build_chart_data(chart_id, root)
+        if data is None:
+            abort(404)
+        return jsonify(data)
+
+    chart_api.__name__ = "chart_api"
+    app.add_url_rule("/api/chart/<chart_id>", endpoint="chart_api", view_func=chart_api, methods=["GET"])
 
 
 @dataclass(frozen=True)
@@ -237,7 +254,7 @@ def build_dashboard_application(
         root=root,
         get_literature_paper=get_literature_paper,
     )
-    register_dashboard_routes(shell.app, **route_views.registration_kwargs())
+    register_dashboard_routes(shell.app, root=root, **route_views.registration_kwargs())
     return DashboardApplication(
         shell=shell,
         services=services,

@@ -71,6 +71,7 @@ def test_create_price_pressure_figures_returns_cached_metadata(tmp_path: Path) -
             "caption_focus": "观察美股公告日效应是否随时间减弱，以及中国样本是否呈现不同的阶段性变化。",
             "path": "results/real_figures/price_pressure_time_series.png",
             "layout_class": "wide",
+            "echart_id": "price_pressure",
         }
     ]
 
