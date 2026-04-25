@@ -9,6 +9,7 @@ from . import (
     orchestrator,
     paths,
     time_series,
+    verdicts,
 )
 
 __all__ = [
@@ -20,4 +21,5 @@ __all__ = [
     "orchestrator",
     "paths",
     "time_series",
+    "verdicts",
 ]

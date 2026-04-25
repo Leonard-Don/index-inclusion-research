@@ -83,6 +83,7 @@ def test_orchestrator_runs_on_toy_data(tmp_path):
         "cma_time_series_rolling.csv",
         "cma_time_series_break.csv",
         "cma_hypothesis_map.csv",
+        "cma_hypothesis_verdicts.csv",
     ]
     for name in expected_tables:
         assert (tmp_path / "tables" / name).exists(), f"missing: {name}"
@@ -101,6 +102,7 @@ def test_orchestrator_runs_on_toy_data(tmp_path):
 
     summary = (tmp_path / "summary.md").read_text()
     assert "六、美股 vs A股 不对称" in summary
+    assert "假说裁决摘要" in summary
     assert "announce" in summary or "effective" in summary
     assert result["tables_count"] == len(expected_tables)
 

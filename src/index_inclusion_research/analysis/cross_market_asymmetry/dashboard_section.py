@@ -5,6 +5,8 @@ from typing import Literal
 
 import pandas as pd
 
+from . import verdicts as cma_verdicts
+
 SectionMode = Literal["brief", "demo", "full"]
 
 SECTION_ID = "cross_market_asymmetry"
@@ -83,6 +85,7 @@ def build_cross_market_section(
 
     gap_summary = _safe_read(tables_dir / "cma_gap_summary.csv")
     hypothesis_map = _safe_read(tables_dir / "cma_hypothesis_map.csv")
+    hypothesis_verdicts = _safe_read(tables_dir / "cma_hypothesis_verdicts.csv")
     mechanism_panel = _safe_read(tables_dir / "cma_mechanism_panel.csv")
     heterogeneity: dict[str, pd.DataFrame] = {
         dim: _safe_read(tables_dir / f"cma_heterogeneity_{dim}.csv") for dim in HET_DIMS
@@ -91,6 +94,21 @@ def build_cross_market_section(
     time_series_break = _safe_read(tables_dir / "cma_time_series_break.csv")
     ar_path = _safe_read(tables_dir / "cma_ar_path.csv")
     car_path = _safe_read(tables_dir / "cma_car_path.csv")
+    if hypothesis_verdicts.empty and any(
+        not frame.empty
+        for frame in (
+            gap_summary,
+            mechanism_panel,
+            heterogeneity["size"],
+            time_series_rolling,
+        )
+    ):
+        hypothesis_verdicts = cma_verdicts.build_hypothesis_verdicts(
+            gap_summary=gap_summary,
+            mechanism_panel=mechanism_panel,
+            heterogeneity_size=heterogeneity["size"],
+            time_series_rolling=time_series_rolling,
+        )
 
     if mode == "brief":
         figure_names = ()
@@ -109,6 +127,7 @@ def build_cross_market_section(
     if mode == "full":
         detail_tables = {
             "window_summary_all": _frame_to_payload(window_summary),
+            "hypothesis_verdicts": _frame_to_payload(hypothesis_verdicts),
             "mechanism_panel": _frame_to_payload(mechanism_panel),
             "time_series_rolling": _frame_to_payload(time_series_rolling),
             "time_series_break": _frame_to_payload(time_series_break),
@@ -138,6 +157,10 @@ def build_cross_market_section(
         "hypothesis_map": {
             "columns": list(hypothesis_map.columns),
             "rows": hypothesis_map.to_dict(orient="records") if mode == "full" else [],
+        },
+        "hypothesis_verdicts": {
+            "columns": list(hypothesis_verdicts.columns),
+            "rows": hypothesis_verdicts.to_dict(orient="records") if mode != "brief" else [],
         },
         "detail_tables": detail_tables,
     }
