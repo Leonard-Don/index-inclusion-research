@@ -267,7 +267,14 @@ def _h2(
     )
 
 
-def _h3(hypothesis: StructuralHypothesis, mechanism_panel: pd.DataFrame) -> dict[str, object]:
+def _h3(
+    hypothesis: StructuralHypothesis,
+    mechanism_panel: pd.DataFrame,
+    *,
+    channel_concentration: pd.DataFrame | None = None,
+) -> dict[str, object]:
+    if channel_concentration is not None and not channel_concentration.empty:
+        return _h3_from_channel_table(hypothesis, channel_concentration)
     cn_eff_turnover = _row(
         mechanism_panel,
         market="CN",
@@ -334,6 +341,71 @@ def _h3(hypothesis: StructuralHypothesis, mechanism_panel: pd.DataFrame) -> dict
             f"{_fmt_num(_num(us_ann_turnover, 'coef'), 4)}/{_fmt_num(_num(us_eff_turnover, 'coef'), 4)}"
         ),
         next_step="把 turnover 与 volume 做成同一张四象限差异检验表，避免单通道过度解释。",
+    )
+
+
+def _h3_from_channel_table(
+    hypothesis: StructuralHypothesis,
+    channel: pd.DataFrame,
+) -> dict[str, object]:
+    total = len(channel)
+    both_sig_count = int(channel["both_channels_sig"].astype(bool).sum())
+    expected_quadrants = {("US", "announce"), ("CN", "effective")}
+    expected_hits: list[str] = []
+    for _, row in channel.iterrows():
+        if not bool(row["both_channels_sig"]):
+            continue
+        if (row["market"], row["event_phase"]) in expected_quadrants:
+            expected_hits.append(f"{row['market']} {row['event_phase']}")
+    expected_hit_count = len(expected_hits)
+    if expected_hit_count == 2:
+        verdict = "支持"
+        confidence = "高"
+        summary = (
+            f"US announce 与 CN effective 两条预期量能集中四象限均双通道显著 "
+            f"(turnover + volume p<0.10), 共 {both_sig_count}/{total} 个象限通过双通道判据。"
+        )
+    elif expected_hit_count == 1:
+        verdict = "部分支持"
+        confidence = "中"
+        summary = (
+            f"仅 {expected_hits[0]} 一个预期象限双通道显著, 共 {both_sig_count}/{total} 个象限通过双通道判据,"
+            "另一条预期象限只有单通道显著, 不能完全确认 H3。"
+        )
+    elif both_sig_count >= 1:
+        verdict = "部分支持"
+        confidence = "低"
+        summary = (
+            f"仅 {both_sig_count}/{total} 个象限双通道显著, 但都不在 US announce / CN effective 预期位置上,"
+            "方向不完全符合 H3。"
+        )
+    else:
+        verdict = "证据不足"
+        confidence = "中"
+        summary = (
+            f"四象限内没有任何象限同时通过 turnover + volume 显著性 (共 {both_sig_count}/{total}),"
+            "单通道证据不足以支持 H3 量能集中机制。"
+        )
+
+    snapshot_parts: list[str] = []
+    for _, row in channel.iterrows():
+        flag = "✓" if bool(row["both_channels_sig"]) else (
+            "T" if bool(row["turnover_sig"]) else "V" if bool(row["volume_sig"]) else "·"
+        )
+        snapshot_parts.append(
+            f"{row['market']} {row['event_phase']}={flag}"
+        )
+    metric_snapshot = (
+        f"channel concentration {both_sig_count}/{total} both-sig: "
+        + ", ".join(snapshot_parts)
+    )
+    return _make_verdict(
+        hypothesis,
+        verdict=verdict,
+        confidence=confidence,
+        evidence_summary=summary,
+        metric_snapshot=metric_snapshot,
+        next_step="可叠加 volatility 通道或 sector heterogeneity 进一步剖分量能集中来源。",
     )
 
 
@@ -447,7 +519,15 @@ def _h4_from_regression(
     )
 
 
-def _h5(hypothesis: StructuralHypothesis, mechanism_panel: pd.DataFrame) -> dict[str, object]:
+def _h5(
+    hypothesis: StructuralHypothesis,
+    mechanism_panel: pd.DataFrame,
+    *,
+    limit_regression: Mapping[str, object] | None = None,
+) -> dict[str, object]:
+    limit_p = _limit_p(limit_regression)
+    if limit_p is not None:
+        return _h5_from_regression(hypothesis, regression=limit_regression, limit_p=limit_p)
     cn_ann = _row(
         mechanism_panel,
         market="CN",
@@ -497,6 +577,64 @@ def _h5(hypothesis: StructuralHypothesis, mechanism_panel: pd.DataFrame) -> dict
     )
 
 
+def _limit_p(regression: Mapping[str, object] | None) -> float | None:
+    if not regression:
+        return None
+    raw = regression.get("limit_p_value")
+    if raw is None:
+        return None
+    try:
+        value = float(raw)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    if value != value:
+        return None
+    return value
+
+
+def _h5_from_regression(
+    hypothesis: StructuralHypothesis,
+    *,
+    regression: Mapping[str, object],
+    limit_p: float,
+) -> dict[str, object]:
+    coef = float(regression.get("limit_coef", 0.0))  # type: ignore[arg-type]
+    n_obs = int(regression.get("n_obs", 0))  # type: ignore[arg-type]
+    r2 = float(regression.get("r_squared", 0.0))  # type: ignore[arg-type]
+    if coef > 0 and limit_p < 0.05:
+        verdict = "支持"
+        confidence = "高"
+        summary = (
+            f"CN 事件级涨跌停命中率正向预测 announce-day CAR (limit_coef={_fmt_num(coef, 4)}, "
+            f"p={limit_p:.3f}, R²={r2:.3f}, n={n_obs})，支持 H5 涨跌停截断机制。"
+        )
+    elif coef > 0 and limit_p < 0.10:
+        verdict = "部分支持"
+        confidence = "中"
+        summary = (
+            f"CN 事件级涨跌停命中率方向正、边际显著 (limit_coef={_fmt_num(coef, 4)}, "
+            f"p={limit_p:.3f}, n={n_obs})，弱支持 H5。"
+        )
+    else:
+        verdict = "证据不足"
+        confidence = "中"
+        summary = (
+            f"CN 事件级涨跌停命中率对 announce-day CAR 不具显著预测力 "
+            f"(limit_coef={_fmt_num(coef, 4)}, p={limit_p:.3f}, n={n_obs})，H5 缺乏支持。"
+        )
+    metric_snapshot = (
+        f"CN limit_coef={_fmt_num(coef, 4)}, p={limit_p:.3f}, R²={r2:.3f}, n={n_obs}"
+    )
+    return _make_verdict(
+        hypothesis,
+        verdict=verdict,
+        confidence=confidence,
+        evidence_summary=summary,
+        metric_snapshot=metric_snapshot,
+        next_step="可加入 sector / size 协变量稳健性检验,或区分 limit_up vs limit_down 暴露。",
+    )
+
+
 def _h6(hypothesis: StructuralHypothesis, heterogeneity_size: pd.DataFrame) -> dict[str, object]:
     required = {"market", "bucket", "asymmetry_index"}
     if heterogeneity_size.empty or not required.issubset(heterogeneity_size.columns):
@@ -542,14 +680,16 @@ def build_hypothesis_verdicts(
     aum_frame: pd.DataFrame | None = None,
     pre_runup_bootstrap: Mapping[str, object] | None = None,
     gap_drift_regression: Mapping[str, object] | None = None,
+    channel_concentration: pd.DataFrame | None = None,
+    limit_regression: Mapping[str, object] | None = None,
 ) -> pd.DataFrame:
     hypotheses = {h.hid: h for h in HYPOTHESES}
     rows = [
         _h1(hypotheses["H1"], gap_summary, bootstrap=pre_runup_bootstrap),
         _h2(hypotheses["H2"], time_series_rolling, aum_frame=aum_frame),
-        _h3(hypotheses["H3"], mechanism_panel),
+        _h3(hypotheses["H3"], mechanism_panel, channel_concentration=channel_concentration),
         _h4(hypotheses["H4"], gap_summary, regression=gap_drift_regression),
-        _h5(hypotheses["H5"], mechanism_panel),
+        _h5(hypotheses["H5"], mechanism_panel, limit_regression=limit_regression),
         _h6(hypotheses["H6"], heterogeneity_size),
     ]
     return pd.DataFrame(rows)
@@ -565,6 +705,8 @@ def export_hypothesis_verdicts(
     aum_frame: pd.DataFrame | None = None,
     pre_runup_bootstrap: Mapping[str, object] | None = None,
     gap_drift_regression: Mapping[str, object] | None = None,
+    channel_concentration: pd.DataFrame | None = None,
+    limit_regression: Mapping[str, object] | None = None,
 ) -> Path:
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -577,6 +719,8 @@ def export_hypothesis_verdicts(
         aum_frame=aum_frame,
         pre_runup_bootstrap=pre_runup_bootstrap,
         gap_drift_regression=gap_drift_regression,
+        channel_concentration=channel_concentration,
+        limit_regression=limit_regression,
     )
     verdicts.to_csv(out_path, index=False)
     return out_path

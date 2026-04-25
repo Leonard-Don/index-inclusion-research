@@ -284,6 +284,173 @@ def test_assemble_mechanism_comparison_table_emits_no_runtime_warnings():
     assert len(tbl) == 60
 
 
+def test_compute_channel_concentration_table_combines_turnover_and_volume():
+    from index_inclusion_research.analysis.cross_market_asymmetry.mechanism_panel import (
+        compute_channel_concentration_table,
+    )
+    panel = pd.DataFrame(
+        [
+            # CN announce: turnover sig, volume not sig
+            {"market": "CN", "event_phase": "announce", "outcome": "turnover_change",
+             "spec": "no_fe", "coef": 0.001, "t": 2.5, "p_value": 0.012, "n_obs": 470},
+            {"market": "CN", "event_phase": "announce", "outcome": "volume_change",
+             "spec": "no_fe", "coef": 1e7, "t": 1.0, "p_value": 0.32, "n_obs": 470},
+            # CN effective: both sig
+            {"market": "CN", "event_phase": "effective", "outcome": "turnover_change",
+             "spec": "no_fe", "coef": 0.0014, "t": 2.7, "p_value": 0.007, "n_obs": 470},
+            {"market": "CN", "event_phase": "effective", "outcome": "volume_change",
+             "spec": "no_fe", "coef": 5e6, "t": 2.1, "p_value": 0.036, "n_obs": 470},
+            # US announce: both sig
+            {"market": "US", "event_phase": "announce", "outcome": "turnover_change",
+             "spec": "no_fe", "coef": 0.03, "t": 20.0, "p_value": 0.0, "n_obs": 980},
+            {"market": "US", "event_phase": "announce", "outcome": "volume_change",
+             "spec": "no_fe", "coef": 8e6, "t": 8.0, "p_value": 0.0, "n_obs": 980},
+            # US effective: neither sig
+            {"market": "US", "event_phase": "effective", "outcome": "turnover_change",
+             "spec": "no_fe", "coef": 0.002, "t": 1.5, "p_value": 0.13, "n_obs": 980},
+            {"market": "US", "event_phase": "effective", "outcome": "volume_change",
+             "spec": "no_fe", "coef": 3e5, "t": 0.5, "p_value": 0.62, "n_obs": 980},
+        ]
+    )
+    table = compute_channel_concentration_table(panel)
+    assert {"market", "event_phase", "turnover_coef", "turnover_p", "volume_coef",
+            "volume_p", "turnover_sig", "volume_sig", "both_channels_sig"}.issubset(
+        table.columns
+    )
+    assert len(table) == 4
+    by_quad = {(r["market"], r["event_phase"]): r for _, r in table.iterrows()}
+    assert by_quad[("CN", "effective")]["both_channels_sig"]
+    assert by_quad[("US", "announce")]["both_channels_sig"]
+    assert not by_quad[("CN", "announce")]["both_channels_sig"]
+    assert not by_quad[("US", "effective")]["both_channels_sig"]
+
+
+def test_compute_channel_concentration_table_handles_missing_outcomes():
+    from index_inclusion_research.analysis.cross_market_asymmetry.mechanism_panel import (
+        compute_channel_concentration_table,
+    )
+    panel = pd.DataFrame(
+        [
+            {"market": "CN", "event_phase": "announce", "outcome": "turnover_change",
+             "spec": "no_fe", "coef": 0.001, "t": 2.5, "p_value": 0.012, "n_obs": 470},
+        ]
+    )
+    table = compute_channel_concentration_table(panel)
+    row = table.iloc[0]
+    assert row["turnover_sig"]
+    assert not row["volume_sig"]
+    import math
+    assert math.isnan(row["volume_coef"])
+
+
+def test_compute_h5_limit_predictive_regression_finds_clear_effect():
+    from index_inclusion_research.analysis.cross_market_asymmetry.mechanism_panel import (
+        compute_h5_limit_predictive_regression,
+    )
+    rng = np.random.default_rng(0)
+    rows = []
+    for i in range(80):
+        limit_share = float(rng.uniform(0, 0.5))
+        # Strong positive relationship: car ≈ 0.05 * limit_share + noise
+        car_1_1 = 0.05 * limit_share + float(rng.normal(0, 0.005))
+        rows.append({
+            "event_id": f"cn-{i}",
+            "market": "CN",
+            "event_phase": "effective",
+            "car_1_1": car_1_1,
+            "price_limit_hit_share": limit_share,
+            "log_mktcap_pre": 22.0 + float(rng.normal(0, 1)),
+        })
+    panel = pd.DataFrame(rows)
+    result = compute_h5_limit_predictive_regression(panel, market="CN")
+    assert result["limit_coef"] > 0.02
+    assert result["limit_p_value"] < 0.001
+    assert result["n_obs"] == 80
+
+
+def test_compute_h5_limit_predictive_regression_returns_high_p_for_no_relationship():
+    from index_inclusion_research.analysis.cross_market_asymmetry.mechanism_panel import (
+        compute_h5_limit_predictive_regression,
+    )
+    rng = np.random.default_rng(11)
+    rows = []
+    for i in range(80):
+        rows.append({
+            "event_id": f"cn-{i}",
+            "market": "CN",
+            "event_phase": "effective",
+            "car_1_1": float(rng.normal(0, 0.02)),
+            "price_limit_hit_share": float(rng.uniform(0, 0.5)),
+            "log_mktcap_pre": 22.0,
+        })
+    panel = pd.DataFrame(rows)
+    result = compute_h5_limit_predictive_regression(panel, market="CN")
+    assert result["limit_p_value"] > 0.10
+
+
+def test_compute_h5_limit_predictive_regression_handles_small_sample():
+    from index_inclusion_research.analysis.cross_market_asymmetry.mechanism_panel import (
+        compute_h5_limit_predictive_regression,
+    )
+    panel = pd.DataFrame(
+        [
+            {"event_id": "cn-1", "market": "CN", "event_phase": "effective",
+             "car_1_1": 0.01, "price_limit_hit_share": 0.1, "log_mktcap_pre": 22.0},
+            {"event_id": "cn-2", "market": "CN", "event_phase": "effective",
+             "car_1_1": 0.02, "price_limit_hit_share": 0.0, "log_mktcap_pre": 22.0},
+        ]
+    )
+    import math
+
+    result = compute_h5_limit_predictive_regression(panel, market="CN")
+    assert math.isnan(result["limit_coef"])
+    assert result["n_obs"] == 2
+
+
+def test_export_h5_limit_predictive_regression_writes_csv(tmp_path):
+    from index_inclusion_research.analysis.cross_market_asymmetry.mechanism_panel import (
+        compute_h5_limit_predictive_regression,
+        export_h5_limit_predictive_regression_table,
+    )
+    rng = np.random.default_rng(2)
+    rows = []
+    for i in range(40):
+        rows.append({
+            "event_id": f"cn-{i}",
+            "market": "CN",
+            "event_phase": "effective",
+            "car_1_1": 0.04 * float(rng.uniform(0, 0.5)) + float(rng.normal(0, 0.005)),
+            "price_limit_hit_share": float(rng.uniform(0, 0.5)),
+            "log_mktcap_pre": 22.0,
+        })
+    panel = pd.DataFrame(rows)
+    result = compute_h5_limit_predictive_regression(panel, market="CN")
+    out = export_h5_limit_predictive_regression_table(result, output_dir=tmp_path)
+    assert out.name == "cma_h5_limit_predictive_regression.csv"
+    written = pd.read_csv(out)
+    assert {"limit_coef", "limit_p_value", "n_obs", "r_squared"}.issubset(written.columns)
+    assert len(written) == 1
+
+
+def test_export_channel_concentration_table_writes_csv(tmp_path):
+    from index_inclusion_research.analysis.cross_market_asymmetry.mechanism_panel import (
+        compute_channel_concentration_table,
+        export_channel_concentration_table,
+    )
+    panel = pd.DataFrame(
+        [
+            {"market": "CN", "event_phase": "announce", "outcome": "turnover_change",
+             "spec": "no_fe", "coef": 0.001, "t": 2.5, "p_value": 0.012, "n_obs": 470},
+            {"market": "CN", "event_phase": "announce", "outcome": "volume_change",
+             "spec": "no_fe", "coef": 1e7, "t": 1.0, "p_value": 0.32, "n_obs": 470},
+        ]
+    )
+    table = compute_channel_concentration_table(panel)
+    out = export_channel_concentration_table(table, output_dir=tmp_path)
+    assert out.name == "cma_h3_channel_concentration.csv"
+    assert out.exists()
+
+
 def test_export_mechanism_tables_writes_csv_and_tex(tmp_path):
     df = pd.DataFrame(
         [
