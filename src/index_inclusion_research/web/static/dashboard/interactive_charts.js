@@ -206,10 +206,139 @@ function buildCarHeatmapOption(payload) {
   };
 }
 
+function buildGapDecompositionOption(payload) {
+  const colors = ['#a63b28', '#c36a2d', '#1f7a8c', '#5c6b77'];
+  const ecSeries = payload.series.map((s, i) => ({
+    name: s.name,
+    type: 'bar',
+    data: s.data,
+    itemStyle: { color: colors[i % colors.length] },
+    emphasis: { focus: 'series' },
+    label: {
+      show: true,
+      formatter: params => (params.value * 100).toFixed(2) + '%',
+      fontSize: 11,
+      color: '#18212b',
+    },
+  }));
+  return {
+    title: { text: '空窗期分段：公告→空窗→生效→反转', left: 'center' },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: params => {
+        const market = params[0]?.axisValue ?? '';
+        return `<strong>${market}</strong><br>` + params.map(p =>
+          `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:6px"></span>${p.seriesName}: ${(p.value * 100).toFixed(3)}%`
+        ).join('<br>');
+      },
+    },
+    legend: { bottom: 0, data: payload.series.map(s => s.name) },
+    grid: { left: 60, right: 30, top: 50, bottom: 60 },
+    xAxis: { type: 'category', data: payload.markets },
+    yAxis: {
+      type: 'value',
+      name: '平均 AR',
+      axisLabel: { formatter: v => (v * 100).toFixed(1) + '%' },
+      splitLine: { lineStyle: { type: 'dashed' } },
+    },
+    series: ecSeries,
+  };
+}
+
+
+function buildHeterogeneitySizeOption(payload) {
+  const ecSeries = payload.series.map(s => ({
+    name: s.name,
+    type: 'bar',
+    data: s.data,
+    itemStyle: { color: s.color },
+    emphasis: { focus: 'series' },
+    label: {
+      show: true,
+      formatter: params => params.value != null ? params.value.toFixed(2) : '',
+      fontSize: 11,
+      color: '#18212b',
+    },
+  }));
+  return {
+    title: { text: '市值五分位的不对称指数（CN vs US）', left: 'center' },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: params => {
+        const bucket = params[0]?.axisValue ?? '';
+        return `<strong>${bucket}</strong><br>` + params.map(p => {
+          const seriesIdx = payload.series.findIndex(s => s.name === p.seriesName);
+          const n = seriesIdx >= 0 ? payload.series[seriesIdx].n_events[p.dataIndex] : '';
+          return `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:6px"></span>${p.seriesName}: ${p.value?.toFixed(3) ?? '—'} (n=${n})`;
+        }).join('<br>');
+      },
+    },
+    legend: { bottom: 0, data: payload.series.map(s => s.name) },
+    grid: { left: 60, right: 30, top: 50, bottom: 60 },
+    xAxis: { type: 'category', data: payload.buckets, name: '市值分组' },
+    yAxis: {
+      type: 'value',
+      name: '不对称指数',
+      splitLine: { lineStyle: { type: 'dashed' } },
+    },
+    series: ecSeries,
+  };
+}
+
+
+function buildTimeSeriesRollingOption(payload) {
+  const ecSeries = payload.series.map(s => ({
+    name: s.name,
+    type: 'line',
+    data: s.data,
+    itemStyle: { color: s.color },
+    lineStyle: { type: s.lineStyle?.type || 'solid', width: s.lineStyle?.width || 2.2 },
+    symbol: s.symbol || 'circle',
+    symbolSize: s.symbolSize || 7,
+    emphasis: { lineStyle: { width: 3.5 } },
+  }));
+  return {
+    title: { text: 'Rolling CAR：5 年滚动窗口（CN vs US × announce / effective）', left: 'center' },
+    tooltip: {
+      trigger: 'axis',
+      formatter: params => {
+        const year = params[0]?.value?.[0] ?? '';
+        return `<strong>${year}（窗口结束年）</strong><br>` + params.map(p =>
+          `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:6px"></span>${p.seriesName}: ${(p.value[1] * 100).toFixed(3)}%`
+        ).join('<br>');
+      },
+    },
+    legend: { bottom: 0, data: payload.series.map(s => s.name) },
+    grid: { left: 60, right: 30, top: 50, bottom: 40 },
+    xAxis: {
+      type: 'value',
+      name: '窗口结束年',
+      nameLocation: 'center',
+      nameGap: 28,
+      axisLabel: { formatter: v => String(v) },
+      min: payload.years?.[0],
+      max: payload.years?.[payload.years.length - 1],
+    },
+    yAxis: {
+      type: 'value',
+      name: '平均 CAR',
+      axisLabel: { formatter: v => (v * 100).toFixed(1) + '%' },
+      splitLine: { lineStyle: { type: 'dashed' } },
+    },
+    series: ecSeries,
+  };
+}
+
+
 const CHART_OPTION_BUILDERS = {
   car_path: buildCarPathOption,
   price_pressure: buildPricePressureOption,
   car_heatmap: buildCarHeatmapOption,
+  gap_decomposition: buildGapDecompositionOption,
+  heterogeneity_size: buildHeterogeneitySizeOption,
+  time_series_rolling: buildTimeSeriesRollingOption,
 };
 
 // ── controller ──────────────────────────────────────────────────────

@@ -196,12 +196,164 @@ def build_car_heatmap_chart_data(root: Path) -> dict:
     }
 
 
+# ── 4. Gap decomposition chart ───────────────────────────────────────
+
+GAP_SEGMENTS: tuple[str, ...] = (
+    "announce_jump",
+    "gap_drift",
+    "effective_jump",
+    "post_effective_reversal",
+)
+GAP_SEGMENT_LABELS = {
+    "announce_jump": "公告跳",
+    "gap_drift": "空窗漂移",
+    "effective_jump": "生效跳",
+    "post_effective_reversal": "生效后反转",
+}
+
+
+def build_gap_decomposition_chart_data(root: Path) -> dict:
+    """Build ECharts data for the announce → gap → effective decomposition.
+
+    Returns a grouped-bar payload keyed on market with 4 segments per market.
+    """
+    summary_path = root / "results" / "real_tables" / "cma_gap_summary.csv"
+    if not summary_path.exists():
+        return {"markets": [], "segments": [], "series": []}
+
+    summary = pd.read_csv(summary_path)
+    summary = summary.loc[summary["metric"].isin(GAP_SEGMENTS)].copy()
+    if summary.empty:
+        return {"markets": [], "segments": [], "series": []}
+
+    pivot = summary.pivot_table(
+        index="market", columns="metric", values="mean", aggfunc="first"
+    ).reindex(columns=list(GAP_SEGMENTS))
+    markets = list(pivot.index)
+    segments = list(GAP_SEGMENTS)
+
+    series = []
+    for segment in segments:
+        if segment not in pivot.columns:
+            continue
+        data = []
+        for market in markets:
+            value = pivot.loc[market, segment]
+            data.append(round(float(value), 6) if pd.notna(value) else 0.0)
+        series.append(
+            {
+                "name": GAP_SEGMENT_LABELS.get(segment, segment),
+                "type": "bar",
+                "data": data,
+                "segment": segment,
+            }
+        )
+
+    return {
+        "markets": [MARKET_LABELS.get(m, m) for m in markets],
+        "raw_markets": markets,
+        "segments": [GAP_SEGMENT_LABELS.get(s, s) for s in segments],
+        "series": series,
+    }
+
+
+# ── 5. Heterogeneity (size buckets) ──────────────────────────────────
+
+
+def build_heterogeneity_size_chart_data(root: Path) -> dict:
+    """Build ECharts data for the size-bucket asymmetry-index matrix.
+
+    Returns one series per market with bucket-sorted asymmetry values.
+    """
+    path = root / "results" / "real_tables" / "cma_heterogeneity_size.csv"
+    if not path.exists():
+        return {"buckets": [], "series": []}
+
+    df = pd.read_csv(path)
+    if "asymmetry_index" not in df.columns:
+        return {"buckets": [], "series": []}
+
+    buckets = sorted(df["bucket"].dropna().unique().tolist())
+    series = []
+    for market, group in df.groupby("market", dropna=False):
+        ordered = group.set_index("bucket").reindex(buckets)
+        data = [
+            round(float(v), 4) if pd.notna(v) else None
+            for v in ordered["asymmetry_index"]
+        ]
+        n_events_col = ordered.get("n_events")
+        n_events = (
+            [int(v) if pd.notna(v) else 0 for v in n_events_col]
+            if n_events_col is not None
+            else [0] * len(buckets)
+        )
+        series.append(
+            {
+                "name": MARKET_LABELS.get(market, market),
+                "type": "bar",
+                "data": data,
+                "n_events": n_events,
+                "color": MARKET_COLORS.get(market, "#30424f"),
+                "market": market,
+            }
+        )
+
+    return {"buckets": buckets, "series": series}
+
+
+# ── 6. Time-series rolling CAR ───────────────────────────────────────
+
+
+def build_time_series_rolling_chart_data(root: Path) -> dict:
+    """Build ECharts data for rolling CAR by market × phase over years."""
+    path = root / "results" / "real_tables" / "cma_time_series_rolling.csv"
+    if not path.exists():
+        return {"series": [], "years": []}
+
+    df = pd.read_csv(path)
+    required = {"market", "event_phase", "car_mean", "window_end_year"}
+    if not required.issubset(df.columns):
+        return {"series": [], "years": []}
+
+    series = []
+    for (market, phase), group in df.groupby(["market", "event_phase"], dropna=False):
+        group = group.sort_values("window_end_year")
+        label = f"{MARKET_LABELS.get(market, market)} {PHASE_LABELS.get(phase, phase)}"
+        data = []
+        for _, r in group.iterrows():
+            year = int(r["window_end_year"])
+            car = round(float(r["car_mean"]), 6)
+            data.append([year, car])
+        series.append(
+            {
+                "name": label,
+                "type": "line",
+                "data": data,
+                "color": MARKET_COLORS.get(market, "#30424f"),
+                "lineStyle": {
+                    "type": "solid" if phase == "announce" else "dashed",
+                    "width": 2.2,
+                },
+                "symbol": "circle",
+                "symbolSize": 7,
+                "market": market,
+                "phase": phase,
+            }
+        )
+
+    years = sorted({int(y) for s in series for y, _ in s["data"]})
+    return {"series": series, "years": years}
+
+
 # ── Registry ─────────────────────────────────────────────────────────
 
 CHART_BUILDERS: dict[str, callable] = {
     "car_path": build_car_path_chart_data,
     "price_pressure": build_price_pressure_chart_data,
     "car_heatmap": build_car_heatmap_chart_data,
+    "gap_decomposition": build_gap_decomposition_chart_data,
+    "heterogeneity_size": build_heterogeneity_size_chart_data,
+    "time_series_rolling": build_time_series_rolling_chart_data,
 }
 
 

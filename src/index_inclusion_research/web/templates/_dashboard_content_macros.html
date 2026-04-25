@@ -188,8 +188,18 @@
   {% if cma_section.figures %}
   <div class="cma-figures library-panels">
     {% for name, src in cma_section.figures.items() %}
+    {% set chart_id = cma_section.figure_echart_ids.get(name) if cma_section.figure_echart_ids else None %}
     <figure class="result-card cma-figure">
+      {% if chart_id %}
+      <div class="echart-panel">
+        <div data-echart="{{ chart_id }}" class="echart-container echart-container-wide"></div>
+      </div>
+      <div class="echart-fallback">
+      {% endif %}
       <img src="{{ url_for('serve_result_file', subpath=src) }}" alt="{{ name }}" loading="lazy" decoding="async">
+      {% if chart_id %}
+      </div>
+      {% endif %}
       <figcaption>{{ name }}</figcaption>
     </figure>
     {% endfor %}
