@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import pandas as pd
 
@@ -111,6 +113,27 @@ def test_assemble_mechanism_comparison_table_schema():
     assert len(tbl) == 60
 
 
+def test_render_mechanism_heatmap_handles_all_nan_pivot(tmp_path):
+    df = pd.DataFrame(
+        [
+            {
+                "market": m,
+                "event_phase": p,
+                "outcome": o,
+                "spec": "no_fe",
+                "t": float("nan"),
+            }
+            for m in ("CN", "US")
+            for p in ("announce", "effective")
+            for o in ("car_1_1", "turnover_change")
+        ]
+    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        out = render_mechanism_heatmap(df, output_dir=tmp_path)
+    assert out.exists()
+
+
 def test_render_mechanism_heatmap_writes_png(tmp_path):
     df = pd.DataFrame(
         [
@@ -128,6 +151,80 @@ def test_render_mechanism_heatmap_writes_png(tmp_path):
     )
     out = render_mechanism_heatmap(df, output_dir=tmp_path)
     assert out.exists()
+
+
+def test_estimate_quadrant_regression_returns_empty_when_underdetermined():
+    panel = pd.DataFrame(
+        [
+            {
+                "market": "CN",
+                "event_phase": "announce",
+                "treatment_group": 1,
+                "car_1_1": 0.01,
+                "log_mktcap_pre": 20.0,
+                "pre_turnover": 0.02,
+            },
+            {
+                "market": "CN",
+                "event_phase": "announce",
+                "treatment_group": 0,
+                "car_1_1": 0.02,
+                "log_mktcap_pre": 20.5,
+                "pre_turnover": 0.03,
+            },
+        ]
+    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        result = estimate_quadrant_regression(
+            panel,
+            market="CN",
+            event_phase="announce",
+            outcome="car_1_1",
+            spec="controls",
+        )
+    assert np.isnan(result["coef"])
+    assert np.isnan(result["se"])
+    assert result["n_obs"] == 2
+
+
+def test_estimate_quadrant_regression_skips_constant_outcome():
+    panel = pd.DataFrame(
+        [
+            {
+                "market": "CN",
+                "event_phase": "announce",
+                "treatment_group": t,
+                "car_1_1": 0.01,
+                "log_mktcap_pre": 20.0 + 0.1 * i,
+                "pre_turnover": 0.02 + 0.001 * i,
+            }
+            for i, t in enumerate([1, 0, 1, 0, 1, 0])
+        ]
+    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        result = estimate_quadrant_regression(
+            panel,
+            market="CN",
+            event_phase="announce",
+            outcome="car_1_1",
+            spec="no_fe",
+        )
+    assert np.isnan(result["coef"])
+    assert result["n_obs"] == 6
+
+
+def test_assemble_mechanism_comparison_table_emits_no_runtime_warnings():
+    raw = _make_matched_panel()
+    panel = build_mechanism_panel(raw)
+    panel_us = panel.copy()
+    panel_us["market"] = "US"
+    all_panel = pd.concat([panel, panel_us], ignore_index=True)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        tbl = assemble_mechanism_comparison_table(all_panel)
+    assert len(tbl) == 60
 
 
 def test_export_mechanism_tables_writes_csv_and_tex(tmp_path):
