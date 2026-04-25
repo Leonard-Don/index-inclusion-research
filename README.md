@@ -373,6 +373,19 @@ index-inclusion-reconstruct-hs300-rdd \
 
 这条路径会用当前 CSI300 成分股、后续真实调样批次回滚、以及公开价格/总股本代理口径，优先重建当前事件源里“可以稳定回滚”的连续批次后缀；如果只想做单批次，也可以改用 `--announce-date 2024-05-31`。它适合课程论文、方法复现和公开数据版本的稳健性补充，但不应表述为中证官方历史候选排名表。
 
+如果你已经准备去采集 L3 正式候选样本（中证官方 / 公告附件 / 人工摘录），可以先生成一份采集包,把每个批次需要哪些字段、用哪条命令验收和写入都列清楚:
+
+```bash
+index-inclusion-plan-hs300-rdd-l3 --force
+```
+
+它默认读 `data/raw/hs300_rdd_candidates.reconstructed.csv` 作为参考批次,在 `results/literature/hs300_rdd_l3_collection/` 下生成:
+
+- `batch_collection_checklist.csv`：每批次的 `acceptance_command` / `write_command` / `refresh_command` 三条建议命令
+- `formal_candidate_template.csv`：可以直接补字段写正式候选名单的模板
+- `boundary_reference.csv`：每批次 cutoff 附近的参考排名快照
+- `collection_plan.md`：人类可读的采集计划摘要
+
 下面这些命令都推荐优先使用包内 CLI。它们和脚本入口一样都支持 `--profile auto|sample|real`，默认会自动优先走 real 工作流；如果你想显式生成 sample 版本，可以在相应命令后加 `--profile sample`。
 
 ### 3. 清洗事件样本
@@ -496,9 +509,11 @@ index-inclusion-identification
 index-inclusion-hs300-rdd
 index-inclusion-prepare-hs300-rdd
 index-inclusion-reconstruct-hs300-rdd
+index-inclusion-plan-hs300-rdd-l3
+index-inclusion-cma
 ```
 
-前五个分别覆盖清洗事件、构面板、匹配对照、事件研究和回归；接着四个分别覆盖示例数据、真实数据、图表表格导出和研究摘要；中间四个对应 dashboard 与三条研究主线；最后三个分别对应 HS300 RDD 运行、候选样本导入和公开口径重建。所有入口均通过 `pyproject.toml` 的 console scripts 或 `python3 -m index_inclusion_research.<module>` 调用。
+前五个分别覆盖清洗事件、构面板、匹配对照、事件研究和回归；接着四个分别覆盖示例数据、真实数据、图表表格导出和研究摘要；中间四个对应 dashboard 与三条研究主线；接下来四个分别对应 HS300 RDD 运行、候选样本导入、公开口径重建和 L3 正式样本采集计划；最后一个是跨市场不对称（CMA）扩展。所有入口均通过 `pyproject.toml` 的 console scripts 或 `python3 -m index_inclusion_research.<module>` 调用。
 
 ## 开发与验证
 
@@ -551,7 +566,8 @@ index-inclusion-cma
 
 产出：
 
-- `results/real_tables/cma_*.csv`（ar/car path、window summary、gap event/summary、mechanism panel、4 个 heterogeneity 维度、rolling、break、hypothesis map）
+- `results/real_tables/cma_*.csv`（ar/car path、window summary、gap event/summary、mechanism panel、4 个 heterogeneity 维度、rolling、break、hypothesis map、hypothesis verdicts）
+- `results/real_tables/cma_hypothesis_verdicts.csv`：每条机制假设的 verdict（`支持` / `部分支持` / `反对` / `待补数据`）+ confidence + 下一步建议；dashboard 在 demo / full 模式下渲染成 verdict 卡片
 - `results/real_tables/cma_mechanism_panel.tex`（论文可直接插入）
 - `results/real_figures/cma_*.png`（7 张主图）
 - `results/real_tables/research_summary.md` 新增章节"六、美股 vs A股 不对称"（幂等追加，不会重复）
