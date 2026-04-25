@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import matplotlib
@@ -9,6 +10,8 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 import statsmodels.api as sm  # noqa: E402
+
+logger = logging.getLogger(__name__)
 
 PRICE_LIMIT_THRESHOLD = 0.099
 
@@ -131,10 +134,19 @@ def estimate_quadrant_regression(
         X = pd.concat([X, sector_dummies], axis=1)
     X = sm.add_constant(X, has_constant="add")
     y = sub[outcome].astype(float)
+    n_obs = len(sub)
+    # HC3 needs leverage h<1 for every obs, which fails if n_obs <= n_params;
+    # require >=2 residual df. Constant y also kills R² (centered_tss==0).
+    if n_obs <= X.shape[1] + 1 or float(y.var(ddof=0)) == 0.0:
+        return {**empty_result, "n_obs": n_obs}
     try:
         model = sm.OLS(y, X).fit(cov_type="HC3")
-    except Exception:  # noqa: BLE001
-        return empty_result
+    except (np.linalg.LinAlgError, ValueError) as exc:
+        logger.debug(
+            "OLS fit failed for %s/%s/%s/%s: %s",
+            market, event_phase, outcome, spec, exc,
+        )
+        return {**empty_result, "n_obs": n_obs}
     return {
         "market": market,
         "event_phase": event_phase,
@@ -183,12 +195,16 @@ def render_mechanism_heatmap(
         index="outcome", columns="quadrant", values="t", aggfunc="first"
     )
     fig, ax = plt.subplots(figsize=(9, 5))
-    im = ax.imshow(pivot.values, cmap="RdBu_r", vmin=-5, vmax=5, aspect="auto")
-    ax.set_xticks(range(len(pivot.columns)))
-    ax.set_xticklabels(pivot.columns, rotation=30, ha="right")
-    ax.set_yticks(range(len(pivot.index)))
-    ax.set_yticklabels(pivot.index)
-    fig.colorbar(im, ax=ax, label="treatment t-stat")
+    if pivot.empty or pivot.isna().all().all():
+        ax.text(0.5, 0.5, "no data", ha="center", va="center", transform=ax.transAxes)
+        ax.set_axis_off()
+    else:
+        im = ax.imshow(pivot.values, cmap="RdBu_r", vmin=-5, vmax=5, aspect="auto")
+        ax.set_xticks(range(len(pivot.columns)))
+        ax.set_xticklabels(pivot.columns, rotation=30, ha="right")
+        ax.set_yticks(range(len(pivot.index)))
+        ax.set_yticklabels(pivot.index)
+        fig.colorbar(im, ax=ax, label="treatment t-stat")
     ax.set_title(f"Mechanism signed-t heatmap ({spec})")
     fig.tight_layout()
     out_path = output_dir / "cma_mechanism_heatmap.png"
