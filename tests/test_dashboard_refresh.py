@@ -83,6 +83,157 @@ def test_build_dashboard_snapshot_meta_uses_latest_timestamp(tmp_path: Path) -> 
     assert meta["label"] == datetime.fromtimestamp(newer_ts, tz=UTC).astimezone().strftime("%Y-%m-%d %H:%M")
 
 
+def test_build_result_health_reports_missing_and_stale_outputs(tmp_path: Path) -> None:
+    for relative in [
+        "results/real_tables/event_study_summary.csv",
+        "results/real_tables/regression_coefficients.csv",
+        "results/real_tables/results_manifest.csv",
+        "results/literature/hs300_rdd/rdd_status.csv",
+        "results/real_tables/research_summary.md",
+    ]:
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("x\n", encoding="utf-8")
+
+    health = dashboard_refresh.build_result_health(
+        tmp_path,
+        to_relative=lambda path: str(path.relative_to(tmp_path)),
+        contract_check={
+            "manifest_exists": True,
+            "manifest_path": "results/real_tables/results_manifest.csv",
+            "manifest_profile": "real",
+            "matches": True,
+            "mismatched_fields": [],
+            "live_status": {"mode": "reconstructed", "generated_at": "2026-04-22T13:00:46+08:00"},
+            "manifest": {"rdd_mode": "reconstructed", "rdd_generated_at": "2026-04-18T22:52:43+08:00"},
+        },
+    )
+
+    assert health["health_status_label"] == "结果健康缺项"
+    assert "index-inclusion-cma" in health["health_commands"]
+    checks = {item["label"]: item for item in health["health_checks"]}
+    assert checks["CMA 假说裁决"]["status"] == "missing"
+    assert checks["RDD L3 正式样本"]["status"] == "missing"
+    assert checks["RDD 状态新鲜度"]["status"] == "warning"
+
+
+def test_build_result_health_guides_l3_collection_package_when_reconstructed_sample_exists(tmp_path: Path) -> None:
+    for relative in [
+        "results/real_tables/event_study_summary.csv",
+        "results/real_tables/regression_coefficients.csv",
+        "results/real_tables/results_manifest.csv",
+        "results/literature/hs300_rdd/rdd_status.csv",
+        "results/real_tables/research_summary.md",
+        "results/real_tables/cma_hypothesis_verdicts.csv",
+        "data/raw/hs300_rdd_candidates.reconstructed.csv",
+    ]:
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("x\n", encoding="utf-8")
+
+    health = dashboard_refresh.build_result_health(
+        tmp_path,
+        to_relative=lambda path: str(path.relative_to(tmp_path)),
+        contract_check={
+            "manifest_exists": True,
+            "manifest_path": "results/real_tables/results_manifest.csv",
+            "manifest_profile": "real",
+            "matches": True,
+            "mismatched_fields": [],
+            "live_status": {"mode": "reconstructed", "generated_at": "2026-04-22T13:00:46+08:00"},
+            "manifest": {"rdd_mode": "reconstructed", "rdd_generated_at": "2026-04-22T13:00:46+08:00"},
+        },
+    )
+
+    checks = {item["label"]: item for item in health["health_checks"]}
+    assert health["health_status_label"] == "结果健康需关注"
+    assert checks["RDD L3 正式样本"]["status"] == "warning"
+    assert "index-inclusion-plan-hs300-rdd-l3" in checks["RDD L3 正式样本"]["command"]
+
+    for relative in [
+        "results/literature/hs300_rdd_l3_collection/collection_plan.md",
+        "results/literature/hs300_rdd_l3_collection/batch_collection_checklist.csv",
+        "results/literature/hs300_rdd_l3_collection/formal_candidate_template.csv",
+        "results/literature/hs300_rdd_l3_collection/boundary_reference.csv",
+    ]:
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("x\n", encoding="utf-8")
+
+    health_with_package = dashboard_refresh.build_result_health(
+        tmp_path,
+        to_relative=lambda path: str(path.relative_to(tmp_path)),
+        contract_check={
+            "manifest_exists": True,
+            "manifest_path": "results/real_tables/results_manifest.csv",
+            "manifest_profile": "real",
+            "matches": True,
+            "mismatched_fields": [],
+            "live_status": {"mode": "reconstructed", "generated_at": "2026-04-22T13:00:46+08:00"},
+            "manifest": {"rdd_mode": "reconstructed", "rdd_generated_at": "2026-04-22T13:00:46+08:00"},
+        },
+    )
+
+    package_check = {item["label"]: item for item in health_with_package["health_checks"]}["RDD L3 正式样本"]
+    assert package_check["status"] == "warning"
+    assert "L3 采集包已就绪" in package_check["copy"]
+    assert "collection_plan.md" in package_check["copy"]
+    assert "boundary_reference.csv" in package_check["copy"]
+    assert "index-inclusion-prepare-hs300-rdd" in package_check["command"]
+
+
+def test_build_result_health_reports_good_status(tmp_path: Path) -> None:
+    for relative in [
+        "results/real_tables/event_study_summary.csv",
+        "results/real_tables/regression_coefficients.csv",
+        "results/real_tables/results_manifest.csv",
+        "results/literature/hs300_rdd/rdd_status.csv",
+        "results/real_tables/research_summary.md",
+    ]:
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("x\n", encoding="utf-8")
+    verdict_path = tmp_path / "results/real_tables/cma_hypothesis_verdicts.csv"
+    verdict_path.write_text(
+        "hid,name_cn,verdict\n"
+        "H1,a,支持\n"
+        "H2,b,待补数据\n"
+        "H3,c,支持\n"
+        "H4,d,部分支持\n"
+        "H5,e,证据不足\n"
+        "H6,f,部分支持\n",
+        encoding="utf-8",
+    )
+    l3_path = tmp_path / "data/raw/hs300_rdd_candidates.csv"
+    l3_path.parent.mkdir(parents=True, exist_ok=True)
+    l3_path.write_text("batch_id,market,index_name,ticker,security_name,announce_date,effective_date,running_variable,cutoff,inclusion\n", encoding="utf-8")
+
+    health = dashboard_refresh.build_result_health(
+        tmp_path,
+        to_relative=lambda path: str(path.relative_to(tmp_path)),
+        contract_check={
+            "manifest_exists": True,
+            "manifest_path": "results/real_tables/results_manifest.csv",
+            "manifest_profile": "real",
+            "matches": True,
+            "mismatched_fields": [],
+            "live_status": {
+                "mode": "real",
+                "source_kind": "real",
+                "generated_at": "2026-04-22T13:00:46+08:00",
+                "candidate_rows": 2,
+                "candidate_batches": 1,
+            },
+            "manifest": {"rdd_mode": "real", "rdd_generated_at": "2026-04-22T13:00:46+08:00"},
+        },
+    )
+
+    assert health["health_status_label"] == "结果健康良好"
+    assert health["health_commands"] == []
+    checks = {item["label"]: item for item in health["health_checks"]}
+    assert checks["RDD L3 正式样本"]["status"] == "ok"
+
+
 def test_refresh_status_payload_reports_duration_error_and_redirect() -> None:
     failed_payload = dashboard_refresh.refresh_status_payload(
         {
@@ -124,6 +275,12 @@ def test_refresh_status_payload_reports_duration_error_and_redirect() -> None:
             "live_status": {"mode": "reconstructed"},
             "manifest": {"rdd_mode": "reconstructed"},
         },
+        result_health={
+            "health_status_label": "结果健康良好",
+            "health_status_copy": "ok",
+            "health_checks": [],
+            "health_commands": [],
+        },
         redirect_url_builder=lambda mode, anchor, open_panels: f"/?mode={mode}#{anchor}",
         now_ts=170.0,
     )
@@ -137,6 +294,7 @@ def test_refresh_status_payload_reports_duration_error_and_redirect() -> None:
     assert failed_payload["contract_status_label"] == "结果状态已同步"
     assert failed_payload["artifact_summary_label"] == "本次刷新未完成"
     assert "结果状态：结果状态已同步" in failed_payload["artifact_summary_copy"]
+    assert failed_payload["health_status_label"] == "结果健康良好"
     assert failed_payload["updated_artifacts"] == []
 
     success_payload = dashboard_refresh.refresh_status_payload(

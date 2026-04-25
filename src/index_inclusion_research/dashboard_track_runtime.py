@@ -30,6 +30,7 @@ from index_inclusion_research.dashboard_types import (
     RddContractCheck,
     RddStatus,
     RenderedTable,
+    ResultHealth,
     SecondarySection,
     SnapshotMeta,
     SupplementResult,
@@ -151,6 +152,13 @@ class DashboardTrackRuntime:
             self.root,
             to_relative=self.safe_relative,
             snapshot_files=snapshot_files,
+        )
+
+    def build_result_health(self) -> ResultHealth:
+        return dashboard_refresh.build_result_health(
+            self.root,
+            to_relative=self.safe_relative,
+            contract_check=self.load_rdd_contract_check(),
         )
 
     # --- content loaders --------------------------------------------------------

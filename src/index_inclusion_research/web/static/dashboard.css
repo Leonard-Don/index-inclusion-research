@@ -396,6 +396,26 @@
       color: var(--muted);
       font-size: 11px;
     }
+    .refresh-status-artifact-item code {
+      flex: 0 0 auto;
+      max-width: min(280px, 45%);
+      padding: 4px 7px;
+      border-radius: 8px;
+      background: rgba(24,33,43,0.06);
+      color: #314252;
+      font-size: 11px;
+      line-height: 1.35;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+    .refresh-status-artifact-item[data-health-status="missing"] {
+      border-color: rgba(166,59,40,0.18);
+      background: rgba(166,59,40,0.07);
+    }
+    .refresh-status-artifact-item[data-health-status="warning"] {
+      border-color: rgba(184,138,45,0.22);
+      background: rgba(184,138,45,0.08);
+    }
     .refresh-status[data-state="running"] {
       background: rgba(15,92,110,0.10);
       border-color: rgba(15,92,110,0.20);
@@ -2680,6 +2700,80 @@
       gap: 18px;
       align-items: start;
       min-width: 0;
+    }
+    .cma-verdict-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 14px;
+      margin: 18px 0;
+      min-width: 0;
+    }
+    .cma-verdict-card {
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+    .cma-verdict-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .cma-verdict-head h3 {
+      margin: 3px 0 0;
+      font-size: 18px;
+      line-height: 1.22;
+      color: #203040;
+    }
+    .cma-verdict-id {
+      color: #7b6344;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+    }
+    .cma-verdict-badge {
+      flex: 0 0 auto;
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: rgba(15, 92, 110, 0.11);
+      color: #0f5c6e;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .cma-verdict-card[data-verdict="支持"] .cma-verdict-badge {
+      background: rgba(15, 92, 110, 0.14);
+    }
+    .cma-verdict-card[data-verdict="待补数据"] .cma-verdict-badge {
+      background: rgba(95, 107, 120, 0.13);
+      color: #4d5964;
+    }
+    .cma-verdict-card[data-verdict="证据不足"] .cma-verdict-badge {
+      background: rgba(166, 59, 40, 0.12);
+      color: #8d3325;
+    }
+    .cma-verdict-summary,
+    .cma-verdict-metric,
+    .cma-verdict-next {
+      margin: 0;
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+    }
+    .cma-verdict-summary {
+      color: #243545;
+      font-size: 14px;
+    }
+    .cma-verdict-metric {
+      color: var(--muted);
+      font-size: 12.5px;
+      font-variant-numeric: tabular-nums;
+    }
+    .cma-verdict-next {
+      padding-top: 10px;
+      border-top: 1px solid rgba(24,33,43,0.08);
+      color: #475666;
+      font-size: 12.5px;
     }
     .section-summary-grid {
       display: grid;

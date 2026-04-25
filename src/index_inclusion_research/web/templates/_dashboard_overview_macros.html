@@ -102,6 +102,9 @@
       {{ refresh_meta.contract_status_label or "—" }}
       {% endif %}
     </div>
+    <div class="refresh-status-summary-pill" data-refresh-health-summary>
+      {{ refresh_meta.health_status_label or "—" }}
+    </div>
   </div>
   <div class="hero-status-inline">
     <div class="hero-status-inline-item">
@@ -160,6 +163,23 @@
           <li class="refresh-status-artifact-item">
             <span>{{ item.path }}</span>
             <time>{{ item.modified_at }}</time>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="refresh-status-artifacts" data-refresh-health>
+        <div class="refresh-status-artifacts-label">结果健康</div>
+        <div class="refresh-status-artifacts-summary">
+          <div class="refresh-status-artifacts-value" data-refresh-health-label>{{ refresh_meta.health_status_label or "—" }}</div>
+          <div class="refresh-status-artifacts-copy" data-refresh-health-copy>{{ refresh_meta.health_status_copy or "—" }}</div>
+        </div>
+        <ul class="refresh-status-artifact-list" data-refresh-health-list {% if not refresh_meta.health_checks %}hidden{% endif %}>
+          {% for item in refresh_meta.health_checks %}
+          <li class="refresh-status-artifact-item" data-health-status="{{ item['status'] }}">
+            <span>{{ item['label'] }} · {{ item['copy'] }}</span>
+            {% if item['command'] %}
+            <code>{{ item['command'] }}</code>
+            {% endif %}
           </li>
           {% endfor %}
         </ul>

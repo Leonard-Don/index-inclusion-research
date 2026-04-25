@@ -103,6 +103,29 @@
 {% endif %}
 {%- endmacro %}
 
+{% macro render_cma_verdict_cards(payload, mode) -%}
+{% if payload and payload.rows %}
+<div class="cma-verdict-grid">
+  {% for verdict in payload.rows %}
+  <article class="result-card cma-verdict-card" data-verdict="{{ verdict.verdict }}">
+    <div class="cma-verdict-head">
+      <div>
+        <div class="cma-verdict-id">{{ verdict.hid }}</div>
+        <h3>{{ verdict.name_cn }}</h3>
+      </div>
+      <span class="cma-verdict-badge">{{ verdict.verdict }}</span>
+    </div>
+    <p class="cma-verdict-summary">{{ verdict.evidence_summary }}</p>
+    <p class="cma-verdict-metric">{{ verdict.metric_snapshot }}</p>
+    {% if mode == 'full' and verdict.next_step %}
+    <p class="cma-verdict-next">{{ verdict.next_step }}</p>
+    {% endif %}
+  </article>
+  {% endfor %}
+</div>
+{% endif %}
+{%- endmacro %}
+
 {% macro render_cma_section(mode, cma_section) -%}
 {% if cma_section %}
 <section class="section" id="cross_market_asymmetry" data-waypoint data-waypoint-kind="section" data-waypoint-label="美股 vs A股 不对称">
@@ -152,6 +175,10 @@
   </ul>
   {% endif %}
 
+  {% if mode != 'brief' and cma_section.hypothesis_verdicts and cma_section.hypothesis_verdicts.rows %}
+  {{ render_cma_verdict_cards(cma_section.hypothesis_verdicts, mode) }}
+  {% endif %}
+
   {% if cma_section.figures %}
   <div class="cma-figures library-panels">
     {% for name, src in cma_section.figures.items() %}
@@ -198,6 +225,7 @@
   {% if mode == 'full' and cma_section.detail_tables %}
   <div class="cma-detail-stack">
     {{ render_cma_collapsible_table(cma_section.detail_tables.window_summary_all, '窗口摘要全集（6 窗口 × 4 象限）') }}
+    {{ render_cma_collapsible_table(cma_section.detail_tables.hypothesis_verdicts, '假说裁决全集（H1–H6）') }}
     {{ render_cma_collapsible_table(cma_section.detail_tables.mechanism_panel, '机制回归面板（4 象限 × 5 outcome × 3 规格）') }}
     {{ render_cma_collapsible_table(cma_section.detail_tables.heterogeneity_size, '异质性 · 市值五分位') }}
     {{ render_cma_collapsible_table(cma_section.detail_tables.heterogeneity_liquidity, '异质性 · 流动性五分位') }}
