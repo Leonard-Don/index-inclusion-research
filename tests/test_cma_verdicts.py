@@ -210,6 +210,67 @@ def test_h1_falls_back_to_single_market_significance_when_bootstrap_missing() ->
     assert "bootstrap" not in h1["metric_snapshot"]
 
 
+def test_h4_upgrades_to_full_support_when_regression_significant() -> None:
+    regression = {
+        "cn_coef": 0.025,
+        "cn_se": 0.008,
+        "cn_t": 3.1,
+        "cn_p_value": 0.002,
+        "gap_length_coef": 0.0001,
+        "gap_length_p_value": 0.45,
+        "n_obs": 430,
+        "r_squared": 0.04,
+    }
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+        gap_drift_regression=regression,
+    )
+    h4 = verdicts.set_index("hid").loc["H4"]
+    assert h4["verdict"] == "支持"
+    assert h4["confidence"] == "高"
+    assert "0.002" in h4["metric_snapshot"]
+    assert "regression" in h4["metric_snapshot"]
+
+
+def test_h4_downgrades_to_证据不足_when_regression_insignificant() -> None:
+    regression = {
+        "cn_coef": 0.005,
+        "cn_se": 0.012,
+        "cn_t": 0.4,
+        "cn_p_value": 0.69,
+        "gap_length_coef": 0.0,
+        "gap_length_p_value": 0.92,
+        "n_obs": 400,
+        "r_squared": 0.001,
+    }
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+        gap_drift_regression=regression,
+    )
+    h4 = verdicts.set_index("hid").loc["H4"]
+    assert h4["verdict"] == "证据不足"
+    assert "0.690" in h4["metric_snapshot"] or "0.69" in h4["metric_snapshot"]
+
+
+def test_h4_falls_back_to_summary_logic_when_regression_missing() -> None:
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+    )
+    h4 = verdicts.set_index("hid").loc["H4"]
+    # Fixture has CN > 0, US < 0, CN t=1.1 (not sig at 0.10) -> 部分支持/低
+    assert h4["verdict"] == "部分支持"
+    assert "regression" not in h4["metric_snapshot"]
+
+
 def test_export_hypothesis_verdicts_writes_csv(tmp_path) -> None:
     out = export_hypothesis_verdicts(
         output_dir=tmp_path,
