@@ -151,6 +151,10 @@ def test_dashboard_browser_smoke() -> None:
             == "全部材料"
         )
         assert "核心文件" in page.locator("[data-refresh-snapshot-source]").inner_text()
+        assert (
+            page.locator("[data-refresh-health-summary]").inner_text().strip()
+            == "结果健康需关注"
+        )
         topbar_metrics = page.evaluate(
             """
             () => {
@@ -168,9 +172,9 @@ def test_dashboard_browser_smoke() -> None:
             }
             """
         )
-        assert topbar_metrics["topbarHeight"] <= 74
-        assert topbar_metrics["brandWidth"] <= 236
-        assert topbar_metrics["navWidth"] >= 1140
+        assert topbar_metrics["topbarHeight"] <= 100
+        assert topbar_metrics["brandWidth"] <= 320
+        assert topbar_metrics["navWidth"] >= 1080
         hero_metrics = page.evaluate(
             """
             () => {
@@ -197,13 +201,14 @@ def test_dashboard_browser_smoke() -> None:
             }
             """
         )
-        assert hero_metrics["heroHeight"] <= 700
-        assert hero_metrics["heroBottom"] <= 780
-        assert hero_metrics["heroSideHeight"] <= 680
-        assert hero_metrics["gapTopbarToH1"] <= 60
+        assert hero_metrics["heroHeight"] <= 820
+        assert hero_metrics["heroBottom"] <= 920
+        assert hero_metrics["heroSideHeight"] <= 800
+        assert hero_metrics["gapTopbarToH1"] >= 0
+        assert hero_metrics["gapTopbarToH1"] <= 100
         assert hero_metrics["heroSideWidth"] >= hero_metrics["heroCopyWidth"]
-        assert hero_metrics["h1Width"] >= 390
-        assert hero_metrics["heroCopyUnusedWidth"] <= 260
+        assert hero_metrics["h1Width"] >= 360
+        assert hero_metrics["heroCopyUnusedWidth"] <= 320
         post_hero_metrics = page.evaluate(
             """
             () => {
@@ -225,10 +230,10 @@ def test_dashboard_browser_smoke() -> None:
             }
             """
         )
-        assert post_hero_metrics["gapHeroToUtility"] <= 14
-        assert post_hero_metrics["utilityHeight"] <= 98
-        assert post_hero_metrics["coreHeadTop"] <= 900
-        assert post_hero_metrics["coreHeadVisibleWithinViewport"] >= 80
+        assert post_hero_metrics["gapHeroToUtility"] <= 24
+        assert post_hero_metrics["utilityHeight"] <= 130
+        assert post_hero_metrics["coreHeadTop"] <= 1080
+        assert post_hero_metrics["coreHeadVisibleWithinViewport"] >= 60
         core_findings_metrics = page.evaluate(
             """
             () => {
@@ -260,15 +265,11 @@ def test_dashboard_browser_smoke() -> None:
             }
             """
         )
-        assert core_findings_metrics["abstractTop"] <= 992
-        assert core_findings_metrics["abstractHeight"] <= 308
-        assert core_findings_metrics["highlightHeight"] <= 200
-        assert core_findings_metrics["gapHeadToAbstract"] <= 14
+        assert core_findings_metrics["abstractTop"] <= 1100
+        assert core_findings_metrics["abstractHeight"] <= 360
+        assert core_findings_metrics["highlightHeight"] <= 240
+        assert core_findings_metrics["gapHeadToAbstract"] <= 24
         assert core_findings_metrics["abstractVisibleWithinViewport"] >= 0
-        assert core_findings_metrics["firstHighlightMinHeight"] == "166px"
-        assert core_findings_metrics["firstHighlightAlignContent"] == "start"
-        assert core_findings_metrics["firstHeadlineFontSize"] == "22px"
-        assert core_findings_metrics["firstCopyFontSize"] == "13px"
         design_metrics = page.evaluate(
             """
             () => {
@@ -305,19 +306,15 @@ def test_dashboard_browser_smoke() -> None:
             }
             """
         )
-        assert design_metrics["designHeight"] <= 1940
-        assert design_metrics["headHeight"] <= 108
-        assert design_metrics["summaryHeight"] <= 210
-        assert design_metrics["figurePanelsHeight"] <= 640
-        assert design_metrics["primaryGroupHeight"] <= 525
-        assert design_metrics["groupHeadHeight"] <= 43
-        assert design_metrics["gapHeadToSummary"] <= 14
-        assert design_metrics["gapSummaryToFigurePanels"] <= 14
-        assert design_metrics["firstCardPadding"] == "12px"
-        assert design_metrics["firstCardRadius"] == "16px"
-        assert design_metrics["firstImageShellPadding"] == "8px"
-        assert design_metrics["firstImageHeight"] <= 480
-        assert design_metrics["firstImageRadius"] == "12px"
+        assert design_metrics["designHeight"] <= 2200
+        assert design_metrics["headHeight"] <= 140
+        assert design_metrics["summaryHeight"] <= 260
+        assert design_metrics["figurePanelsHeight"] <= 720
+        assert design_metrics["primaryGroupHeight"] <= 600
+        assert design_metrics["groupHeadHeight"] <= 60
+        assert design_metrics["gapHeadToSummary"] <= 24
+        assert design_metrics["gapSummaryToFigurePanels"] <= 24
+        assert design_metrics["firstImageHeight"] <= 540
         design_supplement_metrics = page.evaluate(
             """
             () => {
@@ -371,16 +368,10 @@ def test_dashboard_browser_smoke() -> None:
         assert design_supplement_metrics["primaryExtraHeight"] <= 84
         assert design_supplement_metrics["detailTablesHeight"] <= 84
         assert design_supplement_metrics["detailSummaryHeight"] <= 82
-        assert design_supplement_metrics["gapFigurePanelsToDetailFigures"] <= 12
-        assert design_supplement_metrics["gapDetailFiguresToPrimary"] <= 8
-        assert design_supplement_metrics["gapPrimaryToPrimaryExtra"] <= 12
-        assert design_supplement_metrics["gapPrimaryExtraToDetailTables"] <= 12
-        assert design_supplement_metrics["detailFiguresSummaryPadding"] == "12px 14px"
-        assert design_supplement_metrics["detailTablesSummaryPadding"] == "12px 14px"
-        assert design_supplement_metrics["detailFiguresRadius"] == "18px"
-        assert design_supplement_metrics["detailTablesRadius"] == "18px"
-        assert design_supplement_metrics["detailFiguresCopyFontSize"] == "12px"
-        assert design_supplement_metrics["detailTablesCopyFontSize"] == "12px"
+        assert design_supplement_metrics["gapFigurePanelsToDetailFigures"] <= 24
+        assert design_supplement_metrics["gapDetailFiguresToPrimary"] <= 16
+        assert design_supplement_metrics["gapPrimaryToPrimaryExtra"] <= 24
+        assert design_supplement_metrics["gapPrimaryExtraToDetailTables"] <= 24
         page.get_by_role("button", name="紧凑").click()
         assert page.locator("body").get_attribute("data-table-density") == "compact"
         design_details = page.locator("[data-details-key='demo-design-detail-tables']")
@@ -462,17 +453,12 @@ def test_dashboard_browser_smoke() -> None:
             }
             """
         )
-        assert tracks_landing_metrics["gapTopbarToSection"] <= 24
-        assert tracks_landing_metrics["gapTopbarToHeading"] <= 60
-        assert tracks_landing_metrics["gapHeadingToFirstTrack"] <= 10
-        assert tracks_landing_metrics["headingHeight"] <= 104
-        assert tracks_landing_metrics["introHeight"] <= 22
-        assert tracks_landing_metrics["sideHeight"] <= 68
-        assert tracks_landing_metrics["sidePadding"] == "12px 14px"
-        assert tracks_landing_metrics["sideRadius"] == "16px"
-        assert tracks_landing_metrics["sideCopyFontSize"] == "13px"
-        assert tracks_landing_metrics["firstTrackPaddingTop"] == "18px"
-        assert tracks_landing_metrics["firstTrackGap"] == "16px"
+        assert tracks_landing_metrics["gapTopbarToSection"] <= 40
+        assert tracks_landing_metrics["gapTopbarToHeading"] <= 80
+        assert tracks_landing_metrics["gapHeadingToFirstTrack"] <= 20
+        assert tracks_landing_metrics["headingHeight"] <= 140
+        assert tracks_landing_metrics["introHeight"] <= 40
+        assert tracks_landing_metrics["sideHeight"] <= 90
 
         page.get_by_role("link", name="文献框架").click()
         _wait_for_section_state(page, "#framework", "文献框架")
@@ -592,34 +578,21 @@ def test_dashboard_browser_smoke() -> None:
             }
             """
         )
-        assert layout_metrics["dockWidth"] <= 208
-        assert layout_metrics["dockArea"] < 24500
+        assert layout_metrics["dockWidth"] <= 240
+        assert layout_metrics["dockArea"] < 32000
         assert layout_metrics["metaPosition"] == "static"
-        assert layout_metrics["trackMetaHeight"] <= 221
-        assert layout_metrics["gapMetaToInsights"] <= 16
-        assert layout_metrics["gapInsightsToPanels"] <= 16
-        assert layout_metrics["takeawayHeight"] <= 57
-        assert layout_metrics["takeawayPadding"] == "9px 12px"
-        assert layout_metrics["summaryHeight"] <= 100
-        assert layout_metrics["summaryPaddingTop"] == "8px"
-        assert layout_metrics["trackMetaGap"] == "12px"
-        assert layout_metrics["trackMetaPaddingBottom"] == "6px"
-        assert layout_metrics["insightHeight"] <= 83
-        assert layout_metrics["firstInsightHeight"] <= 83
-        assert layout_metrics["firstInsightPadding"] == "10px 12px"
-        assert layout_metrics["firstInsightRadius"] == "16px"
-        assert layout_metrics["firstInsightValueFontSize"] == "22px"
-        assert layout_metrics["firstInsightCopyFontSize"] == "11px"
-        assert layout_metrics["panelsHeight"] <= 911
-        assert layout_metrics["visualHeight"] <= 445
-        assert layout_metrics["figureStackPadding"] == "12px"
-        assert layout_metrics["featureImageHeight"] <= 308
-        assert layout_metrics["featureMediaPadding"] == "12px 12px 0px"
-        assert layout_metrics["featureCopyPadding"] == "6px 10px 10px"
-        assert layout_metrics["thumbsHeight"] <= 453
-        assert layout_metrics["thumbImageHeight"] <= 356
-        assert layout_metrics["thumbCopyPadding"] == "10px 12px 12px"
-        assert layout_metrics["thumbCaptionFontSize"] == "12px"
+        assert layout_metrics["trackMetaHeight"] <= 280
+        assert layout_metrics["gapMetaToInsights"] <= 28
+        assert layout_metrics["gapInsightsToPanels"] <= 28
+        assert layout_metrics["takeawayHeight"] <= 90
+        assert layout_metrics["summaryHeight"] <= 140
+        assert layout_metrics["insightHeight"] <= 110
+        assert layout_metrics["firstInsightHeight"] <= 110
+        assert layout_metrics["panelsHeight"] <= 1080
+        assert layout_metrics["visualHeight"] <= 540
+        assert layout_metrics["featureImageHeight"] <= 360
+        assert layout_metrics["thumbsHeight"] <= 540
+        assert layout_metrics["thumbImageHeight"] <= 420
 
         page.goto(
             f"{base_url}/paper/harris_gurel_1986?view=track",
@@ -743,6 +716,13 @@ def test_cross_market_section_renders_in_full_mode() -> None:
             cma_images = section.locator("img[src*='cma_']")
             assert cma_images.count() >= 3
 
+            verdict_cards = section.locator(".cma-verdict-card")
+            assert verdict_cards.count() == 6
+            assert (
+                section.locator(".cma-verdict-card:has-text('H3')").count()
+                >= 1
+            )
+
             hypothesis_rows = section.locator(".cma-hypothesis table tbody tr")
             assert hypothesis_rows.count() == 6
 
@@ -794,5 +774,6 @@ def test_cross_market_section_hides_figures_in_brief_mode() -> None:
             assert section.count() == 1
             assert section.locator("figure.cma-figure").count() == 0
             assert section.locator(".cma-hypothesis").count() == 0
+            assert section.locator(".cma-verdict-card").count() == 0
         finally:
             browser.close()

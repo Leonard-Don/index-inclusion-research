@@ -11,6 +11,7 @@ from . import (
     mechanism_panel,
     paths,
     time_series,
+    verdicts,
 )
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -24,7 +25,7 @@ APPEND_MARKER = "## 六、美股 vs A股 不对称"
 
 
 def _load_panel(path: Path) -> pd.DataFrame:
-    return pd.read_csv(path)
+    return pd.read_csv(path, low_memory=False)
 
 
 def _append_research_summary(
@@ -33,6 +34,7 @@ def _append_research_summary(
     window_summary: pd.DataFrame,
     gap_summary: pd.DataFrame,
     mechanism_table: pd.DataFrame,
+    hypothesis_verdicts: pd.DataFrame,
 ) -> None:
     lines: list[str] = ["", APPEND_MARKER, ""]
     lines.append("### 4 象限 CAR[-1,+1] 摘要")
@@ -70,6 +72,14 @@ def _append_research_summary(
         lines.append(
             f"- {row['market']} {row['event_phase']} {row['outcome']}：coef = `{coef:.4f}`，t = `{t:.2f}`"
         )
+    if not hypothesis_verdicts.empty:
+        lines.append("")
+        lines.append("### 假说裁决摘要")
+        for _, row in hypothesis_verdicts.iterrows():
+            lines.append(
+                f"- {row['hid']} {row['name_cn']}：{row['verdict']}（可信度：{row['confidence']}）。"
+                f"{row['evidence_summary']}"
+            )
 
     existing = ""
     if summary_path.exists():
@@ -146,6 +156,14 @@ def run_cma_pipeline(
     )
 
     hypotheses.export_hypothesis_map(output_dir=tables_dir)
+    hypothesis_verdicts = verdicts.build_hypothesis_verdicts(
+        gap_summary=gap_summary,
+        mechanism_panel=mech_table,
+        heterogeneity_size=het_tables.get("size", pd.DataFrame()),
+        time_series_rolling=rolling,
+        aum_frame=aum_frame,
+    )
+    hypothesis_verdicts.to_csv(tables_dir / "cma_hypothesis_verdicts.csv", index=False)
 
     if research_summary_path is not None:
         _append_research_summary(
@@ -153,6 +171,7 @@ def run_cma_pipeline(
             window_summary=window_summary,
             gap_summary=gap_summary,
             mechanism_table=mech_table,
+            hypothesis_verdicts=hypothesis_verdicts,
         )
 
     return {

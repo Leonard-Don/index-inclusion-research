@@ -10,6 +10,7 @@ def test_cma_subpackage_imports():
     assert hasattr(cma, "heterogeneity")
     assert hasattr(cma, "time_series")
     assert hasattr(cma, "hypotheses")
+    assert hasattr(cma, "verdicts")
     assert hasattr(cma, "orchestrator")
 
 
