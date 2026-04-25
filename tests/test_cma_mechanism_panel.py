@@ -188,6 +188,63 @@ def test_estimate_quadrant_regression_returns_empty_when_underdetermined():
     assert result["n_obs"] == 2
 
 
+def test_estimate_quadrant_regression_drops_rows_with_nan_in_controls():
+    # Mix treatment so kept rows still have both groups present.
+    treatments = [1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1]
+    panel = pd.DataFrame(
+        [
+            {
+                "market": "CN",
+                "event_phase": "announce",
+                "treatment_group": treatments[i],
+                "car_1_1": 0.01 + 0.005 * i,
+                "log_mktcap_pre": float("nan") if i % 2 == 0 else 20.0 + 0.1 * i,
+                "pre_turnover": 0.02 + 0.001 * i,
+            }
+            for i in range(len(treatments))
+        ]
+    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        result = estimate_quadrant_regression(
+            panel,
+            market="CN",
+            event_phase="announce",
+            outcome="car_1_1",
+            spec="controls",
+        )
+    # Should fit successfully on the 6 rows with finite controls
+    assert not np.isnan(result["coef"])
+    assert result["n_obs"] == 6
+
+
+def test_estimate_quadrant_regression_drops_rows_with_inf_in_controls():
+    panel = pd.DataFrame(
+        [
+            {
+                "market": "CN",
+                "event_phase": "announce",
+                "treatment_group": t,
+                "car_1_1": 0.01 + 0.005 * i,
+                "log_mktcap_pre": float("inf") if i == 0 else 20.0 + 0.1 * i,
+                "pre_turnover": 0.02 + 0.001 * i,
+            }
+            for i, t in enumerate([1, 0, 1, 0, 1, 0, 1, 0])
+        ]
+    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        result = estimate_quadrant_regression(
+            panel,
+            market="CN",
+            event_phase="announce",
+            outcome="car_1_1",
+            spec="controls",
+        )
+    assert not np.isnan(result["coef"])
+    assert result["n_obs"] == 7
+
+
 def test_estimate_quadrant_regression_skips_constant_outcome():
     panel = pd.DataFrame(
         [

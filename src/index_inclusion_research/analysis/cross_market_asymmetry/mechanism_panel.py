@@ -126,6 +126,12 @@ def estimate_quadrant_regression(
         for col in ("log_mktcap_pre", "pre_turnover"):
             if col in sub.columns and sub[col].notna().any():
                 design_cols.append(col)
+    # Drop rows whose design columns have NaN/inf — statsmodels' OLS rejects
+    # those before HC3 even runs ("exog contains inf or nans").
+    finite_design = np.isfinite(sub[design_cols].astype(float).to_numpy()).all(axis=1)
+    sub = sub.loc[finite_design].copy()
+    if sub.empty or sub["treatment_group"].nunique() < 2:
+        return {**empty_result, "n_obs": int(len(sub))}
     X = sub[design_cols].astype(float)
     if spec == "controls_fe" and "sector" in sub.columns:
         sector_dummies = pd.get_dummies(
