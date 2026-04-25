@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, cast
 
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 from index_inclusion_research.dashboard_media import build_figure_entry
 from index_inclusion_research.dashboard_types import (
@@ -183,7 +186,8 @@ def load_saved_tables(
         seen.add(key)
         try:
             frame = read_cached_csv(path)
-        except Exception:
+        except (OSError, ValueError, pd.errors.ParserError) as exc:
+            logger.warning("Skipping unreadable result table %s: %s", path, exc)
             continue
         tables.append((translate_label(key), render_table(frame)))
         if len(tables) >= max_tables:
@@ -197,7 +201,8 @@ def load_single_csv(output_dir: Path, filename: str) -> pd.DataFrame | None:
         return None
     try:
         return read_cached_csv(path)
-    except Exception:
+    except (OSError, ValueError, pd.errors.ParserError) as exc:
+        logger.warning("Skipping unreadable CSV %s: %s", path, exc)
         return None
 
 

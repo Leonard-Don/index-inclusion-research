@@ -1,21 +1,25 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import cast
 
 from index_inclusion_research.dashboard_types import FigureEntry, RelativePathBuilder
 
+logger = logging.getLogger(__name__)
+
 
 def read_image_dimensions(path: Path) -> tuple[int | None, int | None]:
     try:
-        from PIL import Image
+        from PIL import Image, UnidentifiedImageError
     except ImportError:
         return None, None
 
     try:
         with Image.open(path) as image:
             width, height = image.size
-    except Exception:
+    except (OSError, UnidentifiedImageError) as exc:
+        logger.debug("Could not read image dimensions for %s: %s", path, exc)
         return None, None
 
     if width <= 0 or height <= 0:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import math
 import re
 import time
@@ -13,6 +14,8 @@ import pandas as pd
 import requests
 import yfinance as yf
 from bs4 import BeautifulSoup
+
+logger = logging.getLogger(__name__)
 
 from index_inclusion_research.loaders import load_events, save_dataframe
 
@@ -211,7 +214,8 @@ def _fetch_metadata(yahoo_symbol: str, fallback_sector: str | None) -> SecurityM
     try:
         fast_info = ticker.fast_info
         shares = fast_info.get("shares")
-    except Exception:
+    except (KeyError, AttributeError, OSError, ValueError) as exc:
+        logger.debug("yfinance fast_info unavailable for %s: %s", yahoo_symbol, exc)
         shares = None
     return SecurityMetadata(
         yahoo_symbol=yahoo_symbol,
