@@ -80,6 +80,7 @@ class FigureEntry(TypedDict, total=False):
     layout_class: str
     width: int
     height: int
+    echart_id: str
 
 
 class RawFigureEntry(TypedDict, total=False):

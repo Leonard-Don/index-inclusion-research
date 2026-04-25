@@ -41,13 +41,15 @@ def significance_stars(p_value: float) -> str:
 
 
 def _price_pressure_figure_entry(path: Path, to_relative: RelativePathBuilder) -> FigureEntry:
-    return build_figure_entry(
+    entry = build_figure_entry(
         path,
         to_relative=to_relative,
         label="短窗口 CAR 时间变化图",
         caption="图意：按公告年份追踪调入事件的 CAR[-1,+1]。阅读重点：观察美股公告日效应是否随时间减弱，以及中国样本是否呈现不同的阶段性变化。",
         layout_class="wide",
     )
+    entry["echart_id"] = "price_pressure"
+    return entry
 
 
 def create_price_pressure_figures(
@@ -217,6 +219,14 @@ def _sample_design_figure_entries(target_dir: Path, to_relative: RelativePathBui
     main_path = target_dir / "main_regression_coefficients.png"
     mechanism_path = target_dir / "mechanism_regression_coefficients.png"
     match_path = target_dir / "match_diagnostics_overview.png"
+    heatmap_entry = build_figure_entry(
+            heatmap_path,
+            to_relative=to_relative,
+            label="真实样本短窗口 CAR 热力图",
+            caption="图意：把三组短窗口 CAR 压缩到同一张热力图中。阅读重点：优先比较美国公告日和中国生效日单元格的方向、幅度与显著性差异。",
+            layout_class="wide",
+        )
+    heatmap_entry["echart_id"] = "car_heatmap"
     return [
         build_figure_entry(
             timeline_path,
@@ -225,13 +235,7 @@ def _sample_design_figure_entries(target_dir: Path, to_relative: RelativePathBui
             caption="图意：按市场与事件阶段展开所有真实调入/调出事件。阅读重点：观察样本是否集中于少数批次，以及公告日与生效日是否在时间轴上形成清晰层次。",
             layout_class="wide",
         ),
-        build_figure_entry(
-            heatmap_path,
-            to_relative=to_relative,
-            label="真实样本短窗口 CAR 热力图",
-            caption="图意：把三组短窗口 CAR 压缩到同一张热力图中。阅读重点：优先比较美国公告日和中国生效日单元格的方向、幅度与显著性差异。",
-            layout_class="wide",
-        ),
+        heatmap_entry,
         build_figure_entry(
             main_path,
             to_relative=to_relative,

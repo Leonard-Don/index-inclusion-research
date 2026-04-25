@@ -3294,6 +3294,73 @@
       .support-deep-grid { grid-template-columns: 1fr; }
       .stat-row { grid-template-columns: 1fr; gap: 6px; }
     }
+
+    /* ── Interactive ECharts containers ─────────────────────────── */
+
+    .echart-panel {
+      margin: 16px 0 12px;
+    }
+    .echart-container {
+      width: 100%;
+      height: 420px;
+      min-height: 320px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.56);
+      border: 1px solid rgba(24, 33, 43, 0.08);
+      position: relative;
+      transition: box-shadow 240ms ease;
+    }
+    .echart-container:hover {
+      box-shadow: 0 4px 24px rgba(15, 92, 110, 0.08);
+    }
+    .echart-container-wide {
+      height: 480px;
+    }
+    .echart-loading::after {
+      content: "加载图表…";
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 14px;
+      letter-spacing: 0.04em;
+      pointer-events: none;
+    }
+    .echart-empty::after {
+      content: "暂无图表数据";
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .echart-error::after {
+      content: "图表加载失败，使用静态图";
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-2);
+      font-size: 14px;
+    }
+    .echart-fallback[hidden] {
+      display: none;
+    }
+    @media (max-width: 740px) {
+      .echart-container {
+        height: 320px;
+        min-height: 260px;
+      }
+      .echart-container-wide {
+        height: 360px;
+      }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
       *, *::before, *::after {
