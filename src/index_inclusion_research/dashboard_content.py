@@ -23,6 +23,7 @@ from index_inclusion_research.dashboard_types import (
     TrackResult,
 )
 from index_inclusion_research.literature_catalog import (
+    LiteraturePaper,
     build_camp_summary_frame,
     build_grouped_literature_frame,
     build_literature_catalog_frame,
@@ -477,38 +478,13 @@ def _dashboard_record(row: pd.Series) -> PaperDashboardRecord:
     return cast(PaperDashboardRecord, row.to_dict())
 
 
-def load_paper_detail_result(
-    paper_id: str,
+def _build_paper_info_frames(
     *,
-    render_table: TableRenderer,
-    project_module_display_map: Mapping[str, str],
-) -> PaperDetailResult | None:
-    paper = get_literature_paper(paper_id)
-    if paper is None:
-        return None
-
-    catalog_full = build_literature_catalog_frame()
-    current_rows = catalog_full.loc[catalog_full["paper_id"] == paper_id]
-    if current_rows.empty:
-        return None
-    current_index = int(current_rows.index[0])
-    current_catalog_record = _catalog_record(current_rows.iloc[0])
-
-    catalog = build_literature_dashboard_frame()
-    row = catalog.loc[
-        catalog["PDF"].str.contains(f'/paper/{paper_id}"', regex=False)
-    ].head(1)
-    if row.empty:
-        return None
-    record = _dashboard_record(row.iloc[0])
-
-    authors = [part.strip() for part in paper.authors.split(";") if part.strip()]
-    short_authors = authors[0] if len(authors) == 1 else f"{authors[0]} 等"
-    display_project_module = project_module_display(
-        paper.project_module,
-        project_module_display_map=project_module_display_map,
-    )
-
+    paper: LiteraturePaper,
+    record: PaperDashboardRecord,
+    paper_id: str,
+    display_project_module: str,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     info_frame = pd.DataFrame(
         [
             {"项目": "作者", "内容": paper.authors},
@@ -535,6 +511,17 @@ def load_paper_detail_result(
             {"分析维度": "研究中的作用", "内容": record.get("研究中的作用", "")},
         ]
     )
+    return info_frame, deep_frame
+
+
+def _build_paper_summary_view(
+    *,
+    paper: LiteraturePaper,
+    record: PaperDashboardRecord,
+    current_catalog_record: PaperCatalogRecord,
+    short_authors: str,
+    display_project_module: str,
+) -> tuple[list[SummaryCard], list[str], str]:
     summary_cards: list[SummaryCard] = [
         {
             "kicker": "识别对象",
@@ -570,22 +557,21 @@ def load_paper_detail_result(
         ),
         "这页重点回答三个问题：它识别什么、挑战什么、把争论推进到哪里。",
     ]
-    summary_text = " ".join(summary_paragraphs)
+    return summary_cards, summary_paragraphs, " ".join(summary_paragraphs)
 
-    sequence_cards: list[PaperNavCard] = []
-    prev_row = (
-        _catalog_record(catalog_full.iloc[current_index - 1])
-        if current_index > 0
-        else None
-    )
-    next_row = (
-        _catalog_record(catalog_full.iloc[current_index + 1])
-        if current_index < len(catalog_full) - 1
-        else None
-    )
 
+def _build_paper_sequence_cards(
+    *,
+    paper: LiteraturePaper,
+    short_authors: str,
+    current_catalog_record: PaperCatalogRecord,
+    prev_row: PaperCatalogRecord | None,
+    next_row: PaperCatalogRecord | None,
+    project_module_display_map: Mapping[str, str],
+) -> list[PaperNavCard]:
+    cards: list[PaperNavCard] = []
     if prev_row is not None:
-        sequence_cards.append(
+        cards.append(
             {
                 "kicker": "前一篇",
                 "title": paper_brief_title(prev_row),
@@ -609,7 +595,7 @@ def load_paper_detail_result(
                 "is_current": False,
             }
         )
-    sequence_cards.append(
+    cards.append(
         {
             "kicker": "当前这篇",
             "title": f"{short_authors}（{paper.year_label}）",
@@ -637,7 +623,7 @@ def load_paper_detail_result(
         }
     )
     if next_row is not None:
-        sequence_cards.append(
+        cards.append(
             {
                 "kicker": "后一篇",
                 "title": paper_brief_title(next_row),
@@ -661,8 +647,20 @@ def load_paper_detail_result(
                 "is_current": False,
             }
         )
+    return cards
 
-    excluded_recommendation_ids = {
+
+def _build_paper_recommended_cards(
+    *,
+    paper: LiteraturePaper,
+    paper_id: str,
+    current_catalog_record: PaperCatalogRecord,
+    prev_row: PaperCatalogRecord | None,
+    next_row: PaperCatalogRecord | None,
+    catalog_full: pd.DataFrame,
+    project_module_display_map: Mapping[str, str],
+) -> list[dict[str, object]]:
+    excluded_ids = {
         paper_id,
         str(prev_row.get("paper_id", "")) if prev_row is not None else "",
         str(next_row.get("paper_id", "")) if next_row is not None else "",
@@ -671,9 +669,9 @@ def load_paper_detail_result(
     recommended = _select_recommended_records(
         current_record=current_catalog_record,
         candidates=candidate_records,
-        excluded_ids={item for item in excluded_recommendation_ids if item},
+        excluded_ids={item for item in excluded_ids if item},
     )
-    recommended_cards = [
+    return [
         {
             "kicker": _recommended_card_kicker(
                 current_project_module=paper.project_module,
@@ -700,7 +698,15 @@ def load_paper_detail_result(
         }
         for rec in recommended
     ]
-    evolution_nav_cards = [
+
+
+def _build_paper_evolution_nav(
+    *,
+    catalog_full: pd.DataFrame,
+    paper_id: str,
+    project_module_display_map: Mapping[str, str],
+) -> tuple[list[dict[str, object]], list[EvolutionNavView]]:
+    evolution_nav_cards: list[dict[str, object]] = [
         {
             "kicker": f"{idx + 1:02d} · {row['stance']}",
             "title": paper_brief_title(_catalog_record(row)),
@@ -718,18 +724,6 @@ def load_paper_detail_result(
         }
         for idx, (_, row) in enumerate(catalog_full.iterrows())
     ]
-    hero_meta_items: list[MetaItem] = [
-        {"label": "年份", "value": paper.year_label},
-        {"label": "阵营", "value": str(record.get("阵营", ""))},
-        {"label": "立场", "value": str(record.get("立场", ""))},
-        {
-            "label": "研究主线",
-            "value": project_module_display(
-                paper.project_module,
-                project_module_display_map=project_module_display_map,
-            ),
-        },
-    ]
     evolution_nav_views: list[EvolutionNavView] = [
         {"id": "camp", "groups": group_evolution_cards(evolution_nav_cards, "camp")},
         {
@@ -740,6 +734,92 @@ def load_paper_detail_result(
             "id": "stance",
             "groups": group_evolution_cards(evolution_nav_cards, "stance"),
         },
+    ]
+    return evolution_nav_cards, evolution_nav_views
+
+
+def load_paper_detail_result(
+    paper_id: str,
+    *,
+    render_table: TableRenderer,
+    project_module_display_map: Mapping[str, str],
+) -> PaperDetailResult | None:
+    paper = get_literature_paper(paper_id)
+    if paper is None:
+        return None
+
+    catalog_full = build_literature_catalog_frame()
+    current_rows = catalog_full.loc[catalog_full["paper_id"] == paper_id]
+    if current_rows.empty:
+        return None
+    current_index = int(current_rows.index[0])
+    current_catalog_record = _catalog_record(current_rows.iloc[0])
+
+    catalog = build_literature_dashboard_frame()
+    row = catalog.loc[
+        catalog["PDF"].str.contains(f'/paper/{paper_id}"', regex=False)
+    ].head(1)
+    if row.empty:
+        return None
+    record = _dashboard_record(row.iloc[0])
+
+    authors = [part.strip() for part in paper.authors.split(";") if part.strip()]
+    short_authors = authors[0] if len(authors) == 1 else f"{authors[0]} 等"
+    display_project_module = project_module_display(
+        paper.project_module,
+        project_module_display_map=project_module_display_map,
+    )
+    prev_row = (
+        _catalog_record(catalog_full.iloc[current_index - 1])
+        if current_index > 0
+        else None
+    )
+    next_row = (
+        _catalog_record(catalog_full.iloc[current_index + 1])
+        if current_index < len(catalog_full) - 1
+        else None
+    )
+
+    info_frame, deep_frame = _build_paper_info_frames(
+        paper=paper,
+        record=record,
+        paper_id=paper_id,
+        display_project_module=display_project_module,
+    )
+    summary_cards, summary_paragraphs, summary_text = _build_paper_summary_view(
+        paper=paper,
+        record=record,
+        current_catalog_record=current_catalog_record,
+        short_authors=short_authors,
+        display_project_module=display_project_module,
+    )
+    sequence_cards = _build_paper_sequence_cards(
+        paper=paper,
+        short_authors=short_authors,
+        current_catalog_record=current_catalog_record,
+        prev_row=prev_row,
+        next_row=next_row,
+        project_module_display_map=project_module_display_map,
+    )
+    recommended_cards = _build_paper_recommended_cards(
+        paper=paper,
+        paper_id=paper_id,
+        current_catalog_record=current_catalog_record,
+        prev_row=prev_row,
+        next_row=next_row,
+        catalog_full=catalog_full,
+        project_module_display_map=project_module_display_map,
+    )
+    evolution_nav_cards, evolution_nav_views = _build_paper_evolution_nav(
+        catalog_full=catalog_full,
+        paper_id=paper_id,
+        project_module_display_map=project_module_display_map,
+    )
+    hero_meta_items: list[MetaItem] = [
+        {"label": "年份", "value": paper.year_label},
+        {"label": "阵营", "value": str(record.get("阵营", ""))},
+        {"label": "立场", "value": str(record.get("立场", ""))},
+        {"label": "研究主线", "value": display_project_module},
     ]
 
     return {
