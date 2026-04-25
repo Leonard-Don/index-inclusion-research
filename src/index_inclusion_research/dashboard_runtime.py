@@ -21,6 +21,7 @@ from index_inclusion_research.dashboard_types import (
     RddContractCheck,
     RddStatus,
     RefreshStatusPayloadBuilder,
+    ResultHealth,
     SnapshotMeta,
     SupplementResult,
     TrackResult,
@@ -74,6 +75,9 @@ class DashboardRuntime:
 
     def build_dashboard_snapshot_meta(self, snapshot_files: list[Path] | None = None) -> SnapshotMeta:
         return self.track.build_dashboard_snapshot_meta(snapshot_files)
+
+    def build_result_health(self) -> ResultHealth:
+        return self.track.build_result_health()
 
     def load_identification_china_saved_result(self) -> TrackResult:
         return self.track.load_identification_china_saved_result()

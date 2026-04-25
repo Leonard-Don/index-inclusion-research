@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path
@@ -23,6 +24,8 @@ from index_inclusion_research.dashboard_types import (
     RefreshSuccessHandler,
     RefreshWorkerSpawner,
     RelativePathBuilder,
+    ResultHealth,
+    ResultHealthCheck,
     SnapshotMeta,
 )
 
@@ -58,12 +61,248 @@ def dashboard_snapshot_sources(root: Path) -> list[Path]:
         root / "results" / "real_tables" / "regression_coefficients.csv",
         root / "results" / "real_tables" / "identification_scope.csv",
         root / "results" / "real_tables" / "results_manifest.csv",
+        root / "results" / "real_tables" / "research_summary.md",
+        root / "results" / "real_tables" / "cma_hypothesis_verdicts.csv",
         root / "results" / "literature" / "harris_gurel" / "summary.md",
         root / "results" / "literature" / "shleifer" / "summary.md",
         root / "results" / "literature" / "hs300_style" / "summary.md",
         root / "results" / "literature" / "hs300_rdd" / "rdd_status.csv",
     ]
     return [path for path in tracked if path.exists()]
+
+
+def default_result_health() -> ResultHealth:
+    return {
+        "health_status_label": "未校验",
+        "health_status_copy": "当前 payload 未附带结果健康检查。",
+        "health_checks": [],
+        "health_commands": [],
+    }
+
+
+def _health_check(label: str, status: str, copy: str, command: str = "") -> ResultHealthCheck:
+    return {
+        "label": label,
+        "status": status,
+        "copy": copy,
+        "command": command,
+    }
+
+
+def _read_first_csv_row(path: Path) -> dict[str, str]:
+    if not path.exists() or not path.is_file():
+        return {}
+    with path.open(newline="", encoding="utf-8") as fh:
+        reader = csv.DictReader(fh)
+        return next(reader, {}) or {}
+
+
+def _path_label(root: Path, path: Path, to_relative: RelativePathBuilder) -> str:
+    try:
+        return to_relative(path)
+    except ValueError:
+        return str(path.relative_to(root)) if path.is_relative_to(root) else str(path)
+
+
+def _unique_commands(checks: list[ResultHealthCheck]) -> list[str]:
+    seen: set[str] = set()
+    commands: list[str] = []
+    for check in checks:
+        command = check.get("command", "").strip()
+        if not command or command in seen:
+            continue
+        seen.add(command)
+        commands.append(command)
+    return commands
+
+
+def _rdd_l3_candidate_health(
+    root: Path,
+    *,
+    to_relative: RelativePathBuilder,
+    contract_check: RddContractCheck | None,
+) -> ResultHealthCheck:
+    formal_path = root / "data" / "raw" / "hs300_rdd_candidates.csv"
+    reconstructed_path = root / "data" / "raw" / "hs300_rdd_candidates.reconstructed.csv"
+    collection_plan_path = root / "results" / "literature" / "hs300_rdd_l3_collection" / "collection_plan.md"
+    collection_checklist_path = root / "results" / "literature" / "hs300_rdd_l3_collection" / "batch_collection_checklist.csv"
+    collection_template_path = root / "results" / "literature" / "hs300_rdd_l3_collection" / "formal_candidate_template.csv"
+    collection_boundary_path = root / "results" / "literature" / "hs300_rdd_l3_collection" / "boundary_reference.csv"
+    formal_label = _path_label(root, formal_path, to_relative)
+    reconstructed_label = _path_label(root, reconstructed_path, to_relative)
+    collection_plan_label = _path_label(root, collection_plan_path, to_relative)
+    collection_checklist_label = _path_label(root, collection_checklist_path, to_relative)
+    collection_template_label = _path_label(root, collection_template_path, to_relative)
+    collection_boundary_label = _path_label(root, collection_boundary_path, to_relative)
+    live_status = contract_check["live_status"] if contract_check else {}
+    mode = str(live_status.get("mode", "") or "")
+    source_kind = str(live_status.get("source_kind", "") or "")
+    rows = live_status.get("candidate_rows")
+    batches = live_status.get("candidate_batches")
+    refresh_command = "index-inclusion-hs300-rdd && index-inclusion-make-figures-tables && index-inclusion-generate-research-report && index-inclusion-cma"
+    import_command = "index-inclusion-prepare-hs300-rdd --input /path/to/raw_candidates.xlsx --check-only"
+    collection_command = "index-inclusion-plan-hs300-rdd-l3"
+
+    if formal_path.exists():
+        if mode == "real" or source_kind == "real":
+            suffix = f"当前 RDD 已使用正式样本：{rows} 条候选、{batches} 个批次。" if rows and batches else "当前 RDD 已使用正式样本。"
+            return _health_check("RDD L3 正式样本", "ok", f"{formal_label} 可用，{suffix}")
+        return _health_check(
+            "RDD L3 正式样本",
+            "warning",
+            f"{formal_label} 已存在，但当前 RDD 状态仍是 {mode or source_kind or '未知'}；需要重跑识别和主结果。",
+            refresh_command,
+        )
+
+    if reconstructed_path.exists():
+        collection_ready = (
+            collection_plan_path.exists()
+            and collection_checklist_path.exists()
+            and collection_template_path.exists()
+            and collection_boundary_path.exists()
+        )
+        if collection_ready:
+            return _health_check(
+                "RDD L3 正式样本",
+                "warning",
+                (
+                    f"未找到 {formal_label}；当前只能使用 {reconstructed_label} 的 L2 公开重建样本。"
+                    f"L3 采集包已就绪：{collection_plan_label}、{collection_checklist_label}、"
+                    f"{collection_template_label}、{collection_boundary_label}。"
+                ),
+                import_command,
+            )
+        return _health_check(
+            "RDD L3 正式样本",
+            "warning",
+            f"未找到 {formal_label}；当前只能使用 {reconstructed_label} 的 L2 公开重建样本。",
+            collection_command,
+        )
+
+    return _health_check(
+        "RDD L3 正式样本",
+        "missing",
+        f"未找到 {formal_label}，也未找到 {reconstructed_label}。",
+        import_command,
+    )
+
+
+def build_result_health(
+    root: Path,
+    *,
+    to_relative: RelativePathBuilder,
+    contract_check: RddContractCheck | None,
+) -> ResultHealth:
+    required = [
+        (
+            "事件研究摘要",
+            root / "results" / "real_tables" / "event_study_summary.csv",
+            "index-inclusion-make-figures-tables",
+        ),
+        (
+            "回归系数表",
+            root / "results" / "real_tables" / "regression_coefficients.csv",
+            "index-inclusion-make-figures-tables",
+        ),
+        (
+            "结果状态 manifest",
+            root / "results" / "real_tables" / "results_manifest.csv",
+            "index-inclusion-make-figures-tables",
+        ),
+        (
+            "RDD 状态",
+            root / "results" / "literature" / "hs300_rdd" / "rdd_status.csv",
+            "index-inclusion-hs300-rdd",
+        ),
+        (
+            "CMA 假说裁决",
+            root / "results" / "real_tables" / "cma_hypothesis_verdicts.csv",
+            "index-inclusion-cma",
+        ),
+        (
+            "研究摘要",
+            root / "results" / "real_tables" / "research_summary.md",
+            "index-inclusion-generate-research-report && index-inclusion-cma",
+        ),
+    ]
+    checks: list[ResultHealthCheck] = []
+    for label, path, command in required:
+        relative = _path_label(root, path, to_relative)
+        if path.exists():
+            modified = refresh_artifact_modified_at(path)
+            checks.append(_health_check(label, "ok", f"{relative} 可用，最近修改：{modified}。"))
+        else:
+            checks.append(_health_check(label, "missing", f"未找到 {relative}。", command))
+
+    if contract_check is None:
+        checks.append(_health_check("RDD/manifest 契约", "warning", "本次状态未附带 RDD 契约检查。"))
+    elif not contract_check["manifest_exists"]:
+        checks.append(
+            _health_check(
+                "RDD/manifest 契约",
+                "missing",
+                f"未找到 {contract_check['manifest_path']}，无法确认 RDD 状态是否同步。",
+                "index-inclusion-make-figures-tables",
+            )
+        )
+    elif not contract_check["matches"]:
+        mismatch_labels = "、".join(_contract_field_label(field) for field in contract_check["mismatched_fields"])
+        checks.append(
+            _health_check(
+                "RDD/manifest 契约",
+                "warning",
+                f"manifest 与 live RDD 状态在 {mismatch_labels} 上不一致。",
+                "index-inclusion-make-figures-tables && index-inclusion-generate-research-report && index-inclusion-cma",
+            )
+        )
+    else:
+        checks.append(_health_check("RDD/manifest 契约", "ok", "manifest 与当前 RDD 识别状态一致。"))
+
+    checks.append(_rdd_l3_candidate_health(root, to_relative=to_relative, contract_check=contract_check))
+
+    if contract_check and contract_check["manifest_exists"]:
+        live_generated = str(contract_check["live_status"].get("generated_at", "") or "")
+        manifest_generated = str(contract_check["manifest"].get("rdd_generated_at", "") or "")
+        if live_generated and manifest_generated and live_generated != manifest_generated:
+            checks.append(
+                _health_check(
+                    "RDD 状态新鲜度",
+                    "warning",
+                    f"rdd_status.csv 的生成时间为 {live_generated}，manifest 仍记录 {manifest_generated}。",
+                    "index-inclusion-make-figures-tables && index-inclusion-generate-research-report && index-inclusion-cma",
+                )
+            )
+        elif live_generated:
+            checks.append(_health_check("RDD 状态新鲜度", "ok", f"manifest 已记录最新 RDD 生成时间：{live_generated}。"))
+
+    verdict_path = root / "results" / "real_tables" / "cma_hypothesis_verdicts.csv"
+    if verdict_path.exists():
+        with verdict_path.open(newline="", encoding="utf-8") as fh:
+            verdict_rows = max(0, len(list(csv.DictReader(fh))))
+        status = "ok" if verdict_rows >= 6 else "warning"
+        copy = f"CMA 假说裁决表包含 {verdict_rows} 条记录。"
+        command = "" if status == "ok" else "index-inclusion-cma"
+        checks.append(_health_check("CMA 裁决覆盖", status, copy, command))
+
+    severity = [check["status"] for check in checks]
+    commands = _unique_commands(checks)
+    if "missing" in severity:
+        label = "结果健康缺项"
+        missing_count = sum(1 for status in severity if status == "missing")
+        copy = f"缺少 {missing_count} 项核心产物；建议按提示命令补生成后刷新页面。"
+    elif "warning" in severity:
+        label = "结果健康需关注"
+        warning_count = sum(1 for status in severity if status == "warning")
+        copy = f"{warning_count} 项结果状态需要同步或补充；核心页面仍可阅读。"
+    else:
+        label = "结果健康良好"
+        copy = "核心结果、RDD 状态和 CMA 裁决表都可用。"
+    return {
+        "health_status_label": label,
+        "health_status_copy": copy,
+        "health_checks": checks,
+        "health_commands": commands,
+    }
 
 
 def _contract_field_label(field: str) -> str:
@@ -298,6 +537,7 @@ def refresh_status_payload(
     open_panels: str | None,
     snapshot_meta: SnapshotMeta,
     contract_check: RddContractCheck | None,
+    result_health: ResultHealth | None = None,
     redirect_url_builder: RefreshRedirectUrlBuilder,
     now_ts: float,
     accepted: bool = True,
@@ -324,6 +564,7 @@ def refresh_status_payload(
     )
     artifact_summary_label = str(state.get("artifact_summary_label", "") or artifact_summary_label)
     artifact_summary_copy = str(state.get("artifact_summary_copy", "") or artifact_summary_copy)
+    health = result_health or default_result_health()
     duration_seconds = refresh_duration_seconds(started_ts, finished_ts, status, now_ts=now_ts)
     if status == "failed" and error:
         message = f"{message} {error}"
@@ -349,6 +590,10 @@ def refresh_status_payload(
         "contract_status_copy": contract_status_copy,
         "artifact_summary_label": artifact_summary_label,
         "artifact_summary_copy": artifact_summary_copy,
+        "health_status_label": health["health_status_label"],
+        "health_status_copy": health["health_status_copy"],
+        "health_checks": health["health_checks"],
+        "health_commands": health["health_commands"],
         "updated_artifacts": updated_artifacts,
     }
 

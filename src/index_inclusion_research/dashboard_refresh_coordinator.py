@@ -19,6 +19,7 @@ from index_inclusion_research.dashboard_types import (
     RefreshSuccessHandler,
     RefreshWorkerSpawner,
     RelativePathBuilder,
+    ResultHealthBuilder,
     SnapshotMetaBuilder,
     SnapshotSourcesBuilder,
 )
@@ -33,6 +34,7 @@ class DashboardRefreshCoordinator:
         track_anchors: set[str] | frozenset[str],
         dashboard_snapshot_sources: SnapshotSourcesBuilder,
         build_rdd_contract_check: RddContractCheckBuilder,
+        build_result_health: ResultHealthBuilder | None = None,
         to_relative: RelativePathBuilder,
         build_dashboard_snapshot_meta: SnapshotMetaBuilder,
         nav_sections_for_mode: NavSectionsBuilder,
@@ -42,6 +44,7 @@ class DashboardRefreshCoordinator:
         self.track_anchors = track_anchors
         self.dashboard_snapshot_sources = dashboard_snapshot_sources
         self.build_rdd_contract_check = build_rdd_contract_check
+        self.build_result_health = build_result_health or dashboard_refresh.default_result_health
         self.to_relative = to_relative
         self.build_dashboard_snapshot_meta = build_dashboard_snapshot_meta
         self.nav_sections_for_mode = nav_sections_for_mode
@@ -119,6 +122,7 @@ class DashboardRefreshCoordinator:
             open_panels=open_panels,
             snapshot_meta=self.build_dashboard_snapshot_meta(),
             contract_check=self.build_rdd_contract_check(),
+            result_health=self.build_result_health(),
             redirect_url_builder=redirect_url_builder,
             now_ts=now_ts,
         )

@@ -137,6 +137,20 @@ class RefreshArtifact(TypedDict):
     modified_at: str
 
 
+class ResultHealthCheck(TypedDict):
+    label: str
+    status: str
+    copy: str
+    command: str
+
+
+class ResultHealth(TypedDict):
+    health_status_label: str
+    health_status_copy: str
+    health_checks: list[ResultHealthCheck]
+    health_commands: list[str]
+
+
 class RefreshState(TypedDict):
     status: RefreshStatus
     message: str
@@ -181,6 +195,10 @@ class RefreshStatusPayload(TypedDict):
     contract_status_copy: str
     artifact_summary_label: str
     artifact_summary_copy: str
+    health_status_label: str
+    health_status_copy: str
+    health_checks: list[ResultHealthCheck]
+    health_commands: list[str]
     updated_artifacts: list[RefreshArtifact]
 
 
@@ -480,6 +498,7 @@ TableRenderer: TypeAlias = Callable[..., str]
 SnapshotMetaBuilder: TypeAlias = Callable[[], SnapshotMeta]
 SnapshotSourcesBuilder: TypeAlias = Callable[[], list[Path]]
 RddContractCheckBuilder: TypeAlias = Callable[[], RddContractCheck]
+ResultHealthBuilder: TypeAlias = Callable[[], ResultHealth]
 NavSectionsBuilder: TypeAlias = Callable[[ModeName], list[NavSection]]
 OverviewNotesBuilder: TypeAlias = Callable[[ModeName], list[NoteItem]]
 OverviewSummaryBuilder: TypeAlias = Callable[[ModeName], str]
@@ -556,6 +575,8 @@ class DashboardRuntimeLike(Protocol):
     def safe_relative(self, path: Path) -> str: ...
 
     def build_dashboard_snapshot_meta(self, snapshot_files: list[Path] | None = None) -> SnapshotMeta: ...
+
+    def build_result_health(self) -> ResultHealth: ...
 
     def load_identification_china_saved_result(self) -> TrackResult: ...
 

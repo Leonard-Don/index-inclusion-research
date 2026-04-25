@@ -41,6 +41,7 @@ export function createRefreshContext() {
     refreshNote: queryOne("[data-refresh-note]"),
     refreshArtifactSummaryInline: queryOne("[data-refresh-artifact-summary-inline]"),
     refreshContractSummary: queryOne("[data-refresh-contract-summary]"),
+    refreshHealthSummary: queryOne("[data-refresh-health-summary]"),
     refreshScopeLabel: queryOne("[data-refresh-scope-label]"),
     refreshStartedAt: queryOne("[data-refresh-started-at]"),
     refreshFinishedAt: queryOne("[data-refresh-finished-at]"),
@@ -50,6 +51,10 @@ export function createRefreshContext() {
     refreshArtifactSummaryLabel: queryOne("[data-refresh-artifact-summary-label]"),
     refreshArtifactSummaryCopy: queryOne("[data-refresh-artifact-summary-copy]"),
     refreshArtifactList: queryOne("[data-refresh-artifact-list]"),
+    refreshHealth: queryOne("[data-refresh-health]"),
+    refreshHealthLabel: queryOne("[data-refresh-health-label]"),
+    refreshHealthCopy: queryOne("[data-refresh-health-copy]"),
+    refreshHealthList: queryOne("[data-refresh-health-list]"),
   };
 }
 

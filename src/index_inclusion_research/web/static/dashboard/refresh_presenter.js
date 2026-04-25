@@ -85,6 +85,47 @@ export function renderRefreshArtifacts(ctx, payload) {
   ctx.refreshArtifacts.hidden = artifacts.length === 0 && !hasSummary;
 }
 
+export function renderRefreshHealth(ctx, payload) {
+  if (ctx.refreshHealthSummary) {
+    ctx.refreshHealthSummary.textContent =
+      (payload && payload.health_status_label) || "—";
+  }
+  if (!ctx.refreshHealth || !ctx.refreshHealthList) {
+    return;
+  }
+  if (ctx.refreshHealthLabel) {
+    ctx.refreshHealthLabel.textContent =
+      (payload && payload.health_status_label) || "—";
+  }
+  if (ctx.refreshHealthCopy) {
+    ctx.refreshHealthCopy.textContent =
+      (payload && payload.health_status_copy) || "—";
+  }
+  const checks = Array.isArray(payload && payload.health_checks)
+    ? payload.health_checks
+    : [];
+  ctx.refreshHealthList.textContent = "";
+  checks.forEach((check) => {
+    const item = document.createElement("li");
+    item.className = "refresh-status-artifact-item";
+    item.dataset.healthStatus = (check && check.status) || "";
+    const copy = document.createElement("span");
+    copy.textContent = check && check.label ? `${check.label} · ${check.copy || ""}` : "";
+    item.append(copy);
+    if (check && check.command) {
+      const command = document.createElement("code");
+      command.textContent = check.command;
+      item.append(command);
+    }
+    ctx.refreshHealthList.append(item);
+  });
+  ctx.refreshHealthList.hidden = checks.length === 0;
+  const hasHealth =
+    Boolean((payload && payload.health_status_label) || "") ||
+    Boolean((payload && payload.health_status_copy) || "");
+  ctx.refreshHealth.hidden = checks.length === 0 && !hasHealth;
+}
+
 export function applyRefreshStateToDom(
   ctx,
   refreshState,
@@ -130,6 +171,7 @@ export function applyRefreshStateToDom(
     ctx.refreshContractSummary.textContent = refreshContractSummaryText(payload);
   }
   renderRefreshArtifacts(ctx, payload);
+  renderRefreshHealth(ctx, payload);
   if (ctx.refreshNote) {
     ctx.refreshNote.textContent = refreshRuntimeCopy(ctx, payload);
   }
