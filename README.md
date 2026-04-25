@@ -568,6 +568,7 @@ index-inclusion-cma
 
 - `results/real_tables/cma_*.csv`（ar/car path、window summary、gap event/summary、mechanism panel、4 个 heterogeneity 维度、rolling、break、hypothesis map、hypothesis verdicts）
 - `results/real_tables/cma_hypothesis_verdicts.csv`：每条机制假设的 verdict（`支持` / `部分支持` / `反对` / `待补数据`）+ confidence + 下一步建议；dashboard 在 demo / full 模式下渲染成 verdict 卡片
+- `results/real_tables/cma_pre_runup_bootstrap.csv`：H1 信息预运行的 CN-US 跨市场差异 bootstrap 检验(diff_mean / boot_p_value / 95% CI),自动喂给 H1 verdict 替代单市场显著性判断
 - `results/real_tables/cma_mechanism_panel.tex`（论文可直接插入）
 - `results/real_figures/cma_*.png`（7 张主图）
 - `results/real_tables/research_summary.md` 新增章节"六、美股 vs A股 不对称"（幂等追加，不会重复）
