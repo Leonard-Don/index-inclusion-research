@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import argparse
+import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import akshare as ak
 import pandas as pd
 import yfinance as yf
+
+logger = logging.getLogger(__name__)
 
 from index_inclusion_research.analysis.rdd_candidates import (
     build_candidate_batch_audit,
@@ -72,7 +75,8 @@ def _fetch_missing_proxy_market_caps(
     for ticker, symbol in zip(tickers, symbols, strict=True):
         try:
             history_frame = history[symbol] if len(symbols) > 1 else history
-        except Exception:
+        except (KeyError, ValueError) as exc:
+            logger.debug("yfinance history missing for %s: %s", symbol, exc)
             history_frame = pd.DataFrame()
         if history_frame.empty or "Close" not in history_frame.columns:
             continue
@@ -88,7 +92,8 @@ def _fetch_missing_proxy_market_caps(
     def _fetch_shares(symbol: str) -> float | None:
         try:
             shares = yf.Ticker(symbol).fast_info.get("shares")
-        except Exception:
+        except (KeyError, AttributeError, OSError, ValueError) as exc:
+            logger.debug("yfinance shares unavailable for %s: %s", symbol, exc)
             shares = None
         if shares in (None, 0):
             return None

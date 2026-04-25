@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import argparse
+import logging
 from pathlib import Path
 
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 from index_inclusion_research.analysis import compute_event_study
 from index_inclusion_research.literature import compute_retention_summary
@@ -300,8 +303,8 @@ def main(argv: list[str] | None = None) -> None:
         cma_csv = Path(args.tables_dir) / "cma_mechanism_panel.csv"
         if cma_csv.exists():
             _cma.regenerate_tex_only(tables_dir=Path(args.tables_dir))
-    except Exception as exc:  # noqa: BLE001
-        print(f"[figures_tables] CMA tex regeneration skipped: {exc}")
+    except (OSError, ImportError, ValueError) as exc:
+        logger.warning("CMA tex regeneration skipped: %s", exc)
 
     print(f"Saved figures to {args.figures_dir} and tables to {args.tables_dir} (profile: {args.profile})")
 
