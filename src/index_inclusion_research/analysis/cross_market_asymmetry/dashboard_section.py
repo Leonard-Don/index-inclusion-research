@@ -40,6 +40,13 @@ FULL_FIGURES = BRIEF_FIGURES + (
 )
 
 
+FIGURE_ECHART_IDS: dict[str, str] = {
+    "cma_gap_decomposition.png": "gap_decomposition",
+    "cma_heterogeneity_matrix_size.png": "heterogeneity_size",
+    "cma_time_series_rolling.png": "time_series_rolling",
+}
+
+
 HET_DIMS: tuple[str, ...] = ("size", "liquidity", "sector", "gap_bucket")
 
 
@@ -154,6 +161,11 @@ def build_cross_market_section(
             "rows": gap_summary.to_dict(orient="records") if mode != "brief" else [],
         },
         "figures": figures,
+        "figure_echart_ids": {
+            name: chart_id
+            for name, chart_id in FIGURE_ECHART_IDS.items()
+            if name in figures
+        },
         "hypothesis_map": {
             "columns": list(hypothesis_map.columns),
             "rows": hypothesis_map.to_dict(orient="records") if mode == "full" else [],
