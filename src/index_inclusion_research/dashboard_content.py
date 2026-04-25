@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import cast
+from typing import Literal, cast
 
 import pandas as pd
 
@@ -560,6 +560,49 @@ def _build_paper_summary_view(
     return summary_cards, summary_paragraphs, " ".join(summary_paragraphs)
 
 
+_SEQUENCE_KICKER: Mapping[str, str] = {
+    "prev": "前一篇",
+    "current": "当前这篇",
+    "next": "后一篇",
+}
+
+
+def _make_sequence_card(
+    *,
+    position: Literal["prev", "current", "next"],
+    row: PaperCatalogRecord,
+    paper: LiteraturePaper,
+    current_camp: str,
+    project_module_display_map: Mapping[str, str],
+    title_override: str | None = None,
+) -> PaperNavCard:
+    is_current = position == "current"
+    card: PaperNavCard = {
+        "kicker": _SEQUENCE_KICKER[position],
+        "title": title_override or paper_brief_title(row),
+        "year_label": str(row.get("year_label", "")),
+        "camp": str(row.get("camp", "")),
+        "track_label": project_module_display(
+            str(row.get("project_module", "")),
+            project_module_display_map=project_module_display_map,
+        ),
+        "meta": f"{row.get('camp', '')} · {row.get('method_focus', '')}",
+        "copy": _sequence_card_copy(
+            position=position,
+            current_project_module=paper.project_module,
+            current_camp=current_camp,
+            target_project_module=str(row.get("project_module", "")),
+            target_camp=str(row.get("camp", "")),
+            deep_contribution=str(row.get("deep_contribution", "")),
+        ),
+        "href": "" if is_current else f"/paper/{row.get('paper_id')}",
+        "is_current": is_current,
+    }
+    if not is_current:
+        card["action_label"] = _sequence_card_action_label(position)
+    return card
+
+
 def _build_paper_sequence_cards(
     *,
     paper: LiteraturePaper,
@@ -569,83 +612,37 @@ def _build_paper_sequence_cards(
     next_row: PaperCatalogRecord | None,
     project_module_display_map: Mapping[str, str],
 ) -> list[PaperNavCard]:
+    current_camp = str(current_catalog_record.get("camp", ""))
     cards: list[PaperNavCard] = []
     if prev_row is not None:
         cards.append(
-            {
-                "kicker": "前一篇",
-                "title": paper_brief_title(prev_row),
-                "year_label": str(prev_row.get("year_label", "")),
-                "camp": str(prev_row.get("camp", "")),
-                "track_label": project_module_display(
-                    str(prev_row.get("project_module", "")),
-                    project_module_display_map=project_module_display_map,
-                ),
-                "meta": f"{prev_row.get('camp', '')} · {prev_row.get('method_focus', '')}",
-                "copy": _sequence_card_copy(
-                    position="prev",
-                    current_project_module=paper.project_module,
-                    current_camp=str(current_catalog_record.get("camp", "")),
-                    target_project_module=str(prev_row.get("project_module", "")),
-                    target_camp=str(prev_row.get("camp", "")),
-                    deep_contribution=str(prev_row.get("deep_contribution", "")),
-                ),
-                "href": f"/paper/{prev_row.get('paper_id')}",
-                "action_label": _sequence_card_action_label("prev"),
-                "is_current": False,
-            }
+            _make_sequence_card(
+                position="prev",
+                row=prev_row,
+                paper=paper,
+                current_camp=current_camp,
+                project_module_display_map=project_module_display_map,
+            )
         )
     cards.append(
-        {
-            "kicker": "当前这篇",
-            "title": f"{short_authors}（{paper.year_label}）",
-            "year_label": str(current_catalog_record.get("year_label", "")),
-            "camp": str(current_catalog_record.get("camp", "")),
-            "track_label": project_module_display(
-                str(current_catalog_record.get("project_module", "")),
-                project_module_display_map=project_module_display_map,
-            ),
-            "meta": f"{current_catalog_record.get('camp', '')} · {current_catalog_record.get('method_focus', '')}",
-            "copy": _sequence_card_copy(
-                position="current",
-                current_project_module=paper.project_module,
-                current_camp=str(current_catalog_record.get("camp", "")),
-                target_project_module=str(
-                    current_catalog_record.get("project_module", "")
-                ),
-                target_camp=str(current_catalog_record.get("camp", "")),
-                deep_contribution=str(
-                    current_catalog_record.get("deep_contribution", "")
-                ),
-            ),
-            "href": "",
-            "is_current": True,
-        }
+        _make_sequence_card(
+            position="current",
+            row=current_catalog_record,
+            paper=paper,
+            current_camp=current_camp,
+            project_module_display_map=project_module_display_map,
+            title_override=f"{short_authors}（{paper.year_label}）",
+        )
     )
     if next_row is not None:
         cards.append(
-            {
-                "kicker": "后一篇",
-                "title": paper_brief_title(next_row),
-                "year_label": str(next_row.get("year_label", "")),
-                "camp": str(next_row.get("camp", "")),
-                "track_label": project_module_display(
-                    str(next_row.get("project_module", "")),
-                    project_module_display_map=project_module_display_map,
-                ),
-                "meta": f"{next_row.get('camp', '')} · {next_row.get('method_focus', '')}",
-                "copy": _sequence_card_copy(
-                    position="next",
-                    current_project_module=paper.project_module,
-                    current_camp=str(current_catalog_record.get("camp", "")),
-                    target_project_module=str(next_row.get("project_module", "")),
-                    target_camp=str(next_row.get("camp", "")),
-                    deep_contribution=str(next_row.get("deep_contribution", "")),
-                ),
-                "href": f"/paper/{next_row.get('paper_id')}",
-                "action_label": _sequence_card_action_label("next"),
-                "is_current": False,
-            }
+            _make_sequence_card(
+                position="next",
+                row=next_row,
+                paper=paper,
+                current_camp=current_camp,
+                project_module_display_map=project_module_display_map,
+            )
         )
     return cards
 

@@ -158,11 +158,14 @@ def test_home_dashboard_renders_single_frontend_sections() -> None:
     assert response.status_code == 200
     html = response.get_data(as_text=True)
     status = dashboard.runtime.load_rdd_status()
-    assert "把 16 篇文献、真实样本与识别设计放进同一条研究叙述" in html
-    assert "效应被重估而非简单消失" in html
-    assert "三条主线，分别回答三个核心问题" in html
-    assert "16 篇文献如何连成一条研究链" in html
-    assert "把结果放回交易机制与执行场景" in html
+    # Structural smoke for hero / tracks / mechanism sections — assert on
+    # core noun phrases instead of full sentences so copy edits don't
+    # routinely break this test.
+    assert "16 篇文献" in html
+    assert "效应被重估" in html
+    assert "三条主线" in html
+    assert "研究链" in html
+    assert "交易机制" in html
     assert "展示版" in html
     assert "支撑文献" in html
     assert "查看这篇速读" in html
