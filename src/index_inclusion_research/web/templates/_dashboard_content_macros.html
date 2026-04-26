@@ -116,6 +116,21 @@
       <span class="cma-verdict-badge">{{ verdict.verdict }}</span>
     </div>
     <p class="cma-verdict-summary">{{ verdict.evidence_summary }}</p>
+    {% if verdict.key_label %}
+    <div class="cma-verdict-keymetric" data-key="{{ verdict.key_label }}">
+      <span class="cma-verdict-keylabel">{{ verdict.key_label }}</span>
+      <span class="cma-verdict-keyvalue">
+        {%- if verdict.key_value is number and verdict.key_value == verdict.key_value -%}
+          {{ '%.3f'|format(verdict.key_value) }}
+        {%- else -%}
+          —
+        {%- endif -%}
+      </span>
+      {% if verdict.n_obs and verdict.n_obs > 0 %}
+      <span class="cma-verdict-keyn">n={{ verdict.n_obs }}</span>
+      {% endif %}
+    </div>
+    {% endif %}
     <p class="cma-verdict-metric">{{ verdict.metric_snapshot }}</p>
     {% if mode == 'full' and verdict.next_step %}
     <p class="cma-verdict-next">{{ verdict.next_step }}</p>

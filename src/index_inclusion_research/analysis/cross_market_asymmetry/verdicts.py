@@ -73,7 +73,18 @@ def _make_verdict(
     evidence_summary: str,
     metric_snapshot: str,
     next_step: str,
+    key_label: str = "",
+    key_value: float | None = None,
+    n_obs: int | None = None,
 ) -> dict[str, object]:
+    """Build one verdict row.
+
+    The ``key_label`` / ``key_value`` / ``n_obs`` triple is the
+    machine-readable headline (e.g. ``"bootstrap p" 0.640 n=436``).
+    Downstream consumers — dashboard verdict cards, research_summary
+    markdown table — can render the headline number prominently next
+    to the human-readable ``metric_snapshot``.
+    """
     return {
         "hid": hypothesis.hid,
         "name_cn": hypothesis.name_cn,
@@ -83,6 +94,9 @@ def _make_verdict(
         "metric_snapshot": metric_snapshot,
         "next_step": next_step,
         "evidence_refs": " | ".join(hypothesis.evidence_refs),
+        "key_label": key_label,
+        "key_value": float(key_value) if key_value is not None else float("nan"),
+        "n_obs": int(n_obs) if n_obs is not None else 0,
     }
 
 
@@ -197,6 +211,7 @@ def _h1_from_bootstrap(
         f"diff={_fmt_pct(diff)}, bootstrap p={boot_p:.3f}, "
         f"CI95=[{_fmt_pct(ci_low)}, {_fmt_pct(ci_high)}]"
     )
+    n_total = int(bootstrap.get("n_cn", 0) or 0) + int(bootstrap.get("n_us", 0) or 0)  # type: ignore[arg-type]
     return _make_verdict(
         hypothesis,
         verdict=verdict,
@@ -204,6 +219,9 @@ def _h1_from_bootstrap(
         evidence_summary=summary,
         metric_snapshot=metric_snapshot,
         next_step="如需更强结论,可叠加事件级回归并控制 gap_length_days / sector / size 等协变量。",
+        key_label="bootstrap p",
+        key_value=boot_p,
+        n_obs=n_total,
     )
 
 
@@ -406,6 +424,9 @@ def _h3_from_channel_table(
         evidence_summary=summary,
         metric_snapshot=metric_snapshot,
         next_step="可叠加 volatility 通道或 sector heterogeneity 进一步剖分量能集中来源。",
+        key_label="双通道命中率",
+        key_value=(both_sig_count / total) if total else float("nan"),
+        n_obs=total,
     )
 
 
@@ -516,6 +537,9 @@ def _h4_from_regression(
         evidence_summary=summary,
         metric_snapshot=metric_snapshot,
         next_step="可继续叠加 sector / size 等协变量,或检验非线性 gap_length 项的稳健性。",
+        key_label="regression p",
+        key_value=reg_p,
+        n_obs=n_obs,
     )
 
 
@@ -632,6 +656,9 @@ def _h5_from_regression(
         evidence_summary=summary,
         metric_snapshot=metric_snapshot,
         next_step="可加入 sector / size 协变量稳健性检验,或区分 limit_up vs limit_down 暴露。",
+        key_label="limit_coef p",
+        key_value=limit_p,
+        n_obs=n_obs,
     )
 
 
@@ -661,6 +688,8 @@ def _h6(hypothesis: StructuralHypothesis, heterogeneity_size: pd.DataFrame) -> d
         verdict = "证据不足"
         confidence = "低"
         summary = "市值异质性没有显示小市值更强的不对称，当前 proxy 不支持 H6。"
+    spread = float(small) - float(large)
+    cn_n_events = int(cn["n_events"].sum()) if "n_events" in cn.columns else len(cn)
     return _make_verdict(
         hypothesis,
         verdict=verdict,
@@ -668,6 +697,9 @@ def _h6(hypothesis: StructuralHypothesis, heterogeneity_size: pd.DataFrame) -> d
         evidence_summary=summary,
         metric_snapshot=f"CN size Q1-Q2 avg={float(small):.2f}; Q4-Q5 avg={float(large):.2f}",
         next_step="补充真实或重建的 weight_change 后，用 weight_change 直接替代 size proxy。",
+        key_label="Q1Q2−Q4Q5 spread",
+        key_value=spread,
+        n_obs=cn_n_events,
     )
 
 

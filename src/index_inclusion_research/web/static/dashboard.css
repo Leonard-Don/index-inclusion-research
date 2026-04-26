@@ -2769,6 +2769,31 @@
       font-size: 12.5px;
       font-variant-numeric: tabular-nums;
     }
+    .cma-verdict-keymetric {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(15, 92, 110, 0.08);
+      border: 1px solid rgba(15, 92, 110, 0.16);
+      font-variant-numeric: tabular-nums;
+      align-self: flex-start;
+    }
+    .cma-verdict-keylabel {
+      color: #475666;
+      font-size: 11.5px;
+      letter-spacing: 0.04em;
+    }
+    .cma-verdict-keyvalue {
+      color: #18212b;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .cma-verdict-keyn {
+      color: var(--muted);
+      font-size: 11.5px;
+    }
     .cma-verdict-next {
       padding-top: 10px;
       border-top: 1px solid rgba(24,33,43,0.08);

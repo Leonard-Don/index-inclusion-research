@@ -146,6 +146,32 @@ def test_h2_uses_aum_when_available() -> None:
     assert "US AUM" in h2["metric_snapshot"]
 
 
+def test_verdict_rows_carry_structured_key_fields() -> None:
+    bootstrap = {
+        "cn_mean": 0.035,
+        "us_mean": 0.020,
+        "diff_mean": 0.015,
+        "boot_p_value": 0.012,
+        "boot_ci_low": 0.004,
+        "boot_ci_high": 0.026,
+        "n_cn": 130,
+        "n_us": 310,
+        "n_boot": 5000,
+    }
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+        pre_runup_bootstrap=bootstrap,
+    )
+    assert {"key_label", "key_value", "n_obs"}.issubset(verdicts.columns)
+    h1 = verdicts.set_index("hid").loc["H1"]
+    assert h1["key_label"] == "bootstrap p"
+    assert abs(float(h1["key_value"]) - 0.012) < 1e-9
+    assert int(h1["n_obs"]) == 440
+
+
 def test_h1_upgrades_to_full_support_when_bootstrap_significant() -> None:
     bootstrap = {
         "cn_mean": 0.035,
