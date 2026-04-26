@@ -12,6 +12,8 @@ from index_inclusion_research.chart_data import (
     build_car_heatmap_chart_data,
     build_car_path_chart_data,
     build_chart_data,
+    build_cma_gap_length_distribution_chart_data,
+    build_cma_mechanism_heatmap_chart_data,
     build_event_counts_chart_data,
     build_gap_decomposition_chart_data,
     build_heterogeneity_size_chart_data,
@@ -110,6 +112,8 @@ class TestChartRegistry:
             "main_regression",
             "mechanism_regression",
             "event_counts",
+            "cma_mechanism_heatmap",
+            "cma_gap_length_distribution",
         }
 
     def test_build_chart_data_returns_none_for_unknown(self, empty_root: Path) -> None:
@@ -412,6 +416,85 @@ class TestBuildEventCountsChartData:
 
     def test_json_serializable(self, event_counts_root: Path) -> None:
         json.dumps(build_event_counts_chart_data(event_counts_root))
+
+
+# ── cma_mechanism_heatmap ────────────────────────────────────────────
+
+
+@pytest.fixture()
+def cma_mechanism_root(tmp_path: Path) -> Path:
+    tables = tmp_path / "results" / "real_tables"
+    tables.mkdir(parents=True)
+    rows = []
+    for market in ("CN", "US"):
+        for phase in ("announce", "effective"):
+            for outcome in ("car_1_1", "turnover_change", "volume_change",
+                             "volatility_change", "price_limit_hit_share"):
+                rows.append(
+                    f"{market},{phase},{outcome},no_fe,0.01,0.005,2.0,0.045,200,0.05"
+                )
+    (tables / "cma_mechanism_panel.csv").write_text(
+        "market,event_phase,outcome,spec,coef,se,t,p_value,n_obs,r_squared\n"
+        + "\n".join(rows) + "\n"
+    )
+    return tmp_path
+
+
+class TestBuildCmaMechanismHeatmap:
+    def test_empty_root(self, empty_root: Path) -> None:
+        result = build_cma_mechanism_heatmap_chart_data(empty_root)
+        assert result["data"] == []
+
+    def test_populated_4x5_cells(self, cma_mechanism_root: Path) -> None:
+        result = build_cma_mechanism_heatmap_chart_data(cma_mechanism_root)
+        assert len(result["row_labels"]) == 4
+        assert len(result["col_labels"]) == 5
+        assert len(result["data"]) == 20  # 4 quadrants × 5 outcomes
+        for ann in result["annotations"]:
+            assert "t" in ann and "p_value" in ann and "stars" in ann
+        assert result["vmax"] >= 2.0
+
+    def test_json_serializable(self, cma_mechanism_root: Path) -> None:
+        json.dumps(build_cma_mechanism_heatmap_chart_data(cma_mechanism_root))
+
+
+# ── cma_gap_length_distribution ──────────────────────────────────────
+
+
+@pytest.fixture()
+def cma_gap_length_root(tmp_path: Path) -> Path:
+    tables = tmp_path / "results" / "real_tables"
+    tables.mkdir(parents=True)
+    (tables / "cma_gap_event_level.csv").write_text(
+        "event_id,market,gap_length_days\n"
+        "cn-1,CN,14\n"
+        "cn-2,CN,14\n"
+        "cn-3,CN,14\n"
+        "us-1,US,7\n"
+        "us-2,US,7\n"
+        "us-3,US,9\n"
+        "us-4,US,4\n"
+    )
+    return tmp_path
+
+
+class TestBuildCmaGapLengthDistribution:
+    def test_empty_root(self, empty_root: Path) -> None:
+        result = build_cma_gap_length_distribution_chart_data(empty_root)
+        assert result == {"series": [], "lengths": []}
+
+    def test_populated_distribution(self, cma_gap_length_root: Path) -> None:
+        result = build_cma_gap_length_distribution_chart_data(cma_gap_length_root)
+        assert result["lengths"] == [4, 7, 9, 14]
+        cn = next(s for s in result["series"] if s["market"] == "CN")
+        us = next(s for s in result["series"] if s["market"] == "US")
+        # CN only has 14
+        assert cn["data"] == [0, 0, 0, 3]
+        # US has 4(1), 7(2), 9(1), 14(0)
+        assert us["data"] == [1, 2, 1, 0]
+
+    def test_json_serializable(self, cma_gap_length_root: Path) -> None:
+        json.dumps(build_cma_gap_length_distribution_chart_data(cma_gap_length_root))
 
     def test_chart_data_matches_csv_source_of_truth(self, main_regression_root: Path) -> None:
         """Lock the chart_data builder to the regression_coefficients CSV.

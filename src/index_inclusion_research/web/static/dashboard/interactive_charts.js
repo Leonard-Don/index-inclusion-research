@@ -442,7 +442,89 @@ const CHART_OPTION_BUILDERS = {
     return opt;
   },
   event_counts: buildEventCountsOption,
+  cma_mechanism_heatmap: buildCmaMechanismHeatmapOption,
+  cma_gap_length_distribution: buildCmaGapLengthDistributionOption,
 };
+
+
+function buildCmaMechanismHeatmapOption(payload) {
+  return {
+    title: { text: 'CMA 机制系数 t 值热力图(no_fe spec)', left: 'center' },
+    tooltip: {
+      formatter: params => {
+        const ann = payload.annotations.find(
+          a => a.col === params.value[0] && a.row === params.value[1]
+        );
+        if (!ann) return '';
+        return `<strong>${payload.row_labels[ann.row]}</strong><br>` +
+          `${payload.col_labels[ann.col]}<br>` +
+          `t = ${ann.t.toFixed(2)} ${ann.stars ?? ''}<br>` +
+          (ann.p_value != null ? `p = ${ann.p_value.toFixed(4)}` : '');
+      },
+    },
+    grid: { left: 140, right: 80, top: 50, bottom: 60 },
+    xAxis: { type: 'category', data: payload.col_labels, splitArea: { show: true } },
+    yAxis: { type: 'category', data: payload.row_labels, splitArea: { show: true } },
+    visualMap: {
+      min: -payload.vmax,
+      max: payload.vmax,
+      calculable: true,
+      orient: 'vertical',
+      right: 5,
+      top: 'center',
+      inRange: { color: ['#9c2f55', '#f7f2ea', '#0f5c6e'] },
+      formatter: v => v.toFixed(2),
+    },
+    series: [{
+      type: 'heatmap',
+      data: payload.data,
+      label: {
+        show: true,
+        formatter: params => {
+          const ann = payload.annotations.find(
+            a => a.col === params.value[0] && a.row === params.value[1]
+          );
+          return ann ? `${ann.t.toFixed(2)}\n${ann.stars}` : '';
+        },
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#18212b',
+      },
+      emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0, 0, 0, 0.3)' } },
+    }],
+  };
+}
+
+
+function buildCmaGapLengthDistributionOption(payload) {
+  const ecSeries = payload.series.map(s => ({
+    name: s.name,
+    type: 'bar',
+    data: s.data,
+    itemStyle: { color: s.color },
+    barGap: 0,
+    emphasis: { focus: 'series' },
+  }));
+  return {
+    title: { text: 'Announce → Effective 窗口长度分布(天)', left: 'center' },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: params => {
+        const days = params[0]?.axisValue ?? '';
+        return `<strong>${days} 天</strong><br>` + params
+          .filter(p => p.value > 0)
+          .map(p => `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:6px"></span>${p.seriesName}: ${p.value} events`)
+          .join('<br>');
+      },
+    },
+    legend: { bottom: 0, data: payload.series.map(s => s.name) },
+    grid: { left: 60, right: 30, top: 50, bottom: 60 },
+    xAxis: { type: 'category', data: payload.lengths.map(String), name: 'gap_length_days' },
+    yAxis: { type: 'value', name: '事件数', splitLine: { lineStyle: { type: 'dashed' } } },
+    series: ecSeries,
+  };
+}
 
 
 function buildEventCountsOption(payload) {
