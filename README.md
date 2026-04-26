@@ -619,6 +619,9 @@ dashboard 在 `demo` / `full` 模式下渲染交互式图表(基于 ECharts CDN)
 | `main_regression` | `regression_coefficients.csv` | sample design 段(main_car forest plot) |
 | `mechanism_regression` | `regression_coefficients.csv` | sample design 段(turnover_mechanism forest plot) |
 | `event_counts` | `event_counts_by_year.csv` | sample design 段(年份分布柱图) |
+| `cma_mechanism_heatmap` | `cma_mechanism_panel.csv` | CMA 段(t 值热力图) |
+| `cma_gap_length_distribution` | `cma_gap_event_level.csv` | CMA 段(窗口长度柱图) |
+| `rdd_scatter` | `event_level_with_running.csv` | identification track(RDD 散点图带 cutoff) |
 
 图表通过 `IntersectionObserver` 懒加载;未识别的 `chart_id` 返回 404。新增图表见 [src/index_inclusion_research/chart_data.py](src/index_inclusion_research/chart_data.py) 的 `CHART_BUILDERS` 注册表与 [src/index_inclusion_research/web/static/dashboard/interactive_charts.js](src/index_inclusion_research/web/static/dashboard/interactive_charts.js) 的 `CHART_OPTION_BUILDERS`。
 

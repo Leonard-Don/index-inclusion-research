@@ -581,6 +581,67 @@ def build_cma_gap_length_distribution_chart_data(root: Path) -> dict:
     return {"series": series, "lengths": lengths}
 
 
+# ── 12. RDD scatter ──────────────────────────────────────────────────
+
+
+def build_rdd_scatter_chart_data(root: Path) -> dict:
+    """RDD bin scatter for HS300 inclusion at the cutoff.
+
+    Reads ``results/literature/hs300_rdd/event_level_with_running.csv`` and
+    emits two scatter series — control (inclusion=0) and treated
+    (inclusion=1) — in (running_variable, car_m1_p1) space, plus the
+    cutoff value so the JS option builder can render a vertical line.
+    """
+    path = root / "results" / "literature" / "hs300_rdd" / "event_level_with_running.csv"
+    if not path.exists():
+        return {"series": [], "cutoff": None, "outcome": "car_m1_p1"}
+
+    df = pd.read_csv(path)
+    required = {"running_variable", "car_m1_p1", "inclusion"}
+    if not required.issubset(df.columns):
+        return {"series": [], "cutoff": None, "outcome": "car_m1_p1"}
+
+    df = df.dropna(subset=["running_variable", "car_m1_p1"])
+    if df.empty:
+        return {"series": [], "cutoff": None, "outcome": "car_m1_p1"}
+
+    cutoff_value = (
+        float(df["cutoff"].iloc[0]) if "cutoff" in df.columns and pd.notna(df["cutoff"].iloc[0]) else 300.0
+    )
+
+    series = []
+    label_map = {0: "对照(inclusion=0)", 1: "处理(inclusion=1)"}
+    color_map = {0: "#5c6b77", 1: "#a63b28"}
+    for inclusion_value, group in df.groupby("inclusion", dropna=False):
+        try:
+            inc = int(inclusion_value)
+        except (TypeError, ValueError):
+            continue
+        points = []
+        for _, r in group.iterrows():
+            points.append(
+                [
+                    round(float(r["running_variable"]), 4),
+                    round(float(r["car_m1_p1"]), 6),
+                ]
+            )
+        series.append(
+            {
+                "name": label_map.get(inc, f"inclusion={inc}"),
+                "type": "scatter",
+                "data": points,
+                "color": color_map.get(inc, "#30424f"),
+                "inclusion": inc,
+            }
+        )
+
+    return {
+        "series": series,
+        "cutoff": cutoff_value,
+        "outcome": "car_m1_p1",
+    }
+
+
 # ── Registry ─────────────────────────────────────────────────────────
 
 CHART_BUILDERS: dict[str, callable] = {
@@ -595,6 +656,7 @@ CHART_BUILDERS: dict[str, callable] = {
     "event_counts": build_event_counts_chart_data,
     "cma_mechanism_heatmap": build_cma_mechanism_heatmap_chart_data,
     "cma_gap_length_distribution": build_cma_gap_length_distribution_chart_data,
+    "rdd_scatter": build_rdd_scatter_chart_data,
 }
 
 
