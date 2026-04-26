@@ -696,7 +696,12 @@ def _h6(hypothesis: StructuralHypothesis, heterogeneity_size: pd.DataFrame) -> d
         confidence=confidence,
         evidence_summary=summary,
         metric_snapshot=f"CN size Q1-Q2 avg={float(small):.2f}; Q4-Q5 avg={float(large):.2f}",
-        next_step="补充真实或重建的 weight_change 后，用 weight_change 直接替代 size proxy。",
+        next_step=(
+            "补充真实或重建的 weight_change 后,用 weight_change 直接替代 size proxy。"
+            "注意当前 hs300_rdd_candidates.reconstructed.csv 的 running_variable 仅是"
+            "rank 映射(顶=600..尾=1),不能直接当真实流通市值用——需要重新抓取每批次"
+            "公告日的成分股流通股本 × 收盘价才能算出可信的 weight_change。"
+        ),
         key_label="Q1Q2−Q4Q5 spread",
         key_value=spread,
         n_obs=cn_n_events,
