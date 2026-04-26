@@ -88,6 +88,7 @@ def test_orchestrator_runs_on_toy_data(tmp_path):
         "cma_time_series_break.csv",
         "cma_hypothesis_map.csv",
         "cma_hypothesis_verdicts.csv",
+        "cma_hypothesis_verdicts.tex",
     ]
     for name in expected_tables:
         assert (tmp_path / "tables" / name).exists(), f"missing: {name}"

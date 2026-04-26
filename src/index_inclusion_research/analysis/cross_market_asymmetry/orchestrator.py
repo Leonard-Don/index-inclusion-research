@@ -201,6 +201,7 @@ def run_cma_pipeline(
         limit_regression=limit_regression,
     )
     hypothesis_verdicts.to_csv(tables_dir / "cma_hypothesis_verdicts.csv", index=False)
+    verdicts.export_hypothesis_verdicts_tex(hypothesis_verdicts, output_dir=tables_dir)
 
     if research_summary_path is not None:
         _append_research_summary(

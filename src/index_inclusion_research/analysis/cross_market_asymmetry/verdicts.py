@@ -732,6 +732,75 @@ def build_hypothesis_verdicts(
     return pd.DataFrame(rows)
 
 
+_LATEX_VERDICT_HEADER = r"""\begin{tabular}{llllrrl}
+\toprule
+HID & 名称 & 裁决 & 可信度 & 头条指标 & 值 & n \\
+\midrule
+"""
+
+_LATEX_VERDICT_FOOTER = "\\bottomrule\n\\end{tabular}\n"
+
+
+def _latex_escape(text: str) -> str:
+    """Minimal LaTeX-safe escaping for the verdict snapshot."""
+    if text is None:
+        return ""
+    return (
+        str(text)
+        .replace("\\", r"\textbackslash{}")
+        .replace("&", r"\&")
+        .replace("%", r"\%")
+        .replace("_", r"\_")
+        .replace("#", r"\#")
+        .replace("$", r"\$")
+        .replace("{", r"\{")
+        .replace("}", r"\}")
+    )
+
+
+def export_hypothesis_verdicts_tex(
+    verdicts: pd.DataFrame,
+    *,
+    output_dir: Path,
+) -> Path:
+    """Render the verdict frame as a booktabs LaTeX table for paper insertion.
+
+    The output schema matches the markdown verdict block in research_summary
+    so the paper can cite either format. The 关键证据 column is omitted from
+    the LaTeX version to keep it printable on a single page.
+    """
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    out_path = output_dir / "cma_hypothesis_verdicts.tex"
+    lines: list[str] = ["% auto-generated CMA hypothesis verdict table", _LATEX_VERDICT_HEADER]
+    for _, row in verdicts.iterrows():
+        label = str(row.get("key_label", "") or "")
+        value_raw = row.get("key_value")
+        try:
+            value_f = float(value_raw) if value_raw is not None else float("nan")
+        except (TypeError, ValueError):
+            value_f = float("nan")
+        value_text = f"{value_f:.3f}" if value_f == value_f else "—"
+        n_obs_raw = row.get("n_obs")
+        try:
+            n_obs_int = int(n_obs_raw) if n_obs_raw is not None else 0
+        except (TypeError, ValueError):
+            n_obs_int = 0
+        n_text = str(n_obs_int) if n_obs_int > 0 else "—"
+        lines.append(
+            f"{_latex_escape(row['hid'])} & "
+            f"{_latex_escape(row['name_cn'])} & "
+            f"{_latex_escape(row['verdict'])} & "
+            f"{_latex_escape(row['confidence'])} & "
+            f"{_latex_escape(label) if label else '—'} & "
+            f"{value_text} & "
+            f"{n_text} \\\\"
+        )
+    lines.append(_LATEX_VERDICT_FOOTER)
+    out_path.write_text("\n".join(lines))
+    return out_path
+
+
 def export_hypothesis_verdicts(
     *,
     output_dir: Path,
