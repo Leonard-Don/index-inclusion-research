@@ -175,3 +175,8 @@ def test_research_summary_append_is_idempotent(tmp_path):
     )
     content2 = summary_path.read_text()
     assert content2.count("六、美股 vs A股 不对称") == 1
+    # verdict block is rendered as a markdown table, one row per H1..H6
+    assert "| 假说 | 名称 | 裁决 | 可信度 | 关键证据 |" in content2
+    assert "|---|---|---|---|---|" in content2
+    for hid in ("H1", "H2", "H3", "H4", "H5", "H6"):
+        assert f"| {hid} |" in content2
