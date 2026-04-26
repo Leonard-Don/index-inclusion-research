@@ -60,6 +60,10 @@ def run_plan_hs300_rdd_l3_main() -> None:
     _run_package_main("index_inclusion_research.hs300_rdd_l3_collection")
 
 
+def run_prepare_passive_aum_main() -> None:
+    _run_package_main("index_inclusion_research.prepare_passive_aum")
+
+
 def run_generate_sample_data_main() -> None:
     _run_package_main("index_inclusion_research.sample_data")
 
