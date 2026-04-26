@@ -15,6 +15,7 @@ from index_inclusion_research.chart_data import (
     build_gap_decomposition_chart_data,
     build_heterogeneity_size_chart_data,
     build_main_regression_chart_data,
+    build_mechanism_regression_chart_data,
     build_price_pressure_chart_data,
     build_time_series_rolling_chart_data,
 )
@@ -106,6 +107,7 @@ class TestChartRegistry:
             "heterogeneity_size",
             "time_series_rolling",
             "main_regression",
+            "mechanism_regression",
         }
 
     def test_build_chart_data_returns_none_for_unknown(self, empty_root: Path) -> None:
@@ -353,3 +355,49 @@ class TestBuildMainRegressionChartData:
 
     def test_json_serializable(self, main_regression_root: Path) -> None:
         json.dumps(build_main_regression_chart_data(main_regression_root))
+
+    def test_mechanism_regression_filters_to_turnover_mechanism(
+        self, main_regression_root: Path
+    ) -> None:
+        result = build_mechanism_regression_chart_data(main_regression_root)
+        # Fixture has 1 turnover_mechanism row only (CN announce)
+        assert len(result["rows"]) == 1
+        assert result["rows"][0]["specification"] == "turnover_mechanism"
+        assert result["rows"][0]["market"] == "CN"
+
+    def test_mechanism_regression_empty_root_returns_empty(
+        self, empty_root: Path
+    ) -> None:
+        assert build_mechanism_regression_chart_data(empty_root) == {"rows": []}
+
+    def test_chart_data_matches_csv_source_of_truth(self, main_regression_root: Path) -> None:
+        """Lock the chart_data builder to the regression_coefficients CSV.
+
+        If the CSV source ever drifts from what the forest plot displays
+        (different rounding, column rename, filter change), this test
+        fails loudly so the PNG / forest plot don't silently disagree.
+        """
+        import pandas as _pd
+
+        result = build_main_regression_chart_data(main_regression_root)
+        csv_path = (
+            main_regression_root
+            / "results"
+            / "real_tables"
+            / "regression_coefficients.csv"
+        )
+        df = _pd.read_csv(csv_path)
+        df = df.loc[
+            (df["specification"] == "main_car")
+            & (df["parameter"] == "treatment_group")
+        ].reset_index(drop=True)
+        assert len(result["rows"]) == len(df)
+        for chart_row, (_, csv_row) in zip(result["rows"], df.iterrows(), strict=True):
+            csv_coef = round(float(csv_row["coefficient"]), 6)
+            csv_se = float(csv_row["std_error"])
+            assert chart_row["coef"] == csv_coef
+            assert chart_row["ci_lo"] == round(csv_coef - 1.96 * csv_se, 6)
+            assert chart_row["ci_hi"] == round(csv_coef + 1.96 * csv_se, 6)
+            assert chart_row["p_value"] == round(float(csv_row["p_value"]), 6)
+            assert chart_row["market"] == csv_row["market"]
+            assert chart_row["phase"] == csv_row["event_phase"]

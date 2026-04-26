@@ -348,27 +348,24 @@ def build_time_series_rolling_chart_data(root: Path) -> dict:
 # ── 7. Main regression forest plot ───────────────────────────────────
 
 
-def build_main_regression_chart_data(root: Path) -> dict:
-    """Forest-plot payload for the main CAR regression treatment coefficient.
+_QUADRANT_ORDER: dict[tuple[str, str], int] = {
+    ("CN", "announce"): 0,
+    ("CN", "effective"): 1,
+    ("US", "announce"): 2,
+    ("US", "effective"): 3,
+}
 
-    Filters regression_coefficients.csv to ``specification == "main_car"``
-    and ``parameter == "treatment_group"`` and emits one row per
-    (market, event_phase) quadrant with coefficient, ±1.96·SE CI bounds
-    and HC3 p-value. Suitable for an ECharts custom forest plot.
-    """
-    path = root / "results" / "real_tables" / "regression_coefficients.csv"
-    if not path.exists():
-        return {"rows": []}
 
-    df = pd.read_csv(path)
+def _treatment_forest_rows(
+    df: pd.DataFrame,
+    *,
+    specification: str,
+) -> list[dict]:
     sub = df.loc[
-        (df["specification"] == "main_car")
+        (df["specification"] == specification)
         & (df["parameter"] == "treatment_group")
-    ].copy()
-    if sub.empty:
-        return {"rows": []}
-
-    rows = []
+    ]
+    rows: list[dict] = []
     for _, r in sub.iterrows():
         coef = float(r["coefficient"])
         se = float(r["std_error"])
@@ -390,9 +387,41 @@ def build_main_regression_chart_data(root: Path) -> dict:
                 "color": MARKET_COLORS.get(r["market"], "#30424f"),
             }
         )
-    # stable ordering: CN announce, CN effective, US announce, US effective
-    order = {("CN", "announce"): 0, ("CN", "effective"): 1, ("US", "announce"): 2, ("US", "effective"): 3}
-    rows.sort(key=lambda r: order.get((r["market"], r["phase"]), 99))
+    rows.sort(key=lambda r: _QUADRANT_ORDER.get((r["market"], r["phase"]), 99))
+    return rows
+
+
+def build_main_regression_chart_data(root: Path) -> dict:
+    """Forest-plot payload for the main CAR regression treatment coefficient.
+
+    Filters regression_coefficients.csv to ``specification == "main_car"``
+    and ``parameter == "treatment_group"`` and emits one row per
+    (market, event_phase) quadrant with coefficient, ±1.96·SE CI bounds
+    and HC3 p-value. Suitable for an ECharts custom forest plot.
+    """
+    path = root / "results" / "real_tables" / "regression_coefficients.csv"
+    if not path.exists():
+        return {"rows": []}
+
+    df = pd.read_csv(path)
+    rows = _treatment_forest_rows(df, specification="main_car")
+    return {"rows": rows}
+
+
+def build_mechanism_regression_chart_data(root: Path) -> dict:
+    """Forest-plot payload for the turnover-mechanism regression treatment coef.
+
+    Same shape as ``build_main_regression_chart_data`` but filtered to
+    ``specification == "turnover_mechanism"`` so the dashboard can show
+    the channel-concentration evidence right next to the main CAR
+    forest plot.
+    """
+    path = root / "results" / "real_tables" / "regression_coefficients.csv"
+    if not path.exists():
+        return {"rows": []}
+
+    df = pd.read_csv(path)
+    rows = _treatment_forest_rows(df, specification="turnover_mechanism")
     return {"rows": rows}
 
 
@@ -406,6 +435,7 @@ CHART_BUILDERS: dict[str, callable] = {
     "heterogeneity_size": build_heterogeneity_size_chart_data,
     "time_series_rolling": build_time_series_rolling_chart_data,
     "main_regression": build_main_regression_chart_data,
+    "mechanism_regression": build_mechanism_regression_chart_data,
 }
 
 
