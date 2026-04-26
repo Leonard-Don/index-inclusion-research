@@ -75,10 +75,14 @@ def _append_research_summary(
     if not hypothesis_verdicts.empty:
         lines.append("")
         lines.append("### 假说裁决摘要")
+        lines.append("")
+        lines.append("| 假说 | 名称 | 裁决 | 可信度 | 关键证据 |")
+        lines.append("|---|---|---|---|---|")
         for _, row in hypothesis_verdicts.iterrows():
+            evidence = str(row["evidence_summary"]).replace("|", "\\|").replace("\n", " ")
             lines.append(
-                f"- {row['hid']} {row['name_cn']}：{row['verdict']}（可信度：{row['confidence']}）。"
-                f"{row['evidence_summary']}"
+                f"| {row['hid']} | {row['name_cn']} | {row['verdict']} | "
+                f"{row['confidence']} | {evidence} |"
             )
 
     existing = ""
