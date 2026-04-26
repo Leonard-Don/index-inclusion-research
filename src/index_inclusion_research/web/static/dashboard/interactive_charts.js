@@ -434,6 +434,13 @@ const CHART_OPTION_BUILDERS = {
   heterogeneity_size: buildHeterogeneitySizeOption,
   time_series_rolling: buildTimeSeriesRollingOption,
   main_regression: buildMainRegressionOption,
+  // mechanism_regression reuses the forest-plot option builder; the
+  // chart title and series dataset come straight from the payload.
+  mechanism_regression: payload => {
+    const opt = buildMainRegressionOption(payload);
+    opt.title = { text: '机制回归 turnover_mechanism 系数(× 4 象限,带 95% CI)', left: 'center' };
+    return opt;
+  },
 };
 
 // ── controller ──────────────────────────────────────────────────────

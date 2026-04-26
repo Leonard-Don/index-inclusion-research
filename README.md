@@ -510,6 +510,7 @@ index-inclusion-hs300-rdd
 index-inclusion-prepare-hs300-rdd
 index-inclusion-reconstruct-hs300-rdd
 index-inclusion-plan-hs300-rdd-l3
+index-inclusion-prepare-passive-aum
 index-inclusion-cma
 ```
 
@@ -582,11 +583,22 @@ index-inclusion-cma
 index-inclusion-cma --tex-only
 ```
 
-需要叠加被动基金 AUM 到时序图：准备 `data/raw/passive_aum.csv`（列：`market, year, aum_trillion`）后
+需要叠加被动基金 AUM 到时序图(同时解锁 H2 verdict):准备 `data/raw/passive_aum.csv`(列:`market, year, aum_trillion`)后
 
 ```bash
 index-inclusion-cma --aum data/raw/passive_aum.csv
 ```
+
+如果你拿到的 AUM 原始文件列名是 `Country / Year / AUM` 或中文 `市场 / 年份 / 被动AUM` 之类的非标准格式,先用导入工具归一化:
+
+```bash
+index-inclusion-prepare-passive-aum \
+  --input /path/to/raw_aum.csv \
+  --output data/raw/passive_aum.csv \
+  --force
+```
+
+它会自动把列名 / 市场代号 / 数值类型规范化,丢掉无效行(未识别市场、年份非数、aum 非正)并打印审计行。`--check-only` 只校验不写盘。模板见 [data/raw/passive_aum.template.csv](data/raw/passive_aum.template.csv)。
 
 `index-inclusion-make-figures-tables` 跑完标准表格后，如果检测到已存在的 `cma_mechanism_panel.csv`，会自动调 `regenerate_tex_only` 把 `.tex` 刷新到最新。
 
@@ -604,7 +616,8 @@ dashboard 在 `demo` / `full` 模式下渲染交互式图表(基于 ECharts CDN)
 | `gap_decomposition` | `cma_gap_summary.csv` | CMA 段图卡 |
 | `heterogeneity_size` | `cma_heterogeneity_size.csv` | CMA 段图卡 |
 | `time_series_rolling` | `cma_time_series_rolling.csv` | CMA 段图卡 |
-| `main_regression` | `regression_coefficients.csv` | sample design 段(forest plot) |
+| `main_regression` | `regression_coefficients.csv` | sample design 段(main_car forest plot) |
+| `mechanism_regression` | `regression_coefficients.csv` | sample design 段(turnover_mechanism forest plot) |
 
 图表通过 `IntersectionObserver` 懒加载;未识别的 `chart_id` 返回 404。新增图表见 [src/index_inclusion_research/chart_data.py](src/index_inclusion_research/chart_data.py) 的 `CHART_BUILDERS` 注册表与 [src/index_inclusion_research/web/static/dashboard/interactive_charts.js](src/index_inclusion_research/web/static/dashboard/interactive_charts.js) 的 `CHART_OPTION_BUILDERS`。
 

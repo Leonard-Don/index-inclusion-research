@@ -234,6 +234,13 @@ def _sample_design_figure_entries(target_dir: Path, to_relative: RelativePathBui
         caption="图意：展示主回归中处理组变量系数与 95% 置信区间。阅读重点：比较不同市场、不同事件阶段的方向是否一致，以及置信区间是否跨越 0。",
     )
     main_entry["echart_id"] = "main_regression"
+    mechanism_entry = build_figure_entry(
+        mechanism_path,
+        to_relative=to_relative,
+        label="机制回归系数图",
+        caption="图意：把换手率、成交量与波动率三类机制回归放在同一张图中。阅读重点：观察中国 A 股与美国在公告日和生效日的机制方向是否一致。",
+    )
+    mechanism_entry["echart_id"] = "mechanism_regression"
     return [
         build_figure_entry(
             timeline_path,
@@ -244,12 +251,7 @@ def _sample_design_figure_entries(target_dir: Path, to_relative: RelativePathBui
         ),
         heatmap_entry,
         main_entry,
-        build_figure_entry(
-            mechanism_path,
-            to_relative=to_relative,
-            label="机制回归系数图",
-            caption="图意：把换手率、成交量与波动率三类机制回归放在同一张图中。阅读重点：观察中国 A 股与美国在公告日和生效日的机制方向是否一致。",
-        ),
+        mechanism_entry,
         build_figure_entry(
             match_path,
             to_relative=to_relative,
