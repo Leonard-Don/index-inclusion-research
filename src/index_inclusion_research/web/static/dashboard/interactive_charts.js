@@ -444,7 +444,66 @@ const CHART_OPTION_BUILDERS = {
   event_counts: buildEventCountsOption,
   cma_mechanism_heatmap: buildCmaMechanismHeatmapOption,
   cma_gap_length_distribution: buildCmaGapLengthDistributionOption,
+  rdd_scatter: buildRddScatterOption,
 };
+
+
+function buildRddScatterOption(payload) {
+  const ecSeries = payload.series.map(s => ({
+    name: s.name,
+    type: 'scatter',
+    data: s.data,
+    itemStyle: { color: s.color, opacity: 0.55 },
+    symbolSize: 6,
+    emphasis: { focus: 'series', itemStyle: { opacity: 1 } },
+  }));
+  if (payload.cutoff != null) {
+    ecSeries.push({
+      type: 'line',
+      data: [],
+      markLine: {
+        symbol: 'none',
+        silent: true,
+        lineStyle: { color: '#9ba3ad', type: 'dashed', width: 1.5 },
+        label: { formatter: 'cutoff = ' + payload.cutoff },
+        data: [{ xAxis: payload.cutoff }],
+      },
+    });
+  }
+  return {
+    title: {
+      text: 'HS300 RDD 散点(运行变量 × CAR[-1,+1])',
+      left: 'center',
+    },
+    tooltip: {
+      trigger: 'item',
+      formatter: params => {
+        if (!params.value || params.value.length < 2) return '';
+        const x = params.value[0];
+        const y = params.value[1];
+        return `<strong>${params.seriesName}</strong><br>` +
+          `running_variable: ${x.toFixed(1)}<br>` +
+          `CAR[-1,+1]: ${(y * 100).toFixed(3)}%`;
+      },
+    },
+    legend: { bottom: 0, data: payload.series.map(s => s.name) },
+    grid: { left: 60, right: 30, top: 50, bottom: 50 },
+    xAxis: {
+      type: 'value',
+      name: 'running_variable',
+      nameLocation: 'center',
+      nameGap: 28,
+      splitLine: { lineStyle: { type: 'dashed' } },
+    },
+    yAxis: {
+      type: 'value',
+      name: 'CAR[-1,+1]',
+      axisLabel: { formatter: v => (v * 100).toFixed(1) + '%' },
+      splitLine: { lineStyle: { type: 'dashed' } },
+    },
+    series: ecSeries,
+  };
+}
 
 
 function buildCmaMechanismHeatmapOption(payload) {

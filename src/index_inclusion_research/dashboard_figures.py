@@ -204,13 +204,13 @@ def create_identification_figures(
     fig.tight_layout()
     fig.savefig(figure_path, dpi=220)
     plt.close(fig)
-    return [
-        build_figure_entry(
-            figure_path,
-            to_relative=to_relative,
-            caption="中国样本 RDD 主图。图意：以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。阅读重点：聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
-        )
-    ]
+    rdd_entry = build_figure_entry(
+        figure_path,
+        to_relative=to_relative,
+        caption="中国样本 RDD 主图。图意：以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。阅读重点：聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
+    )
+    rdd_entry["echart_id"] = "rdd_scatter"
+    return [rdd_entry]
 
 
 def _sample_design_figure_entries(target_dir: Path, to_relative: RelativePathBuilder) -> list[FigureEntry]:

@@ -20,6 +20,7 @@ from index_inclusion_research.chart_data import (
     build_main_regression_chart_data,
     build_mechanism_regression_chart_data,
     build_price_pressure_chart_data,
+    build_rdd_scatter_chart_data,
     build_time_series_rolling_chart_data,
 )
 
@@ -114,6 +115,7 @@ class TestChartRegistry:
             "event_counts",
             "cma_mechanism_heatmap",
             "cma_gap_length_distribution",
+            "rdd_scatter",
         }
 
     def test_build_chart_data_returns_none_for_unknown(self, empty_root: Path) -> None:
@@ -495,6 +497,46 @@ class TestBuildCmaGapLengthDistribution:
 
     def test_json_serializable(self, cma_gap_length_root: Path) -> None:
         json.dumps(build_cma_gap_length_distribution_chart_data(cma_gap_length_root))
+
+
+# ── rdd_scatter ──────────────────────────────────────────────────────
+
+
+@pytest.fixture()
+def rdd_scatter_root(tmp_path: Path) -> Path:
+    rdd_dir = tmp_path / "results" / "literature" / "hs300_rdd"
+    rdd_dir.mkdir(parents=True)
+    (rdd_dir / "event_level_with_running.csv").write_text(
+        "running_variable,car_m1_p1,inclusion,cutoff\n"
+        "320,0.012,1,300\n"
+        "350,0.018,1,300\n"
+        "400,0.022,1,300\n"
+        "280,0.001,0,300\n"
+        "290,-0.003,0,300\n"
+    )
+    return tmp_path
+
+
+class TestBuildRddScatterChartData:
+    def test_empty_root(self, empty_root: Path) -> None:
+        result = build_rdd_scatter_chart_data(empty_root)
+        assert result["series"] == []
+        assert result["cutoff"] is None
+
+    def test_populated_returns_two_series(self, rdd_scatter_root: Path) -> None:
+        result = build_rdd_scatter_chart_data(rdd_scatter_root)
+        assert len(result["series"]) == 2
+        assert result["cutoff"] == 300.0
+        treated = next(s for s in result["series"] if s["inclusion"] == 1)
+        control = next(s for s in result["series"] if s["inclusion"] == 0)
+        assert len(treated["data"]) == 3
+        assert len(control["data"]) == 2
+        for x, y in treated["data"] + control["data"]:
+            assert isinstance(x, float)
+            assert isinstance(y, float)
+
+    def test_json_serializable(self, rdd_scatter_root: Path) -> None:
+        json.dumps(build_rdd_scatter_chart_data(rdd_scatter_root))
 
     def test_chart_data_matches_csv_source_of_truth(self, main_regression_root: Path) -> None:
         """Lock the chart_data builder to the regression_coefficients CSV.
