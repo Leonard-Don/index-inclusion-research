@@ -570,6 +570,8 @@ index-inclusion-cma
 - `results/real_tables/cma_hypothesis_verdicts.csv`：每条机制假设的 verdict（`支持` / `部分支持` / `反对` / `待补数据`）+ confidence + 下一步建议；dashboard 在 demo / full 模式下渲染成 verdict 卡片
 - `results/real_tables/cma_pre_runup_bootstrap.csv`：H1 信息预运行的 CN-US 跨市场差异 bootstrap 检验(diff_mean / boot_p_value / 95% CI),自动喂给 H1 verdict 替代单市场显著性判断
 - `results/real_tables/cma_gap_drift_market_regression.csv`：H4 卖空约束的 `gap_drift ~ cn_dummy + gap_length_days` OLS-HC3 回归结果(cn_coef / cn_p_value / r_squared),自动喂给 H4 verdict 替代单市场比较
+- `results/real_tables/cma_h3_channel_concentration.csv`：H3 散户/机构结构的 4 象限双通道(turnover + volume)显著性表(turnover_sig / volume_sig / both_channels_sig),自动喂给 H3 verdict 替代单通道判断
+- `results/real_tables/cma_h5_limit_predictive_regression.csv`：H5 涨跌停限制的 CN 事件级预测回归(`car_1_1 ~ price_limit_hit_share + log_mktcap_pre`),自动喂给 H5 verdict 替代单市场 t 检验
 - `results/real_tables/cma_mechanism_panel.tex`（论文可直接插入）
 - `results/real_figures/cma_*.png`（7 张主图）
 - `results/real_tables/research_summary.md` 新增章节"六、美股 vs A股 不对称"（幂等追加，不会重复）
@@ -589,6 +591,22 @@ index-inclusion-cma --aum data/raw/passive_aum.csv
 `index-inclusion-make-figures-tables` 跑完标准表格后，如果检测到已存在的 `cma_mechanism_panel.csv`，会自动调 `regenerate_tex_only` 把 `.tex` 刷新到最新。
 
 CMA 的 dashboard 集成以**自包含 helper** 形式交付：`index_inclusion_research.analysis.cross_market_asymmetry.dashboard_section.build_cross_market_section(tables_dir=..., figures_dir=..., mode=...)` 返回一个 presenter-agnostic 的 section context，dashboard 层可以在任何 mode（`brief` / `demo` / `full`）下直接接入。
+
+### 交互式 ECharts 图层
+
+dashboard 在 `demo` / `full` 模式下渲染交互式图表(基于 ECharts CDN)。每张交互图通过 `/api/chart/<chart_id>` 端点拉取 JSON,数据由 `index_inclusion_research.chart_data` 模块根据现有 CSV 输出按需构建,PNG 仍作 fallback 渲染:
+
+| chart_id | 数据来源 | 渲染位置 |
+|---|---|---|
+| `car_path` | `cma_ar_path.csv` + `cma_car_path.csv` | CMA 段头 |
+| `car_heatmap` | `event_study_summary.csv` | sample design 段 |
+| `price_pressure` | `time_series_event_study_summary.csv` | 价格压力 track |
+| `gap_decomposition` | `cma_gap_summary.csv` | CMA 段图卡 |
+| `heterogeneity_size` | `cma_heterogeneity_size.csv` | CMA 段图卡 |
+| `time_series_rolling` | `cma_time_series_rolling.csv` | CMA 段图卡 |
+| `main_regression` | `regression_coefficients.csv` | sample design 段(forest plot) |
+
+图表通过 `IntersectionObserver` 懒加载;未识别的 `chart_id` 返回 404。新增图表见 [src/index_inclusion_research/chart_data.py](src/index_inclusion_research/chart_data.py) 的 `CHART_BUILDERS` 注册表与 [src/index_inclusion_research/web/static/dashboard/interactive_charts.js](src/index_inclusion_research/web/static/dashboard/interactive_charts.js) 的 `CHART_OPTION_BUILDERS`。
 
 ## 哪些文件是“核心文件”
 
