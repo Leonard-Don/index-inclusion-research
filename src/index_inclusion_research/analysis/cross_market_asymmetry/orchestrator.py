@@ -76,13 +76,28 @@ def _append_research_summary(
         lines.append("")
         lines.append("### 假说裁决摘要")
         lines.append("")
-        lines.append("| 假说 | 名称 | 裁决 | 可信度 | 关键证据 |")
-        lines.append("|---|---|---|---|---|")
+        lines.append(
+            "| 假说 | 名称 | 裁决 | 可信度 | 头条指标 | 值 | n | 关键证据 |"
+        )
+        lines.append("|---|---|---|---|---|---|---|---|")
         for _, row in hypothesis_verdicts.iterrows():
             evidence = str(row["evidence_summary"]).replace("|", "\\|").replace("\n", " ")
+            label = str(row.get("key_label", "") or "—")
+            value = row.get("key_value")
+            try:
+                value_f = float(value) if value is not None else float("nan")
+            except (TypeError, ValueError):
+                value_f = float("nan")
+            value_text = f"{value_f:.3f}" if value_f == value_f else "—"  # NaN check
+            n_obs_raw = row.get("n_obs")
+            try:
+                n_obs_int = int(n_obs_raw) if n_obs_raw is not None else 0
+            except (TypeError, ValueError):
+                n_obs_int = 0
+            n_text = str(n_obs_int) if n_obs_int > 0 else "—"
             lines.append(
                 f"| {row['hid']} | {row['name_cn']} | {row['verdict']} | "
-                f"{row['confidence']} | {evidence} |"
+                f"{row['confidence']} | {label} | {value_text} | {n_text} | {evidence} |"
             )
 
     existing = ""
