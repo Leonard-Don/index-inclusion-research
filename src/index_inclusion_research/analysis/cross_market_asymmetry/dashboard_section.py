@@ -44,6 +44,8 @@ FIGURE_ECHART_IDS: dict[str, str] = {
     "cma_gap_decomposition.png": "gap_decomposition",
     "cma_heterogeneity_matrix_size.png": "heterogeneity_size",
     "cma_time_series_rolling.png": "time_series_rolling",
+    "cma_mechanism_heatmap.png": "cma_mechanism_heatmap",
+    "cma_gap_length_distribution.png": "cma_gap_length_distribution",
 }
 
 

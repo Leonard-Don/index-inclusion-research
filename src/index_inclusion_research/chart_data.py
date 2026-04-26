@@ -462,6 +462,125 @@ def build_event_counts_chart_data(root: Path) -> dict:
     return {"series": series, "years": years}
 
 
+# ── 10. CMA mechanism heatmap (t-values by quadrant × outcome) ───────
+
+
+_MECHANISM_OUTCOME_LABELS = {
+    "car_1_1": "CAR[-1,+1]",
+    "turnover_change": "Turnover Δ",
+    "volume_change": "Volume Δ",
+    "volatility_change": "Volatility Δ",
+    "price_limit_hit_share": "涨跌停命中率",
+}
+
+
+def build_cma_mechanism_heatmap_chart_data(root: Path) -> dict:
+    """Heatmap of treatment-group t-values across CMA mechanism panel.
+
+    Reads ``cma_mechanism_panel.csv`` (no_fe spec only) and pivots into
+    a quadrant × outcome heatmap with ECharts-friendly cell triples.
+    """
+    path = root / "results" / "real_tables" / "cma_mechanism_panel.csv"
+    if not path.exists():
+        return {"data": [], "row_labels": [], "col_labels": [], "annotations": []}
+
+    df = pd.read_csv(path)
+    sub = df.loc[df["spec"] == "no_fe"].copy()
+    if sub.empty:
+        return {"data": [], "row_labels": [], "col_labels": [], "annotations": []}
+
+    sub["row_label"] = (
+        sub["market"].map(MARKET_LABELS).fillna(sub["market"])
+        + " · "
+        + sub["event_phase"].map(PHASE_LABELS).fillna(sub["event_phase"])
+    )
+    sub["col_label"] = sub["outcome"].map(_MECHANISM_OUTCOME_LABELS).fillna(sub["outcome"])
+
+    row_order = [
+        f"{MARKET_LABELS[m]} · {PHASE_LABELS[p]}"
+        for m in ("CN", "US")
+        for p in ("announce", "effective")
+    ]
+    col_order = [
+        _MECHANISM_OUTCOME_LABELS[o]
+        for o in (
+            "car_1_1",
+            "turnover_change",
+            "volume_change",
+            "volatility_change",
+            "price_limit_hit_share",
+        )
+    ]
+
+    pivot_t = sub.pivot_table(index="row_label", columns="col_label", values="t", aggfunc="first")
+    pivot_p = sub.pivot_table(index="row_label", columns="col_label", values="p_value", aggfunc="first")
+
+    data: list[list] = []
+    annotations: list[dict] = []
+    for i, row in enumerate(row_order):
+        for j, col in enumerate(col_order):
+            t_val = pivot_t.loc[row, col] if row in pivot_t.index and col in pivot_t.columns else None
+            p_val = pivot_p.loc[row, col] if row in pivot_p.index and col in pivot_p.columns else None
+            if t_val is None or pd.isna(t_val):
+                continue
+            data.append([j, i, round(float(t_val), 3)])
+            annotations.append(
+                {
+                    "col": j,
+                    "row": i,
+                    "t": round(float(t_val), 3),
+                    "p_value": round(float(p_val), 4) if pd.notna(p_val) else None,
+                    "stars": _significance_stars(float(p_val)) if pd.notna(p_val) else "",
+                }
+            )
+
+    vmax = max((abs(v) for _, _, v in data), default=2.0)
+    return {
+        "data": data,
+        "row_labels": row_order,
+        "col_labels": col_order,
+        "annotations": annotations,
+        "vmax": round(vmax, 3),
+    }
+
+
+# ── 11. CMA gap-length distribution ──────────────────────────────────
+
+
+def build_cma_gap_length_distribution_chart_data(root: Path) -> dict:
+    """Bar-chart payload: count of events per ``gap_length_days`` per market.
+
+    Reads ``cma_gap_event_level.csv`` and groups by integer gap_length_days
+    so the chart shows the announce → effective window-length distribution
+    (CN is fixed at 14, US varies 0..26).
+    """
+    path = root / "results" / "real_tables" / "cma_gap_event_level.csv"
+    if not path.exists():
+        return {"series": [], "lengths": []}
+
+    df = pd.read_csv(path)
+    df = df.dropna(subset=["gap_length_days"])
+    if df.empty:
+        return {"series": [], "lengths": []}
+
+    df["gap_length_days"] = df["gap_length_days"].astype(int)
+    lengths = sorted(df["gap_length_days"].unique().tolist())
+    series = []
+    for market, group in df.groupby("market", dropna=False):
+        counts = group["gap_length_days"].value_counts().to_dict()
+        data = [int(counts.get(length, 0)) for length in lengths]
+        series.append(
+            {
+                "name": MARKET_LABELS.get(market, market),
+                "type": "bar",
+                "data": data,
+                "color": MARKET_COLORS.get(market, "#30424f"),
+                "market": market,
+            }
+        )
+    return {"series": series, "lengths": lengths}
+
+
 # ── Registry ─────────────────────────────────────────────────────────
 
 CHART_BUILDERS: dict[str, callable] = {
@@ -474,6 +593,8 @@ CHART_BUILDERS: dict[str, callable] = {
     "main_regression": build_main_regression_chart_data,
     "mechanism_regression": build_mechanism_regression_chart_data,
     "event_counts": build_event_counts_chart_data,
+    "cma_mechanism_heatmap": build_cma_mechanism_heatmap_chart_data,
+    "cma_gap_length_distribution": build_cma_gap_length_distribution_chart_data,
 }
 
 
