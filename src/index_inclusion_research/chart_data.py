@@ -425,6 +425,43 @@ def build_mechanism_regression_chart_data(root: Path) -> dict:
     return {"rows": rows}
 
 
+# ── 9. Event counts by year ──────────────────────────────────────────
+
+
+def build_event_counts_chart_data(root: Path) -> dict:
+    """Bar-chart payload of treated event counts per market × announce_year.
+
+    Reads ``event_counts_by_year.csv`` and emits one series per market
+    (filtered to ``inclusion == 1`` — treated events only) with a value
+    for every year in the union range. Suitable for an ECharts grouped
+    bar chart that pairs with the static sample-event-timeline figure.
+    """
+    path = root / "results" / "real_tables" / "event_counts_by_year.csv"
+    if not path.exists():
+        return {"series": [], "years": []}
+
+    df = pd.read_csv(path)
+    df = df.loc[df["inclusion"] == 1].copy()
+    if df.empty:
+        return {"series": [], "years": []}
+
+    years = sorted({int(y) for y in df["announce_year"].dropna().unique()})
+    series = []
+    for market, group in df.groupby("market", dropna=False):
+        by_year = group.set_index("announce_year")["n_events"].to_dict()
+        data = [int(by_year.get(year, 0)) for year in years]
+        series.append(
+            {
+                "name": MARKET_LABELS.get(market, market),
+                "type": "bar",
+                "data": data,
+                "color": MARKET_COLORS.get(market, "#30424f"),
+                "market": market,
+            }
+        )
+    return {"series": series, "years": years}
+
+
 # ── Registry ─────────────────────────────────────────────────────────
 
 CHART_BUILDERS: dict[str, callable] = {
@@ -436,6 +473,7 @@ CHART_BUILDERS: dict[str, callable] = {
     "time_series_rolling": build_time_series_rolling_chart_data,
     "main_regression": build_main_regression_chart_data,
     "mechanism_regression": build_mechanism_regression_chart_data,
+    "event_counts": build_event_counts_chart_data,
 }
 
 

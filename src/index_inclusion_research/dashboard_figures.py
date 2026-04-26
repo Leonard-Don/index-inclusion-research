@@ -241,14 +241,16 @@ def _sample_design_figure_entries(target_dir: Path, to_relative: RelativePathBui
         caption="图意：把换手率、成交量与波动率三类机制回归放在同一张图中。阅读重点：观察中国 A 股与美国在公告日和生效日的机制方向是否一致。",
     )
     mechanism_entry["echart_id"] = "mechanism_regression"
+    timeline_entry = build_figure_entry(
+        timeline_path,
+        to_relative=to_relative,
+        label="真实调入调出事件时间线",
+        caption="图意：按市场与事件阶段展开所有真实调入/调出事件。阅读重点：观察样本是否集中于少数批次，以及公告日与生效日是否在时间轴上形成清晰层次。",
+        layout_class="wide",
+    )
+    timeline_entry["echart_id"] = "event_counts"
     return [
-        build_figure_entry(
-            timeline_path,
-            to_relative=to_relative,
-            label="真实调入调出事件时间线",
-            caption="图意：按市场与事件阶段展开所有真实调入/调出事件。阅读重点：观察样本是否集中于少数批次，以及公告日与生效日是否在时间轴上形成清晰层次。",
-            layout_class="wide",
-        ),
+        timeline_entry,
         heatmap_entry,
         main_entry,
         mechanism_entry,
