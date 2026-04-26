@@ -429,6 +429,56 @@ def test_h3_falls_back_to_single_channel_logic_when_table_missing() -> None:
     assert "channel" not in h3["metric_snapshot"]
 
 
+def test_export_hypothesis_verdicts_tex_writes_booktabs_table(tmp_path) -> None:
+    from index_inclusion_research.analysis.cross_market_asymmetry.verdicts import (
+        export_hypothesis_verdicts_tex,
+    )
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+    )
+    out = export_hypothesis_verdicts_tex(verdicts, output_dir=tmp_path)
+    assert out.name == "cma_hypothesis_verdicts.tex"
+    content = out.read_text()
+    assert r"\begin{tabular}" in content
+    assert r"\toprule" in content
+    assert r"\bottomrule" in content
+    for hid in ("H1", "H2", "H3", "H4", "H5", "H6"):
+        assert hid in content
+
+
+def test_export_hypothesis_verdicts_tex_escapes_latex_metacharacters(tmp_path) -> None:
+    from index_inclusion_research.analysis.cross_market_asymmetry.verdicts import (
+        export_hypothesis_verdicts_tex,
+    )
+    # craft a verdict with special chars in key_label
+    verdicts = pd.DataFrame(
+        [
+            {
+                "hid": "H99",
+                "name_cn": "Probe & test",
+                "verdict": "支持",
+                "confidence": "高",
+                "evidence_summary": "",
+                "metric_snapshot": "",
+                "next_step": "",
+                "evidence_refs": "",
+                "key_label": "p_value & R²",
+                "key_value": 0.05,
+                "n_obs": 100,
+            }
+        ]
+    )
+    out = export_hypothesis_verdicts_tex(verdicts, output_dir=tmp_path)
+    text = out.read_text()
+    # & escaped
+    assert r"Probe \& test" in text
+    # _ escaped
+    assert r"p\_value" in text
+
+
 def test_export_hypothesis_verdicts_writes_csv(tmp_path) -> None:
     out = export_hypothesis_verdicts(
         output_dir=tmp_path,
