@@ -332,6 +332,100 @@ function buildTimeSeriesRollingOption(payload) {
 }
 
 
+function buildMainRegressionOption(payload) {
+  const rows = payload.rows || [];
+  const labels = rows.map(r => r.label);
+  // point series — coefficient
+  const pointData = rows.map((r, i) => ({
+    value: [r.coef, i],
+    itemStyle: { color: r.color },
+    p_value: r.p_value,
+    stars: r.stars,
+    ci_lo: r.ci_lo,
+    ci_hi: r.ci_hi,
+  }));
+  // CI bars rendered via custom series
+  const ciSeries = {
+    name: '95% CI',
+    type: 'custom',
+    renderItem: (params, api) => {
+      const idx = api.value(0);
+      const lo = api.value(1);
+      const hi = api.value(2);
+      const yPx = api.coord([0, idx])[1];
+      const loPx = api.coord([lo, idx])[0];
+      const hiPx = api.coord([hi, idx])[0];
+      return {
+        type: 'group',
+        children: [
+          { type: 'line', shape: { x1: loPx, y1: yPx, x2: hiPx, y2: yPx },
+            style: { stroke: rows[idx]?.color || '#30424f', lineWidth: 2 } },
+          { type: 'line', shape: { x1: loPx, y1: yPx - 6, x2: loPx, y2: yPx + 6 },
+            style: { stroke: rows[idx]?.color || '#30424f', lineWidth: 2 } },
+          { type: 'line', shape: { x1: hiPx, y1: yPx - 6, x2: hiPx, y2: yPx + 6 },
+            style: { stroke: rows[idx]?.color || '#30424f', lineWidth: 2 } },
+        ],
+      };
+    },
+    data: rows.map((r, i) => [i, r.ci_lo, r.ci_hi]),
+    silent: true,
+    z: -1,
+  };
+  return {
+    title: { text: '主回归 treatment_group 系数(CAR[-1,+1] × 4 象限,带 95% CI)', left: 'center' },
+    tooltip: {
+      trigger: 'item',
+      formatter: params => {
+        const d = params.data;
+        if (!d || d.value == null) return '';
+        const coef = d.value[0];
+        return `<strong>${labels[d.value[1]] ?? ''}</strong><br>` +
+          `coef: ${(coef * 100).toFixed(3)}% ${d.stars ?? ''}<br>` +
+          `95% CI: [${(d.ci_lo * 100).toFixed(3)}%, ${(d.ci_hi * 100).toFixed(3)}%]<br>` +
+          `p = ${d.p_value?.toFixed(4) ?? '—'}`;
+      },
+    },
+    grid: { left: 140, right: 30, top: 50, bottom: 60 },
+    xAxis: {
+      type: 'value',
+      name: 'treatment_group 系数',
+      nameLocation: 'center',
+      nameGap: 28,
+      axisLabel: { formatter: v => (v * 100).toFixed(1) + '%' },
+      splitLine: { lineStyle: { type: 'dashed' } },
+    },
+    yAxis: {
+      type: 'category',
+      data: labels,
+      inverse: true,
+      axisTick: { show: false },
+    },
+    series: [
+      ciSeries,
+      {
+        name: '系数估计',
+        type: 'scatter',
+        data: pointData,
+        symbolSize: 12,
+        emphasis: { scale: 1.4 },
+      },
+      {
+        // zero-line marker
+        type: 'line',
+        data: [],
+        markLine: {
+          symbol: 'none',
+          silent: true,
+          lineStyle: { color: '#9ba3ad', type: 'dashed' },
+          data: [{ xAxis: 0 }],
+          label: { show: false },
+        },
+      },
+    ],
+  };
+}
+
+
 const CHART_OPTION_BUILDERS = {
   car_path: buildCarPathOption,
   price_pressure: buildPricePressureOption,
@@ -339,6 +433,7 @@ const CHART_OPTION_BUILDERS = {
   gap_decomposition: buildGapDecompositionOption,
   heterogeneity_size: buildHeterogeneitySizeOption,
   time_series_rolling: buildTimeSeriesRollingOption,
+  main_regression: buildMainRegressionOption,
 };
 
 // ── controller ──────────────────────────────────────────────────────
@@ -359,7 +454,9 @@ function initChart(container) {
       return r.json();
     })
     .then(payload => {
-      if (payload.error || (!payload.series && !payload.data)) {
+      // empty / unrenderable payload — keep the static fallback img
+      const hasContent = !!(payload.series || payload.data || payload.rows);
+      if (payload.error || !hasContent) {
         container.classList.remove('echart-loading');
         container.classList.add('echart-empty');
         return;

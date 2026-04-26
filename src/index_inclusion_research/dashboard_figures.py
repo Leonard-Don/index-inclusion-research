@@ -227,6 +227,13 @@ def _sample_design_figure_entries(target_dir: Path, to_relative: RelativePathBui
             layout_class="wide",
         )
     heatmap_entry["echart_id"] = "car_heatmap"
+    main_entry = build_figure_entry(
+        main_path,
+        to_relative=to_relative,
+        label="主回归处理组系数图",
+        caption="图意：展示主回归中处理组变量系数与 95% 置信区间。阅读重点：比较不同市场、不同事件阶段的方向是否一致，以及置信区间是否跨越 0。",
+    )
+    main_entry["echart_id"] = "main_regression"
     return [
         build_figure_entry(
             timeline_path,
@@ -236,12 +243,7 @@ def _sample_design_figure_entries(target_dir: Path, to_relative: RelativePathBui
             layout_class="wide",
         ),
         heatmap_entry,
-        build_figure_entry(
-            main_path,
-            to_relative=to_relative,
-            label="主回归处理组系数图",
-            caption="图意：展示主回归中处理组变量系数与 95% 置信区间。阅读重点：比较不同市场、不同事件阶段的方向是否一致，以及置信区间是否跨越 0。",
-        ),
+        main_entry,
         build_figure_entry(
             mechanism_path,
             to_relative=to_relative,

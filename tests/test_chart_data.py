@@ -14,6 +14,7 @@ from index_inclusion_research.chart_data import (
     build_chart_data,
     build_gap_decomposition_chart_data,
     build_heterogeneity_size_chart_data,
+    build_main_regression_chart_data,
     build_price_pressure_chart_data,
     build_time_series_rolling_chart_data,
 )
@@ -104,6 +105,7 @@ class TestChartRegistry:
             "gap_decomposition",
             "heterogeneity_size",
             "time_series_rolling",
+            "main_regression",
         }
 
     def test_build_chart_data_returns_none_for_unknown(self, empty_root: Path) -> None:
@@ -309,3 +311,45 @@ class TestBuildTimeSeriesRollingChartData:
 
     def test_json_serializable(self, time_series_rolling_root: Path) -> None:
         json.dumps(build_time_series_rolling_chart_data(time_series_rolling_root))
+
+
+# ── main_regression forest plot ──────────────────────────────────────
+
+
+@pytest.fixture()
+def main_regression_root(tmp_path: Path) -> Path:
+    tables = tmp_path / "results" / "real_tables"
+    tables.mkdir(parents=True)
+    (tables / "regression_coefficients.csv").write_text(
+        "market,event_phase,specification,dependent_variable,parameter,coefficient,std_error,t_stat,p_value\n"
+        "CN,announce,main_car,car_m1_p1,const,-0.13,0.035,-3.79,0.0001\n"
+        "CN,announce,main_car,car_m1_p1,treatment_group,0.0101,0.0026,3.88,0.0001\n"
+        "CN,effective,main_car,car_m1_p1,treatment_group,-0.005,0.0032,-1.58,0.114\n"
+        "US,announce,main_car,car_m1_p1,treatment_group,0.013,0.0041,3.18,0.0014\n"
+        "US,effective,main_car,car_m1_p1,treatment_group,-0.0007,0.0028,-0.26,0.792\n"
+        "CN,announce,turnover_mechanism,turnover_change,treatment_group,-0.0002,0.0003,-0.69,0.49\n"
+    )
+    return tmp_path
+
+
+class TestBuildMainRegressionChartData:
+    def test_empty_root(self, empty_root: Path) -> None:
+        result = build_main_regression_chart_data(empty_root)
+        assert result == {"rows": []}
+
+    def test_returns_only_main_car_treatment_rows(self, main_regression_root: Path) -> None:
+        result = build_main_regression_chart_data(main_regression_root)
+        # 4 quadrants for main_car, treatment_group only
+        assert len(result["rows"]) == 4
+        for r in result["rows"]:
+            assert r["specification"] == "main_car"
+        assert {r["market"] for r in result["rows"]} == {"CN", "US"}
+        assert {r["phase"] for r in result["rows"]} == {"announce", "effective"}
+
+    def test_ci_bounds_computed_from_se(self, main_regression_root: Path) -> None:
+        result = build_main_regression_chart_data(main_regression_root)
+        for r in result["rows"]:
+            assert r["ci_lo"] < r["coef"] < r["ci_hi"]
+
+    def test_json_serializable(self, main_regression_root: Path) -> None:
+        json.dumps(build_main_regression_chart_data(main_regression_root))
