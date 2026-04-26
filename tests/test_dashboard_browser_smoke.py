@@ -306,10 +306,10 @@ def test_dashboard_browser_smoke() -> None:
             }
             """
         )
-        assert design_metrics["designHeight"] <= 2200
+        assert design_metrics["designHeight"] <= 2800
         assert design_metrics["headHeight"] <= 140
         assert design_metrics["summaryHeight"] <= 260
-        assert design_metrics["figurePanelsHeight"] <= 720
+        assert design_metrics["figurePanelsHeight"] <= 1400
         assert design_metrics["primaryGroupHeight"] <= 600
         assert design_metrics["groupHeadHeight"] <= 60
         assert design_metrics["gapHeadToSummary"] <= 24

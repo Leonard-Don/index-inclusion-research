@@ -12,6 +12,7 @@ from index_inclusion_research.chart_data import (
     build_car_heatmap_chart_data,
     build_car_path_chart_data,
     build_chart_data,
+    build_event_counts_chart_data,
     build_gap_decomposition_chart_data,
     build_heterogeneity_size_chart_data,
     build_main_regression_chart_data,
@@ -108,6 +109,7 @@ class TestChartRegistry:
             "time_series_rolling",
             "main_regression",
             "mechanism_regression",
+            "event_counts",
         }
 
     def test_build_chart_data_returns_none_for_unknown(self, empty_root: Path) -> None:
@@ -369,6 +371,47 @@ class TestBuildMainRegressionChartData:
         self, empty_root: Path
     ) -> None:
         assert build_mechanism_regression_chart_data(empty_root) == {"rows": []}
+
+
+# ── event_counts ─────────────────────────────────────────────────────
+
+
+@pytest.fixture()
+def event_counts_root(tmp_path: Path) -> Path:
+    tables = tmp_path / "results" / "real_tables"
+    tables.mkdir(parents=True)
+    (tables / "event_counts_by_year.csv").write_text(
+        "market,announce_year,inclusion,n_events\n"
+        "CN,2020,0,21\n"
+        "CN,2020,1,21\n"
+        "CN,2021,1,28\n"
+        "US,2020,1,30\n"
+        "US,2021,1,40\n"
+        "US,2022,1,50\n"
+    )
+    return tmp_path
+
+
+class TestBuildEventCountsChartData:
+    def test_empty_root(self, empty_root: Path) -> None:
+        assert build_event_counts_chart_data(empty_root) == {"series": [], "years": []}
+
+    def test_filters_to_treated_only_and_aligns_years(
+        self, event_counts_root: Path
+    ) -> None:
+        result = build_event_counts_chart_data(event_counts_root)
+        assert result["years"] == [2020, 2021, 2022]
+        # 2 markets × len(years) cells
+        names = sorted(s["name"] for s in result["series"])
+        assert "中国 A 股" in names and "美国" in names
+        cn = next(s for s in result["series"] if s["market"] == "CN")
+        # CN has events only in 2020 and 2021 → 21, 28, 0 across years
+        assert cn["data"] == [21, 28, 0]
+        us = next(s for s in result["series"] if s["market"] == "US")
+        assert us["data"] == [30, 40, 50]
+
+    def test_json_serializable(self, event_counts_root: Path) -> None:
+        json.dumps(build_event_counts_chart_data(event_counts_root))
 
     def test_chart_data_matches_csv_source_of_truth(self, main_regression_root: Path) -> None:
         """Lock the chart_data builder to the regression_coefficients CSV.

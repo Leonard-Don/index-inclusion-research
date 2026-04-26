@@ -441,7 +441,48 @@ const CHART_OPTION_BUILDERS = {
     opt.title = { text: '机制回归 turnover_mechanism 系数(× 4 象限,带 95% CI)', left: 'center' };
     return opt;
   },
+  event_counts: buildEventCountsOption,
 };
+
+
+function buildEventCountsOption(payload) {
+  const ecSeries = payload.series.map(s => ({
+    name: s.name,
+    type: 'bar',
+    data: s.data,
+    itemStyle: { color: s.color },
+    emphasis: { focus: 'series' },
+    label: {
+      show: true,
+      position: 'top',
+      formatter: params => params.value > 0 ? params.value : '',
+      fontSize: 11,
+      color: '#18212b',
+    },
+  }));
+  return {
+    title: { text: '真实调入事件按公告年分布(CN vs US)', left: 'center' },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: params => {
+        const year = params[0]?.axisValue ?? '';
+        return `<strong>${year}</strong><br>` + params.map(p =>
+          `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:6px"></span>${p.seriesName}: ${p.value} events`
+        ).join('<br>');
+      },
+    },
+    legend: { bottom: 0, data: payload.series.map(s => s.name) },
+    grid: { left: 60, right: 30, top: 50, bottom: 60 },
+    xAxis: { type: 'category', data: payload.years.map(String), name: '公告年份' },
+    yAxis: {
+      type: 'value',
+      name: '事件数',
+      splitLine: { lineStyle: { type: 'dashed' } },
+    },
+    series: ecSeries,
+  };
+}
 
 // ── controller ──────────────────────────────────────────────────────
 
