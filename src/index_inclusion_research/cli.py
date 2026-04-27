@@ -68,6 +68,14 @@ def run_compute_h6_weight_change_main() -> None:
     _run_package_main("index_inclusion_research.compute_h6_weight_change")
 
 
+def run_rebuild_all_main() -> None:
+    _run_package_main("index_inclusion_research.rebuild_all")
+
+
+def run_verdict_summary_main() -> None:
+    _run_package_main("index_inclusion_research.verdict_summary")
+
+
 def run_generate_sample_data_main() -> None:
     _run_package_main("index_inclusion_research.sample_data")
 
