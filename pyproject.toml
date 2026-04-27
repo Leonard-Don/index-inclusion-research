@@ -37,6 +37,7 @@ index-inclusion-prepare-hs300-rdd = "index_inclusion_research.cli:run_prepare_hs
 index-inclusion-reconstruct-hs300-rdd = "index_inclusion_research.cli:run_reconstruct_hs300_rdd_candidates_main"
 index-inclusion-plan-hs300-rdd-l3 = "index_inclusion_research.cli:run_plan_hs300_rdd_l3_main"
 index-inclusion-prepare-passive-aum = "index_inclusion_research.cli:run_prepare_passive_aum_main"
+index-inclusion-compute-h6-weight-change = "index_inclusion_research.cli:run_compute_h6_weight_change_main"
 index-inclusion-generate-sample-data = "index_inclusion_research.cli:run_generate_sample_data_main"
 index-inclusion-download-real-data = "index_inclusion_research.cli:run_download_real_data_main"
 index-inclusion-make-figures-tables = "index_inclusion_research.cli:run_make_figures_tables_main"
