@@ -197,6 +197,31 @@
   {% endif %}
 
   {% if mode != 'brief' and cma_section.hypothesis_verdicts and cma_section.hypothesis_verdicts.rows %}
+  {% if cma_section.verdict_diff and cma_section.verdict_diff.available %}
+  {% set diff = cma_section.verdict_diff %}
+  {% set has_diff = diff.changed_count or diff.added_count or diff.removed_count %}
+  <aside class="cma-verdict-diff" data-has-diff="{{ '1' if has_diff else '0' }}">
+    <div class="cma-verdict-diff-head">
+      <span class="cma-verdict-diff-kicker">上一次跑相比</span>
+      {% if has_diff %}
+        <strong>{{ diff.changed_count }} 项变更</strong>
+        {% if diff.added_count %}<span class="cma-verdict-diff-meta">+{{ diff.added_count }} 新增</span>{% endif %}
+        {% if diff.removed_count %}<span class="cma-verdict-diff-meta">-{{ diff.removed_count }} 移除</span>{% endif %}
+        <span class="cma-verdict-diff-meta">{{ diff.unchanged_count }} 不变</span>
+      {% else %}
+        <strong>所有 verdict 不变</strong>
+        <span class="cma-verdict-diff-meta">{{ diff.unchanged_count }} 项保持</span>
+      {% endif %}
+    </div>
+    {% if diff.changed_rows %}
+    <ul class="cma-verdict-diff-list">
+      {% for row in diff.changed_rows %}
+      <li><strong>{{ row.hid }}</strong> {{ row.name_cn }} — {{ row.summary }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </aside>
+  {% endif %}
   {% if cma_section.track_summary and cma_section.track_summary.rows %}
   <div class="cma-track-summary">
     {% for row in cma_section.track_summary.rows %}

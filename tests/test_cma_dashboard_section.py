@@ -160,6 +160,68 @@ def test_section_computes_hypothesis_verdicts_when_csv_missing(tmp_path):
     assert section["hypothesis_verdicts"]["rows"][0]["hid"] == "H1"
 
 
+def test_section_verdict_diff_unavailable_without_previous_csv(tmp_path):
+    tables = tmp_path / "tables"
+    figures = tmp_path / "figures"
+    _seed_tables(tables)
+    section = build_cross_market_section(
+        tables_dir=tables, figures_dir=figures, mode="full"
+    )
+    assert section["verdict_diff"]["available"] is False
+
+
+def test_section_verdict_diff_reports_no_changes_when_previous_matches(tmp_path):
+    tables = tmp_path / "tables"
+    figures = tmp_path / "figures"
+    _seed_tables(tables)
+    # snapshot a copy of the seeded verdicts as the "previous" state
+    current = pd.read_csv(tables / "cma_hypothesis_verdicts.csv")
+    current.to_csv(tables / "cma_hypothesis_verdicts.previous.csv", index=False)
+    section = build_cross_market_section(
+        tables_dir=tables, figures_dir=figures, mode="full"
+    )
+    diff = section["verdict_diff"]
+    assert diff["available"] is True
+    assert diff["changed_count"] == 0
+    assert diff["unchanged_count"] == 7
+    assert diff["changed_rows"] == []
+
+
+def test_section_verdict_diff_surfaces_tier_flip(tmp_path):
+    tables = tmp_path / "tables"
+    figures = tmp_path / "figures"
+    _seed_tables(tables)
+    current = pd.read_csv(tables / "cma_hypothesis_verdicts.csv")
+    previous = current.copy()
+    # simulate that H1 used to be 证据不足 and is now whatever the seed has
+    previous.loc[previous["hid"] == "H1", "verdict"] = "证据不足"
+    previous.to_csv(tables / "cma_hypothesis_verdicts.previous.csv", index=False)
+    # Force current H1 to a different verdict
+    if current.loc[current["hid"] == "H1", "verdict"].iloc[0] == "证据不足":
+        current.loc[current["hid"] == "H1", "verdict"] = "支持"
+        current.to_csv(tables / "cma_hypothesis_verdicts.csv", index=False)
+    section = build_cross_market_section(
+        tables_dir=tables, figures_dir=figures, mode="full"
+    )
+    diff = section["verdict_diff"]
+    assert diff["available"] is True
+    assert diff["changed_count"] >= 1
+    h1_summary = next(r for r in diff["changed_rows"] if r["hid"] == "H1")
+    assert "verdict" in h1_summary["summary"]
+
+
+def test_section_verdict_diff_unavailable_in_brief_mode(tmp_path):
+    tables = tmp_path / "tables"
+    figures = tmp_path / "figures"
+    _seed_tables(tables)
+    current = pd.read_csv(tables / "cma_hypothesis_verdicts.csv")
+    current.to_csv(tables / "cma_hypothesis_verdicts.previous.csv", index=False)
+    section = build_cross_market_section(
+        tables_dir=tables, figures_dir=figures, mode="brief"
+    )
+    assert section["verdict_diff"]["available"] is False
+
+
 def test_section_demo_mode_exposes_hypothesis_verdict_cards(tmp_path):
     tables = tmp_path / "tables"
     figures = tmp_path / "figures"
