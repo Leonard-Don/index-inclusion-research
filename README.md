@@ -540,9 +540,19 @@ index-inclusion-verdict-summary
 - **Dashboard 与三条主线**:`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - **HS300 RDD 工具链**:`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3`
 - **跨市场不对称 + 假说证据**:`cma`(7 条假说 verdict)/ `prepare-passive-aum`(为 H2 准备 AUM 数据)/ `compute-h6-weight-change`(为 H6 重建真实流通市值)
-- **总入口**:`rebuild-all`(10 步流水线一键跑)/ `verdict-summary`(终端速览 7 条假说裁决)
+- **总入口**:`rebuild-all`(10 步流水线一键跑)/ `verdict-summary`(终端速览 7 条假说裁决)/ `doctor`(项目健康检查)
 
-所有入口均通过 `pyproject.toml` 的 console scripts 或 `python3 -m index_inclusion_research.<module>` 调用,也可以用 `make rebuild` / `make verdicts` 简写。
+所有入口均通过 `pyproject.toml` 的 console scripts 或 `python3 -m index_inclusion_research.<module>` 调用,也可以用 `make rebuild` / `make verdicts` / `make doctor` 简写。
+
+### Verdicts ↔ Literature 双向链接
+
+每条 H1..H7 假说在 [hypotheses.py](src/index_inclusion_research/analysis/cross_market_asymmetry/hypotheses.py) 注册时同时声明 `paper_ids`,从 16 篇文献库挑出"支撑这条假说"的论文。系统的两端都消费这个映射:
+
+- **Dashboard verdict 卡片** 在 metric 下方显示"支持文献 (N) [paper_id_chip] [paper_id_chip]...",每个 chip 链到 `/paper/<paper_id>`。
+- **`/paper/<paper_id>` 论文详情页** 渲染"CMA 假说证据"段,列出所有引用本论文的假说 + 其当前 verdict tier + 头条指标,每行末尾"看 dashboard 裁决 →"链到 `/verdict/<hid>`。
+- **`/verdict/<hid>`**(浏览器可分享的稳定 URL)302-redirect 到 `/?mode=full#hypothesis-<hid>`,直接定位到对应 verdict 卡片。`/verdict/H99` 等 typo 返回 404。
+
+整个 verdict↔literature 网络可深链、可双向跳转、可分享。
 
 ### Verdict 迭代追踪
 
