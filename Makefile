@@ -1,4 +1,4 @@
-.PHONY: setup test lint serve coverage clean help rebuild verdicts
+.PHONY: setup test lint serve coverage clean help rebuild verdicts doctor
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -28,6 +28,9 @@ rebuild: ## Run the full pipeline (events → CMA → figures → research repor
 
 verdicts: ## Print the current 7-hypothesis verdict picture
 	index-inclusion-verdict-summary
+
+doctor: ## Run project health checks (paper IDs / CSVs / chart registry / scripts)
+	index-inclusion-doctor
 
 clean: ## Remove generated artifacts
 	rm -rf htmlcov .coverage .pytest_cache .ruff_cache __pycache__

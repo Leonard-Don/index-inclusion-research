@@ -76,6 +76,10 @@ def run_verdict_summary_main() -> None:
     _run_package_main("index_inclusion_research.verdict_summary")
 
 
+def run_doctor_main() -> None:
+    _run_package_main("index_inclusion_research.doctor")
+
+
 def run_generate_sample_data_main() -> None:
     _run_package_main("index_inclusion_research.sample_data")
 
