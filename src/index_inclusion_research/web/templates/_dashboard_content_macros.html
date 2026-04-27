@@ -107,7 +107,7 @@
 {% if payload and payload.rows %}
 <div class="cma-verdict-grid">
   {% for verdict in payload.rows %}
-  <article class="result-card cma-verdict-card" data-verdict="{{ verdict.verdict }}">
+  <article id="hypothesis-{{ verdict.hid }}" class="result-card cma-verdict-card" data-verdict="{{ verdict.verdict }}">
     <div class="cma-verdict-head">
       <div>
         <div class="cma-verdict-id">{{ verdict.hid }}</div>

@@ -194,6 +194,33 @@ def test_home_dashboard_renders_single_frontend_sections() -> None:
     assert "built-in method copy of dict object" not in html
 
 
+def test_verdict_redirect_route_lands_on_dashboard_anchor() -> None:
+    """/verdict/<hid> for a valid hid should 302-redirect to the
+    home-page verdict-card anchor."""
+    client = dashboard.app.test_client()
+    response = client.get("/verdict/H1", follow_redirects=False)
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("#hypothesis-H1")
+    assert "/?mode=full" in response.headers["Location"]
+
+
+def test_verdict_redirect_route_returns_404_for_unknown_hid() -> None:
+    client = dashboard.app.test_client()
+    response = client.get("/verdict/H99", follow_redirects=False)
+    assert response.status_code == 404
+
+
+def test_home_dashboard_full_mode_renders_verdict_card_anchor_ids() -> None:
+    """Each verdict card should carry id="hypothesis-{hid}" so the
+    /verdict/<hid> redirect lands on the right card."""
+    client = dashboard.app.test_client()
+    response = client.get("/?mode=full")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    for hid in ("H1", "H2", "H3", "H4", "H5", "H6", "H7"):
+        assert f'id="hypothesis-{hid}"' in html
+
+
 def test_home_dashboard_supports_full_mode() -> None:
     client = dashboard.app.test_client()
     response = client.get("/?mode=full")

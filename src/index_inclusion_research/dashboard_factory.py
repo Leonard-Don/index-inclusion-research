@@ -189,8 +189,39 @@ def register_dashboard_routes(
     app.add_url_rule("/files/<path:subpath>", endpoint="serve_result_file", view_func=serve_result_file_view, methods=["GET"])
     app.add_url_rule("/paper/<paper_id>", endpoint="show_paper_brief", view_func=show_paper_brief_view, methods=["GET"])
     app.add_url_rule("/paper/<paper_id>/pdf", endpoint="serve_library_pdf", view_func=serve_library_pdf_view, methods=["GET"])
+    app.add_url_rule(
+        "/verdict/<hid>",
+        endpoint="show_verdict_redirect",
+        view_func=_make_verdict_redirect_view(),
+        methods=["GET"],
+    )
     _register_chart_api(app, root)
     return app
+
+
+def _make_verdict_redirect_view():
+    """Build a small redirect view that maps /verdict/<hid> to the
+    dashboard verdict-card anchor on the home page.
+
+    Validates ``hid`` against the canonical CMA hypothesis registry so
+    typo'd URLs return 404 instead of silently dumping the user on a
+    page with no matching anchor.
+    """
+    from flask import abort, redirect
+
+    from index_inclusion_research.analysis.cross_market_asymmetry.hypotheses import (
+        HYPOTHESES,
+    )
+
+    valid = {h.hid for h in HYPOTHESES}
+
+    def show_verdict_redirect(hid: str):
+        if hid not in valid:
+            abort(404)
+        return redirect(f"/?mode=full#hypothesis-{hid}", code=302)
+
+    show_verdict_redirect.__name__ = "show_verdict_redirect"
+    return show_verdict_redirect
 
 
 def _register_chart_api(app: Flask, root: Path) -> None:
