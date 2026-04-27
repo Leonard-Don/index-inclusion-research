@@ -2794,6 +2794,48 @@
       color: var(--muted);
       font-size: 11.5px;
     }
+    .cma-verdict-diff {
+      margin: 12px 0 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(15, 92, 110, 0.06);
+      border: 1px solid rgba(15, 92, 110, 0.14);
+      font-variant-numeric: tabular-nums;
+    }
+    .cma-verdict-diff[data-has-diff="1"] {
+      background: rgba(195, 106, 45, 0.10);
+      border-color: rgba(195, 106, 45, 0.28);
+    }
+    .cma-verdict-diff-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 10px;
+    }
+    .cma-verdict-diff-kicker {
+      color: var(--muted);
+      font-size: 11.5px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .cma-verdict-diff-head strong {
+      color: #18212b;
+      font-size: 14px;
+    }
+    .cma-verdict-diff-meta {
+      color: #475666;
+      font-size: 12px;
+    }
+    .cma-verdict-diff-list {
+      margin: 8px 0 0;
+      padding-left: 20px;
+      color: #243545;
+      font-size: 12.5px;
+      line-height: 1.55;
+    }
+    .cma-verdict-diff-list li + li {
+      margin-top: 4px;
+    }
     .cma-track-summary {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));

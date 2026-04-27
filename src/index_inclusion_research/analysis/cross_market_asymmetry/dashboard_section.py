@@ -5,6 +5,8 @@ from typing import Literal
 
 import pandas as pd
 
+from index_inclusion_research import verdict_summary
+
 from . import hypotheses as cma_hypotheses
 from . import verdicts as cma_verdicts
 
@@ -178,7 +180,80 @@ def build_cross_market_section(
             "rows": hypothesis_verdicts.to_dict(orient="records") if mode != "brief" else [],
         },
         "track_summary": _build_track_summary_payload(hypothesis_verdicts, mode),
+        "verdict_diff": _build_verdict_diff_payload(
+            hypothesis_verdicts, tables_dir=tables_dir, mode=mode
+        ),
         "detail_tables": detail_tables,
+    }
+
+
+def _build_verdict_diff_payload(
+    hypothesis_verdicts: pd.DataFrame,
+    *,
+    tables_dir: Path,
+    mode: str,
+) -> dict:
+    """Compute a compact verdict diff between current and the orchestrator-
+    saved ``cma_hypothesis_verdicts.previous.csv``.
+
+    Returns ``{"available": False}`` when the previous snapshot is absent,
+    when the current frame is empty, or in brief mode (where verdicts
+    don't render). Otherwise returns ``{"available": True,
+    "changed_count": N, "added_count": M, "removed_count": K,
+    "unchanged_count": U, "changed_rows": [...], "added_rows": [...],
+    "removed_rows": [...]}`` for the template to render as a banner.
+    """
+    if mode == "brief" or hypothesis_verdicts.empty:
+        return {"available": False}
+    previous_path = tables_dir / "cma_hypothesis_verdicts.previous.csv"
+    if not previous_path.exists():
+        return {"available": False}
+    try:
+        previous = pd.read_csv(previous_path)
+    except (OSError, ValueError):
+        return {"available": False}
+    diff_rows = verdict_summary.compute_verdict_diff(hypothesis_verdicts, previous)
+    changed = [r for r in diff_rows if r["kind"] == "changed"]
+    added = [r for r in diff_rows if r["kind"] == "added"]
+    removed = [r for r in diff_rows if r["kind"] == "removed"]
+    unchanged = [r for r in diff_rows if r["kind"] == "unchanged"]
+    # Flatten the changed-row payload for the template (avoids deep dict
+    # navigation in Jinja). Each entry carries hid, name_cn, and a short
+    # human-readable summary like "verdict: 证据不足→支持; key_value: 0.640→0.012".
+    changed_summaries: list[dict[str, object]] = []
+    for row in changed:
+        hid = str(row["hid"])
+        name = str(row.get("name_cn", "") or "")
+        diff_chunks: list[str] = []
+        for field, beats in row["changes"].items():  # type: ignore[index]
+            before = beats["before"]
+            after = beats["after"]
+            if field == "key_value":
+                bef = "—" if isinstance(before, float) and (before != before) else f"{before:.3f}"
+                aft = "—" if isinstance(after, float) and (after != after) else f"{after:.3f}"
+                diff_chunks.append(f"{field}: {bef}→{aft}")
+            else:
+                diff_chunks.append(f"{field}: {before}→{after}")
+        changed_summaries.append(
+            {"hid": hid, "name_cn": name, "summary": "; ".join(diff_chunks)}
+        )
+    return {
+        "available": True,
+        "changed_count": len(changed),
+        "added_count": len(added),
+        "removed_count": len(removed),
+        "unchanged_count": len(unchanged),
+        "changed_rows": changed_summaries,
+        "added_rows": [
+            {"hid": str(r["hid"]),
+             "verdict": str((r.get("current") or {}).get("verdict", ""))}
+            for r in added
+        ],
+        "removed_rows": [
+            {"hid": str(r["hid"]),
+             "verdict": str((r.get("previous") or {}).get("verdict", ""))}
+            for r in removed
+        ],
     }
 
 
