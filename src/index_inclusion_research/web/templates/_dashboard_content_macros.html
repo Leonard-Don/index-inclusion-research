@@ -132,6 +132,14 @@
     </div>
     {% endif %}
     <p class="cma-verdict-metric">{{ verdict.metric_snapshot }}</p>
+    {% if verdict.paper_ids and verdict.paper_count and verdict.paper_count > 0 %}
+    <div class="cma-verdict-papers">
+      <span class="cma-verdict-papers-label">支持文献 ({{ verdict.paper_count }})</span>
+      {% for pid in verdict.paper_ids.split(' | ') %}
+      <a class="cma-verdict-paper-chip" href="/paper/{{ pid }}">{{ pid }}</a>
+      {% endfor %}
+    </div>
+    {% endif %}
     {% if mode == 'full' and verdict.next_step %}
     <p class="cma-verdict-next">{{ verdict.next_step }}</p>
     {% endif %}

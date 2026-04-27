@@ -2794,6 +2794,35 @@
       color: var(--muted);
       font-size: 11.5px;
     }
+    .cma-verdict-papers {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      padding-top: 8px;
+      border-top: 1px dashed rgba(24,33,43,0.10);
+    }
+    .cma-verdict-papers-label {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-right: 4px;
+    }
+    .cma-verdict-paper-chip {
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(15, 92, 110, 0.08);
+      border: 1px solid rgba(15, 92, 110, 0.18);
+      color: #18212b;
+      font-size: 11.5px;
+      text-decoration: none;
+      font-variant-numeric: tabular-nums;
+    }
+    .cma-verdict-paper-chip:hover {
+      background: rgba(15, 92, 110, 0.16);
+      border-color: rgba(15, 92, 110, 0.32);
+    }
     .cma-verdict-diff {
       margin: 12px 0 14px;
       padding: 12px 14px;

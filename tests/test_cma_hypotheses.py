@@ -22,17 +22,40 @@ def test_hypothesis_shape():
         assert h.implications, f"{h.hid} has no implications"
 
 
+def test_each_hypothesis_has_at_least_one_supporting_paper():
+    """Every H1..H7 should reference at least one literature paper."""
+    for h in HYPOTHESES:
+        assert h.paper_ids, f"{h.hid} has no supporting papers in literature catalog"
+
+
+def test_hypothesis_paper_ids_resolve_to_real_catalog_entries():
+    """Every paper_id should match a paper in build_literature_catalog_frame."""
+    from index_inclusion_research.literature_catalog import (
+        build_literature_catalog_frame,
+    )
+    catalog_ids = set(build_literature_catalog_frame()["paper_id"].tolist())
+    for h in HYPOTHESES:
+        for pid in h.paper_ids:
+            assert pid in catalog_ids, (
+                f"{h.hid} references unknown paper_id {pid!r}; "
+                f"valid IDs: {sorted(catalog_ids)}"
+            )
+
+
 def test_export_hypothesis_map_writes_csv(tmp_path):
     out = export_hypothesis_map(output_dir=tmp_path)
     assert out.exists()
     df = pd.read_csv(out)
-    assert {"hid", "name_cn", "mechanism", "evidence_refs", "verdict_logic", "track"}.issubset(
-        df.columns
-    )
+    assert {
+        "hid", "name_cn", "mechanism", "evidence_refs", "verdict_logic",
+        "track", "paper_ids", "paper_count",
+    }.issubset(df.columns)
     assert len(df) == 7
     # all 7 should have non-empty track assignments
     assert df["track"].notna().all()
     assert (df["track"].astype(str).str.len() > 0).all()
+    # all 7 should have paper_count >= 1
+    assert (df["paper_count"] >= 1).all()
 
 
 def test_compute_track_verdict_summary_groups_by_track():

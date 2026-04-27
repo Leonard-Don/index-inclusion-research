@@ -15,6 +15,10 @@ class StructuralHypothesis:
     evidence_refs: tuple[str, ...]
     verdict_logic: str
     track: str = ""  # one of {"price_pressure", "demand_curve", "identification"}
+    # Paper IDs from literature_catalog that speak to this hypothesis. Each
+    # entry must match a row in build_literature_catalog_frame()["paper_id"]
+    # so dashboard cards can link directly to /paper/<paper_id>.
+    paper_ids: tuple[str, ...] = ()
 
 
 TRACK_LABELS: dict[str, str] = {
@@ -33,6 +37,12 @@ HYPOTHESES: tuple[StructuralHypothesis, ...] = (
         evidence_refs=("M1:cma_ar_path.csv", "M2:cma_gap_summary.csv"),
         verdict_logic="若 CN pre_announce_runup > US 且 t 显著 → 支持 H1",
         track="identification",
+        paper_ids=(
+            "harris_gurel_1986",      # short-window CAR + volume around announce
+            "denis_et_al_2003",       # pre-announcement abnormal returns
+            "kasch_sarkar_2011",      # pre-inclusion strong performance
+            "coakley_et_al_2022",     # options-implied forward-looking comovement
+        ),
     ),
     StructuralHypothesis(
         hid="H2",
@@ -42,6 +52,11 @@ HYPOTHESES: tuple[StructuralHypothesis, ...] = (
         evidence_refs=("M5:cma_time_series_rolling.csv",),
         verdict_logic="若 US effective rolling CAR 单调下降、A 股 effective 上升 → 支持 H2",
         track="demand_curve",
+        paper_ids=(
+            "petajisto_2011",         # index premium dynamics
+            "ahn_patatoukas_2022",    # indexation impact on price discovery
+            "greenwood_sammon_2022",  # S&P 500 inclusion-effect generations
+        ),
     ),
     StructuralHypothesis(
         hid="H3",
@@ -51,6 +66,10 @@ HYPOTHESES: tuple[StructuralHypothesis, ...] = (
         evidence_refs=("M3:cma_mechanism_panel.csv",),
         verdict_logic="若 CN effective × volume_change 系数显著 > 0 且 US 对应系数显著 < 0 → 支持 H3",
         track="price_pressure",
+        paper_ids=(
+            "madhavan_2003",          # Russell liquidity & transaction costs
+            "harris_gurel_1986",      # volume shock at announce vs effective
+        ),
     ),
     StructuralHypothesis(
         hid="H4",
@@ -60,6 +79,10 @@ HYPOTHESES: tuple[StructuralHypothesis, ...] = (
         evidence_refs=("M2:cma_gap_summary.csv",),
         verdict_logic="若 CN gap_drift t > US gap_drift t 显著 → 支持 H4",
         track="identification",
+        paper_ids=(
+            "ahn_patatoukas_2022",    # arbitrage capability proxy
+            "petajisto_2011",         # price elasticity reflecting arbitrage
+        ),
     ),
     StructuralHypothesis(
         hid="H5",
@@ -69,6 +92,11 @@ HYPOTHESES: tuple[StructuralHypothesis, ...] = (
         evidence_refs=("M3:cma_mechanism_panel.csv",),
         verdict_logic="若 CN announce × price_limit_hit_share > 0 且 effective × price_limit_hit_share > 0 → 支持 H5",
         track="identification",
+        paper_ids=(
+            "chu_et_al_2021",         # CSI 300 long-run holding-period
+            "yao_zhou_chen_2022",     # CSI300 boundary RD + DID
+            "yao_zhang_li_hs300",     # HS300 boundary RD
+        ),
     ),
     StructuralHypothesis(
         hid="H6",
@@ -78,6 +106,13 @@ HYPOTHESES: tuple[StructuralHypothesis, ...] = (
         evidence_refs=("M4:cma_heterogeneity_size.csv",),
         verdict_logic="M4 size 异质性中，CN 小市值更易受权重预判差影响",
         track="demand_curve",
+        paper_ids=(
+            "shleifer_1986",          # exogenous demand shock
+            "wurgler_zhuravskaya_2002",  # substitutability & demand-curve slope
+            "kaul_mehrotra_morck_2000",  # pure weight adjustment shock
+            "chang_hong_liskovich_2014", # Russell pure-indexation cutoff
+            "lynch_mendenhall_1997",  # announce vs effective separation
+        ),
     ),
     StructuralHypothesis(
         hid="H7",
@@ -97,6 +132,10 @@ HYPOTHESES: tuple[StructuralHypothesis, ...] = (
             "spread (max-min) > 1.5 → 部分支持 / 支持。CN sector 数据缺失则 CN 部分挂 待补"
         ),
         track="identification",
+        paper_ids=(
+            "madhavan_2003",         # Russell sector-aware analysis
+            "chu_et_al_2021",        # cross-sector heterogeneity hints in CSI 300
+        ),
     ),
 )
 
@@ -113,6 +152,8 @@ def export_hypothesis_map(*, output_dir: Path) -> Path:
             "evidence_refs": " | ".join(h.evidence_refs),
             "verdict_logic": h.verdict_logic,
             "track": h.track,
+            "paper_ids": " | ".join(h.paper_ids),
+            "paper_count": len(h.paper_ids),
         }
         for h in HYPOTHESES
     ]
