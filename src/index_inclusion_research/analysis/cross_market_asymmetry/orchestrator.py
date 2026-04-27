@@ -210,8 +210,14 @@ def run_cma_pipeline(
     hypothesis_verdicts.to_csv(tables_dir / "cma_hypothesis_verdicts.csv", index=False)
     verdicts.export_hypothesis_verdicts_tex(hypothesis_verdicts, output_dir=tables_dir)
     paper_verdict_path = ROOT / "docs" / "paper_outline_verdicts.md"
+    event_counts_path = tables_dir / "event_counts_by_year.csv"
+    paper_event_counts = (
+        pd.read_csv(event_counts_path) if event_counts_path.exists() else None
+    )
     verdicts.export_paper_verdict_section(
-        hypothesis_verdicts, output_path=paper_verdict_path
+        hypothesis_verdicts,
+        output_path=paper_verdict_path,
+        event_counts=paper_event_counts,
     )
     hypotheses.export_track_verdict_summary(
         hypothesis_verdicts, output_dir=tables_dir

@@ -22,6 +22,22 @@
 - 价格效应会不会只部分回吐，从而支持需求曲线向下倾斜？
 - 不同市场制度和识别方法会不会改变结论，尤其是在中国市场？
 
+## 研究当前结论速览
+
+跨市场不对称(CMA)pipeline 在真实样本上的 7 条机制假说裁决(`index-inclusion-verdict-summary` 也能终端打印):
+
+| 假说 | 名称 | 裁决 | 头条指标 | 主线 |
+|---|---|---|---|---|
+| H1 | 信息泄露与预运行 | 证据不足 | bootstrap p = 0.640 (n=436) | 制度识别 |
+| H2 | 被动基金 AUM 差异 | 待补数据 | — | 需求曲线 |
+| H3 | 散户 vs 机构结构 | 部分支持 | 双通道命中率 = 0.500 | 短期价格压力 |
+| H4 | 卖空约束 | 证据不足 | regression p = 0.537 (n=436) | 制度识别 |
+| H5 | 涨跌停限制 | 证据不足 | limit_coef p = 0.213 (n=936) | 制度识别 |
+| H6 | 指数权重可预测性 | 部分支持 | Q1Q2−Q4Q5 spread = 1.17 (n=118) | 需求曲线 |
+| H7 | 行业结构差异 | 部分支持 | US sector spread = 5.95 (n=187) | 制度识别 |
+
+数据可重现:`make rebuild` 跑 10 步流水线刷新所有产出。详见 [results/real_tables/cma_hypothesis_verdicts.csv](results/real_tables/cma_hypothesis_verdicts.csv) 和 [docs/paper_outline_verdicts.md](docs/paper_outline_verdicts.md)。
+
 ## GitHub 首页先看什么
 
 如果你是第一次点进这个仓库，建议先看这 4 件事：
@@ -511,10 +527,22 @@ index-inclusion-prepare-hs300-rdd
 index-inclusion-reconstruct-hs300-rdd
 index-inclusion-plan-hs300-rdd-l3
 index-inclusion-prepare-passive-aum
+index-inclusion-compute-h6-weight-change
 index-inclusion-cma
+index-inclusion-rebuild-all
+index-inclusion-verdict-summary
 ```
 
-前五个分别覆盖清洗事件、构面板、匹配对照、事件研究和回归；接着四个分别覆盖示例数据、真实数据、图表表格导出和研究摘要；中间四个对应 dashboard 与三条研究主线；接下来四个分别对应 HS300 RDD 运行、候选样本导入、公开口径重建和 L3 正式样本采集计划；最后一个是跨市场不对称（CMA）扩展。所有入口均通过 `pyproject.toml` 的 console scripts 或 `python3 -m index_inclusion_research.<module>` 调用。
+按用途分组(共 21 个 console scripts):
+- **数据流水线**:`build-event-sample` / `build-price-panel` / `match-controls` / `run-event-study` / `run-regressions`
+- **样本数据**:`generate-sample-data` / `download-real-data`
+- **报表与图表**:`make-figures-tables` / `generate-research-report`
+- **Dashboard 与三条主线**:`dashboard` / `price-pressure` / `demand-curve` / `identification`
+- **HS300 RDD 工具链**:`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3`
+- **跨市场不对称 + 假说证据**:`cma`(7 条假说 verdict)/ `prepare-passive-aum`(为 H2 准备 AUM 数据)/ `compute-h6-weight-change`(为 H6 重建真实流通市值)
+- **总入口**:`rebuild-all`(10 步流水线一键跑)/ `verdict-summary`(终端速览 7 条假说裁决)
+
+所有入口均通过 `pyproject.toml` 的 console scripts 或 `python3 -m index_inclusion_research.<module>` 调用,也可以用 `make rebuild` / `make verdicts` 简写。
 
 ## 开发与验证
 

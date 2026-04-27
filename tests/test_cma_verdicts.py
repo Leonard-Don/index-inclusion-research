@@ -542,6 +542,50 @@ def test_export_paper_verdict_section_writes_markdown(tmp_path) -> None:
     assert "H1" in content and "H7" in content
 
 
+def test_render_paper_verdict_section_includes_sample_and_methods_when_event_counts_provided(
+    tmp_path,
+) -> None:
+    from index_inclusion_research.analysis.cross_market_asymmetry.verdicts import (
+        render_paper_verdict_section,
+    )
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+    )
+    event_counts = pd.DataFrame(
+        [
+            {"market": "CN", "announce_year": 2020, "inclusion": 1, "n_events": 21},
+            {"market": "CN", "announce_year": 2024, "inclusion": 1, "n_events": 28},
+            {"market": "US", "announce_year": 2020, "inclusion": 1, "n_events": 30},
+            {"market": "US", "announce_year": 2024, "inclusion": 1, "n_events": 19},
+        ]
+    )
+    text = render_paper_verdict_section(verdicts, event_counts=event_counts)
+    # sample summary preamble before verdict-by-verdict block
+    assert "样本概述" in text
+    assert "方法概述" in text
+    assert "限制与稳健性" in text
+    # H2 is 待补数据 in fixture → should appear in limitations list
+    assert "H2" in text
+
+
+def test_render_paper_verdict_section_skips_extras_without_event_counts() -> None:
+    from index_inclusion_research.analysis.cross_market_asymmetry.verdicts import (
+        render_paper_verdict_section,
+    )
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+    )
+    text = render_paper_verdict_section(verdicts)
+    assert "样本概述" not in text
+    assert "限制与稳健性" not in text
+
+
 def test_render_paper_verdict_section_handles_empty_input() -> None:
     from index_inclusion_research.analysis.cross_market_asymmetry.verdicts import (
         render_paper_verdict_section,
