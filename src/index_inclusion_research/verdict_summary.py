@@ -152,6 +152,176 @@ def _read_csv(path: Path) -> pd.DataFrame | None:
         return None
 
 
+# ── snapshot + diff ──────────────────────────────────────────────────
+
+
+def save_verdict_snapshot(verdicts: pd.DataFrame, *, output_path: Path) -> Path:
+    """Persist the verdict frame as a snapshot for later --compare-with."""
+    out_path = Path(output_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    verdicts.to_csv(out_path, index=False)
+    return out_path
+
+
+def _coerce_float(value: object) -> float:
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return float("nan")
+    return v
+
+
+def _coerce_int(value: object) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def compute_verdict_diff(
+    current: pd.DataFrame,
+    previous: pd.DataFrame,
+    *,
+    delta_threshold: float = 1e-6,
+) -> list[dict[str, object]]:
+    """Compute a list of per-hid diff records.
+
+    Each record is one of:
+      - ``{"kind": "added", "hid": ...}`` (in current, not in previous)
+      - ``{"kind": "removed", "hid": ...}`` (in previous, not in current)
+      - ``{"kind": "changed", "hid": ..., changes: {...}}``
+      - ``{"kind": "unchanged", "hid": ...}``
+
+    A "changed" record's ``changes`` dict carries before/after for any of
+    verdict / confidence / key_label / key_value / n_obs that differ.
+    NaN-vs-NaN is treated as equal; NaN-vs-numeric counts as a change.
+    """
+    if current is None or current.empty:
+        cur_by_hid: dict[str, dict] = {}
+    else:
+        cur_by_hid = {str(r["hid"]): dict(r) for _, r in current.iterrows()}
+    if previous is None or previous.empty:
+        prev_by_hid: dict[str, dict] = {}
+    else:
+        prev_by_hid = {str(r["hid"]): dict(r) for _, r in previous.iterrows()}
+
+    rows: list[dict[str, object]] = []
+    all_hids = sorted(set(cur_by_hid) | set(prev_by_hid))
+    for hid in all_hids:
+        if hid in cur_by_hid and hid not in prev_by_hid:
+            rows.append({"kind": "added", "hid": hid, "current": cur_by_hid[hid]})
+            continue
+        if hid in prev_by_hid and hid not in cur_by_hid:
+            rows.append({"kind": "removed", "hid": hid, "previous": prev_by_hid[hid]})
+            continue
+        cur = cur_by_hid[hid]
+        prev = prev_by_hid[hid]
+        changes: dict[str, dict[str, object]] = {}
+        for field in ("verdict", "confidence", "key_label"):
+            cur_val = "" if pd.isna(cur.get(field, "")) else str(cur.get(field, ""))
+            prev_val = "" if pd.isna(prev.get(field, "")) else str(prev.get(field, ""))
+            if cur_val != prev_val:
+                changes[field] = {"before": prev_val, "after": cur_val}
+        cur_v = _coerce_float(cur.get("key_value"))
+        prev_v = _coerce_float(prev.get("key_value"))
+        cur_nan = math.isnan(cur_v)
+        prev_nan = math.isnan(prev_v)
+        if cur_nan != prev_nan or (
+            not cur_nan and not prev_nan and abs(cur_v - prev_v) > delta_threshold
+        ):
+            changes["key_value"] = {"before": prev_v, "after": cur_v}
+        cur_n = _coerce_int(cur.get("n_obs"))
+        prev_n = _coerce_int(prev.get("n_obs"))
+        if cur_n != prev_n:
+            changes["n_obs"] = {"before": prev_n, "after": cur_n}
+        if changes:
+            rows.append({
+                "kind": "changed",
+                "hid": hid,
+                "name_cn": cur.get("name_cn", prev.get("name_cn", "")),
+                "changes": changes,
+            })
+        else:
+            rows.append({"kind": "unchanged", "hid": hid})
+    return rows
+
+
+def render_verdict_diff(
+    diff_rows: list[dict[str, object]],
+    *,
+    color: bool = True,
+) -> str:
+    """Render diff rows as a multi-line string with tier-coloured arrows."""
+    if not diff_rows:
+        return "(无 diff 输入)\n"
+    changed = [r for r in diff_rows if r["kind"] == "changed"]
+    added = [r for r in diff_rows if r["kind"] == "added"]
+    removed = [r for r in diff_rows if r["kind"] == "removed"]
+    unchanged = [r for r in diff_rows if r["kind"] == "unchanged"]
+
+    lines: list[str] = []
+    lines.append("=" * 72)
+    lines.append(" VERDICT DIFF · 当前 vs 快照")
+    lines.append("=" * 72)
+    lines.append(
+        f"  changed: {len(changed)}, added: {len(added)},"
+        f" removed: {len(removed)}, unchanged: {len(unchanged)}"
+    )
+    lines.append("")
+
+    if not (changed or added or removed):
+        lines.append("  ✓ 所有 verdict 相同 — 没有变化。")
+        return "\n".join(lines) + "\n"
+
+    if changed:
+        lines.append("已变更:")
+        lines.append("")
+        for row in changed:
+            hid = str(row["hid"])
+            name = str(row.get("name_cn", ""))
+            lines.append(f"  {hid} · {name}")
+            for field, beats in row["changes"].items():  # type: ignore[index]
+                before = beats["before"]
+                after = beats["after"]
+                if field == "verdict":
+                    bef_text = _colorize(str(before), str(before), enable=color)
+                    aft_text = _colorize(str(after), str(after), enable=color)
+                    lines.append(f"    verdict        : {bef_text}  →  {aft_text}")
+                elif field == "key_value":
+                    bef_str = "—" if isinstance(before, float) and math.isnan(before) else f"{before:.3f}"
+                    aft_str = "—" if isinstance(after, float) and math.isnan(after) else f"{after:.3f}"
+                    delta = ""
+                    if (
+                        isinstance(before, float) and isinstance(after, float)
+                        and not math.isnan(before) and not math.isnan(after)
+                    ):
+                        delta = f"  (Δ {after - before:+.3f})"
+                    lines.append(f"    key_value      : {bef_str}  →  {aft_str}{delta}")
+                else:
+                    lines.append(f"    {field:<14} : {before}  →  {after}")
+            lines.append("")
+
+    if added:
+        lines.append("新增:")
+        for row in added:
+            cur = row.get("current", {})  # type: ignore[assignment]
+            lines.append(
+                f"  + {row['hid']} {cur.get('name_cn', '')} → {cur.get('verdict', '')}"
+            )
+        lines.append("")
+
+    if removed:
+        lines.append("移除:")
+        for row in removed:
+            prev = row.get("previous", {})  # type: ignore[assignment]
+            lines.append(
+                f"  - {row['hid']} {prev.get('name_cn', '')} (was {prev.get('verdict', '')})"
+            )
+        lines.append("")
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
 # ── CLI ──────────────────────────────────────────────────────────────
 
 
@@ -180,6 +350,19 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Disable ANSI colour escape codes.",
     )
+    parser.add_argument(
+        "--snapshot",
+        metavar="PATH",
+        help="Save the current verdicts CSV to PATH for later --compare-with diffs.",
+    )
+    parser.add_argument(
+        "--compare-with",
+        metavar="PATH",
+        help=(
+            "Render a before/after diff against the snapshot at PATH instead of "
+            "(or in addition to) the standard summary."
+        ),
+    )
     return parser
 
 
@@ -201,6 +384,24 @@ def main(argv: Sequence[str] | None = None) -> int:
     track_summary = _read_csv(track_path)
 
     enable_color = not args.no_color and sys.stdout.isatty()
+
+    if args.snapshot:
+        snapshot_path = Path(args.snapshot)
+        save_verdict_snapshot(verdicts, output_path=snapshot_path)
+        print(f"[verdict-summary] saved snapshot to {snapshot_path}")
+
+    if args.compare_with:
+        previous_path = Path(args.compare_with)
+        previous = _read_csv(previous_path)
+        if previous is None:
+            print(
+                f"[verdict-summary] --compare-with snapshot not found / unreadable: {previous_path}"
+            )
+            return 1
+        diff_rows = compute_verdict_diff(verdicts, previous)
+        print(render_verdict_diff(diff_rows, color=enable_color))
+        return 0
+
     print(render_summary(verdicts, track_summary, color=enable_color))
     return 0
 

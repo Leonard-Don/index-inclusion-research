@@ -6,7 +6,13 @@ from pathlib import Path
 
 import pandas as pd
 
-from index_inclusion_research.verdict_summary import main, render_summary
+from index_inclusion_research.verdict_summary import (
+    compute_verdict_diff,
+    main,
+    render_summary,
+    render_verdict_diff,
+    save_verdict_snapshot,
+)
 
 
 def _verdicts_fixture() -> pd.DataFrame:
@@ -109,6 +115,131 @@ def test_main_returns_1_when_verdicts_csv_missing(tmp_path: Path) -> None:
     rc = main([
         "--verdicts", str(tmp_path / "missing.csv"),
         "--track-summary", str(tmp_path / "missing-track.csv"),
+        "--no-color",
+    ])
+    assert rc == 1
+
+
+def test_save_verdict_snapshot_writes_csv(tmp_path: Path) -> None:
+    out = tmp_path / "snap.csv"
+    written = save_verdict_snapshot(_verdicts_fixture(), output_path=out)
+    assert written == out
+    assert out.exists()
+    df = pd.read_csv(out)
+    assert len(df) == 3
+    assert "hid" in df.columns
+
+
+def test_compute_verdict_diff_detects_tier_flip() -> None:
+    previous = _verdicts_fixture()
+    current = previous.copy()
+    current.loc[current["hid"] == "H1", "verdict"] = "支持"
+    current.loc[current["hid"] == "H1", "key_value"] = 0.012
+    diff = compute_verdict_diff(current, previous)
+    h1 = next(r for r in diff if r["hid"] == "H1")
+    assert h1["kind"] == "changed"
+    changes = h1["changes"]
+    assert changes["verdict"] == {"before": "证据不足", "after": "支持"}
+    assert changes["key_value"]["before"] == 0.640
+    assert changes["key_value"]["after"] == 0.012
+
+
+def test_compute_verdict_diff_detects_added_and_removed() -> None:
+    previous = _verdicts_fixture()
+    current = previous.copy()
+    # add H8
+    current = pd.concat(
+        [current, pd.DataFrame([{"hid": "H8", "name_cn": "新假说",
+                                  "verdict": "支持", "confidence": "中",
+                                  "key_label": "lol", "key_value": 0.1, "n_obs": 50}])],
+        ignore_index=True,
+    )
+    # remove H3
+    current = current.loc[current["hid"] != "H3"].reset_index(drop=True)
+    diff = compute_verdict_diff(current, previous)
+    kinds = {r["hid"]: r["kind"] for r in diff if r["kind"] != "unchanged"}
+    assert kinds["H8"] == "added"
+    assert kinds["H3"] == "removed"
+
+
+def test_compute_verdict_diff_unchanged_for_identical_input() -> None:
+    diff = compute_verdict_diff(_verdicts_fixture(), _verdicts_fixture())
+    assert all(r["kind"] == "unchanged" for r in diff)
+
+
+def test_compute_verdict_diff_handles_nan_key_value() -> None:
+    previous = _verdicts_fixture()
+    current = previous.copy()
+    # H2 already has NaN key_value; flip its verdict only
+    current.loc[current["hid"] == "H2", "verdict"] = "部分支持"
+    diff = compute_verdict_diff(current, previous)
+    h2 = next(r for r in diff if r["hid"] == "H2")
+    assert h2["kind"] == "changed"
+    # NaN-vs-NaN should NOT register as a key_value change
+    assert "key_value" not in h2["changes"]
+
+
+def test_render_verdict_diff_no_changes() -> None:
+    diff = compute_verdict_diff(_verdicts_fixture(), _verdicts_fixture())
+    text = render_verdict_diff(diff, color=False)
+    assert "没有变化" in text
+
+
+def test_render_verdict_diff_shows_arrows_and_delta() -> None:
+    previous = _verdicts_fixture()
+    current = previous.copy()
+    current.loc[current["hid"] == "H1", "verdict"] = "支持"
+    current.loc[current["hid"] == "H1", "key_value"] = 0.012
+    text = render_verdict_diff(compute_verdict_diff(current, previous), color=False)
+    assert "证据不足" in text
+    assert "支持" in text
+    assert "→" in text
+    assert "Δ" in text  # delta marker for numeric change
+
+
+def test_main_snapshot_writes_file(tmp_path: Path, capsys) -> None:
+    verdicts_path = tmp_path / "verdicts.csv"
+    _verdicts_fixture().to_csv(verdicts_path, index=False)
+    snap_path = tmp_path / "snap.csv"
+    rc = main([
+        "--verdicts", str(verdicts_path),
+        "--track-summary", str(tmp_path / "missing.csv"),
+        "--snapshot", str(snap_path),
+        "--no-color",
+    ])
+    assert rc == 0
+    assert snap_path.exists()
+    captured = capsys.readouterr().out
+    assert "saved snapshot" in captured
+
+
+def test_main_compare_with_renders_diff(tmp_path: Path, capsys) -> None:
+    verdicts_path = tmp_path / "v.csv"
+    snap_path = tmp_path / "s.csv"
+    fixture = _verdicts_fixture()
+    fixture.to_csv(snap_path, index=False)
+    altered = fixture.copy()
+    altered.loc[altered["hid"] == "H1", "verdict"] = "支持"
+    altered.to_csv(verdicts_path, index=False)
+    rc = main([
+        "--verdicts", str(verdicts_path),
+        "--track-summary", str(tmp_path / "missing.csv"),
+        "--compare-with", str(snap_path),
+        "--no-color",
+    ])
+    assert rc == 0
+    captured = capsys.readouterr().out
+    assert "VERDICT DIFF" in captured
+    assert "证据不足" in captured and "支持" in captured
+
+
+def test_main_compare_with_missing_snapshot_returns_1(tmp_path: Path) -> None:
+    verdicts_path = tmp_path / "v.csv"
+    _verdicts_fixture().to_csv(verdicts_path, index=False)
+    rc = main([
+        "--verdicts", str(verdicts_path),
+        "--track-summary", str(tmp_path / "missing-track.csv"),
+        "--compare-with", str(tmp_path / "no-such-snap.csv"),
         "--no-color",
     ])
     assert rc == 1
