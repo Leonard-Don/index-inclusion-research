@@ -197,6 +197,30 @@
   {% endif %}
 
   {% if mode != 'brief' and cma_section.hypothesis_verdicts and cma_section.hypothesis_verdicts.rows %}
+  {% if cma_section.track_summary and cma_section.track_summary.rows %}
+  <div class="cma-track-summary">
+    {% for row in cma_section.track_summary.rows %}
+    <article class="cma-track-card">
+      <header>
+        <span class="cma-track-kicker">研究主线</span>
+        <h3>{{ row.track_label }}</h3>
+        <span class="cma-track-hypotheses">{{ row.hypotheses }}</span>
+      </header>
+      <div class="cma-track-counts">
+        {% for label, key in [('支持', '支持'), ('部分支持', '部分支持'), ('证据不足', '证据不足'), ('待补数据', '待补数据')] %}
+          {% set count = row.get(key, 0) %}
+          {% if count and count > 0 %}
+          <span class="cma-track-count" data-verdict="{{ label }}">
+            <span class="cma-track-count-num">{{ count }}</span>
+            <span class="cma-track-count-label">{{ label }}</span>
+          </span>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% endif %}
   {{ render_cma_verdict_cards(cma_section.hypothesis_verdicts, mode) }}
   {% endif %}
 

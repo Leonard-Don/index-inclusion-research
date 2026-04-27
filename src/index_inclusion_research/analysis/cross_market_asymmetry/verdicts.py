@@ -662,7 +662,22 @@ def _h5_from_regression(
     )
 
 
-def _h6(hypothesis: StructuralHypothesis, heterogeneity_size: pd.DataFrame) -> dict[str, object]:
+def _h6(
+    hypothesis: StructuralHypothesis,
+    heterogeneity_size: pd.DataFrame,
+    *,
+    weight_change: pd.DataFrame | None = None,
+    gap_event_level: pd.DataFrame | None = None,
+) -> dict[str, object]:
+    if (
+        weight_change is not None
+        and not weight_change.empty
+        and gap_event_level is not None
+        and not gap_event_level.empty
+    ):
+        return _h6_from_weight_change(
+            hypothesis, weight_change=weight_change, gap_event_level=gap_event_level
+        )
     required = {"market", "bucket", "asymmetry_index"}
     if heterogeneity_size.empty or not required.issubset(heterogeneity_size.columns):
         return _pending(
@@ -719,17 +734,217 @@ def build_hypothesis_verdicts(
     gap_drift_regression: Mapping[str, object] | None = None,
     channel_concentration: pd.DataFrame | None = None,
     limit_regression: Mapping[str, object] | None = None,
+    heterogeneity_sector: pd.DataFrame | None = None,
+    weight_change: pd.DataFrame | None = None,
+    gap_event_level: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     hypotheses = {h.hid: h for h in HYPOTHESES}
+    sector_frame = (
+        heterogeneity_sector
+        if heterogeneity_sector is not None
+        else pd.DataFrame()
+    )
     rows = [
         _h1(hypotheses["H1"], gap_summary, bootstrap=pre_runup_bootstrap),
         _h2(hypotheses["H2"], time_series_rolling, aum_frame=aum_frame),
         _h3(hypotheses["H3"], mechanism_panel, channel_concentration=channel_concentration),
         _h4(hypotheses["H4"], gap_summary, regression=gap_drift_regression),
         _h5(hypotheses["H5"], mechanism_panel, limit_regression=limit_regression),
-        _h6(hypotheses["H6"], heterogeneity_size),
+        _h6(
+            hypotheses["H6"],
+            heterogeneity_size,
+            weight_change=weight_change,
+            gap_event_level=gap_event_level,
+        ),
+        _h7(hypotheses["H7"], sector_frame),
     ]
     return pd.DataFrame(rows)
+
+
+_H6_WEIGHT_QUANTILES = (0.0, 0.25, 0.50, 0.75, 1.0)
+
+
+def _h6_from_weight_change(
+    hypothesis: StructuralHypothesis,
+    *,
+    weight_change: pd.DataFrame,
+    gap_event_level: pd.DataFrame,
+) -> dict[str, object]:
+    """H6 verdict path that uses real weight_change instead of size proxy.
+
+    Joins the per-event ``weight_proxy`` (from compute_h6_weight_change)
+    with the gap event panel on (market, ticker), splits by the median
+    weight_proxy within CN events, and compares the mean
+    ``announce_jump`` between the heavy-weight and light-weight groups.
+    H6 predicts heavy-weight events should show LARGER announce_jump
+    because their inclusion is more predictable and arbitrageurs front-run.
+    """
+    if "ticker" not in weight_change.columns or "ticker" not in gap_event_level.columns:
+        return _pending(
+            hypothesis,
+            "weight_change / gap_event_level 缺少 ticker 列,无法 join。",
+            "确认 hs300_weight_change.csv 与 cma_gap_event_level.csv 都按 ticker 标识。",
+        )
+    cn_weights = weight_change.loc[weight_change["market"] == "CN"].copy()
+    cn_events = gap_event_level.loc[gap_event_level["market"] == "CN"].copy()
+    if cn_weights.empty or cn_events.empty:
+        return _pending(
+            hypothesis,
+            "CN 没有 weight_change 或 gap_event_level 行,无法用真实权重替代 size proxy。",
+            "重跑 index-inclusion-compute-h6-weight-change 取 CN 流通市值后再做。",
+        )
+    merged = cn_events.merge(
+        cn_weights[["ticker", "weight_proxy"]], on="ticker", how="inner"
+    ).dropna(subset=["weight_proxy", "announce_jump"])
+    if len(merged) < 6:
+        return _make_verdict(
+            hypothesis,
+            verdict="证据不足",
+            confidence="低",
+            evidence_summary=(
+                f"CN 实际匹配上 weight_proxy + announce_jump 的事件只有 {len(merged)} 条,"
+                "样本太小,无法分组比较。"
+            ),
+            metric_snapshot=f"matched events={len(merged)}",
+            next_step="扩大 weight_change 样本或允许跨批次 ticker 复用。",
+            key_label="weight_proxy split",
+            key_value=float("nan"),
+            n_obs=int(len(merged)),
+        )
+    median_weight = float(merged["weight_proxy"].median())
+    heavy = merged.loc[merged["weight_proxy"] > median_weight]
+    light = merged.loc[merged["weight_proxy"] <= median_weight]
+    heavy_mean = float(heavy["announce_jump"].mean())
+    light_mean = float(light["announce_jump"].mean())
+    spread = heavy_mean - light_mean
+    if spread > 0 and heavy_mean > 0:
+        verdict = "支持"
+        confidence = "中"
+        summary = (
+            f"CN 重权重事件(weight>median={median_weight:.4f})announce_jump 均值"
+            f" {heavy_mean:+.2%} 高于轻权重 {light_mean:+.2%},spread={spread:+.2%},"
+            f" 方向符合 H6 权重可预判预言。"
+        )
+    elif spread > 0:
+        verdict = "部分支持"
+        confidence = "低"
+        summary = (
+            f"CN 重权重 announce_jump 高于轻权重 ({heavy_mean:+.2%} vs {light_mean:+.2%}),"
+            "但绝对量级小,方向支持 H6 但不强。"
+        )
+    else:
+        verdict = "证据不足"
+        confidence = "中"
+        summary = (
+            f"CN 重权重 announce_jump 并不明显高于轻权重 ({heavy_mean:+.2%} vs"
+            f" {light_mean:+.2%},spread={spread:+.2%}),H6 不被支持。"
+        )
+    return _make_verdict(
+        hypothesis,
+        verdict=verdict,
+        confidence=confidence,
+        evidence_summary=summary,
+        metric_snapshot=(
+            f"matched={len(merged)}, median weight={median_weight:.4f},"
+            f" heavy announce_jump={heavy_mean:+.2%}, light={light_mean:+.2%},"
+            f" spread={spread:+.2%}"
+        ),
+        next_step="可以再按 sector × weight 交互或多分位回归检验稳健性。",
+        key_label="heavy−light spread",
+        key_value=spread,
+        n_obs=int(len(merged)),
+    )
+
+
+_H7_MIN_EVENTS_PER_SECTOR = 10
+
+
+def _h7(
+    hypothesis: StructuralHypothesis,
+    heterogeneity_sector: pd.DataFrame,
+) -> dict[str, object]:
+    required = {"market", "bucket", "asymmetry_index", "n_events"}
+    if heterogeneity_sector.empty or not required.issubset(heterogeneity_sector.columns):
+        return _pending(
+            hypothesis,
+            "缺少 sector 异质性表,无法测试行业结构差异。",
+            "重跑 CMA M4 sector 维度异质性。",
+        )
+    cn = heterogeneity_sector.loc[heterogeneity_sector["market"] == "CN"].copy()
+    us = heterogeneity_sector.loc[heterogeneity_sector["market"] == "US"].copy()
+    cn_buckets = sorted(b for b in cn["bucket"].dropna().unique() if str(b) != "Unknown")
+    cn_status = "已分行业" if cn_buckets else "待补 sector"
+
+    us_eligible = us.loc[
+        (us["n_events"] >= _H7_MIN_EVENTS_PER_SECTOR)
+        & (us["bucket"].astype(str) != "Unknown")
+    ].copy()
+    if us_eligible.empty or len(us_eligible) < 2:
+        return _make_verdict(
+            hypothesis,
+            verdict="证据不足",
+            confidence="低",
+            evidence_summary=(
+                f"US sector 桶内 n>={_H7_MIN_EVENTS_PER_SECTOR} 的行业不足 2 个,"
+                f"无法计算跨行业 asymmetry spread。CN 状态:{cn_status}。"
+            ),
+            metric_snapshot=(
+                f"US eligible sectors={len(us_eligible)}; CN sector 状态={cn_status}"
+            ),
+            next_step="将 sector_min_events 阈值降低,或确保 sector 字段被填充。",
+            key_label="US sector spread",
+            key_value=float("nan"),
+            n_obs=int(us_eligible["n_events"].sum()) if not us_eligible.empty else 0,
+        )
+    us_max = float(us_eligible["asymmetry_index"].max())
+    us_min = float(us_eligible["asymmetry_index"].min())
+    spread = us_max - us_min
+    sector_top_row = us_eligible.loc[us_eligible["asymmetry_index"].idxmax()]
+    sector_bot_row = us_eligible.loc[us_eligible["asymmetry_index"].idxmin()]
+    us_n = int(us_eligible["n_events"].sum())
+    if spread > 1.5:
+        verdict = "支持" if cn_buckets else "部分支持"
+        confidence = "中" if cn_buckets else "低"
+        summary = (
+            f"US 行业间 asymmetry_index spread = {spread:.2f}({sector_top_row['bucket']}"
+            f" {us_max:+.2f} vs {sector_bot_row['bucket']} {us_min:+.2f}),行业结构在 inclusion"
+            f" 效应中显著起作用。CN 状态:{cn_status}。"
+        )
+    elif spread > 0.5:
+        verdict = "部分支持"
+        confidence = "低"
+        summary = (
+            f"US 行业 asymmetry_index spread = {spread:.2f},方向上行业差异存在但分化不强。"
+            f" CN 状态:{cn_status}。"
+        )
+    else:
+        verdict = "证据不足"
+        confidence = "中"
+        summary = (
+            f"US 行业 asymmetry_index spread = {spread:.2f}(<0.5),行业维度的 inclusion 效应分化"
+            f" 微弱。CN 状态:{cn_status}。"
+        )
+    metric_snapshot = (
+        f"US eligible sectors={len(us_eligible)}, max={us_max:+.2f}({sector_top_row['bucket']}),"
+        f" min={us_min:+.2f}({sector_bot_row['bucket']}), spread={spread:.2f}, n={us_n}"
+    )
+    if cn_buckets:
+        metric_snapshot += f"; CN sectors={len(cn_buckets)}"
+    else:
+        metric_snapshot += "; CN sector 未填充"
+    return _make_verdict(
+        hypothesis,
+        verdict=verdict,
+        confidence=confidence,
+        evidence_summary=summary,
+        metric_snapshot=metric_snapshot,
+        next_step=(
+            "若 CN sector 字段补齐,可做 CN-US 行业 × 阶段交互回归;否则限定为美股结论。"
+        ),
+        key_label="US sector spread",
+        key_value=spread,
+        n_obs=us_n,
+    )
 
 
 _LATEX_VERDICT_HEADER = r"""\begin{tabular}{llllrrl}
@@ -801,6 +1016,83 @@ def export_hypothesis_verdicts_tex(
     return out_path
 
 
+def render_paper_verdict_section(verdicts: pd.DataFrame) -> str:
+    """Render verdicts as a paper-ready markdown section.
+
+    Output starts with an aggregate summary line (X 支持 / Y 部分支持 /
+    Z 证据不足 / W 待补数据), followed by one paragraph per hypothesis
+    that combines name, verdict, key metric, and the human-readable
+    evidence_summary. Suitable for pasting into docs/paper_outline.md
+    or for an automated paper-section drop-in.
+    """
+    if verdicts is None or verdicts.empty:
+        return "## 假说裁决叙述\n\n(暂无 verdict 数据。先跑 `index-inclusion-cma`。)\n"
+
+    counts: dict[str, int] = {}
+    for _, row in verdicts.iterrows():
+        verdict_label = str(row["verdict"])
+        counts[verdict_label] = counts.get(verdict_label, 0) + 1
+
+    aggregate_parts = []
+    for label in ("支持", "部分支持", "证据不足", "待补数据"):
+        if counts.get(label, 0) > 0:
+            aggregate_parts.append(f"{counts[label]} 项{label}")
+
+    lines: list[str] = []
+    lines.append("## 假说裁决叙述")
+    lines.append("")
+    lines.append(
+        f"基于跨市场不对称(CMA)pipeline 自动产出,7 条机制假说的当前裁决分布:"
+        f" **{' / '.join(aggregate_parts) if aggregate_parts else '无可裁决项'}**。"
+        " 详见 `results/real_tables/cma_hypothesis_verdicts.csv`。"
+    )
+    lines.append("")
+    for _, row in verdicts.iterrows():
+        hid = str(row["hid"])
+        name = str(row["name_cn"])
+        verdict_label = str(row["verdict"])
+        confidence = str(row["confidence"])
+        evidence = str(row.get("evidence_summary", "")).strip()
+        metric_snapshot = str(row.get("metric_snapshot", "")).strip()
+        key_label = str(row.get("key_label", "") or "").strip()
+        key_value = row.get("key_value")
+        try:
+            key_value_f = float(key_value) if key_value is not None else float("nan")
+        except (TypeError, ValueError):
+            key_value_f = float("nan")
+        n_obs_raw = row.get("n_obs")
+        try:
+            n_obs_int = int(n_obs_raw) if n_obs_raw is not None else 0
+        except (TypeError, ValueError):
+            n_obs_int = 0
+
+        head = f"### {hid} · {name} —— {verdict_label}(可信度:{confidence})"
+        lines.append(head)
+        if key_label and key_value_f == key_value_f:
+            tail = f"**{key_label} = {key_value_f:.3f}**"
+            if n_obs_int > 0:
+                tail += f", n = {n_obs_int}"
+            lines.append(tail)
+        if evidence:
+            lines.append(evidence)
+        if metric_snapshot:
+            lines.append(f"_细节_: {metric_snapshot}")
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def export_paper_verdict_section(
+    verdicts: pd.DataFrame,
+    *,
+    output_path: Path,
+) -> Path:
+    """Write the paper-ready verdict section to ``output_path`` (a .md file)."""
+    out_path = Path(output_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(render_paper_verdict_section(verdicts))
+    return out_path
+
+
 def export_hypothesis_verdicts(
     *,
     output_dir: Path,
@@ -813,6 +1105,7 @@ def export_hypothesis_verdicts(
     gap_drift_regression: Mapping[str, object] | None = None,
     channel_concentration: pd.DataFrame | None = None,
     limit_regression: Mapping[str, object] | None = None,
+    heterogeneity_sector: pd.DataFrame | None = None,
 ) -> Path:
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -827,6 +1120,7 @@ def export_hypothesis_verdicts(
         gap_drift_regression=gap_drift_regression,
         channel_concentration=channel_concentration,
         limit_regression=limit_regression,
+        heterogeneity_sector=heterogeneity_sector,
     )
     verdicts.to_csv(out_path, index=False)
     return out_path

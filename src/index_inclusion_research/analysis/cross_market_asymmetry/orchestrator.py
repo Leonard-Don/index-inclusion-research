@@ -20,6 +20,7 @@ REAL_FIGURES_DIR = ROOT / "results" / "real_figures"
 REAL_EVENT_PANEL = ROOT / "data" / "processed" / "real_event_panel.csv"
 REAL_MATCHED_EVENT_PANEL = ROOT / "data" / "processed" / "real_matched_event_panel.csv"
 REAL_EVENTS_CLEAN = ROOT / "data" / "processed" / "real_events_clean.csv"
+WEIGHT_CHANGE_PATH = ROOT / "data" / "processed" / "hs300_weight_change.csv"
 
 APPEND_MARKER = "## 六、美股 vs A股 不对称"
 
@@ -189,6 +190,9 @@ def run_cma_pipeline(
     )
 
     hypotheses.export_hypothesis_map(output_dir=tables_dir)
+    weight_change_frame = (
+        pd.read_csv(WEIGHT_CHANGE_PATH) if WEIGHT_CHANGE_PATH.exists() else None
+    )
     hypothesis_verdicts = verdicts.build_hypothesis_verdicts(
         gap_summary=gap_summary,
         mechanism_panel=mech_table,
@@ -198,10 +202,20 @@ def run_cma_pipeline(
         pre_runup_bootstrap=pre_runup_bootstrap,
         gap_drift_regression=gap_drift_regression,
         channel_concentration=channel_concentration,
+        heterogeneity_sector=het_tables.get("sector", pd.DataFrame()),
+        weight_change=weight_change_frame,
+        gap_event_level=gap,
         limit_regression=limit_regression,
     )
     hypothesis_verdicts.to_csv(tables_dir / "cma_hypothesis_verdicts.csv", index=False)
     verdicts.export_hypothesis_verdicts_tex(hypothesis_verdicts, output_dir=tables_dir)
+    paper_verdict_path = ROOT / "docs" / "paper_outline_verdicts.md"
+    verdicts.export_paper_verdict_section(
+        hypothesis_verdicts, output_path=paper_verdict_path
+    )
+    hypotheses.export_track_verdict_summary(
+        hypothesis_verdicts, output_dir=tables_dir
+    )
 
     if research_summary_path is not None:
         _append_research_summary(

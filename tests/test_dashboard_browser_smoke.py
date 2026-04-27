@@ -717,14 +717,16 @@ def test_cross_market_section_renders_in_full_mode() -> None:
             assert cma_images.count() >= 3
 
             verdict_cards = section.locator(".cma-verdict-card")
-            assert verdict_cards.count() == 6
+            assert verdict_cards.count() == 7
+            track_cards = section.locator(".cma-track-card")
+            assert track_cards.count() == 3
             assert (
                 section.locator(".cma-verdict-card:has-text('H3')").count()
                 >= 1
             )
 
             hypothesis_rows = section.locator(".cma-hypothesis table tbody tr")
-            assert hypothesis_rows.count() == 6
+            assert hypothesis_rows.count() == 7
 
             collapsibles = section.locator("details.cma-collapsible")
             assert collapsibles.count() >= 10
