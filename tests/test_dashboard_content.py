@@ -153,3 +153,31 @@ def test_load_paper_detail_result_returns_none_for_unknown_paper() -> None:
     )
 
     assert result is None
+
+
+def test_load_paper_detail_result_includes_verdict_citations_for_cited_paper() -> None:
+    """Papers cited by H1+H3 should get a verdict_citations list with both."""
+    result = dashboard_content.load_paper_detail_result(
+        "harris_gurel_1986",
+        render_table=_render_table_stub,
+        project_module_display_map=PROJECT_MODULE_DISPLAY,
+    )
+    assert result is not None
+    citations = result.get("verdict_citations") or []
+    hids = sorted(c["hid"] for c in citations)
+    assert hids == ["H1", "H3"]
+    for c in citations:
+        assert c["name_cn"]
+        assert c["track_label"]
+
+
+def test_load_paper_detail_result_includes_verdict_citations_for_h6_paper() -> None:
+    """shleifer_1986 is cited only by H6."""
+    result = dashboard_content.load_paper_detail_result(
+        "shleifer_1986",
+        render_table=_render_table_stub,
+        project_module_display_map=PROJECT_MODULE_DISPLAY,
+    )
+    assert result is not None
+    citations = result.get("verdict_citations") or []
+    assert [c["hid"] for c in citations] == ["H6"]

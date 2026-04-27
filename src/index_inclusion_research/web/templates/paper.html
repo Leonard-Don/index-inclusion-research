@@ -91,6 +91,38 @@
     </section>
     {% endif %}
 
+    {% if current.verdict_citations %}
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">CMA 假说证据</div>
+          <h2>这篇论文支持的机制假说</h2>
+        </div>
+        <div class="section-intro">本论文被 CMA 体系下的 {{ current.verdict_citations|length }} 条机制假说引用为证据支撑。每条假说的当前 verdict 来自真实样本 pipeline,点 dashboard 链接可看完整裁决卡片。</div>
+      </div>
+      <ul class="paper-verdict-list">
+        {% for cit in current.verdict_citations %}
+        <li class="paper-verdict-item" data-verdict="{{ cit.verdict }}">
+          <div class="paper-verdict-id">{{ cit.hid }}</div>
+          <div class="paper-verdict-body">
+            <h3>{{ cit.name_cn }}</h3>
+            <div class="paper-verdict-meta">
+              <span class="paper-verdict-track">主线:{{ cit.track_label }}</span>
+              {% if cit.verdict %}
+              <span class="paper-verdict-tier" data-verdict="{{ cit.verdict }}">当前 verdict:<strong>{{ cit.verdict }}</strong></span>
+              {% endif %}
+              {% if cit.key_label and cit.key_value == cit.key_value %}
+              <span class="paper-verdict-key">{{ cit.key_label }} = {{ '%.3f'|format(cit.key_value) }}{% if cit.n_obs and cit.n_obs > 0 %} (n={{ cit.n_obs }}){% endif %}</span>
+              {% endif %}
+            </div>
+          </div>
+          <a class="paper-verdict-link" href="/?mode=full#cross_market_asymmetry">看 dashboard 裁决 →</a>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
     {% if current.sequence_cards or current.recommended_cards %}
     <section class="section">
       <div class="section-head">

@@ -162,6 +162,54 @@ def export_hypothesis_map(*, output_dir: Path) -> Path:
     return out_path
 
 
+def compute_paper_verdict_citations(
+    paper_id: str,
+    *,
+    verdicts: pd.DataFrame | None = None,
+) -> list[dict[str, object]]:
+    """Reverse mapping: which H1..H7 hypotheses cite this paper, and what
+    is their current verdict (when a verdicts frame is supplied).
+
+    Static return shape per element:
+        {"hid", "name_cn", "track", "track_label",
+         "verdict", "confidence", "key_label", "key_value", "n_obs"}
+    The static fields (hid / name_cn / track / track_label) come straight
+    from the HYPOTHESES registry and are always populated. The live
+    fields (verdict / confidence / key_label / key_value / n_obs) come
+    from the verdicts frame when provided; otherwise they default to ""
+    or NaN so callers can still render a "cited by Hx" pill without the
+    live tier.
+    """
+    cited_by: list[StructuralHypothesis] = [
+        h for h in HYPOTHESES if paper_id in h.paper_ids
+    ]
+    if not cited_by:
+        return []
+    by_hid: dict[str, dict[str, object]] = {}
+    if verdicts is not None and not verdicts.empty and "hid" in verdicts.columns:
+        by_hid = {str(r["hid"]): dict(r) for _, r in verdicts.iterrows()}
+    out: list[dict[str, object]] = []
+    for h in cited_by:
+        live = by_hid.get(h.hid, {})
+        out.append(
+            {
+                "hid": h.hid,
+                "name_cn": h.name_cn,
+                "track": h.track,
+                "track_label": TRACK_LABELS.get(h.track, h.track),
+                "verdict": str(live.get("verdict", "")),
+                "confidence": str(live.get("confidence", "")),
+                "key_label": str(live.get("key_label", "") or ""),
+                "key_value": float(live["key_value"])
+                if live.get("key_value") is not None
+                and not pd.isna(live.get("key_value"))
+                else float("nan"),
+                "n_obs": int(live.get("n_obs", 0) or 0),
+            }
+        )
+    return out
+
+
 def compute_track_verdict_summary(verdicts: pd.DataFrame) -> pd.DataFrame:
     """Aggregate verdict counts per research track.
 
