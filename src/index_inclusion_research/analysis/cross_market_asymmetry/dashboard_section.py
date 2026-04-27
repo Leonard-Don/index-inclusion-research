@@ -5,6 +5,7 @@ from typing import Literal
 
 import pandas as pd
 
+from . import hypotheses as cma_hypotheses
 from . import verdicts as cma_verdicts
 
 SectionMode = Literal["brief", "demo", "full"]
@@ -176,5 +177,23 @@ def build_cross_market_section(
             "columns": list(hypothesis_verdicts.columns),
             "rows": hypothesis_verdicts.to_dict(orient="records") if mode != "brief" else [],
         },
+        "track_summary": _build_track_summary_payload(hypothesis_verdicts, mode),
         "detail_tables": detail_tables,
     }
+
+
+def _build_track_summary_payload(
+    hypothesis_verdicts: pd.DataFrame,
+    mode: str,
+) -> dict:
+    if hypothesis_verdicts.empty or mode == "brief":
+        return {"rows": []}
+    summary = cma_hypotheses.compute_track_verdict_summary(hypothesis_verdicts)
+    if summary.empty:
+        return {"rows": []}
+    # Stable ordering matching the project's 3-track narrative
+    track_order = {"price_pressure": 0, "demand_curve": 1, "identification": 2}
+    summary = summary.sort_values(
+        "track", key=lambda s: s.map(track_order).fillna(99)
+    ).reset_index(drop=True)
+    return {"rows": summary.to_dict(orient="records")}

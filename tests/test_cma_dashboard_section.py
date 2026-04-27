@@ -53,7 +53,7 @@ def _seed_tables(tables_dir):
                 "evidence_refs": "",
                 "verdict_logic": "",
             }
-            for i in range(1, 7)
+            for i in range(1, 8)
         ]
     ).to_csv(tables_dir / "cma_hypothesis_map.csv", index=False)
     pd.DataFrame(
@@ -68,7 +68,7 @@ def _seed_tables(tables_dir):
                 "next_step": f"next {i}",
                 "evidence_refs": "M1",
             }
-            for i in range(1, 7)
+            for i in range(1, 8)
         ]
     ).to_csv(tables_dir / "cma_hypothesis_verdicts.csv", index=False)
 
@@ -142,8 +142,8 @@ def test_section_full_mode_hypothesis_map_populated(tmp_path):
     section = build_cross_market_section(
         tables_dir=tables, figures_dir=figures, mode="full"
     )
-    assert len(section["hypothesis_map"]["rows"]) == 6
-    assert len(section["hypothesis_verdicts"]["rows"]) == 6
+    assert len(section["hypothesis_map"]["rows"]) == 7
+    assert len(section["hypothesis_verdicts"]["rows"]) == 7
 
 
 def test_section_computes_hypothesis_verdicts_when_csv_missing(tmp_path):
@@ -156,7 +156,7 @@ def test_section_computes_hypothesis_verdicts_when_csv_missing(tmp_path):
         tables_dir=tables, figures_dir=figures, mode="full"
     )
 
-    assert len(section["hypothesis_verdicts"]["rows"]) == 6
+    assert len(section["hypothesis_verdicts"]["rows"]) == 7
     assert section["hypothesis_verdicts"]["rows"][0]["hid"] == "H1"
 
 
@@ -169,7 +169,7 @@ def test_section_demo_mode_exposes_hypothesis_verdict_cards(tmp_path):
     )
 
     assert section["hypothesis_map"]["rows"] == []
-    assert len(section["hypothesis_verdicts"]["rows"]) == 6
+    assert len(section["hypothesis_verdicts"]["rows"]) == 7
 
 
 def test_section_missing_tables_yield_empty_rows(tmp_path):
