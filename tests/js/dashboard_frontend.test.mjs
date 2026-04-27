@@ -26,6 +26,7 @@ import {
 import { fetchRefreshStatus, postRefreshRequest } from "../../src/index_inclusion_research/web/static/dashboard/refresh_requests.js";
 import { createDetailsSurface } from "../../src/index_inclusion_research/web/static/dashboard/surface_details.js";
 import { createTableSurface } from "../../src/index_inclusion_research/web/static/dashboard/surface_tables.js";
+import { createVerdictFilterController } from "../../src/index_inclusion_research/web/static/dashboard/verdict_filter.js";
 
 function createClassList(initialValues = []) {
   const values = new Set(initialValues);
@@ -166,6 +167,11 @@ test("bootstrapDashboard wires controllers in order and returns handles", () => 
       calls.push("refresh.initialize");
     },
   };
+  const verdictFilter = {
+    initialize() {
+      calls.push("verdictFilter.initialize");
+    },
+  };
 
   const result = bootstrapDashboard({
     createDashboardContext() {
@@ -190,6 +196,10 @@ test("bootstrapDashboard wires controllers in order and returns handles", () => 
       assert.equal(receivedNavigation, navigation);
       return refresh;
     },
+    createVerdictFilterController() {
+      calls.push("createVerdictFilterController");
+      return verdictFilter;
+    },
   });
 
   assert.deepEqual(calls, [
@@ -197,14 +207,17 @@ test("bootstrapDashboard wires controllers in order and returns handles", () => 
     "createSurfaceController",
     "createNavigationController",
     "createRefreshController",
+    "createVerdictFilterController",
     "surface.initialize",
     "navigation.initialize",
     "refresh.initialize",
+    "verdictFilter.initialize",
   ]);
   assert.equal(result.context, context);
   assert.equal(result.surface, surface);
   assert.equal(result.navigation, navigation);
   assert.equal(result.refresh, refresh);
+  assert.equal(result.verdictFilter, verdictFilter);
 
   assert.equal(typeof detailsCallback, "function");
   detailsCallback();
@@ -641,4 +654,130 @@ test("refresh request helpers build urls and post payloads with dashboard header
       assert.equal(fetchCalls[1].options.credentials, "same-origin");
     },
   );
+});
+
+// ── verdict tier filter ──────────────────────────────────────────────
+
+
+function makeChip(filter) {
+  const listeners = new Map();
+  const attrs = new Map([["data-filter", filter]]);
+  const classes = new Set(filter === "all" ? ["is-active"] : []);
+  return {
+    listeners,
+    attrs,
+    classes,
+    getAttribute(name) {
+      return attrs.get(name) ?? null;
+    },
+    setAttribute(name, value) {
+      attrs.set(name, value);
+    },
+    addEventListener(event, handler) {
+      listeners.set(event, handler);
+    },
+    classList: {
+      add: (name) => classes.add(name),
+      remove: (name) => classes.delete(name),
+      contains: (name) => classes.has(name),
+    },
+    click() {
+      const handler = listeners.get("click");
+      if (handler) handler({ preventDefault: () => {} });
+    },
+  };
+}
+
+
+function makeGridAndNav(filterChipKinds = ["all", "支持", "证据不足"]) {
+  const chips = filterChipKinds.map((kind) => makeChip(kind));
+  const gridAttrs = new Map();
+  const grid = {
+    getAttribute(name) {
+      return gridAttrs.get(name) ?? null;
+    },
+    setAttribute(name, value) {
+      gridAttrs.set(name, value);
+    },
+    removeAttribute(name) {
+      gridAttrs.delete(name);
+    },
+  };
+  const navAttrs = new Map();
+  const nav = {
+    getAttribute(name) {
+      return navAttrs.get(name) ?? null;
+    },
+    setAttribute(name, value) {
+      navAttrs.set(name, value);
+    },
+    parentElement: {
+      querySelector(selector) {
+        return selector === ".cma-verdict-grid" ? grid : null;
+      },
+    },
+    querySelectorAll(selector) {
+      return selector === ".cma-verdict-filter-chip" ? chips : [];
+    },
+  };
+  return { nav, chips, grid };
+}
+
+
+test("verdict filter chip click sets data-filter on grid and toggles active", () => {
+  const { nav, chips, grid } = makeGridAndNav();
+  const fakeDoc = {
+    querySelectorAll(selector) {
+      return selector === ".cma-verdict-filter" ? [nav] : [];
+    },
+    querySelector() {
+      return null;
+    },
+  };
+  const controller = createVerdictFilterController({ doc: fakeDoc });
+  controller.initialize();
+
+  // initial state — "all" chip is active, no filter on grid
+  assert.equal(grid.getAttribute("data-filter"), null);
+  assert.ok(chips[0].classList.contains("is-active"));
+
+  // click "支持" chip
+  chips[1].click();
+  assert.equal(grid.getAttribute("data-filter"), "支持");
+  assert.equal(nav.getAttribute("data-active"), "支持");
+  assert.ok(!chips[0].classList.contains("is-active"));
+  assert.ok(chips[1].classList.contains("is-active"));
+  assert.ok(!chips[2].classList.contains("is-active"));
+
+  // click "证据不足" chip
+  chips[2].click();
+  assert.equal(grid.getAttribute("data-filter"), "证据不足");
+  assert.ok(chips[2].classList.contains("is-active"));
+  assert.ok(!chips[1].classList.contains("is-active"));
+
+  // click "all" chip — filter cleared
+  chips[0].click();
+  assert.equal(grid.getAttribute("data-filter"), null);
+  assert.ok(chips[0].classList.contains("is-active"));
+});
+
+
+test("verdict filter initialize is a no-op when doc is null", () => {
+  const controller = createVerdictFilterController({ doc: null });
+  // Should not throw.
+  controller.initialize();
+});
+
+
+test("verdict filter initialize is a no-op when no nav element exists", () => {
+  const fakeDoc = {
+    querySelectorAll() {
+      return [];
+    },
+    querySelector() {
+      return null;
+    },
+  };
+  const controller = createVerdictFilterController({ doc: fakeDoc });
+  controller.initialize();  // should not throw
 });

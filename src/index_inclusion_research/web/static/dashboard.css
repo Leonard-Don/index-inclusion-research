@@ -2794,6 +2794,63 @@
       color: var(--muted);
       font-size: 11.5px;
     }
+    .cma-verdict-filter {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin: 4px 0 12px;
+      font-variant-numeric: tabular-nums;
+    }
+    .cma-verdict-filter-label {
+      color: var(--muted);
+      font-size: 11.5px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-right: 2px;
+    }
+    .cma-verdict-filter-chip {
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.55);
+      border: 1px solid rgba(15, 92, 110, 0.20);
+      color: #18212b;
+      font-size: 12.5px;
+      cursor: pointer;
+      transition: background 160ms ease, border-color 160ms ease;
+      font-variant-numeric: tabular-nums;
+    }
+    .cma-verdict-filter-chip:hover {
+      background: rgba(15, 92, 110, 0.10);
+      border-color: rgba(15, 92, 110, 0.36);
+    }
+    .cma-verdict-filter-chip.is-active {
+      background: rgba(15, 92, 110, 0.16);
+      border-color: rgba(15, 92, 110, 0.45);
+      font-weight: 600;
+    }
+    .cma-verdict-filter-chip[data-verdict="支持"].is-active {
+      background: rgba(46, 119, 89, 0.20);
+      border-color: rgba(46, 119, 89, 0.55);
+    }
+    .cma-verdict-filter-chip[data-verdict="部分支持"].is-active {
+      background: rgba(195, 106, 45, 0.20);
+      border-color: rgba(195, 106, 45, 0.55);
+    }
+    .cma-verdict-filter-chip[data-verdict="证据不足"].is-active {
+      background: rgba(166, 59, 40, 0.20);
+      border-color: rgba(166, 59, 40, 0.55);
+    }
+    .cma-verdict-filter-chip[data-verdict="待补数据"].is-active {
+      background: rgba(92, 107, 119, 0.20);
+      border-color: rgba(92, 107, 119, 0.55);
+    }
+    .cma-verdict-grid[data-filter="支持"] .cma-verdict-card:not([data-verdict="支持"]),
+    .cma-verdict-grid[data-filter="部分支持"] .cma-verdict-card:not([data-verdict="部分支持"]),
+    .cma-verdict-grid[data-filter="证据不足"] .cma-verdict-card:not([data-verdict="证据不足"]),
+    .cma-verdict-grid[data-filter="待补数据"] .cma-verdict-card:not([data-verdict="待补数据"]) {
+      display: none;
+    }
     .cma-verdict-papers {
       display: flex;
       flex-wrap: wrap;

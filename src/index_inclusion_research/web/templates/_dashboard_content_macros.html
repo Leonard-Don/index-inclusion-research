@@ -105,6 +105,16 @@
 
 {% macro render_cma_verdict_cards(payload, mode) -%}
 {% if payload and payload.rows %}
+{% set verdict_tiers_present = payload.rows | map(attribute='verdict') | list | unique | list %}
+<nav class="cma-verdict-filter" data-active="all" aria-label="按裁决 tier 筛选 verdict 卡片">
+  <span class="cma-verdict-filter-label">筛选</span>
+  <button type="button" class="cma-verdict-filter-chip is-active" data-filter="all">全部</button>
+  {% for tier in ['支持', '部分支持', '证据不足', '待补数据'] %}
+    {% if tier in verdict_tiers_present %}
+    <button type="button" class="cma-verdict-filter-chip" data-filter="{{ tier }}" data-verdict="{{ tier }}">{{ tier }}</button>
+    {% endif %}
+  {% endfor %}
+</nav>
 <div class="cma-verdict-grid">
   {% for verdict in payload.rows %}
   <article id="hypothesis-{{ verdict.hid }}" class="result-card cma-verdict-card" data-verdict="{{ verdict.verdict }}">
