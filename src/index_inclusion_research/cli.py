@@ -64,6 +64,10 @@ def run_prepare_passive_aum_main() -> None:
     _run_package_main("index_inclusion_research.prepare_passive_aum")
 
 
+def run_compute_h6_weight_change_main() -> None:
+    _run_package_main("index_inclusion_research.compute_h6_weight_change")
+
+
 def run_generate_sample_data_main() -> None:
     _run_package_main("index_inclusion_research.sample_data")
 
