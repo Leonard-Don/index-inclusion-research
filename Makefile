@@ -1,4 +1,4 @@
-.PHONY: setup test lint serve coverage clean help
+.PHONY: setup test lint serve coverage clean help rebuild verdicts
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -22,6 +22,12 @@ smoke: ## Run dashboard browser smoke tests (requires Playwright + Chromium)
 
 serve: ## Start the dashboard on localhost:5001
 	index-inclusion-dashboard
+
+rebuild: ## Run the full pipeline (events → CMA → figures → research report)
+	index-inclusion-rebuild-all
+
+verdicts: ## Print the current 7-hypothesis verdict picture
+	index-inclusion-verdict-summary
 
 clean: ## Remove generated artifacts
 	rm -rf htmlcov .coverage .pytest_cache .ruff_cache __pycache__
