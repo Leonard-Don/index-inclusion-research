@@ -70,6 +70,7 @@ def test_create_dashboard_app_and_register_routes() -> None:
     assert "/run/<analysis_id>" in rules
     assert "/paper/<paper_id>/pdf" in rules
     assert "/api/chart/<chart_id>" in rules
+    assert "/verdict/<hid>" in rules
 
 
 def test_register_dashboard_routes_uses_stable_endpoint_names() -> None:
