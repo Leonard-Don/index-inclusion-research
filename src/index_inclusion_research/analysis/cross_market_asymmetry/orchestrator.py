@@ -207,7 +207,15 @@ def run_cma_pipeline(
         gap_event_level=gap,
         limit_regression=limit_regression,
     )
-    hypothesis_verdicts.to_csv(tables_dir / "cma_hypothesis_verdicts.csv", index=False)
+    verdicts_csv_path = tables_dir / "cma_hypothesis_verdicts.csv"
+    # Auto-snapshot the previous verdicts so users can always run
+    # `index-inclusion-verdict-summary --compare-with cma_hypothesis_verdicts.previous.csv`
+    # to see what flipped between two pipeline runs, without having to remember
+    # to take a manual snapshot before a re-run.
+    if verdicts_csv_path.exists():
+        previous_path = tables_dir / "cma_hypothesis_verdicts.previous.csv"
+        previous_path.write_bytes(verdicts_csv_path.read_bytes())
+    hypothesis_verdicts.to_csv(verdicts_csv_path, index=False)
     verdicts.export_hypothesis_verdicts_tex(hypothesis_verdicts, output_dir=tables_dir)
     paper_verdict_path = ROOT / "docs" / "paper_outline_verdicts.md"
     event_counts_path = tables_dir / "event_counts_by_year.csv"

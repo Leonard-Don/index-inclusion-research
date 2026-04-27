@@ -363,7 +363,64 @@ def build_arg_parser() -> argparse.ArgumentParser:
             "(or in addition to) the standard summary."
         ),
     )
+    parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help=(
+            "Output format. 'text' (default) is the colourised terminal "
+            "summary; 'json' is a machine-readable dump of the same data "
+            "(verdicts + track summary + optional diff)."
+        ),
+    )
     return parser
+
+
+def render_summary_json(
+    verdicts: pd.DataFrame,
+    track_summary: pd.DataFrame | None = None,
+    *,
+    diff_rows: list[dict[str, object]] | None = None,
+) -> str:
+    """Return a JSON string carrying the full verdict picture.
+
+    Schema is stable for downstream tooling:
+    ``{"verdicts": [...], "track_summary": [...], "aggregate": {...},
+    "diff": [...]?}``. NaN values become ``null``; numeric fields stay
+    numeric.
+    """
+    import json
+
+    def _row_to_jsonable(row: pd.Series) -> dict[str, object]:
+        out: dict[str, object] = {}
+        for col, value in row.items():
+            if isinstance(value, float) and math.isnan(value):
+                out[col] = None
+            elif isinstance(value, (int, float, str, bool)) or value is None:
+                out[col] = value
+            else:
+                out[col] = str(value)
+        return out
+
+    payload: dict[str, object] = {}
+    payload["verdicts"] = (
+        [_row_to_jsonable(row) for _, row in verdicts.iterrows()]
+        if not verdicts.empty
+        else []
+    )
+    aggregate: dict[str, int] = {tier: 0 for tier in VERDICT_TIER_ORDER}
+    for row in payload["verdicts"]:
+        tier = str(row.get("verdict", ""))
+        aggregate[tier] = aggregate.get(tier, 0) + 1
+    payload["aggregate"] = aggregate
+    payload["track_summary"] = (
+        [_row_to_jsonable(row) for _, row in track_summary.iterrows()]
+        if track_summary is not None and not track_summary.empty
+        else []
+    )
+    if diff_rows is not None:
+        payload["diff"] = diff_rows
+    return json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -390,6 +447,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         save_verdict_snapshot(verdicts, output_path=snapshot_path)
         print(f"[verdict-summary] saved snapshot to {snapshot_path}")
 
+    diff_rows: list[dict[str, object]] | None = None
     if args.compare_with:
         previous_path = Path(args.compare_with)
         previous = _read_csv(previous_path)
@@ -399,6 +457,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             return 1
         diff_rows = compute_verdict_diff(verdicts, previous)
+
+    if args.format == "json":
+        print(render_summary_json(verdicts, track_summary, diff_rows=diff_rows), end="")
+        return 0
+
+    if diff_rows is not None:
         print(render_verdict_diff(diff_rows, color=enable_color))
         return 0
 

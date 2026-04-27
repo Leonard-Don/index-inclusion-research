@@ -182,3 +182,40 @@ def test_research_summary_append_is_idempotent(tmp_path):
     assert "|---|---|---|---|---|---|---|---|" in content2
     for hid in ("H1", "H2", "H3", "H4", "H5", "H6"):
         assert f"| {hid} |" in content2
+
+
+def test_run_cma_pipeline_writes_previous_snapshot_on_second_run(tmp_path):
+    event_panel = _make_min_event_panel()
+    events = _make_min_events()
+    event_panel_path = tmp_path / "ep.csv"
+    matched_path = tmp_path / "mp.csv"
+    events_path = tmp_path / "ev.csv"
+    event_panel.to_csv(event_panel_path, index=False)
+    event_panel.to_csv(matched_path, index=False)
+    events.to_csv(events_path, index=False)
+    tables_dir = tmp_path / "tables"
+
+    # first run: no .previous.csv expected
+    orchestrator.run_cma_pipeline(
+        event_panel_path=event_panel_path,
+        matched_panel_path=matched_path,
+        events_path=events_path,
+        tables_dir=tables_dir,
+        figures_dir=tmp_path / "figures",
+    )
+    current = tables_dir / "cma_hypothesis_verdicts.csv"
+    previous = tables_dir / "cma_hypothesis_verdicts.previous.csv"
+    assert current.exists()
+    assert not previous.exists()
+
+    # second run: .previous.csv should now mirror the first run's CSV
+    first_content = current.read_bytes()
+    orchestrator.run_cma_pipeline(
+        event_panel_path=event_panel_path,
+        matched_panel_path=matched_path,
+        events_path=events_path,
+        tables_dir=tables_dir,
+        figures_dir=tmp_path / "figures",
+    )
+    assert previous.exists()
+    assert previous.read_bytes() == first_content
