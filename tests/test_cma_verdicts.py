@@ -222,6 +222,24 @@ def test_h2_uses_aum_when_available() -> None:
     assert "US AUM" in h2["metric_snapshot"]
 
 
+def test_verdict_rows_carry_paper_ids_from_hypothesis_registry() -> None:
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+    )
+    assert {"paper_ids", "paper_count"}.issubset(verdicts.columns)
+    by_hid = verdicts.set_index("hid")
+    # H1 should have 4 supporting papers per registry
+    assert int(by_hid.loc["H1", "paper_count"]) == 4
+    h1_papers = str(by_hid.loc["H1", "paper_ids"]).split(" | ")
+    assert "harris_gurel_1986" in h1_papers
+    assert "denis_et_al_2003" in h1_papers
+    # H6 should have 5 (its registry entry is the longest)
+    assert int(by_hid.loc["H6", "paper_count"]) == 5
+
+
 def test_verdict_rows_carry_structured_key_fields() -> None:
     bootstrap = {
         "cn_mean": 0.035,
