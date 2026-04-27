@@ -10,6 +10,7 @@ from index_inclusion_research.verdict_summary import (
     compute_verdict_diff,
     main,
     render_summary,
+    render_summary_json,
     render_verdict_diff,
     save_verdict_snapshot,
 )
@@ -231,6 +232,54 @@ def test_main_compare_with_renders_diff(tmp_path: Path, capsys) -> None:
     captured = capsys.readouterr().out
     assert "VERDICT DIFF" in captured
     assert "证据不足" in captured and "支持" in captured
+
+
+def test_render_summary_json_carries_aggregate_and_verdicts() -> None:
+    import json
+
+    text = render_summary_json(_verdicts_fixture())
+    payload = json.loads(text)
+    assert "verdicts" in payload and len(payload["verdicts"]) == 3
+    assert payload["aggregate"]["证据不足"] == 1
+    assert payload["aggregate"]["待补数据"] == 1
+    assert payload["aggregate"]["部分支持"] == 1
+    assert payload["track_summary"] == []
+
+
+def test_render_summary_json_normalises_nan_to_null() -> None:
+    import json
+
+    payload = json.loads(render_summary_json(_verdicts_fixture()))
+    h2 = next(v for v in payload["verdicts"] if v["hid"] == "H2")
+    # H2 has NaN key_value in fixture → should be null in JSON
+    assert h2["key_value"] is None
+
+
+def test_render_summary_json_with_diff_rows() -> None:
+    import json
+
+    diff = compute_verdict_diff(_verdicts_fixture(), _verdicts_fixture())
+    payload = json.loads(render_summary_json(_verdicts_fixture(), diff_rows=diff))
+    assert "diff" in payload
+    assert len(payload["diff"]) == 3
+
+
+def test_main_format_json_prints_valid_json(tmp_path: Path, capsys) -> None:
+    import json
+
+    verdicts_path = tmp_path / "v.csv"
+    _verdicts_fixture().to_csv(verdicts_path, index=False)
+    rc = main([
+        "--verdicts", str(verdicts_path),
+        "--track-summary", str(tmp_path / "missing.csv"),
+        "--format", "json",
+        "--no-color",
+    ])
+    assert rc == 0
+    out = capsys.readouterr().out
+    payload = json.loads(out)
+    assert "verdicts" in payload
+    assert "aggregate" in payload
 
 
 def test_main_compare_with_missing_snapshot_returns_1(tmp_path: Path) -> None:
