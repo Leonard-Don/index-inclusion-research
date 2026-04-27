@@ -2823,6 +2823,59 @@
       background: rgba(15, 92, 110, 0.16);
       border-color: rgba(15, 92, 110, 0.32);
     }
+    .paper-verdict-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .paper-verdict-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.6);
+      border: 1px solid rgba(15, 92, 110, 0.14);
+      font-variant-numeric: tabular-nums;
+    }
+    .paper-verdict-item[data-verdict="支持"] { border-color: rgba(46, 119, 89, 0.40); }
+    .paper-verdict-item[data-verdict="部分支持"] { border-color: rgba(195, 106, 45, 0.36); }
+    .paper-verdict-item[data-verdict="证据不足"] { border-color: rgba(166, 59, 40, 0.36); }
+    .paper-verdict-item[data-verdict="待补数据"] { border-color: rgba(92, 107, 119, 0.32); }
+    .paper-verdict-id {
+      font-weight: 600;
+      color: #18212b;
+      font-size: 17px;
+    }
+    .paper-verdict-body h3 {
+      margin: 0 0 4px 0;
+      font-size: 15px;
+      color: #18212b;
+    }
+    .paper-verdict-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 12.5px;
+      color: #475666;
+    }
+    .paper-verdict-tier[data-verdict="支持"] { color: #2e7759; }
+    .paper-verdict-tier[data-verdict="部分支持"] { color: #c36a2d; }
+    .paper-verdict-tier[data-verdict="证据不足"] { color: #a63b28; }
+    .paper-verdict-tier[data-verdict="待补数据"] { color: #5c6b77; }
+    .paper-verdict-link {
+      color: #0f5c6e;
+      font-size: 12.5px;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .paper-verdict-link:hover {
+      text-decoration: underline;
+    }
     .cma-verdict-diff {
       margin: 12px 0 14px;
       padding: 12px 14px;

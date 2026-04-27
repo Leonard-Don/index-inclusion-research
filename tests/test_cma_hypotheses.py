@@ -89,6 +89,53 @@ def test_compute_track_verdict_summary_groups_by_track():
     assert by_track.loc["identification", "部分支持"] == 1
 
 
+def test_compute_paper_verdict_citations_returns_static_when_verdicts_absent():
+    from index_inclusion_research.analysis.cross_market_asymmetry.hypotheses import (
+        compute_paper_verdict_citations,
+    )
+
+    cits = compute_paper_verdict_citations("harris_gurel_1986")
+    # H1 + H3 cite this paper
+    hids = sorted(c["hid"] for c in cits)
+    assert hids == ["H1", "H3"]
+    # Static fields populated
+    for c in cits:
+        assert c["name_cn"]
+        assert c["track"]
+        assert c["track_label"]
+    # Without a verdicts frame, live fields are blank
+    assert all(c["verdict"] == "" for c in cits)
+
+
+def test_compute_paper_verdict_citations_returns_empty_for_unknown_paper():
+    from index_inclusion_research.analysis.cross_market_asymmetry.hypotheses import (
+        compute_paper_verdict_citations,
+    )
+
+    assert compute_paper_verdict_citations("not-a-paper") == []
+
+
+def test_compute_paper_verdict_citations_merges_live_verdict_when_provided():
+    from index_inclusion_research.analysis.cross_market_asymmetry.hypotheses import (
+        compute_paper_verdict_citations,
+    )
+
+    verdicts = pd.DataFrame(
+        [
+            {"hid": "H1", "verdict": "证据不足", "confidence": "中",
+             "key_label": "bootstrap p", "key_value": 0.640, "n_obs": 436},
+            {"hid": "H3", "verdict": "部分支持", "confidence": "中",
+             "key_label": "双通道命中率", "key_value": 0.500, "n_obs": 4},
+        ]
+    )
+    cits = compute_paper_verdict_citations("harris_gurel_1986", verdicts=verdicts)
+    by_hid = {c["hid"]: c for c in cits}
+    assert by_hid["H1"]["verdict"] == "证据不足"
+    assert abs(by_hid["H1"]["key_value"] - 0.640) < 1e-9
+    assert by_hid["H3"]["verdict"] == "部分支持"
+    assert by_hid["H3"]["n_obs"] == 4
+
+
 def test_export_track_verdict_summary_writes_csv(tmp_path):
     from index_inclusion_research.analysis.cross_market_asymmetry.hypotheses import (
         export_track_verdict_summary,

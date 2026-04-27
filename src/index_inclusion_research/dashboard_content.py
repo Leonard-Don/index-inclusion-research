@@ -735,6 +735,36 @@ def _build_paper_evolution_nav(
     return evolution_nav_cards, evolution_nav_views
 
 
+_VERDICTS_CSV_REL = ("results", "real_tables", "cma_hypothesis_verdicts.csv")
+
+
+def _build_paper_verdict_citations(paper_id: str) -> list[dict[str, object]]:
+    """Resolve which CMA hypotheses cite this paper + their current verdict.
+
+    Returns ``[]`` for papers no hypothesis cites. Otherwise reads the
+    project-root verdicts CSV for live tiers when available; falls back
+    to the static registry-only view (verdict / key_value blank) when
+    the CSV is missing or unreadable.
+    """
+    from pathlib import Path as _Path
+
+    from index_inclusion_research.analysis.cross_market_asymmetry import (
+        hypotheses as cma_hypotheses,
+    )
+
+    root = _Path(__file__).resolve().parents[2]
+    csv_path = root.joinpath(*_VERDICTS_CSV_REL)
+    verdicts: pd.DataFrame | None = None
+    if csv_path.exists():
+        try:
+            verdicts = pd.read_csv(csv_path)
+        except (OSError, ValueError):
+            verdicts = None
+    return cma_hypotheses.compute_paper_verdict_citations(
+        paper_id, verdicts=verdicts
+    )
+
+
 def load_paper_detail_result(
     paper_id: str,
     *,
@@ -812,6 +842,7 @@ def load_paper_detail_result(
         paper_id=paper_id,
         project_module_display_map=project_module_display_map,
     )
+    verdict_citations = _build_paper_verdict_citations(paper_id)
     hero_meta_items: list[MetaItem] = [
         {"label": "年份", "value": paper.year_label},
         {"label": "阵营", "value": str(record.get("阵营", ""))},
@@ -841,6 +872,7 @@ def load_paper_detail_result(
         "recommended_cards": recommended_cards,
         "evolution_nav_cards": evolution_nav_cards,
         "evolution_nav_views": evolution_nav_views,
+        "verdict_citations": verdict_citations,
         "figure_paths": [],
         "primary_actions": (
             [
