@@ -11,6 +11,7 @@ from index_inclusion_research.doctor import (
     check_chart_builders_register,
     check_console_scripts_importable,
     check_hypothesis_paper_ids_resolve,
+    check_p_gated_verdict_sensitivity,
     check_results_directory_populated,
     check_verdicts_csv_health,
     main,
@@ -72,6 +73,114 @@ def test_check_verdicts_csv_health_passes_with_seven_hids(tmp_path: Path) -> Non
     ).to_csv(csv, index=False)
     result = check_verdicts_csv_health(csv_path=csv)
     assert result.status == "pass"
+
+
+def test_check_p_gated_sensitivity_warns_when_csv_missing(tmp_path: Path) -> None:
+    result = check_p_gated_verdict_sensitivity(csv_path=tmp_path / "missing.csv")
+    assert result.status == "warn"
+    assert "not found" in result.message
+
+
+def test_check_p_gated_sensitivity_warns_when_p_value_column_missing(tmp_path: Path) -> None:
+    csv = tmp_path / "verdicts.csv"
+    pd.DataFrame(
+        [{"hid": f"H{i}", "verdict": "证据不足"} for i in range(1, 8)]
+    ).to_csv(csv, index=False)
+    result = check_p_gated_verdict_sensitivity(csv_path=csv)
+    assert result.status == "warn"
+    assert "p_value" in result.message
+
+
+def test_check_p_gated_sensitivity_warns_when_all_p_values_nan(tmp_path: Path) -> None:
+    csv = tmp_path / "verdicts.csv"
+    pd.DataFrame(
+        [{"hid": f"H{i}", "p_value": float("nan")} for i in range(1, 8)]
+    ).to_csv(csv, index=False)
+    result = check_p_gated_verdict_sensitivity(csv_path=csv)
+    assert result.status == "warn"
+    assert "structured p_value" in result.message
+
+
+def test_check_p_gated_sensitivity_passes_when_all_clearly_above_default(
+    tmp_path: Path,
+) -> None:
+    """Real-data scenario: H1/H4/H5 all have p ≥ 0.10 (current CMA snapshot).
+    No boundary, doctor should pass with a sensible summary."""
+    csv = tmp_path / "verdicts.csv"
+    rows = [
+        {"hid": "H1", "p_value": 0.6396},
+        {"hid": "H2", "p_value": float("nan")},
+        {"hid": "H3", "p_value": float("nan")},
+        {"hid": "H4", "p_value": 0.5366},
+        {"hid": "H5", "p_value": 0.2134},
+        {"hid": "H6", "p_value": float("nan")},
+        {"hid": "H7", "p_value": float("nan")},
+    ]
+    pd.DataFrame(rows).to_csv(csv, index=False)
+    result = check_p_gated_verdict_sensitivity(csv_path=csv)
+    assert result.status == "pass"
+    # Should report 3 p-gated, 0 sig at strict, 0 sig at default.
+    assert "3 p-gated" in result.message
+    assert "0 significant at strict" in result.message
+    assert "0 at default" in result.message
+
+
+def test_check_p_gated_sensitivity_passes_when_all_robustly_significant(
+    tmp_path: Path,
+) -> None:
+    """All three p-gated H clear strict (0.05) — strongest possible signal."""
+    csv = tmp_path / "verdicts.csv"
+    rows = [
+        {"hid": "H1", "p_value": 0.001},
+        {"hid": "H4", "p_value": 0.012},
+        {"hid": "H5", "p_value": 0.0002},
+    ]
+    pd.DataFrame(rows).to_csv(csv, index=False)
+    result = check_p_gated_verdict_sensitivity(csv_path=csv)
+    assert result.status == "pass"
+    assert "3 significant at strict" in result.message
+    assert "3 at default" in result.message
+
+
+def test_check_p_gated_sensitivity_warns_on_boundary_results(
+    tmp_path: Path,
+) -> None:
+    """H4 sits at p=0.07 — sig at default 0.10 but flips at strict 0.05.
+    Doctor should warn and list H4 in details."""
+    csv = tmp_path / "verdicts.csv"
+    rows = [
+        {"hid": "H1", "p_value": 0.001},
+        {"hid": "H4", "p_value": 0.07},  # boundary
+        {"hid": "H5", "p_value": 0.50},
+    ]
+    pd.DataFrame(rows).to_csv(csv, index=False)
+    result = check_p_gated_verdict_sensitivity(csv_path=csv)
+    assert result.status == "warn"
+    assert "boundary" in result.message
+    # The detail line for H4 should be present.
+    assert any("H4" in d and "0.0700" in d for d in result.details)
+    # H1 and H5 should NOT be listed as boundary.
+    assert not any("H1" in d for d in result.details)
+    assert not any("H5" in d for d in result.details)
+
+
+def test_check_p_gated_sensitivity_respects_custom_thresholds(
+    tmp_path: Path,
+) -> None:
+    """Tighter strict threshold (0.01) makes p=0.03 a boundary case."""
+    csv = tmp_path / "verdicts.csv"
+    rows = [{"hid": "H1", "p_value": 0.03}]
+    pd.DataFrame(rows).to_csv(csv, index=False)
+    # With strict=0.05, p=0.03 is NOT boundary (it's robust).
+    result_loose = check_p_gated_verdict_sensitivity(
+        csv_path=csv, strict_threshold=0.05, default_threshold=0.10
+    )
+    assert result_loose.status == "pass"
+    # With strict=0.01, p=0.03 IS boundary (sig at 0.05 but flips at 0.01).
+    result_tight = check_p_gated_verdict_sensitivity(
+        csv_path=csv, strict_threshold=0.01, default_threshold=0.05
+    )
+    assert result_tight.status == "warn"
 
 
 def test_check_results_directory_populated_warns_when_missing(tmp_path: Path) -> None:

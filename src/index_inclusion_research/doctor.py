@@ -228,6 +228,96 @@ def check_chart_builders_register(
     )
 
 
+def check_p_gated_verdict_sensitivity(
+    *,
+    csv_path: Path = DEFAULT_VERDICTS_CSV,
+    strict_threshold: float = 0.05,
+    default_threshold: float = 0.10,
+) -> CheckResult:
+    """Flag p-gated hypotheses sitting in the boundary [strict, default).
+
+    H1 / H4 / H5 (gated by a single p) carry a structured ``p_value`` in
+    the verdict CSV. If any of them clears the default threshold (0.10)
+    but flips not_sig at the strict threshold (0.05), that's a fragile
+    "support" the referee will probe — doctor surfaces it as a warn so
+    the researcher knows to add robustness or report both thresholds.
+
+    H2 / H3 / H6 / H7 (spread / share / ratio headlines) carry NaN
+    ``p_value`` and are out of scope.
+    """
+    if not csv_path.exists():
+        return CheckResult(
+            name="p_gated_verdict_sensitivity",
+            status="warn",
+            message=f"verdicts CSV not found: {csv_path}",
+            fix="Run `index-inclusion-cma` to generate the verdicts CSV.",
+        )
+    try:
+        df = pd.read_csv(csv_path)
+    except (OSError, ValueError) as exc:
+        return CheckResult(
+            name="p_gated_verdict_sensitivity",
+            status="warn",
+            message=f"verdicts CSV unreadable: {exc}",
+            fix="Inspect / regenerate cma_hypothesis_verdicts.csv via `index-inclusion-cma`.",
+        )
+    if "p_value" not in df.columns:
+        return CheckResult(
+            name="p_gated_verdict_sensitivity",
+            status="warn",
+            message="verdicts CSV is missing the 'p_value' column (likely pre-8a2272e).",
+            fix="Run `index-inclusion-cma` to repopulate the verdicts CSV with structured p_value.",
+        )
+    p_gated = df.loc[df["p_value"].notna()].copy()
+    if p_gated.empty:
+        return CheckResult(
+            name="p_gated_verdict_sensitivity",
+            status="warn",
+            message="No hypothesis carries a structured p_value (all NaN).",
+            fix=(
+                "Confirm bootstrap / regression / limit_regression inputs to "
+                "build_hypothesis_verdicts are reaching H1 / H4 / H5."
+            ),
+        )
+    p_gated["p_value"] = p_gated["p_value"].astype(float)
+    boundary_mask = (p_gated["p_value"] >= strict_threshold) & (
+        p_gated["p_value"] < default_threshold
+    )
+    boundary = p_gated.loc[boundary_mask]
+    n_total = len(p_gated)
+    n_strict_sig = int((p_gated["p_value"] < strict_threshold).sum())
+    n_default_sig = int((p_gated["p_value"] < default_threshold).sum())
+    if not boundary.empty:
+        details = tuple(
+            f"{row['hid']}: p={float(row['p_value']):.4f}"
+            f" → sig at p<{default_threshold} but flips not_sig at p<{strict_threshold}"
+            for _, row in boundary.iterrows()
+        )
+        return CheckResult(
+            name="p_gated_verdict_sensitivity",
+            status="warn",
+            message=(
+                f"{len(boundary)} of {n_total} p-gated hypotheses sit in the boundary"
+                f" [{strict_threshold}, {default_threshold}) — referee will probe robustness."
+            ),
+            fix=(
+                "Add covariates / expand sample, or report both thresholds. "
+                "`index-inclusion-verdict-summary --sensitivity 0.05 0.10` shows "
+                "both side by side."
+            ),
+            details=details,
+        )
+    return CheckResult(
+        name="p_gated_verdict_sensitivity",
+        status="pass",
+        message=(
+            f"{n_total} p-gated hypotheses; {n_strict_sig} significant at strict"
+            f" ({strict_threshold}), {n_default_sig} at default ({default_threshold});"
+            f" none sit in the [{strict_threshold}, {default_threshold}) boundary."
+        ),
+    )
+
+
 def check_console_scripts_importable() -> CheckResult:
     """Every console_script declared in pyproject.toml resolves to a callable."""
     pyproject = ROOT / "pyproject.toml"
@@ -290,6 +380,7 @@ DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_hypothesis_paper_ids_resolve,
     check_verdicts_csv_health,
     check_results_directory_populated,
+    check_p_gated_verdict_sensitivity,
     check_chart_builders_register,
     check_console_scripts_importable,
 )
