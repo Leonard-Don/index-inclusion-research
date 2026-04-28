@@ -1,117 +1,34 @@
+"""Per-hypothesis verdict functions H1..H7 and their evidence-driven
+sub-helpers (_h{X}_from_*).
+
+Each ``_h{X}`` is the public entry point that ``build_hypothesis_verdicts``
+calls; each ``_h{X}_from_*`` is dispatched when the matching evidence
+frame (bootstrap result / regression result / channel concentration
+table / weight change frame) is supplied.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
-from pathlib import Path
 
 import pandas as pd
 
-from .hypotheses import HYPOTHESES, StructuralHypothesis
+from ..hypotheses import StructuralHypothesis
+from ._core import (
+    _fmt_num,
+    _fmt_pct,
+    _make_verdict,
+    _num,
+    _pending,
+    _row,
+    _sig,
+)
 
-SIGNIFICANCE_LEVEL = 0.10
-
-
-def _row(
-    frame: pd.DataFrame,
-    *,
-    market: str,
-    metric: str | None = None,
-    event_phase: str | None = None,
-    outcome: str | None = None,
-    spec: str | None = None,
-) -> pd.Series | None:
-    if frame.empty:
-        return None
-    sub = frame.copy()
-    filters = {
-        "market": market,
-        "metric": metric,
-        "event_phase": event_phase,
-        "outcome": outcome,
-        "spec": spec,
-    }
-    for column, value in filters.items():
-        if value is None:
-            continue
-        if column not in sub.columns:
-            return None
-        sub = sub.loc[sub[column] == value]
-    if sub.empty:
-        return None
-    return sub.iloc[0]
+_H6_WEIGHT_QUANTILES = (0.0, 0.25, 0.50, 0.75, 1.0)
+_H7_MIN_EVENTS_PER_SECTOR = 10
 
 
-def _num(row: pd.Series | None, column: str) -> float | None:
-    if row is None or column not in row:
-        return None
-    value = row[column]
-    if pd.isna(value):
-        return None
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-
-def _fmt_pct(value: float | None) -> str:
-    return "NA" if value is None else f"{value:.2%}"
-
-
-def _fmt_num(value: float | None, digits: int = 2) -> str:
-    return "NA" if value is None else f"{value:.{digits}f}"
-
-
-def _sig(row: pd.Series | None) -> bool:
-    p_value = _num(row, "p_value")
-    return p_value is not None and p_value < SIGNIFICANCE_LEVEL
-
-
-def _make_verdict(
-    hypothesis: StructuralHypothesis,
-    *,
-    verdict: str,
-    confidence: str,
-    evidence_summary: str,
-    metric_snapshot: str,
-    next_step: str,
-    key_label: str = "",
-    key_value: float | None = None,
-    n_obs: int | None = None,
-) -> dict[str, object]:
-    """Build one verdict row.
-
-    The ``key_label`` / ``key_value`` / ``n_obs`` triple is the
-    machine-readable headline (e.g. ``"bootstrap p" 0.640 n=436``).
-    Downstream consumers — dashboard verdict cards, research_summary
-    markdown table — can render the headline number prominently next
-    to the human-readable ``metric_snapshot``.
-    """
-    return {
-        "hid": hypothesis.hid,
-        "name_cn": hypothesis.name_cn,
-        "verdict": verdict,
-        "confidence": confidence,
-        "evidence_summary": evidence_summary,
-        "metric_snapshot": metric_snapshot,
-        "next_step": next_step,
-        "evidence_refs": " | ".join(hypothesis.evidence_refs),
-        "key_label": key_label,
-        "key_value": float(key_value) if key_value is not None else float("nan"),
-        "n_obs": int(n_obs) if n_obs is not None else 0,
-        "paper_ids": " | ".join(hypothesis.paper_ids),
-        "paper_count": len(hypothesis.paper_ids),
-        "track": hypothesis.track,
-    }
-
-
-def _pending(hypothesis: StructuralHypothesis, reason: str, next_step: str) -> dict[str, object]:
-    return _make_verdict(
-        hypothesis,
-        verdict="待补数据",
-        confidence="低",
-        evidence_summary=reason,
-        metric_snapshot="NA",
-        next_step=next_step,
-    )
+# ── H1 信息泄露与预运行 ──────────────────────────────────────────────
 
 
 def _h1(
@@ -228,6 +145,9 @@ def _h1_from_bootstrap(
     )
 
 
+# ── H2 被动基金 AUM 差异 ─────────────────────────────────────────────
+
+
 def _h2(
     hypothesis: StructuralHypothesis,
     time_series_rolling: pd.DataFrame,
@@ -286,6 +206,9 @@ def _h2(
         ),
         next_step="用年度面板回归替代趋势首尾比较，并加入 CN AUM 作为对照。",
     )
+
+
+# ── H3 散户 vs 机构结构 ─────────────────────────────────────────────
 
 
 def _h3(
@@ -433,6 +356,9 @@ def _h3_from_channel_table(
     )
 
 
+# ── H4 卖空约束 ─────────────────────────────────────────────────────
+
+
 def _h4(
     hypothesis: StructuralHypothesis,
     gap_summary: pd.DataFrame,
@@ -544,6 +470,9 @@ def _h4_from_regression(
         key_value=reg_p,
         n_obs=n_obs,
     )
+
+
+# ── H5 涨跌停限制 ──────────────────────────────────────────────────
 
 
 def _h5(
@@ -665,6 +594,9 @@ def _h5_from_regression(
     )
 
 
+# ── H6 指数权重可预测性 ─────────────────────────────────────────────
+
+
 def _h6(
     hypothesis: StructuralHypothesis,
     heterogeneity_size: pd.DataFrame,
@@ -724,47 +656,6 @@ def _h6(
         key_value=spread,
         n_obs=cn_n_events,
     )
-
-
-def build_hypothesis_verdicts(
-    *,
-    gap_summary: pd.DataFrame,
-    mechanism_panel: pd.DataFrame,
-    heterogeneity_size: pd.DataFrame,
-    time_series_rolling: pd.DataFrame,
-    aum_frame: pd.DataFrame | None = None,
-    pre_runup_bootstrap: Mapping[str, object] | None = None,
-    gap_drift_regression: Mapping[str, object] | None = None,
-    channel_concentration: pd.DataFrame | None = None,
-    limit_regression: Mapping[str, object] | None = None,
-    heterogeneity_sector: pd.DataFrame | None = None,
-    weight_change: pd.DataFrame | None = None,
-    gap_event_level: pd.DataFrame | None = None,
-) -> pd.DataFrame:
-    hypotheses = {h.hid: h for h in HYPOTHESES}
-    sector_frame = (
-        heterogeneity_sector
-        if heterogeneity_sector is not None
-        else pd.DataFrame()
-    )
-    rows = [
-        _h1(hypotheses["H1"], gap_summary, bootstrap=pre_runup_bootstrap),
-        _h2(hypotheses["H2"], time_series_rolling, aum_frame=aum_frame),
-        _h3(hypotheses["H3"], mechanism_panel, channel_concentration=channel_concentration),
-        _h4(hypotheses["H4"], gap_summary, regression=gap_drift_regression),
-        _h5(hypotheses["H5"], mechanism_panel, limit_regression=limit_regression),
-        _h6(
-            hypotheses["H6"],
-            heterogeneity_size,
-            weight_change=weight_change,
-            gap_event_level=gap_event_level,
-        ),
-        _h7(hypotheses["H7"], sector_frame),
-    ]
-    return pd.DataFrame(rows)
-
-
-_H6_WEIGHT_QUANTILES = (0.0, 0.25, 0.50, 0.75, 1.0)
 
 
 def _h6_from_weight_change(
@@ -859,7 +750,7 @@ def _h6_from_weight_change(
     )
 
 
-_H7_MIN_EVENTS_PER_SECTOR = 10
+# ── H7 行业结构差异 ─────────────────────────────────────────────────
 
 
 def _h7(
@@ -948,268 +839,3 @@ def _h7(
         key_value=spread,
         n_obs=us_n,
     )
-
-
-_LATEX_VERDICT_HEADER = r"""\begin{tabular}{llllrrl}
-\toprule
-HID & 名称 & 裁决 & 可信度 & 头条指标 & 值 & n \\
-\midrule
-"""
-
-_LATEX_VERDICT_FOOTER = "\\bottomrule\n\\end{tabular}\n"
-
-
-def _latex_escape(text: str) -> str:
-    """Minimal LaTeX-safe escaping for the verdict snapshot."""
-    if text is None:
-        return ""
-    return (
-        str(text)
-        .replace("\\", r"\textbackslash{}")
-        .replace("&", r"\&")
-        .replace("%", r"\%")
-        .replace("_", r"\_")
-        .replace("#", r"\#")
-        .replace("$", r"\$")
-        .replace("{", r"\{")
-        .replace("}", r"\}")
-    )
-
-
-def export_hypothesis_verdicts_tex(
-    verdicts: pd.DataFrame,
-    *,
-    output_dir: Path,
-) -> Path:
-    """Render the verdict frame as a booktabs LaTeX table for paper insertion.
-
-    The output schema matches the markdown verdict block in research_summary
-    so the paper can cite either format. The 关键证据 column is omitted from
-    the LaTeX version to keep it printable on a single page.
-    """
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    out_path = output_dir / "cma_hypothesis_verdicts.tex"
-    lines: list[str] = ["% auto-generated CMA hypothesis verdict table", _LATEX_VERDICT_HEADER]
-    for _, row in verdicts.iterrows():
-        label = str(row.get("key_label", "") or "")
-        value_raw = row.get("key_value")
-        try:
-            value_f = float(value_raw) if value_raw is not None else float("nan")
-        except (TypeError, ValueError):
-            value_f = float("nan")
-        value_text = f"{value_f:.3f}" if value_f == value_f else "—"
-        n_obs_raw = row.get("n_obs")
-        try:
-            n_obs_int = int(n_obs_raw) if n_obs_raw is not None else 0
-        except (TypeError, ValueError):
-            n_obs_int = 0
-        n_text = str(n_obs_int) if n_obs_int > 0 else "—"
-        lines.append(
-            f"{_latex_escape(row['hid'])} & "
-            f"{_latex_escape(row['name_cn'])} & "
-            f"{_latex_escape(row['verdict'])} & "
-            f"{_latex_escape(row['confidence'])} & "
-            f"{_latex_escape(label) if label else '—'} & "
-            f"{value_text} & "
-            f"{n_text} \\\\"
-        )
-    lines.append(_LATEX_VERDICT_FOOTER)
-    out_path.write_text("\n".join(lines))
-    return out_path
-
-
-def _sample_summary_block(event_counts: pd.DataFrame | None) -> list[str]:
-    """Render the sample-description preamble from event_counts_by_year.csv."""
-    if event_counts is None or event_counts.empty:
-        return []
-    by_market = (
-        event_counts.loc[event_counts["inclusion"] == 1]
-        .groupby("market")["n_events"].sum()
-    )
-    if by_market.empty:
-        return []
-    cn_n = int(by_market.get("CN", 0))
-    us_n = int(by_market.get("US", 0))
-    years = (
-        event_counts["announce_year"].astype("Int64").dropna()
-        if "announce_year" in event_counts.columns
-        else pd.Series(dtype="Int64")
-    )
-    year_lo = int(years.min()) if not years.empty else 0
-    year_hi = int(years.max()) if not years.empty else 0
-    lines = ["### 样本概述", ""]
-    lines.append(
-        f"真实样本覆盖 {year_lo}–{year_hi} 年间 CSI300(CN)与 S&P500(US)"
-        f"的指数纳入事件: 共 **CN {cn_n} 起 / US {us_n} 起 inclusion 事件**(`inclusion=1`)。"
-        " 每个事件采用 [-20, +20] 交易日的事件窗口,匹配对照组按 sector × 同期市值 quintile 抽取。"
-    )
-    lines.append("")
-    return lines
-
-
-def _methods_block() -> list[str]:
-    return [
-        "### 方法概述",
-        "",
-        "- **事件研究**: 公告日 (`announce`) 与生效日 (`effective`) 双窗口,",
-        "  CAR 窗口包括 `[-1,+1]` / `[-3,+3]` / `[-5,+5]`,长窗口取 `[0,+20]` / `[0,+60]` / `[0,+120]`。",
-        "- **匹配回归**: `treatment_group` 二值变量 + sector / 对数市值 / 事件前收益作为协变量,",
-        "  使用 HC3 异方差稳健标准误。",
-        "- **CMA 7 条机制假说**: 见下方逐项裁决,每条假说都有自动产出的 verdict + 头条指标。",
-        "  完整 metric pipeline 见 `index-inclusion-cma`(`results/real_tables/cma_*.csv`)。",
-        "- **HS300 RDD**: cutoff=300 的运行变量断点,公告日 `[-1,+1]` 主结果。",
-        "",
-    ]
-
-
-def _limitations_block(verdicts: pd.DataFrame) -> list[str]:
-    """List 待补数据 hypotheses + general caveats."""
-    pending = verdicts.loc[verdicts["verdict"] == "待补数据"] if not verdicts.empty else pd.DataFrame()
-    lines = ["### 限制与稳健性补强方向", ""]
-    if not pending.empty:
-        lines.append("**当前 verdicts 标注 待补数据 的项**(下游研究可补齐再重跑):")
-        lines.append("")
-        for _, row in pending.iterrows():
-            lines.append(
-                f"- {row['hid']} {row['name_cn']}: {str(row.get('next_step') or '').strip()}"
-            )
-        lines.append("")
-    lines.extend(
-        [
-            "**通用稳健性补强**:",
-            "",
-            "- HS300 RDD 当前 `running_variable` 是公开重建排名(顶=600..尾=1),不等同于真实流通市值;",
-            "  正式批次候选样本(L3)上线前,RDD 结论限定为公开重建口径,不可表述为中证官方历史候选排名。",
-            "- 跨市场比较默认按事件汇总(announce vs effective × CN vs US 4 象限),后续可叠加事件级",
-            "  bootstrap / permutation 检验,以及 sector × size 的交互检验,进一步压低单通道误判风险。",
-            "- 长窗口(>120 日)的 retention ratio 在样本量收缩时会跳到 NA,",
-            "  当前 demand_curve 主线主要靠 `[0,+60]` / `[0,+120]` 给出方向性结论。",
-            "",
-        ]
-    )
-    return lines
-
-
-def render_paper_verdict_section(
-    verdicts: pd.DataFrame,
-    *,
-    event_counts: pd.DataFrame | None = None,
-) -> str:
-    """Render verdicts as a paper-ready markdown section.
-
-    Output starts with an aggregate summary line (X 支持 / Y 部分支持 /
-    Z 证据不足 / W 待补数据), followed by one paragraph per hypothesis
-    that combines name, verdict, key metric, and the human-readable
-    evidence_summary. When ``event_counts`` is supplied, a sample
-    summary preamble + a methods block sit before the verdict
-    paragraphs and a limitations block sits after — yielding a draft
-    that can be pasted into ``docs/paper_outline.md`` or fed into a
-    LaTeX paper template.
-    """
-    if verdicts is None or verdicts.empty:
-        return "## 假说裁决叙述\n\n(暂无 verdict 数据。先跑 `index-inclusion-cma`。)\n"
-
-    counts: dict[str, int] = {}
-    for _, row in verdicts.iterrows():
-        verdict_label = str(row["verdict"])
-        counts[verdict_label] = counts.get(verdict_label, 0) + 1
-
-    aggregate_parts = []
-    for label in ("支持", "部分支持", "证据不足", "待补数据"):
-        if counts.get(label, 0) > 0:
-            aggregate_parts.append(f"{counts[label]} 项{label}")
-
-    lines: list[str] = []
-    lines.append("## 假说裁决叙述")
-    lines.append("")
-    lines.append(
-        f"基于跨市场不对称(CMA)pipeline 自动产出,7 条机制假说的当前裁决分布:"
-        f" **{' / '.join(aggregate_parts) if aggregate_parts else '无可裁决项'}**。"
-        " 详见 `results/real_tables/cma_hypothesis_verdicts.csv`。"
-    )
-    lines.append("")
-    sample_lines = _sample_summary_block(event_counts)
-    if sample_lines:
-        lines.extend(sample_lines)
-        lines.extend(_methods_block())
-    for _, row in verdicts.iterrows():
-        hid = str(row["hid"])
-        name = str(row["name_cn"])
-        verdict_label = str(row["verdict"])
-        confidence = str(row["confidence"])
-        evidence = str(row.get("evidence_summary", "")).strip()
-        metric_snapshot = str(row.get("metric_snapshot", "")).strip()
-        key_label = str(row.get("key_label", "") or "").strip()
-        key_value = row.get("key_value")
-        try:
-            key_value_f = float(key_value) if key_value is not None else float("nan")
-        except (TypeError, ValueError):
-            key_value_f = float("nan")
-        n_obs_raw = row.get("n_obs")
-        try:
-            n_obs_int = int(n_obs_raw) if n_obs_raw is not None else 0
-        except (TypeError, ValueError):
-            n_obs_int = 0
-
-        head = f"### {hid} · {name} —— {verdict_label}(可信度:{confidence})"
-        lines.append(head)
-        if key_label and key_value_f == key_value_f:
-            tail = f"**{key_label} = {key_value_f:.3f}**"
-            if n_obs_int > 0:
-                tail += f", n = {n_obs_int}"
-            lines.append(tail)
-        if evidence:
-            lines.append(evidence)
-        if metric_snapshot:
-            lines.append(f"_细节_: {metric_snapshot}")
-        lines.append("")
-    if sample_lines:
-        lines.extend(_limitations_block(verdicts))
-    return "\n".join(lines).rstrip() + "\n"
-
-
-def export_paper_verdict_section(
-    verdicts: pd.DataFrame,
-    *,
-    output_path: Path,
-    event_counts: pd.DataFrame | None = None,
-) -> Path:
-    """Write the paper-ready verdict section to ``output_path`` (a .md file)."""
-    out_path = Path(output_path)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(render_paper_verdict_section(verdicts, event_counts=event_counts))
-    return out_path
-
-
-def export_hypothesis_verdicts(
-    *,
-    output_dir: Path,
-    gap_summary: pd.DataFrame,
-    mechanism_panel: pd.DataFrame,
-    heterogeneity_size: pd.DataFrame,
-    time_series_rolling: pd.DataFrame,
-    aum_frame: pd.DataFrame | None = None,
-    pre_runup_bootstrap: Mapping[str, object] | None = None,
-    gap_drift_regression: Mapping[str, object] | None = None,
-    channel_concentration: pd.DataFrame | None = None,
-    limit_regression: Mapping[str, object] | None = None,
-    heterogeneity_sector: pd.DataFrame | None = None,
-) -> Path:
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    out_path = output_dir / "cma_hypothesis_verdicts.csv"
-    verdicts = build_hypothesis_verdicts(
-        gap_summary=gap_summary,
-        mechanism_panel=mechanism_panel,
-        heterogeneity_size=heterogeneity_size,
-        time_series_rolling=time_series_rolling,
-        aum_frame=aum_frame,
-        pre_runup_bootstrap=pre_runup_bootstrap,
-        gap_drift_regression=gap_drift_regression,
-        channel_concentration=channel_concentration,
-        limit_regression=limit_regression,
-        heterogeneity_sector=heterogeneity_sector,
-    )
-    verdicts.to_csv(out_path, index=False)
-    return out_path
