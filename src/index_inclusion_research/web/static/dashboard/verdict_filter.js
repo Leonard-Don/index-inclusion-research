@@ -15,6 +15,7 @@
 const FILTER_CHIP_SELECTOR = ".cma-verdict-filter-chip";
 const FILTER_NAV_SELECTOR = ".cma-verdict-filter";
 const VERDICT_GRID_SELECTOR = ".cma-verdict-grid";
+const TRACK_CARD_SELECTOR = ".cma-track-card";
 const ACTIVE_CLASS = "is-active";
 
 export function createVerdictFilterController(options = {}) {
@@ -22,8 +23,12 @@ export function createVerdictFilterController(options = {}) {
 
   function initialize() {
     if (!doc) return;
+    // tier filter chips
     const navs = doc.querySelectorAll(FILTER_NAV_SELECTOR);
     navs.forEach(setupNav);
+    // track filter via track summary cards (toggle-on-click)
+    const trackCards = doc.querySelectorAll(TRACK_CARD_SELECTOR);
+    trackCards.forEach(setupTrackCard);
   }
 
   function setupNav(nav) {
@@ -63,5 +68,37 @@ export function createVerdictFilterController(options = {}) {
     }
   }
 
-  return { initialize, applyFilter };
+  function setupTrackCard(card) {
+    const track = card.getAttribute("data-filter-track");
+    if (!track) return;
+    const grid = doc.querySelector(VERDICT_GRID_SELECTOR);
+    if (!grid) return;
+    card.addEventListener("click", (event) => {
+      event.preventDefault();
+      toggleTrackFilter({ card, grid, track });
+    });
+  }
+
+  function toggleTrackFilter({ card, grid, track }) {
+    const currentTrack = grid.getAttribute("data-filter-track");
+    // sibling cards inside the same .cma-track-summary container
+    const siblings =
+      card.parentElement?.querySelectorAll(TRACK_CARD_SELECTOR) ?? [];
+    if (currentTrack === track) {
+      // toggle off
+      grid.removeAttribute("data-filter-track");
+      siblings.forEach((sib) => sib.classList.remove(ACTIVE_CLASS));
+    } else {
+      grid.setAttribute("data-filter-track", track);
+      siblings.forEach((sib) => {
+        if (sib === card) {
+          sib.classList.add(ACTIVE_CLASS);
+        } else {
+          sib.classList.remove(ACTIVE_CLASS);
+        }
+      });
+    }
+  }
+
+  return { initialize, applyFilter, toggleTrackFilter };
 }

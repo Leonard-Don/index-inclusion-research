@@ -781,3 +781,152 @@ test("verdict filter initialize is a no-op when no nav element exists", () => {
   const controller = createVerdictFilterController({ doc: fakeDoc });
   controller.initialize();  // should not throw
 });
+
+
+function makeTrackCard(track) {
+  const listeners = new Map();
+  const attrs = new Map([["data-filter-track", track]]);
+  const classes = new Set();
+  const card = {
+    listeners,
+    attrs,
+    classes,
+    parentElement: null,  // assigned later when collecting siblings
+    getAttribute(name) {
+      return attrs.get(name) ?? null;
+    },
+    addEventListener(event, handler) {
+      listeners.set(event, handler);
+    },
+    classList: {
+      add: (name) => classes.add(name),
+      remove: (name) => classes.delete(name),
+      contains: (name) => classes.has(name),
+    },
+    click() {
+      const handler = listeners.get("click");
+      if (handler) handler({ preventDefault: () => {} });
+    },
+  };
+  return card;
+}
+
+
+function makeTrackCardsWithGrid() {
+  const cards = [
+    makeTrackCard("price_pressure"),
+    makeTrackCard("demand_curve"),
+    makeTrackCard("identification"),
+  ];
+  const parent = {
+    querySelectorAll(selector) {
+      return selector === ".cma-track-card" ? cards : [];
+    },
+  };
+  cards.forEach((card) => {
+    card.parentElement = parent;
+  });
+  const gridAttrs = new Map();
+  const grid = {
+    getAttribute(name) {
+      return gridAttrs.get(name) ?? null;
+    },
+    setAttribute(name, value) {
+      gridAttrs.set(name, value);
+    },
+    removeAttribute(name) {
+      gridAttrs.delete(name);
+    },
+  };
+  return { cards, grid };
+}
+
+
+test("track summary card click sets data-filter-track on grid + activates that card only", () => {
+  const { cards, grid } = makeTrackCardsWithGrid();
+  const fakeDoc = {
+    querySelectorAll(selector) {
+      if (selector === ".cma-verdict-filter") return [];
+      if (selector === ".cma-track-card") return cards;
+      return [];
+    },
+    querySelector(selector) {
+      if (selector === ".cma-verdict-grid") return grid;
+      return null;
+    },
+  };
+  const controller = createVerdictFilterController({ doc: fakeDoc });
+  controller.initialize();
+
+  // initial state: no track filter
+  assert.equal(grid.getAttribute("data-filter-track"), null);
+
+  // click identification
+  cards[2].click();
+  assert.equal(grid.getAttribute("data-filter-track"), "identification");
+  assert.ok(cards[2].classList.contains("is-active"));
+  assert.ok(!cards[0].classList.contains("is-active"));
+  assert.ok(!cards[1].classList.contains("is-active"));
+
+  // click price_pressure switches active card
+  cards[0].click();
+  assert.equal(grid.getAttribute("data-filter-track"), "price_pressure");
+  assert.ok(cards[0].classList.contains("is-active"));
+  assert.ok(!cards[2].classList.contains("is-active"));
+
+  // click the same card again toggles off
+  cards[0].click();
+  assert.equal(grid.getAttribute("data-filter-track"), null);
+  assert.ok(!cards[0].classList.contains("is-active"));
+});
+
+
+test("track filter and tier filter coexist independently on the same grid", () => {
+  // Verify both filters can be active simultaneously and CSS resolves
+  // their intersection (we can't test CSS here, just the attribute
+  // state), demonstrating the two controllers don't interfere.
+  const { cards, grid } = makeTrackCardsWithGrid();
+  const tierChip = makeChip("证据不足");
+  const allChip = makeChip("all");
+  const tierNavAttrs = new Map();
+  const tierNav = {
+    getAttribute(name) {
+      return tierNavAttrs.get(name) ?? null;
+    },
+    setAttribute(name, value) {
+      tierNavAttrs.set(name, value);
+    },
+    parentElement: {
+      querySelector(selector) {
+        return selector === ".cma-verdict-grid" ? grid : null;
+      },
+    },
+    querySelectorAll(selector) {
+      return selector === ".cma-verdict-filter-chip"
+        ? [allChip, tierChip]
+        : [];
+    },
+  };
+  const fakeDoc = {
+    querySelectorAll(selector) {
+      if (selector === ".cma-verdict-filter") return [tierNav];
+      if (selector === ".cma-track-card") return cards;
+      return [];
+    },
+    querySelector(selector) {
+      return selector === ".cma-verdict-grid" ? grid : null;
+    },
+  };
+  const controller = createVerdictFilterController({ doc: fakeDoc });
+  controller.initialize();
+
+  cards[2].click();  // identification track active
+  tierChip.click();  // 证据不足 tier active
+  assert.equal(grid.getAttribute("data-filter-track"), "identification");
+  assert.equal(grid.getAttribute("data-filter"), "证据不足");
+
+  // toggle track off — tier filter remains
+  cards[2].click();
+  assert.equal(grid.getAttribute("data-filter-track"), null);
+  assert.equal(grid.getAttribute("data-filter"), "证据不足");
+});
