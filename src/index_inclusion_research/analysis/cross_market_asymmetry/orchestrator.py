@@ -119,6 +119,7 @@ def run_cma_pipeline(
     figures_dir: Path = REAL_FIGURES_DIR,
     research_summary_path: Path | None = None,
     aum_path: Path | None = None,
+    significance_level: float | None = None,
 ) -> dict[str, object]:
     event_panel = _load_panel(Path(event_panel_path))
     matched_panel = _load_panel(Path(matched_panel_path))
@@ -193,20 +194,23 @@ def run_cma_pipeline(
     weight_change_frame = (
         pd.read_csv(WEIGHT_CHANGE_PATH) if WEIGHT_CHANGE_PATH.exists() else None
     )
-    hypothesis_verdicts = verdicts.build_hypothesis_verdicts(
-        gap_summary=gap_summary,
-        mechanism_panel=mech_table,
-        heterogeneity_size=het_tables.get("size", pd.DataFrame()),
-        time_series_rolling=rolling,
-        aum_frame=aum_frame,
-        pre_runup_bootstrap=pre_runup_bootstrap,
-        gap_drift_regression=gap_drift_regression,
-        channel_concentration=channel_concentration,
-        heterogeneity_sector=het_tables.get("sector", pd.DataFrame()),
-        weight_change=weight_change_frame,
-        gap_event_level=gap,
-        limit_regression=limit_regression,
-    )
+    build_kwargs: dict[str, object] = {
+        "gap_summary": gap_summary,
+        "mechanism_panel": mech_table,
+        "heterogeneity_size": het_tables.get("size", pd.DataFrame()),
+        "time_series_rolling": rolling,
+        "aum_frame": aum_frame,
+        "pre_runup_bootstrap": pre_runup_bootstrap,
+        "gap_drift_regression": gap_drift_regression,
+        "channel_concentration": channel_concentration,
+        "heterogeneity_sector": het_tables.get("sector", pd.DataFrame()),
+        "weight_change": weight_change_frame,
+        "gap_event_level": gap,
+        "limit_regression": limit_regression,
+    }
+    if significance_level is not None:
+        build_kwargs["significance_level"] = significance_level
+    hypothesis_verdicts = verdicts.build_hypothesis_verdicts(**build_kwargs)
     verdicts_csv_path = tables_dir / "cma_hypothesis_verdicts.csv"
     # Auto-snapshot the previous verdicts so users can always run
     # `index-inclusion-verdict-summary --compare-with cma_hypothesis_verdicts.previous.csv`

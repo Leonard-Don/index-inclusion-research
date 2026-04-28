@@ -64,9 +64,9 @@ def _fmt_num(value: float | None, digits: int = 2) -> str:
     return "NA" if value is None else f"{value:.{digits}f}"
 
 
-def _sig(row: pd.Series | None) -> bool:
+def _sig(row: pd.Series | None, level: float = SIGNIFICANCE_LEVEL) -> bool:
     p_value = _num(row, "p_value")
-    return p_value is not None and p_value < SIGNIFICANCE_LEVEL
+    return p_value is not None and p_value < level
 
 
 def _make_verdict(

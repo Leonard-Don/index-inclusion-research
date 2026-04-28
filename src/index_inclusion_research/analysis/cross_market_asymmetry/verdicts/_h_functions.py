@@ -15,6 +15,7 @@ import pandas as pd
 
 from ..hypotheses import StructuralHypothesis
 from ._core import (
+    SIGNIFICANCE_LEVEL,
     _fmt_num,
     _fmt_pct,
     _make_verdict,
@@ -36,6 +37,7 @@ def _h1(
     gap_summary: pd.DataFrame,
     *,
     bootstrap: Mapping[str, object] | None = None,
+    significance_level: float = SIGNIFICANCE_LEVEL,
 ) -> dict[str, object]:
     cn = _row(gap_summary, market="CN", metric="pre_announce_runup")
     us = _row(gap_summary, market="US", metric="pre_announce_runup")
@@ -50,10 +52,15 @@ def _h1(
     boot_p = _bootstrap_p(bootstrap)
     if boot_p is not None:
         return _h1_from_bootstrap(
-            hypothesis, cn_mean=cn_mean, us_mean=us_mean, bootstrap=bootstrap, boot_p=boot_p
+            hypothesis,
+            cn_mean=cn_mean,
+            us_mean=us_mean,
+            bootstrap=bootstrap,
+            boot_p=boot_p,
+            significance_level=significance_level,
         )
     directional = cn_mean > us_mean
-    if directional and _sig(cn):
+    if directional and _sig(cn, level=significance_level):
         verdict = "部分支持"
         confidence = "中"
         summary = "CN 公告前漂移高于 US，且 CN 自身显著；但当前还没有跨市场差异检验。"
@@ -100,19 +107,21 @@ def _h1_from_bootstrap(
     us_mean: float,
     bootstrap: Mapping[str, object],
     boot_p: float,
+    significance_level: float = SIGNIFICANCE_LEVEL,
 ) -> dict[str, object]:
     diff_raw = bootstrap.get("diff_mean", cn_mean - us_mean)
     diff = float(diff_raw) if diff_raw is not None else cn_mean - us_mean
     ci_low = float(bootstrap.get("boot_ci_low", float("nan")))  # type: ignore[arg-type]
     ci_high = float(bootstrap.get("boot_ci_high", float("nan")))  # type: ignore[arg-type]
-    if diff > 0 and boot_p < 0.05:
+    strict = significance_level / 2
+    if diff > 0 and boot_p < strict:
         verdict = "支持"
         confidence = "高"
         summary = (
             f"CN-US pre-runup 差异 {_fmt_pct(diff)} 在 bootstrap 下显著 (p={boot_p:.3f}, "
             f"CI95=[{_fmt_pct(ci_low)}, {_fmt_pct(ci_high)}])，支持 H1 信息预运行。"
         )
-    elif diff > 0 and boot_p < 0.10:
+    elif diff > 0 and boot_p < significance_level:
         verdict = "部分支持"
         confidence = "中"
         summary = (
@@ -154,6 +163,7 @@ def _h2(
     time_series_rolling: pd.DataFrame,
     *,
     aum_frame: pd.DataFrame | None,
+    significance_level: float = SIGNIFICANCE_LEVEL,  # noqa: ARG001 — kept for API symmetry; H2 uses mean direction, not p
 ) -> dict[str, object]:
     if aum_frame is None or aum_frame.empty:
         return _pending(
@@ -217,9 +227,12 @@ def _h3(
     mechanism_panel: pd.DataFrame,
     *,
     channel_concentration: pd.DataFrame | None = None,
+    significance_level: float = SIGNIFICANCE_LEVEL,
 ) -> dict[str, object]:
     if channel_concentration is not None and not channel_concentration.empty:
-        return _h3_from_channel_table(hypothesis, channel_concentration)
+        return _h3_from_channel_table(
+            hypothesis, channel_concentration, significance_level=significance_level
+        )
     cn_eff_turnover = _row(
         mechanism_panel,
         market="CN",
@@ -255,11 +268,13 @@ def _h3(
             "缺少 turnover/volume 机制回归四象限结果，暂时不能裁决量能集中机制。",
             "重跑 CMA M3 机制面板，生成完整 cma_mechanism_panel.csv。",
         )
-    cn_turnover_ok = (_num(cn_eff_turnover, "coef") or 0.0) > 0 and _sig(cn_eff_turnover)
+    cn_turnover_ok = (_num(cn_eff_turnover, "coef") or 0.0) > 0 and _sig(
+        cn_eff_turnover, level=significance_level
+    )
     us_concentrated_announce = (
         (_num(us_ann_turnover, "coef") or 0.0)
         > (_num(us_eff_turnover, "coef") or 0.0)
-        and _sig(us_ann_turnover)
+        and _sig(us_ann_turnover, level=significance_level)
     )
     cn_volume_positive = (_num(cn_eff_volume, "coef") or 0.0) > 0
     if cn_turnover_ok and us_concentrated_announce and cn_volume_positive:
@@ -292,6 +307,8 @@ def _h3(
 def _h3_from_channel_table(
     hypothesis: StructuralHypothesis,
     channel: pd.DataFrame,
+    *,
+    significance_level: float = SIGNIFICANCE_LEVEL,  # noqa: ARG001 — sig flags are pre-computed upstream
 ) -> dict[str, object]:
     total = len(channel)
     both_sig_count = int(channel["both_channels_sig"].astype(bool).sum())
@@ -365,6 +382,7 @@ def _h4(
     gap_summary: pd.DataFrame,
     *,
     regression: Mapping[str, object] | None = None,
+    significance_level: float = SIGNIFICANCE_LEVEL,
 ) -> dict[str, object]:
     cn = _row(gap_summary, market="CN", metric="gap_drift")
     us = _row(gap_summary, market="US", metric="gap_drift")
@@ -384,8 +402,9 @@ def _h4(
             us_mean=us_mean,
             regression=regression,
             reg_p=reg_p,
+            significance_level=significance_level,
         )
-    if cn_mean > 0 and us_mean <= 0 and _sig(cn):
+    if cn_mean > 0 and us_mean <= 0 and _sig(cn, level=significance_level):
         verdict = "支持"
         confidence = "中"
         summary = "CN 空窗期漂移显著为正且 US 接近或低于 0，符合套利约束解释。"
@@ -432,17 +451,19 @@ def _h4_from_regression(
     us_mean: float,
     regression: Mapping[str, object],
     reg_p: float,
+    significance_level: float = SIGNIFICANCE_LEVEL,
 ) -> dict[str, object]:
     cn_coef = float(regression.get("cn_coef", 0.0))  # type: ignore[arg-type]
     n_obs = int(regression.get("n_obs", 0))  # type: ignore[arg-type]
-    if cn_coef > 0 and reg_p < 0.05:
+    strict = significance_level / 2
+    if cn_coef > 0 and reg_p < strict:
         verdict = "支持"
         confidence = "高"
         summary = (
             f"控制 gap_length_days 后 CN gap_drift 比 US 高 {_fmt_pct(cn_coef)} "
             f"(回归 p={reg_p:.3f})，跨市场差异稳健，符合 H4 套利约束解释。"
         )
-    elif cn_coef > 0 and reg_p < 0.10:
+    elif cn_coef > 0 and reg_p < significance_level:
         verdict = "部分支持"
         confidence = "中"
         summary = (
@@ -482,10 +503,16 @@ def _h5(
     mechanism_panel: pd.DataFrame,
     *,
     limit_regression: Mapping[str, object] | None = None,
+    significance_level: float = SIGNIFICANCE_LEVEL,
 ) -> dict[str, object]:
     limit_p = _limit_p(limit_regression)
     if limit_p is not None:
-        return _h5_from_regression(hypothesis, regression=limit_regression, limit_p=limit_p)
+        return _h5_from_regression(
+            hypothesis,
+            regression=limit_regression,
+            limit_p=limit_p,
+            significance_level=significance_level,
+        )
     cn_ann = _row(
         mechanism_panel,
         market="CN",
@@ -508,7 +535,12 @@ def _h5(
         )
     ann_positive = (_num(cn_ann, "coef") or 0.0) > 0
     eff_positive = (_num(cn_eff, "coef") or 0.0) > 0
-    if ann_positive and eff_positive and _sig(cn_ann) and _sig(cn_eff):
+    if (
+        ann_positive
+        and eff_positive
+        and _sig(cn_ann, level=significance_level)
+        and _sig(cn_eff, level=significance_level)
+    ):
         verdict = "支持"
         confidence = "中"
         summary = "CN 公告日与生效日 price_limit_hit_share 均显著为正，支持涨跌停截断机制。"
@@ -555,18 +587,20 @@ def _h5_from_regression(
     *,
     regression: Mapping[str, object],
     limit_p: float,
+    significance_level: float = SIGNIFICANCE_LEVEL,
 ) -> dict[str, object]:
     coef = float(regression.get("limit_coef", 0.0))  # type: ignore[arg-type]
     n_obs = int(regression.get("n_obs", 0))  # type: ignore[arg-type]
     r2 = float(regression.get("r_squared", 0.0))  # type: ignore[arg-type]
-    if coef > 0 and limit_p < 0.05:
+    strict = significance_level / 2
+    if coef > 0 and limit_p < strict:
         verdict = "支持"
         confidence = "高"
         summary = (
             f"CN 事件级涨跌停命中率正向预测 announce-day CAR (limit_coef={_fmt_num(coef, 4)}, "
             f"p={limit_p:.3f}, R²={r2:.3f}, n={n_obs})，支持 H5 涨跌停截断机制。"
         )
-    elif coef > 0 and limit_p < 0.10:
+    elif coef > 0 and limit_p < significance_level:
         verdict = "部分支持"
         confidence = "中"
         summary = (
@@ -606,6 +640,7 @@ def _h6(
     *,
     weight_change: pd.DataFrame | None = None,
     gap_event_level: pd.DataFrame | None = None,
+    significance_level: float = SIGNIFICANCE_LEVEL,
 ) -> dict[str, object]:
     if (
         weight_change is not None
@@ -614,7 +649,10 @@ def _h6(
         and not gap_event_level.empty
     ):
         return _h6_from_weight_change(
-            hypothesis, weight_change=weight_change, gap_event_level=gap_event_level
+            hypothesis,
+            weight_change=weight_change,
+            gap_event_level=gap_event_level,
+            significance_level=significance_level,
         )
     required = {"market", "bucket", "asymmetry_index"}
     if heterogeneity_size.empty or not required.issubset(heterogeneity_size.columns):
@@ -666,6 +704,7 @@ def _h6_from_weight_change(
     *,
     weight_change: pd.DataFrame,
     gap_event_level: pd.DataFrame,
+    significance_level: float = SIGNIFICANCE_LEVEL,  # noqa: ARG001 — H6 weight-change path is decided by spread, not p
 ) -> dict[str, object]:
     """H6 verdict path that uses real weight_change instead of size proxy.
 
@@ -759,6 +798,8 @@ def _h6_from_weight_change(
 def _h7(
     hypothesis: StructuralHypothesis,
     heterogeneity_sector: pd.DataFrame,
+    *,
+    significance_level: float = SIGNIFICANCE_LEVEL,  # noqa: ARG001 — H7 verdict is decided by US sector spread, not p
 ) -> dict[str, object]:
     required = {"market", "bucket", "asymmetry_index", "n_events"}
     if heterogeneity_sector.empty or not required.issubset(heterogeneity_sector.columns):
