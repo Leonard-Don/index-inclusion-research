@@ -2845,6 +2845,83 @@
       background: rgba(92, 107, 119, 0.20);
       border-color: rgba(92, 107, 119, 0.55);
     }
+    /* p-value sensitivity threshold filter (sister of cma-verdict-filter) */
+    .cma-sensitivity-threshold-filter {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 12px;
+      font-variant-numeric: tabular-nums;
+    }
+    .cma-sensitivity-threshold-label {
+      color: var(--muted);
+      font-size: 11.5px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-right: 2px;
+    }
+    .cma-sensitivity-threshold-chip {
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.55);
+      border: 1px solid rgba(72, 60, 132, 0.22);
+      color: #18212b;
+      font-size: 12.5px;
+      cursor: pointer;
+      transition: background 160ms ease, border-color 160ms ease;
+      font-variant-numeric: tabular-nums;
+    }
+    .cma-sensitivity-threshold-chip:hover {
+      background: rgba(72, 60, 132, 0.10);
+      border-color: rgba(72, 60, 132, 0.40);
+    }
+    .cma-sensitivity-threshold-chip.is-active {
+      background: rgba(72, 60, 132, 0.18);
+      border-color: rgba(72, 60, 132, 0.50);
+      font-weight: 600;
+    }
+    .cma-sensitivity-threshold-hint {
+      color: var(--muted);
+      font-size: 11px;
+      margin-left: 4px;
+    }
+    /* Per-card sensitivity strip — flips between sig / not_sig / na as
+       the user picks a different threshold chip. */
+    .cma-verdict-sensitivity {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+      background: rgba(15, 92, 110, 0.06);
+      border: 1px solid transparent;
+      transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+    }
+    .cma-verdict-sensitivity[data-sensitivity="sig"] {
+      background: rgba(46, 119, 89, 0.14);
+      border-color: rgba(46, 119, 89, 0.36);
+      color: #2e7759;
+    }
+    .cma-verdict-sensitivity[data-sensitivity="not_sig"] {
+      background: rgba(166, 59, 40, 0.10);
+      border-color: rgba(166, 59, 40, 0.30);
+      color: #a63b28;
+    }
+    .cma-verdict-sensitivity[data-sensitivity="na"] {
+      background: rgba(92, 107, 119, 0.10);
+      border-color: rgba(92, 107, 119, 0.22);
+      color: var(--muted);
+      font-style: italic;
+    }
+    .cma-verdict-sensitivity-icon {
+      font-weight: 700;
+      font-size: 13px;
+      min-width: 12px;
+      text-align: center;
+    }
     .cma-verdict-grid[data-filter="支持"] .cma-verdict-card:not([data-verdict="支持"]),
     .cma-verdict-grid[data-filter="部分支持"] .cma-verdict-card:not([data-verdict="部分支持"]),
     .cma-verdict-grid[data-filter="证据不足"] .cma-verdict-card:not([data-verdict="证据不足"]),
