@@ -758,6 +758,86 @@ def test_cross_market_section_renders_in_full_mode() -> None:
             browser.close()
 
 
+def test_sensitivity_threshold_chip_flips_verdict_card_strips() -> None:
+    """End-to-end check that the dashboard p-threshold chip rewires every
+    p-gated verdict card's sensitivity strip in real time.
+
+    Locks the wiring landed in 88fe435: SSR renders the 0.10 baseline,
+    JS controller takes over on click. We verify both halves: the SSR
+    initial state and a live click that flips strip text + data-sens.
+    """
+    with (
+        _running_dashboard_server() as base_url,
+        playwright_sync_api.sync_playwright() as playwright,
+    ):
+        browser = playwright.chromium.launch()
+        try:
+            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
+            page.wait_for_load_state("networkidle")
+
+            section = page.locator("section#cross_market_asymmetry")
+            section.first.scroll_into_view_if_needed()
+
+            # ── SSR baseline: nav rendered, default chip 0.10 active ──
+            nav = section.locator(".cma-sensitivity-threshold-filter")
+            assert nav.count() == 1
+            chips = nav.locator(".cma-sensitivity-threshold-chip")
+            assert chips.count() == 5
+            active_chip = nav.locator(".cma-sensitivity-threshold-chip.is-active")
+            assert active_chip.count() == 1
+            assert active_chip.first.get_attribute("data-threshold") == "0.10"
+
+            grid = section.locator(".cma-verdict-grid")
+            assert grid.get_attribute("data-sensitivity-threshold") == "0.10"
+
+            # The non-p hypotheses (H2/H3/H6/H7) are always na regardless of
+            # threshold — the strip text shouldn't mention p<...
+            h2_strip = section.locator(
+                "#hypothesis-H2 .cma-verdict-sensitivity"
+            )
+            assert h2_strip.get_attribute("data-sensitivity") == "na"
+            assert "不在 sweep" in h2_strip.inner_text()
+
+            # ── Live click: pick 0.20, expect grid attr to flip ──
+            chip_020 = nav.locator(
+                ".cma-sensitivity-threshold-chip[data-threshold='0.20']"
+            )
+            chip_020.click()
+            page.wait_for_function(
+                """
+                () => {
+                    const grid = document.querySelector(".cma-verdict-grid");
+                    return grid?.getAttribute("data-sensitivity-threshold") === "0.20";
+                }
+                """,
+                timeout=5000,
+            )
+            # Active chip moved
+            assert (
+                section.locator(
+                    ".cma-sensitivity-threshold-chip.is-active"
+                ).first.get_attribute("data-threshold")
+                == "0.20"
+            )
+            # H2 (non-p) still na — was never going to flip
+            assert h2_strip.get_attribute("data-sensitivity") == "na"
+
+            # H1 / H4 / H5 strip text contains the new threshold "0.20"
+            for hid in ("H1", "H4", "H5"):
+                card = section.locator(f"#hypothesis-{hid}")
+                strip = card.locator(".cma-verdict-sensitivity")
+                strip_text = strip.inner_text()
+                assert "0.20" in strip_text, (
+                    f"{hid} strip didn't pick up new threshold; got {strip_text!r}"
+                )
+                # data-p-value should be a parseable float — defensive check
+                p_attr = card.get_attribute("data-p-value")
+                assert p_attr and float(p_attr) >= 0.0
+        finally:
+            browser.close()
+
+
 def test_cross_market_section_hides_figures_in_brief_mode() -> None:
     """Brief mode should render the CMA section header but not show figures
     or the hypothesis map."""
