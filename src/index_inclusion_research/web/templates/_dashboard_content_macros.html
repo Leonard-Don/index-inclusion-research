@@ -115,9 +115,18 @@
     {% endif %}
   {% endfor %}
 </nav>
-<div class="cma-verdict-grid">
+<nav class="cma-sensitivity-threshold-filter" data-active="0.10" aria-label="切换 p 值显著性阈值,实时刷新 H1 / H4 / H5 卡片上的显著性指示">
+  <span class="cma-sensitivity-threshold-label">p 阈值</span>
+  {% for t in ['0.01', '0.05', '0.10', '0.15', '0.20'] %}
+  <button type="button" class="cma-sensitivity-threshold-chip{% if t == '0.10' %} is-active{% endif %}" data-threshold="{{ t }}">{{ t }}</button>
+  {% endfor %}
+  <span class="cma-sensitivity-threshold-hint">仅影响 H1 / H4 / H5(由单一 p 决定 verdict)</span>
+</nav>
+<div class="cma-verdict-grid" data-sensitivity-threshold="0.10">
   {% for verdict in payload.rows %}
-  <article id="hypothesis-{{ verdict.hid }}" class="result-card cma-verdict-card" data-verdict="{{ verdict.verdict }}" data-track="{{ verdict.track or '' }}">
+  {% set p_is_num = verdict.p_value is number and verdict.p_value == verdict.p_value %}
+  {% set p_sig_at_default = p_is_num and verdict.p_value < 0.10 %}
+  <article id="hypothesis-{{ verdict.hid }}" class="result-card cma-verdict-card" data-verdict="{{ verdict.verdict }}" data-track="{{ verdict.track or '' }}" data-p-value="{% if p_is_num %}{{ verdict.p_value }}{% endif %}">
     <div class="cma-verdict-head">
       <div>
         <div class="cma-verdict-id">{{ verdict.hid }}</div>
@@ -141,6 +150,18 @@
       {% endif %}
     </div>
     {% endif %}
+    <div class="cma-verdict-sensitivity" data-sensitivity="{% if not p_is_num %}na{% elif p_sig_at_default %}sig{% else %}not_sig{% endif %}">
+      <span class="cma-verdict-sensitivity-icon">{% if not p_is_num %}·{% elif p_sig_at_default %}✓{% else %}—{% endif %}</span>
+      <span class="cma-verdict-sensitivity-text">
+        {%- if not p_is_num -%}
+          头条指标不是 p,不在 sweep 范围
+        {%- elif p_sig_at_default -%}
+          在 p&lt;0.10 下显著(p={{ '%.3f'|format(verdict.p_value) }})
+        {%- else -%}
+          在 p&lt;0.10 下不显著(p={{ '%.3f'|format(verdict.p_value) }})
+        {%- endif -%}
+      </span>
+    </div>
     <p class="cma-verdict-metric">{{ verdict.metric_snapshot }}</p>
     {% if verdict.paper_ids and verdict.paper_count and verdict.paper_count > 0 %}
     <div class="cma-verdict-papers">

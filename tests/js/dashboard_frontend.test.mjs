@@ -26,6 +26,7 @@ import {
 import { fetchRefreshStatus, postRefreshRequest } from "../../src/index_inclusion_research/web/static/dashboard/refresh_requests.js";
 import { createDetailsSurface } from "../../src/index_inclusion_research/web/static/dashboard/surface_details.js";
 import { createTableSurface } from "../../src/index_inclusion_research/web/static/dashboard/surface_tables.js";
+import { createSensitivityThresholdController } from "../../src/index_inclusion_research/web/static/dashboard/sensitivity_threshold.js";
 import { createVerdictFilterController } from "../../src/index_inclusion_research/web/static/dashboard/verdict_filter.js";
 
 function createClassList(initialValues = []) {
@@ -172,6 +173,11 @@ test("bootstrapDashboard wires controllers in order and returns handles", () => 
       calls.push("verdictFilter.initialize");
     },
   };
+  const sensitivityThreshold = {
+    initialize() {
+      calls.push("sensitivityThreshold.initialize");
+    },
+  };
 
   const result = bootstrapDashboard({
     createDashboardContext() {
@@ -200,6 +206,10 @@ test("bootstrapDashboard wires controllers in order and returns handles", () => 
       calls.push("createVerdictFilterController");
       return verdictFilter;
     },
+    createSensitivityThresholdController() {
+      calls.push("createSensitivityThresholdController");
+      return sensitivityThreshold;
+    },
   });
 
   assert.deepEqual(calls, [
@@ -208,16 +218,19 @@ test("bootstrapDashboard wires controllers in order and returns handles", () => 
     "createNavigationController",
     "createRefreshController",
     "createVerdictFilterController",
+    "createSensitivityThresholdController",
     "surface.initialize",
     "navigation.initialize",
     "refresh.initialize",
     "verdictFilter.initialize",
+    "sensitivityThreshold.initialize",
   ]);
   assert.equal(result.context, context);
   assert.equal(result.surface, surface);
   assert.equal(result.navigation, navigation);
   assert.equal(result.refresh, refresh);
   assert.equal(result.verdictFilter, verdictFilter);
+  assert.equal(result.sensitivityThreshold, sensitivityThreshold);
 
   assert.equal(typeof detailsCallback, "function");
   detailsCallback();
@@ -929,4 +942,190 @@ test("track filter and tier filter coexist independently on the same grid", () =
   cards[2].click();
   assert.equal(grid.getAttribute("data-filter-track"), null);
   assert.equal(grid.getAttribute("data-filter"), "证据不足");
+});
+
+
+// ── sensitivity threshold filter ─────────────────────────────────────
+
+
+function makeSensitivityChip(threshold, isInitiallyActive = false) {
+  const listeners = new Map();
+  const attrs = new Map([["data-threshold", threshold]]);
+  const classes = new Set(isInitiallyActive ? ["is-active"] : []);
+  return {
+    listeners,
+    attrs,
+    classes,
+    getAttribute(name) {
+      return attrs.get(name) ?? null;
+    },
+    setAttribute(name, value) {
+      attrs.set(name, value);
+    },
+    addEventListener(event, handler) {
+      listeners.set(event, handler);
+    },
+    classList: {
+      add: (name) => classes.add(name),
+      remove: (name) => classes.delete(name),
+      contains: (name) => classes.has(name),
+    },
+    click() {
+      const handler = listeners.get("click");
+      if (handler) handler({ preventDefault: () => {} });
+    },
+  };
+}
+
+
+function makeVerdictCard({ pValue }) {
+  // pValue: a string like "0.012", or "" for NaN/non-p hypotheses.
+  const stripAttrs = new Map([["data-sensitivity", "not_sig"]]);
+  const iconEl = { textContent: "—" };
+  const textEl = { textContent: "" };
+  const strip = {
+    getAttribute(name) {
+      return stripAttrs.get(name) ?? null;
+    },
+    setAttribute(name, value) {
+      stripAttrs.set(name, value);
+    },
+    querySelector(selector) {
+      if (selector === ".cma-verdict-sensitivity-icon") return iconEl;
+      if (selector === ".cma-verdict-sensitivity-text") return textEl;
+      return null;
+    },
+  };
+  const cardAttrs = new Map([["data-p-value", pValue]]);
+  return {
+    cardAttrs,
+    strip,
+    stripAttrs,
+    iconEl,
+    textEl,
+    getAttribute(name) {
+      return cardAttrs.get(name) ?? null;
+    },
+    querySelector(selector) {
+      return selector === ".cma-verdict-sensitivity" ? strip : null;
+    },
+  };
+}
+
+
+function makeSensitivityFixture(pValues = ["0.012", "0.6396", ""]) {
+  const chips = [
+    makeSensitivityChip("0.05"),
+    makeSensitivityChip("0.10", true),  // initial server-rendered active
+    makeSensitivityChip("0.20"),
+  ];
+  const cards = pValues.map((p) => makeVerdictCard({ pValue: p }));
+  const gridAttrs = new Map([["data-sensitivity-threshold", "0.10"]]);
+  const grid = {
+    getAttribute(name) {
+      return gridAttrs.get(name) ?? null;
+    },
+    setAttribute(name, value) {
+      gridAttrs.set(name, value);
+    },
+    querySelectorAll(selector) {
+      return selector === ".cma-verdict-card" ? cards : [];
+    },
+  };
+  const navAttrs = new Map([["data-active", "0.10"]]);
+  const nav = {
+    getAttribute(name) {
+      return navAttrs.get(name) ?? null;
+    },
+    setAttribute(name, value) {
+      navAttrs.set(name, value);
+    },
+    parentElement: {
+      querySelector(selector) {
+        return selector === ".cma-verdict-grid" ? grid : null;
+      },
+    },
+    querySelectorAll(selector) {
+      return selector === ".cma-sensitivity-threshold-chip" ? chips : [];
+    },
+  };
+  const fakeDoc = {
+    querySelectorAll(selector) {
+      return selector === ".cma-sensitivity-threshold-filter" ? [nav] : [];
+    },
+    querySelector() {
+      return null;
+    },
+  };
+  return { nav, chips, grid, cards, fakeDoc };
+}
+
+
+test("sensitivity threshold chip click flips p-gated cards between sig and not_sig", () => {
+  const { fakeDoc, chips, grid, cards } = makeSensitivityFixture();
+  const controller = createSensitivityThresholdController({ doc: fakeDoc });
+  controller.initialize();
+
+  // Click 0.05 — H1 (p=0.012) flips to sig, H4 (p=0.6396) stays not_sig,
+  // NaN card stays na.
+  chips[0].click();
+  assert.equal(grid.getAttribute("data-sensitivity-threshold"), "0.05");
+  assert.ok(chips[0].classList.contains("is-active"));
+  assert.ok(!chips[1].classList.contains("is-active"));
+
+  assert.equal(cards[0].stripAttrs.get("data-sensitivity"), "sig");
+  assert.equal(cards[0].iconEl.textContent, "✓");
+  assert.match(cards[0].textEl.textContent, /显著.*p=0\.012/);
+
+  assert.equal(cards[1].stripAttrs.get("data-sensitivity"), "not_sig");
+  assert.equal(cards[1].iconEl.textContent, "—");
+  assert.match(cards[1].textEl.textContent, /不显著.*p=0\.640/);
+
+  assert.equal(cards[2].stripAttrs.get("data-sensitivity"), "na");
+  assert.equal(cards[2].iconEl.textContent, "·");
+  assert.match(cards[2].textEl.textContent, /不在 sweep 范围/);
+});
+
+
+test("sensitivity threshold click to 0.20 marks H1 + H4 sig but H4 still not at p=0.6396", () => {
+  // H4 has p=0.6396 → still > 0.20 so not sig.
+  const { fakeDoc, chips, cards } = makeSensitivityFixture();
+  const controller = createSensitivityThresholdController({ doc: fakeDoc });
+  controller.initialize();
+
+  chips[2].click();  // 0.20
+  assert.equal(cards[0].stripAttrs.get("data-sensitivity"), "sig");
+  assert.equal(cards[1].stripAttrs.get("data-sensitivity"), "not_sig");
+  assert.equal(cards[2].stripAttrs.get("data-sensitivity"), "na");
+});
+
+
+test("sensitivity threshold initialize is a no-op when doc is null", () => {
+  const controller = createSensitivityThresholdController({ doc: null });
+  controller.initialize();  // should not throw
+});
+
+
+test("sensitivity threshold initialize is a no-op when no nav element exists", () => {
+  const fakeDoc = {
+    querySelectorAll() {
+      return [];
+    },
+    querySelector() {
+      return null;
+    },
+  };
+  const controller = createSensitivityThresholdController({ doc: fakeDoc });
+  controller.initialize();  // should not throw
+});
+
+
+test("sensitivity threshold marks malformed data-p-value as na rather than silently sig", () => {
+  // Defensive case: data-p-value = "abc" → can't parse → strip should
+  // be na, not silently flipped to sig.
+  const { fakeDoc, chips, cards } = makeSensitivityFixture(["abc"]);
+  const controller = createSensitivityThresholdController({ doc: fakeDoc });
+  controller.initialize();
+  chips[0].click();
+  assert.equal(cards[0].stripAttrs.get("data-sensitivity"), "na");
 });
