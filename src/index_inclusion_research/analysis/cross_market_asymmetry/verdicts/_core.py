@@ -80,6 +80,7 @@ def _make_verdict(
     key_label: str = "",
     key_value: float | None = None,
     n_obs: int | None = None,
+    p_value: float | None = None,
 ) -> dict[str, object]:
     """Build one verdict row.
 
@@ -88,6 +89,13 @@ def _make_verdict(
     Downstream consumers — dashboard verdict cards, research_summary
     markdown table — can render the headline number prominently next
     to the human-readable ``metric_snapshot``.
+
+    ``p_value`` is the structured p-value column for sensitivity
+    analysis. It is populated for hypotheses whose verdict is gated by
+    a single p (H1 bootstrap, H4 regression, H5 limit_coef) and left
+    NaN for the spread/share-style hypotheses (H3 / H6 / H7) where the
+    headline metric isn't a p. Downstream consumers can re-threshold
+    against this column without parsing ``evidence_summary`` strings.
     """
     return {
         "hid": hypothesis.hid,
@@ -98,6 +106,7 @@ def _make_verdict(
         "metric_snapshot": metric_snapshot,
         "next_step": next_step,
         "evidence_refs": " | ".join(hypothesis.evidence_refs),
+        "p_value": float(p_value) if p_value is not None else float("nan"),
         "key_label": key_label,
         "key_value": float(key_value) if key_value is not None else float("nan"),
         "n_obs": int(n_obs) if n_obs is not None else 0,
