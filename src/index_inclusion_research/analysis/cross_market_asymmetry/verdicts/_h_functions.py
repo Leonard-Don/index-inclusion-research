@@ -142,6 +142,7 @@ def _h1_from_bootstrap(
         key_label="bootstrap p",
         key_value=boot_p,
         n_obs=n_total,
+        p_value=boot_p,
     )
 
 
@@ -469,6 +470,7 @@ def _h4_from_regression(
         key_label="regression p",
         key_value=reg_p,
         n_obs=n_obs,
+        p_value=reg_p,
     )
 
 
@@ -591,6 +593,7 @@ def _h5_from_regression(
         key_label="limit_coef p",
         key_value=limit_p,
         n_obs=n_obs,
+        p_value=limit_p,
     )
 
 

@@ -266,6 +266,85 @@ def test_verdict_rows_carry_structured_key_fields() -> None:
     assert int(h1["n_obs"]) == 440
 
 
+def test_p_value_column_populated_for_p_gated_hypotheses() -> None:
+    """The verdict CSV exposes a structured p_value column.
+
+    H1 (bootstrap), H4 (gap_drift regression), H5 (limit_regression) are
+    gated by a single p, so their p_value column is non-NaN and equals
+    the gating p exactly. H2 / H3 / H6 / H7 (and any fallback path that
+    isn't decided by a single p) keep p_value NaN. Sensitivity sweeps
+    can therefore re-threshold without parsing ``evidence_summary``.
+    """
+    bootstrap = {
+        "cn_mean": 0.035,
+        "us_mean": 0.020,
+        "diff_mean": 0.015,
+        "boot_p_value": 0.012,
+        "boot_ci_low": 0.004,
+        "boot_ci_high": 0.026,
+        "n_cn": 130,
+        "n_us": 310,
+        "n_boot": 5000,
+    }
+    gap_drift_regression = {
+        "cn_coef": 0.025,
+        "cn_se": 0.008,
+        "cn_t": 3.1,
+        "cn_p_value": 0.002,
+        "gap_length_coef": 0.0001,
+        "gap_length_p_value": 0.45,
+        "n_obs": 430,
+        "r_squared": 0.04,
+    }
+    limit_regression = {
+        "limit_coef": 0.05,
+        "limit_t": 4.1,
+        "limit_p_value": 0.0002,
+        "r_squared": 0.06,
+        "n_obs": 118,
+    }
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+        pre_runup_bootstrap=bootstrap,
+        gap_drift_regression=gap_drift_regression,
+        limit_regression=limit_regression,
+    )
+
+    assert "p_value" in verdicts.columns
+
+    by_hid = verdicts.set_index("hid")
+
+    # p-gated paths: column equals the gating p exactly.
+    assert abs(float(by_hid.loc["H1", "p_value"]) - 0.012) < 1e-12
+    assert abs(float(by_hid.loc["H4", "p_value"]) - 0.002) < 1e-12
+    assert abs(float(by_hid.loc["H5", "p_value"]) - 0.0002) < 1e-12
+
+    # Spread / share / pending paths: p_value is NaN.
+    for hid in ("H2", "H3", "H6", "H7"):
+        assert pd.isna(by_hid.loc[hid, "p_value"]), (
+            f"{hid} should have NaN p_value (its headline metric isn't a p)"
+        )
+
+
+def test_p_value_is_nan_for_h1_h4_fallback_when_no_regression_provided() -> None:
+    """Without bootstrap / regression inputs the H1/H4 fallback paths
+    pick a verdict from mean direction + t, not a single p, so
+    p_value stays NaN — the column reflects "decided by a p" not
+    "has any p anywhere"."""
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+    )
+    by_hid = verdicts.set_index("hid")
+    assert pd.isna(by_hid.loc["H1", "p_value"])
+    assert pd.isna(by_hid.loc["H4", "p_value"])
+
+
 def test_h1_upgrades_to_full_support_when_bootstrap_significant() -> None:
     bootstrap = {
         "cn_mean": 0.035,
