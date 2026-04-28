@@ -21,6 +21,7 @@ from pathlib import Path
 import pandas as pd
 
 from ..hypotheses import HYPOTHESES
+from ._core import SIGNIFICANCE_LEVEL
 from ._h_functions import _h1, _h2, _h3, _h4, _h5, _h6, _h7
 
 
@@ -38,7 +39,18 @@ def build_hypothesis_verdicts(
     heterogeneity_sector: pd.DataFrame | None = None,
     weight_change: pd.DataFrame | None = None,
     gap_event_level: pd.DataFrame | None = None,
+    significance_level: float = SIGNIFICANCE_LEVEL,
 ) -> pd.DataFrame:
+    """Build the 7-hypothesis verdict frame.
+
+    ``significance_level`` (default 0.10) is the boundary p threshold:
+    p-gated hypotheses (H1 / H4 / H5) use the ``significance_level / 2``
+    inner cutoff for "支持" (high confidence) and ``significance_level``
+    itself for "部分支持" (medium). At the default 0.10 the inner cutoff
+    is 0.05, which exactly reproduces the pre-parameterized behaviour.
+    H2 / H3 / H6 / H7 are decided by spread / share / direction and are
+    unaffected by this parameter.
+    """
     hypotheses = {h.hid: h for h in HYPOTHESES}
     sector_frame = (
         heterogeneity_sector
@@ -46,18 +58,48 @@ def build_hypothesis_verdicts(
         else pd.DataFrame()
     )
     rows = [
-        _h1(hypotheses["H1"], gap_summary, bootstrap=pre_runup_bootstrap),
-        _h2(hypotheses["H2"], time_series_rolling, aum_frame=aum_frame),
-        _h3(hypotheses["H3"], mechanism_panel, channel_concentration=channel_concentration),
-        _h4(hypotheses["H4"], gap_summary, regression=gap_drift_regression),
-        _h5(hypotheses["H5"], mechanism_panel, limit_regression=limit_regression),
+        _h1(
+            hypotheses["H1"],
+            gap_summary,
+            bootstrap=pre_runup_bootstrap,
+            significance_level=significance_level,
+        ),
+        _h2(
+            hypotheses["H2"],
+            time_series_rolling,
+            aum_frame=aum_frame,
+            significance_level=significance_level,
+        ),
+        _h3(
+            hypotheses["H3"],
+            mechanism_panel,
+            channel_concentration=channel_concentration,
+            significance_level=significance_level,
+        ),
+        _h4(
+            hypotheses["H4"],
+            gap_summary,
+            regression=gap_drift_regression,
+            significance_level=significance_level,
+        ),
+        _h5(
+            hypotheses["H5"],
+            mechanism_panel,
+            limit_regression=limit_regression,
+            significance_level=significance_level,
+        ),
         _h6(
             hypotheses["H6"],
             heterogeneity_size,
             weight_change=weight_change,
             gap_event_level=gap_event_level,
+            significance_level=significance_level,
         ),
-        _h7(hypotheses["H7"], sector_frame),
+        _h7(
+            hypotheses["H7"],
+            sector_frame,
+            significance_level=significance_level,
+        ),
     ]
     return pd.DataFrame(rows)
 
@@ -144,6 +186,7 @@ def export_hypothesis_verdicts(
     channel_concentration: pd.DataFrame | None = None,
     limit_regression: Mapping[str, object] | None = None,
     heterogeneity_sector: pd.DataFrame | None = None,
+    significance_level: float = SIGNIFICANCE_LEVEL,
 ) -> Path:
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -159,6 +202,7 @@ def export_hypothesis_verdicts(
         channel_concentration=channel_concentration,
         limit_regression=limit_regression,
         heterogeneity_sector=heterogeneity_sector,
+        significance_level=significance_level,
     )
     verdicts.to_csv(out_path, index=False)
     return out_path

@@ -58,6 +58,19 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="Skip computation; only regenerate LaTeX tables from existing CMA CSVs.",
     )
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=None,
+        metavar="P",
+        help=(
+            "Boundary p-value threshold for the verdict pipeline (default: 0.10). "
+            "Affects H1 / H4 / H5 (the p-gated hypotheses): inner cutoff for "
+            "'支持' is THRESHOLD/2, '部分支持' is THRESHOLD itself. "
+            "H2 / H3 / H6 / H7 are unaffected. Use to regenerate verdicts at a "
+            "stricter or looser cutoff without re-running the full sweep."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.tex_only:
@@ -81,6 +94,7 @@ def main(argv: list[str] | None = None) -> None:
         figures_dir=Path(args.figures_dir),
         research_summary_path=Path(args.research_summary),
         aum_path=aum_path,
+        significance_level=args.threshold,
     )
     print("CMA pipeline finished.")
     print(f"  tables_dir: {result['tables_dir']}")

@@ -754,3 +754,118 @@ def test_export_hypothesis_verdicts_writes_csv(tmp_path) -> None:
     exported = pd.read_csv(out)
     assert len(exported) == 7
     assert exported.loc[exported["hid"] == "H3", "verdict"].iloc[0] == "支持"
+
+
+# ── significance_level parameterization (CMA --threshold) ──────────────
+
+
+def _h4_boundary_regression(p_value: float) -> dict[str, object]:
+    """Helper: build a gap_drift_regression input with the given p_value
+    so we can probe how H4 verdict shifts as significance_level moves."""
+    return {
+        "cn_coef": 0.025,
+        "cn_se": 0.008,
+        "cn_t": 3.1,
+        "cn_p_value": p_value,
+        "gap_length_coef": 0.0001,
+        "gap_length_p_value": 0.45,
+        "n_obs": 430,
+        "r_squared": 0.04,
+    }
+
+
+def test_default_significance_level_matches_pre_parameterized_behavior() -> None:
+    """Sanity: not passing significance_level reproduces the historical
+    0.05/0.10 double-tier behavior. p=0.07 → 部分支持 (was sig at 0.10
+    only; flipped between strict 0.05 and default 0.10)."""
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+        gap_drift_regression=_h4_boundary_regression(0.07),
+    )
+    h4 = verdicts.set_index("hid").loc["H4"]
+    assert h4["verdict"] == "部分支持"
+
+
+def test_strict_threshold_flips_boundary_p_to_evidence_insufficient() -> None:
+    """level=0.05 makes p=0.07 fail the boundary check entirely (since
+    0.07 >= 0.05) → '证据不足'. The same input at default 0.10 yielded
+    '部分支持' above; this is exactly the kind of flip a referee asks
+    about."""
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+        gap_drift_regression=_h4_boundary_regression(0.07),
+        significance_level=0.05,
+    )
+    h4 = verdicts.set_index("hid").loc["H4"]
+    assert h4["verdict"] == "证据不足"
+
+
+def test_loose_threshold_promotes_p_007_to_full_support() -> None:
+    """level=0.20 → strict cutoff is 0.10, so p=0.07 < 0.10 ⇒ '支持'."""
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+        gap_drift_regression=_h4_boundary_regression(0.07),
+        significance_level=0.20,
+    )
+    h4 = verdicts.set_index("hid").loc["H4"]
+    assert h4["verdict"] == "支持"
+    assert h4["confidence"] == "高"
+
+
+def test_h2_h3_h6_h7_unaffected_by_significance_level_change() -> None:
+    """Spread / share / direction-driven hypotheses keep their verdict
+    regardless of significance_level — locks the documented contract."""
+    bootstrap = {
+        "cn_mean": 0.035,
+        "us_mean": 0.020,
+        "diff_mean": 0.015,
+        "boot_p_value": 0.012,
+        "boot_ci_low": 0.004,
+        "boot_ci_high": 0.026,
+        "n_cn": 130,
+        "n_us": 310,
+        "n_boot": 5000,
+    }
+    common = {
+        "gap_summary": _gap_summary(),
+        "mechanism_panel": _mechanism_panel(),
+        "heterogeneity_size": _heterogeneity_size(),
+        "time_series_rolling": _rolling(),
+        "pre_runup_bootstrap": bootstrap,
+    }
+    default = build_hypothesis_verdicts(**common).set_index("hid")
+    strict = build_hypothesis_verdicts(**common, significance_level=0.01).set_index("hid")
+    loose = build_hypothesis_verdicts(**common, significance_level=0.30).set_index("hid")
+    for hid in ("H2", "H3", "H6", "H7"):
+        assert default.loc[hid, "verdict"] == strict.loc[hid, "verdict"], (
+            f"{hid} should be invariant to threshold (default vs strict 0.01)"
+        )
+        assert default.loc[hid, "verdict"] == loose.loc[hid, "verdict"], (
+            f"{hid} should be invariant to threshold (default vs loose 0.30)"
+        )
+
+
+def test_export_hypothesis_verdicts_threads_significance_level_through(tmp_path) -> None:
+    """The CLI-visible export wrapper also honours significance_level
+    so `index-inclusion-cma --threshold 0.05` regenerates the CSV at
+    that cutoff."""
+    out = export_hypothesis_verdicts(
+        output_dir=tmp_path,
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+        gap_drift_regression=_h4_boundary_regression(0.07),
+        significance_level=0.05,
+    )
+    csv = pd.read_csv(out)
+    assert csv.loc[csv["hid"] == "H4", "verdict"].iloc[0] == "证据不足"

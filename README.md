@@ -586,9 +586,11 @@ VERDICT DIFF · 当前 vs 快照
 
 ### p 阈值灵敏度分析
 
-H1 / H4 / H5 的 verdict 由单一 p 决定(分别是 bootstrap p / regression p / limit_coef p),H2 / H3 / H6 / H7 的头条指标是 spread / 命中率 / AUM 比率,不在 p 阈值 sweep 范围内。审稿人最爱的追问 "如果阈值是 0.05 而不是 0.10,结论会怎样?" — 项目把回答这个问题的能力做成四层入口,从机器可读到点鼠标都覆盖:
+H1 / H4 / H5 的 verdict 由单一 p 决定(分别是 bootstrap p / regression p / limit_coef p),H2 / H3 / H6 / H7 的头条指标是 spread / 命中率 / AUM 比率,不在 p 阈值 sweep 范围内。审稿人最爱的追问 "如果阈值是 0.05 而不是 0.10,结论会怎样?" — 项目把回答这个问题的能力做成**五层入口**,从重新生成 verdict 到机器可读到点鼠标都覆盖:
 
-**1. 数据层** — `cma_hypothesis_verdicts.csv` 自带 `p_value` 列,H1/H4/H5 填 boot/reg/limit p,其他四个为 NaN。下游可以直接 pandas:
+**0. 决定层** — `index-inclusion-cma --threshold 0.05` 让 verdict 字段(`支持` / `部分支持` / `证据不足`)本身在自定义阈值下重新生成。语义:`THRESHOLD` 是边界 p,inner cutoff 是 `THRESHOLD/2`(支持/高 confidence),outer 是 `THRESHOLD`(部分支持/中)。默认 0.10 与历史行为字节兼容(inner 0.05 / outer 0.10)。下面四层(数据 / CLI sweep / GUI / CI)都基于这一次跑出的 CSV。
+
+**1. 数据层(读)** — `cma_hypothesis_verdicts.csv` 自带 `p_value` 列,H1/H4/H5 填 boot/reg/limit p,其他四个为 NaN。下游可以直接 pandas:
 
 ```python
 import pandas as pd
