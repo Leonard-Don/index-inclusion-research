@@ -38,6 +38,8 @@
 
 数据可重现:`make rebuild` 跑 10 步流水线刷新所有产出。详见 [results/real_tables/cma_hypothesis_verdicts.csv](results/real_tables/cma_hypothesis_verdicts.csv) 和 [docs/paper_outline_verdicts.md](docs/paper_outline_verdicts.md)。
 
+想知道 "如果阈值是 0.05 而不是 0.10,结论会怎样?" — 项目把这个问题做成了**四层入口**(数据 / CLI / dashboard / doctor),终端一行看 sweep:`index-inclusion-verdict-summary --sensitivity` ,详见 [#p-阈值灵敏度分析](#p-阈值灵敏度分析)。
+
 ## GitHub 首页先看什么
 
 如果你是第一次点进这个仓库，建议先看这 4 件事：
@@ -581,6 +583,56 @@ VERDICT DIFF · 当前 vs 快照
     verdict        : 证据不足  →  支持
     key_value      : 0.640  →  0.012  (Δ -0.628)
 ```
+
+### p 阈值灵敏度分析
+
+H1 / H4 / H5 的 verdict 由单一 p 决定(分别是 bootstrap p / regression p / limit_coef p),H2 / H3 / H6 / H7 的头条指标是 spread / 命中率 / AUM 比率,不在 p 阈值 sweep 范围内。审稿人最爱的追问 "如果阈值是 0.05 而不是 0.10,结论会怎样?" — 项目把回答这个问题的能力做成四层入口,从机器可读到点鼠标都覆盖:
+
+**1. 数据层** — `cma_hypothesis_verdicts.csv` 自带 `p_value` 列,H1/H4/H5 填 boot/reg/limit p,其他四个为 NaN。下游可以直接 pandas:
+
+```python
+import pandas as pd
+df = pd.read_csv("results/real_tables/cma_hypothesis_verdicts.csv")
+df.loc[df["p_value"].notna() & (df["p_value"] < 0.05), ["hid", "name_cn", "p_value"]]
+```
+
+**2. CLI 层** — `index-inclusion-verdict-summary --sensitivity`,默认阈值 (0.05, 0.10, 0.15),也可自定义:
+
+```bash
+# 默认三阈值
+index-inclusion-verdict-summary --sensitivity
+
+# 自定义阈值(自动去重 + 排序)
+index-inclusion-verdict-summary --sensitivity 0.01 0.05 0.10 0.15 0.20
+
+# JSON 输出供 CI / 下游脚本消费
+index-inclusion-verdict-summary --format json --sensitivity 0.05 0.10 | jq '.sensitivity'
+```
+
+终端表格示意:
+
+```
+ 假说 verdict p 值灵敏度(3 阈值)
+  hid    p_value  p<0.05   p<0.1  p<0.15
+  ──────────────────────────────────────
+  H1      0.6396       —       —       —
+  H4      0.5366       —       —       —
+  H5      0.2134       —       —       —
+  p<0.05: 0/3 显著 · p<0.1: 0/3 显著 · p<0.15: 0/3 显著
+  注:H2 H3 H6 H7 头条指标不是 p,不在 sweep 范围内。
+```
+
+**3. GUI 层** — dashboard CMA section 的 verdict 网格上方有 5 个阈值 chip(0.01 / 0.05 / 0.10 / 0.15 / 0.20),默认 0.10 active。点击其他 chip,H1/H4/H5 卡片底部的 sensitivity strip 实时翻"在 p<X 下显著(p=...)"或"在 p<X 下不显著(p=...)";non-p 卡片始终标"头条指标不是 p,不在 sweep 范围"。给 advisor / 同事演示时直接点鼠标即可。
+
+**4. CI 层** — `index-inclusion-doctor` 第 4 项 `p_gated_verdict_sensitivity` 自动 flag 处于 [0.05, 0.10) 边缘区间的假说(default 显著但 strict 翻 not_sig — 审稿人会追问 robustness 的典型情形):
+
+```text
+✓  p_gated_verdict_sensitivity
+    3 p-gated hypotheses; 0 significant at strict (0.05), 0 at default (0.1);
+    none sit in the [0.05, 0.1) boundary.
+```
+
+如果出现 boundary 项,doctor 会变 warn 并在 details 列出 hid + p,fix 建议指向 `verdict-summary --sensitivity` 同时看双阈值。这条检查不会让 CI fail(语义是 "research robustness signal" 而非 "project broken"),但会在 `make doctor` / CI 输出里显眼。
 
 ## 开发与验证
 
