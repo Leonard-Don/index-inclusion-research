@@ -20,7 +20,7 @@ def test_supplementary_frames_are_populated() -> None:
 def test_impact_scenarios_have_expected_columns() -> None:
     scenarios = estimate_impact_scenarios()
     assert len(scenarios) >= 3
-    assert "估计必须成交金额(美元)" in scenarios.columns
+    assert "估计必须成交金额（美元）" in scenarios.columns
     assert "相对ADV占比" in scenarios.columns
     assert "平方根冲击估计(%)" in scenarios.columns
 

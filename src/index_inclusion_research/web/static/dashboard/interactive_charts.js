@@ -372,7 +372,7 @@ function buildMainRegressionOption(payload) {
     z: -1,
   };
   return {
-    title: { text: '主回归 treatment_group 系数(CAR[-1,+1] × 4 象限,带 95% CI)', left: 'center' },
+    title: { text: '主回归 treatment_group 系数（CAR[-1,+1] × 4 象限，带 95% CI）', left: 'center' },
     tooltip: {
       trigger: 'item',
       formatter: params => {
@@ -438,7 +438,7 @@ const CHART_OPTION_BUILDERS = {
   // chart title and series dataset come straight from the payload.
   mechanism_regression: payload => {
     const opt = buildMainRegressionOption(payload);
-    opt.title = { text: '机制回归 turnover_mechanism 系数(× 4 象限,带 95% CI)', left: 'center' };
+    opt.title = { text: '机制回归 turnover_mechanism 系数（× 4 象限，带 95% CI）', left: 'center' };
     return opt;
   },
   event_counts: buildEventCountsOption,

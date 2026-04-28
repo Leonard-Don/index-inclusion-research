@@ -426,7 +426,7 @@ def render_sensitivity_table(
         lines.append(
             f"  注:{non_p_ids} 头条指标不是 p(spread / 命中率 / AUM 比率),"
         )
-        lines.append("  其 verdict 不会随 p 阈值变化,因此不在 sweep 范围内。")
+        lines.append("  其 verdict 不会随 p 阈值变化，因此不在 sweep 范围内。")
     return "\n".join(lines).rstrip() + "\n"
 
 
