@@ -117,7 +117,7 @@
 </nav>
 <div class="cma-verdict-grid">
   {% for verdict in payload.rows %}
-  <article id="hypothesis-{{ verdict.hid }}" class="result-card cma-verdict-card" data-verdict="{{ verdict.verdict }}">
+  <article id="hypothesis-{{ verdict.hid }}" class="result-card cma-verdict-card" data-verdict="{{ verdict.verdict }}" data-track="{{ verdict.track or '' }}">
     <div class="cma-verdict-head">
       <div>
         <div class="cma-verdict-id">{{ verdict.hid }}</div>
@@ -243,9 +243,9 @@
   {% if cma_section.track_summary and cma_section.track_summary.rows %}
   <div class="cma-track-summary">
     {% for row in cma_section.track_summary.rows %}
-    <article class="cma-track-card">
+    <button type="button" class="cma-track-card" data-filter-track="{{ row.track }}" aria-label="筛选到{{ row.track_label }}">
       <header>
-        <span class="cma-track-kicker">研究主线</span>
+        <span class="cma-track-kicker">研究主线 · 点击筛选</span>
         <h3>{{ row.track_label }}</h3>
         <span class="cma-track-hypotheses">{{ row.hypotheses }}</span>
       </header>
@@ -260,7 +260,7 @@
           {% endif %}
         {% endfor %}
       </div>
-    </article>
+    </button>
     {% endfor %}
   </div>
   {% endif %}

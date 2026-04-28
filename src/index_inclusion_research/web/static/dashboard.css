@@ -2851,6 +2851,14 @@
     .cma-verdict-grid[data-filter="待补数据"] .cma-verdict-card:not([data-verdict="待补数据"]) {
       display: none;
     }
+    .cma-verdict-grid[data-filter-track="price_pressure"]
+      .cma-verdict-card:not([data-track="price_pressure"]),
+    .cma-verdict-grid[data-filter-track="demand_curve"]
+      .cma-verdict-card:not([data-track="demand_curve"]),
+    .cma-verdict-grid[data-filter-track="identification"]
+      .cma-verdict-card:not([data-track="identification"]) {
+      display: none;
+    }
     .cma-verdict-papers {
       display: flex;
       flex-wrap: wrap;
@@ -2989,6 +2997,20 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
+      cursor: pointer;
+      text-align: left;
+      font: inherit;
+      color: inherit;
+      transition: background 160ms ease, border-color 160ms ease, transform 120ms ease;
+    }
+    .cma-track-card:hover {
+      background: rgba(15, 92, 110, 0.08);
+      border-color: rgba(15, 92, 110, 0.32);
+    }
+    .cma-track-card.is-active {
+      background: rgba(15, 92, 110, 0.16);
+      border-color: rgba(15, 92, 110, 0.48);
+      transform: translateY(-1px);
     }
     .cma-track-card header {
       display: flex;

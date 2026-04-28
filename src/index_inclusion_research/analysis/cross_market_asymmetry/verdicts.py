@@ -99,6 +99,7 @@ def _make_verdict(
         "n_obs": int(n_obs) if n_obs is not None else 0,
         "paper_ids": " | ".join(hypothesis.paper_ids),
         "paper_count": len(hypothesis.paper_ids),
+        "track": hypothesis.track,
     }
 
 
