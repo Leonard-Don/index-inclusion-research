@@ -7,8 +7,10 @@ from pathlib import Path
 import pandas as pd
 
 from index_inclusion_research.verdict_summary import (
+    build_sensitivity_table,
     compute_verdict_diff,
     main,
+    render_sensitivity_table,
     render_summary,
     render_summary_json,
     render_verdict_diff,
@@ -306,3 +308,188 @@ def test_main_prints_summary_when_csv_present(tmp_path: Path, capsys) -> None:
     out = capsys.readouterr().out
     assert "假说裁决摘要" in out
     assert "H1" in out and "H3" in out
+
+
+# ── Sensitivity sweep ────────────────────────────────────────────────
+
+
+def _verdicts_with_p_value_fixture() -> pd.DataFrame:
+    """A 4-row fixture covering the four p_value cases:
+
+    - H1: p < 0.05 (would be flagged sig at every reasonable threshold)
+    - H4: p in 0.10-0.15 band (used to test threshold flips)
+    - H5: p > 0.20 (never sig at default thresholds)
+    - H6: NaN p_value (spread-style hypothesis, out of scope)
+    """
+    return pd.DataFrame(
+        [
+            {
+                "hid": "H1", "name_cn": "H1 name",
+                "verdict": "支持", "confidence": "高",
+                "key_label": "bootstrap p", "key_value": 0.012, "n_obs": 440,
+                "p_value": 0.012,
+            },
+            {
+                "hid": "H4", "name_cn": "H4 name",
+                "verdict": "部分支持", "confidence": "中",
+                "key_label": "regression p", "key_value": 0.12, "n_obs": 430,
+                "p_value": 0.12,
+            },
+            {
+                "hid": "H5", "name_cn": "H5 name",
+                "verdict": "证据不足", "confidence": "中",
+                "key_label": "limit_coef p", "key_value": 0.30, "n_obs": 936,
+                "p_value": 0.30,
+            },
+            {
+                "hid": "H6", "name_cn": "H6 name",
+                "verdict": "部分支持", "confidence": "低",
+                "key_label": "Q1Q2−Q4Q5 spread", "key_value": 1.17, "n_obs": 118,
+                "p_value": float("nan"),
+            },
+        ]
+    )
+
+
+def test_build_sensitivity_table_marks_sig_per_threshold() -> None:
+    table = build_sensitivity_table(
+        _verdicts_with_p_value_fixture(),
+        thresholds=(0.05, 0.10, 0.15),
+    )
+    by_hid = table.set_index("hid")
+    # H1 (p=0.012): sig at every threshold
+    assert by_hid.loc["H1", "sig_at_0.05"] is True
+    assert by_hid.loc["H1", "sig_at_0.1"] is True
+    assert by_hid.loc["H1", "sig_at_0.15"] is True
+    # H4 (p=0.12): sig only at 0.15 (the loosest)
+    assert by_hid.loc["H4", "sig_at_0.05"] is False
+    assert by_hid.loc["H4", "sig_at_0.1"] is False
+    assert by_hid.loc["H4", "sig_at_0.15"] is True
+    # H5 (p=0.30): never sig at these thresholds
+    assert by_hid.loc["H5", "sig_at_0.05"] is False
+    assert by_hid.loc["H5", "sig_at_0.1"] is False
+    assert by_hid.loc["H5", "sig_at_0.15"] is False
+    # H6 (NaN): None at every threshold (out of scope)
+    assert by_hid.loc["H6", "sig_at_0.05"] is None
+    assert by_hid.loc["H6", "sig_at_0.1"] is None
+    assert by_hid.loc["H6", "sig_at_0.15"] is None
+
+
+def test_build_sensitivity_table_dedupes_and_sorts_thresholds() -> None:
+    table = build_sensitivity_table(
+        _verdicts_with_p_value_fixture(),
+        thresholds=(0.10, 0.05, 0.10, 0.15),  # duplicates + unsorted
+    )
+    expected = ["hid", "name_cn", "p_value", "sig_at_0.05", "sig_at_0.1", "sig_at_0.15"]
+    assert list(table.columns) == expected
+
+
+def test_build_sensitivity_table_handles_empty_verdicts() -> None:
+    table = build_sensitivity_table(pd.DataFrame(), thresholds=(0.05, 0.10))
+    assert table.empty
+    assert "p_value" in table.columns
+
+
+def test_render_sensitivity_table_shows_p_gated_rows_and_out_of_scope_note() -> None:
+    text = render_sensitivity_table(
+        _verdicts_with_p_value_fixture(),
+        thresholds=(0.05, 0.10, 0.15),
+    )
+    # Header / banner
+    assert "p 值灵敏度" in text
+    # P-gated hypotheses appear with their p_value
+    assert "H1" in text
+    assert "0.0120" in text
+    assert "H4" in text
+    assert "0.1200" in text
+    # Out-of-scope hypothesis is called out separately, not in the main grid
+    assert "H6" in text
+    assert "不在 sweep 范围内" in text
+
+
+def test_render_sensitivity_table_handles_only_non_p_hypotheses() -> None:
+    only_non_p = pd.DataFrame(
+        [
+            {"hid": "H6", "name_cn": "H6", "verdict": "部分支持", "p_value": float("nan")},
+            {"hid": "H7", "name_cn": "H7", "verdict": "部分支持", "p_value": float("nan")},
+        ]
+    )
+    text = render_sensitivity_table(only_non_p, thresholds=(0.05,))
+    assert "没有任何假说由单一 p 决定" in text
+
+
+def test_main_sensitivity_default_uses_three_thresholds(
+    tmp_path: Path, capsys
+) -> None:
+    verdicts_path = tmp_path / "verdicts.csv"
+    _verdicts_with_p_value_fixture().to_csv(verdicts_path, index=False)
+    rc = main([
+        "--verdicts", str(verdicts_path),
+        "--track-summary", str(tmp_path / "missing-track.csv"),
+        "--no-color",
+        "--sensitivity",  # no values → defaults
+    ])
+    assert rc == 0
+    out = capsys.readouterr().out
+    # Default thresholds 0.05 / 0.10 / 0.15 all appear
+    assert "p<0.05" in out
+    assert "p<0.1" in out
+    assert "p<0.15" in out
+
+
+def test_main_sensitivity_custom_thresholds(tmp_path: Path, capsys) -> None:
+    verdicts_path = tmp_path / "verdicts.csv"
+    _verdicts_with_p_value_fixture().to_csv(verdicts_path, index=False)
+    rc = main([
+        "--verdicts", str(verdicts_path),
+        "--track-summary", str(tmp_path / "missing-track.csv"),
+        "--no-color",
+        "--sensitivity", "0.01", "0.50",
+    ])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "p<0.01" in out
+    assert "p<0.5" in out
+
+
+def test_main_format_json_with_sensitivity_emits_sensitivity_block(
+    tmp_path: Path, capsys
+) -> None:
+    import json
+
+    verdicts_path = tmp_path / "verdicts.csv"
+    _verdicts_with_p_value_fixture().to_csv(verdicts_path, index=False)
+    rc = main([
+        "--verdicts", str(verdicts_path),
+        "--track-summary", str(tmp_path / "missing-track.csv"),
+        "--format", "json",
+        "--sensitivity", "0.05", "0.10",
+    ])
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert "sensitivity" in payload
+    assert payload["sensitivity"]["thresholds"] == [0.05, 0.10]
+    rows_by_hid = {row["hid"]: row for row in payload["sensitivity"]["rows"]}
+    # H1 (p=0.012) is sig at both thresholds
+    assert rows_by_hid["H1"]["sig_at_0.05"] is True
+    assert rows_by_hid["H1"]["sig_at_0.1"] is True
+    # H6 (NaN p) is null at both
+    assert rows_by_hid["H6"]["sig_at_0.05"] is None
+    assert rows_by_hid["H6"]["sig_at_0.1"] is None
+
+
+def test_main_format_json_without_sensitivity_omits_sensitivity_block(
+    tmp_path: Path, capsys
+) -> None:
+    import json
+
+    verdicts_path = tmp_path / "verdicts.csv"
+    _verdicts_with_p_value_fixture().to_csv(verdicts_path, index=False)
+    rc = main([
+        "--verdicts", str(verdicts_path),
+        "--track-summary", str(tmp_path / "missing-track.csv"),
+        "--format", "json",
+    ])
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert "sensitivity" not in payload

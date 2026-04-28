@@ -322,6 +322,114 @@ def render_verdict_diff(
     return "\n".join(lines).rstrip() + "\n"
 
 
+# ── Sensitivity sweep ────────────────────────────────────────────────
+
+
+DEFAULT_SENSITIVITY_THRESHOLDS: tuple[float, ...] = (0.05, 0.10, 0.15)
+
+
+def build_sensitivity_table(
+    verdicts: pd.DataFrame,
+    thresholds: Sequence[float] = DEFAULT_SENSITIVITY_THRESHOLDS,
+) -> pd.DataFrame:
+    """Return a per-hypothesis significance sweep across p thresholds.
+
+    For each verdict row this returns ``hid``, ``name_cn``, ``p_value``
+    plus one boolean column per threshold (``sig_at_<t>``) indicating
+    whether ``p_value < t`` at that threshold. Hypotheses without a
+    structured ``p_value`` (H2 / H3 / H6 / H7 — headline metric is a
+    spread / share / ratio, not a p) get ``None`` in every threshold
+    column.
+
+    Downstream consumers (``render_sensitivity_table``,
+    ``render_summary_json``) can answer "if I tightened the threshold
+    from 0.10 to 0.05, which verdicts flip?" without re-parsing
+    ``evidence_summary`` strings.
+    """
+    if verdicts.empty:
+        return pd.DataFrame(columns=["hid", "name_cn", "p_value"])
+    threshs = tuple(sorted({float(t) for t in thresholds}))
+    rows: list[dict[str, object]] = []
+    for _, v in verdicts.iterrows():
+        raw = v.get("p_value") if "p_value" in v.index else None
+        try:
+            p = float(raw) if raw is not None else float("nan")
+        except (TypeError, ValueError):
+            p = float("nan")
+        has_p = not math.isnan(p)
+        row: dict[str, object] = {
+            "hid": str(v.get("hid", "")),
+            "name_cn": str(v.get("name_cn", "")),
+            "p_value": p,
+        }
+        for t in threshs:
+            row[f"sig_at_{t}"] = (p < t) if has_p else None
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def render_sensitivity_table(
+    verdicts: pd.DataFrame,
+    thresholds: Sequence[float] = DEFAULT_SENSITIVITY_THRESHOLDS,
+) -> str:
+    """Render the sensitivity sweep as an aligned text block."""
+    threshs = tuple(sorted({float(t) for t in thresholds}))
+    table = build_sensitivity_table(verdicts, threshs)
+
+    lines: list[str] = []
+    lines.append("=" * 72)
+    lines.append(
+        f" 假说 verdict p 值灵敏度({len(threshs)} 阈值)"
+    )
+    lines.append("=" * 72)
+
+    if table.empty:
+        lines.append("(verdicts CSV 为空 —— 先跑 `index-inclusion-cma`。)")
+        return "\n".join(lines) + "\n"
+
+    p_gated = table.loc[table["p_value"].notna()].copy()
+    non_p = table.loc[table["p_value"].isna()].copy()
+
+    if p_gated.empty:
+        lines.append("(没有任何假说由单一 p 决定 verdict —— sweep 不适用。)")
+    else:
+        # Header
+        thresh_cols = [f"p<{t}" for t in threshs]
+        header = (
+            f"  {'hid':<5}{'p_value':>9}  "
+            + "  ".join(f"{c:>6}" for c in thresh_cols)
+        )
+        lines.append(header)
+        lines.append("  " + "─" * (len(header) - 2))
+        for _, row in p_gated.iterrows():
+            cells = []
+            for t in threshs:
+                flag = row[f"sig_at_{t}"]
+                cells.append("✓" if flag else "—")
+            lines.append(
+                f"  {str(row['hid']):<5}"
+                f"{float(row['p_value']):>9.4f}  "
+                + "  ".join(f"{c:>6}" for c in cells)
+            )
+        # tally: at each threshold, how many sig?
+        lines.append("")
+        tally_parts = []
+        for t in threshs:
+            sig_count = int(p_gated[f"sig_at_{t}"].sum())
+            total = len(p_gated)
+            tally_parts.append(f"p<{t}: {sig_count}/{total} 显著")
+        lines.append("  " + " · ".join(tally_parts))
+
+    if not non_p.empty:
+        lines.append("")
+        non_p_ids = " ".join(str(h) for h in non_p["hid"])
+        lines.append(
+            f"  注:{non_p_ids} 头条指标不是 p(spread / 命中率 / AUM 比率),"
+        )
+        lines.append("  其 verdict 不会随 p 阈值变化,因此不在 sweep 范围内。")
+    return "\n".join(lines).rstrip() + "\n"
+
+
 # ── CLI ──────────────────────────────────────────────────────────────
 
 
@@ -370,7 +478,21 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help=(
             "Output format. 'text' (default) is the colourised terminal "
             "summary; 'json' is a machine-readable dump of the same data "
-            "(verdicts + track summary + optional diff)."
+            "(verdicts + track summary + optional diff + optional sensitivity)."
+        ),
+    )
+    parser.add_argument(
+        "--sensitivity",
+        nargs="*",
+        type=float,
+        metavar="T",
+        default=None,
+        help=(
+            "Print a p-value sensitivity sweep. Pass thresholds as floats "
+            "(e.g. `--sensitivity 0.01 0.05 0.10 0.15`); pass with no "
+            "arguments to use the default (0.05 0.10 0.15). H1 / H4 / H5 "
+            "(p-gated hypotheses) get ✓ / — per threshold; H2 / H3 / H6 / "
+            "H7 are out of scope."
         ),
     )
     return parser
@@ -381,13 +503,16 @@ def render_summary_json(
     track_summary: pd.DataFrame | None = None,
     *,
     diff_rows: list[dict[str, object]] | None = None,
+    sensitivity_thresholds: Sequence[float] | None = None,
 ) -> str:
     """Return a JSON string carrying the full verdict picture.
 
     Schema is stable for downstream tooling:
     ``{"verdicts": [...], "track_summary": [...], "aggregate": {...},
-    "diff": [...]?}``. NaN values become ``null``; numeric fields stay
-    numeric.
+    "diff": [...]?, "sensitivity": {"thresholds": [...], "rows": [...]}?}``.
+    NaN values become ``null``; numeric fields stay numeric. The
+    ``sensitivity`` block only appears when ``sensitivity_thresholds``
+    is non-None.
     """
     import json
 
@@ -420,6 +545,13 @@ def render_summary_json(
     )
     if diff_rows is not None:
         payload["diff"] = diff_rows
+    if sensitivity_thresholds is not None:
+        threshs = tuple(sorted({float(t) for t in sensitivity_thresholds}))
+        sens_table = build_sensitivity_table(verdicts, threshs)
+        payload["sensitivity"] = {
+            "thresholds": list(threshs),
+            "rows": [_row_to_jsonable(row) for _, row in sens_table.iterrows()],
+        }
     return json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
 
 
@@ -458,15 +590,36 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 1
         diff_rows = compute_verdict_diff(verdicts, previous)
 
+    sensitivity_thresholds: tuple[float, ...] | None = None
+    if args.sensitivity is not None:
+        # `--sensitivity` with no values → use defaults; with values → use those.
+        sensitivity_thresholds = (
+            tuple(args.sensitivity)
+            if args.sensitivity
+            else DEFAULT_SENSITIVITY_THRESHOLDS
+        )
+
     if args.format == "json":
-        print(render_summary_json(verdicts, track_summary, diff_rows=diff_rows), end="")
+        print(
+            render_summary_json(
+                verdicts,
+                track_summary,
+                diff_rows=diff_rows,
+                sensitivity_thresholds=sensitivity_thresholds,
+            ),
+            end="",
+        )
         return 0
 
     if diff_rows is not None:
         print(render_verdict_diff(diff_rows, color=enable_color))
+        if sensitivity_thresholds is not None:
+            print(render_sensitivity_table(verdicts, sensitivity_thresholds))
         return 0
 
     print(render_summary(verdicts, track_summary, color=enable_color))
+    if sensitivity_thresholds is not None:
+        print(render_sensitivity_table(verdicts, sensitivity_thresholds))
     return 0
 
 
