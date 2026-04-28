@@ -119,12 +119,12 @@ HYPOTHESES: tuple[StructuralHypothesis, ...] = (
         name_cn="行业结构差异",
         mechanism=(
             "行业内 inclusion 效应可能取决于成分股集中度、被动资金行业偏好和"
-            "行业流动性。如果行业差异是 inclusion 效应的关键来源,asymmetry_index"
+            "行业流动性。如果行业差异是 inclusion 效应的关键来源，asymmetry_index"
             "应在 sector 维度上有显著分化。"
         ),
         implications=(
             "US sector 维度上 asymmetry_index 跨行业 spread 显著大于零",
-            "CN 因 sector 字段未填充,暂时无法对比",
+            "CN 因 sector 字段未填充，暂时无法对比",
         ),
         evidence_refs=("M4:cma_heterogeneity_sector.csv",),
         verdict_logic=(

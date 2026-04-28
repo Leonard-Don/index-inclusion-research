@@ -118,7 +118,7 @@ def estimate_impact_scenarios(
             {
                 "权重变化(bps)": weight_bps,
                 "被动资金AUM(十亿美元)": passive_aum_billion,
-                "估计必须成交金额(美元)": required_notional,
+                "估计必须成交金额（美元）": required_notional,
                 "估计必须成交股数": required_shares,
                 "相对ADV占比": participation,
                 "平方根冲击估计(%)": sqrt_impact * 100,

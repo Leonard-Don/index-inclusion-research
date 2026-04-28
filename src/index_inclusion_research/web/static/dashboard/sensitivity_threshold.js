@@ -80,7 +80,7 @@ export function createSensitivityThresholdController(options = {}) {
     if (pAttr === "") {
       strip.setAttribute("data-sensitivity", "na");
       if (iconEl) iconEl.textContent = "·";
-      if (textEl) textEl.textContent = "头条指标不是 p,不在 sweep 范围";
+      if (textEl) textEl.textContent = "头条指标不是 p，不在 sweep 范围";
       return;
     }
     const p = parseFloat(pAttr);

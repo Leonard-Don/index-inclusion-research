@@ -44,7 +44,7 @@ def _sample_summary_block(event_counts: pd.DataFrame | None) -> list[str]:
     lines.append(
         f"真实样本覆盖 {year_lo}–{year_hi} 年间 CSI300(CN)与 S&P500(US)"
         f"的指数纳入事件: 共 **CN {cn_n} 起 / US {us_n} 起 inclusion 事件**(`inclusion=1`)。"
-        " 每个事件采用 [-20, +20] 交易日的事件窗口,匹配对照组按 sector × 同期市值 quintile 抽取。"
+        " 每个事件采用 [-20, +20] 交易日的事件窗口，匹配对照组按 sector × 同期市值 quintile 抽取。"
     )
     lines.append("")
     return lines
@@ -58,9 +58,9 @@ def _methods_block() -> list[str]:
         "  CAR 窗口包括 `[-1,+1]` / `[-3,+3]` / `[-5,+5]`,长窗口取 `[0,+20]` / `[0,+60]` / `[0,+120]`。",
         "- **匹配回归**: `treatment_group` 二值变量 + sector / 对数市值 / 事件前收益作为协变量,",
         "  使用 HC3 异方差稳健标准误。",
-        "- **CMA 7 条机制假说**: 见下方逐项裁决,每条假说都有自动产出的 verdict + 头条指标。",
+        "- **CMA 7 条机制假说**: 见下方逐项裁决，每条假说都有自动产出的 verdict + 头条指标。",
         "  完整 metric pipeline 见 `index-inclusion-cma`(`results/real_tables/cma_*.csv`)。",
-        "- **HS300 RDD**: cutoff=300 的运行变量断点,公告日 `[-1,+1]` 主结果。",
+        "- **HS300 RDD**: cutoff=300 的运行变量断点，公告日 `[-1,+1]` 主结果。",
         "",
     ]
 
@@ -82,9 +82,9 @@ def _limitations_block(verdicts: pd.DataFrame) -> list[str]:
             "**通用稳健性补强**:",
             "",
             "- HS300 RDD 当前 `running_variable` 是公开重建排名(顶=600..尾=1),不等同于真实流通市值;",
-            "  正式批次候选样本(L3)上线前,RDD 结论限定为公开重建口径,不可表述为中证官方历史候选排名。",
+            "  正式批次候选样本(L3)上线前，RDD 结论限定为公开重建口径，不可表述为中证官方历史候选排名。",
             "- 跨市场比较默认按事件汇总(announce vs effective × CN vs US 4 象限),后续可叠加事件级",
-            "  bootstrap / permutation 检验,以及 sector × size 的交互检验,进一步压低单通道误判风险。",
+            "  bootstrap / permutation 检验，以及 sector × size 的交互检验，进一步压低单通道误判风险。",
             "- 长窗口(>120 日)的 retention ratio 在样本量收缩时会跳到 NA,",
             "  当前 demand_curve 主线主要靠 `[0,+60]` / `[0,+120]` 给出方向性结论。",
             "",

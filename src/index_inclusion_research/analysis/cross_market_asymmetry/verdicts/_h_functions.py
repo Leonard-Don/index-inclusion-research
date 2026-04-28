@@ -147,7 +147,7 @@ def _h1_from_bootstrap(
         confidence=confidence,
         evidence_summary=summary,
         metric_snapshot=metric_snapshot,
-        next_step="如需更强结论,可叠加事件级回归并控制 gap_length_days / sector / size 等协变量。",
+        next_step="如需更强结论，可叠加事件级回归并控制 gap_length_days / sector / size 等协变量。",
         key_label="bootstrap p",
         key_value=boot_p,
         n_obs=n_total,
@@ -325,20 +325,20 @@ def _h3_from_channel_table(
         confidence = "高"
         summary = (
             f"US announce 与 CN effective 两条预期量能集中四象限均双通道显著 "
-            f"(turnover + volume p<0.10), 共 {both_sig_count}/{total} 个象限通过双通道判据。"
+            f"(turnover + volume p<0.10),共 {both_sig_count}/{total} 个象限通过双通道判据。"
         )
     elif expected_hit_count == 1:
         verdict = "部分支持"
         confidence = "中"
         summary = (
-            f"仅 {expected_hits[0]} 一个预期象限双通道显著, 共 {both_sig_count}/{total} 个象限通过双通道判据,"
-            "另一条预期象限只有单通道显著, 不能完全确认 H3。"
+            f"仅 {expected_hits[0]} 一个预期象限双通道显著，共 {both_sig_count}/{total} 个象限通过双通道判据，"
+            "另一条预期象限只有单通道显著，不能完全确认 H3。"
         )
     elif both_sig_count >= 1:
         verdict = "部分支持"
         confidence = "低"
         summary = (
-            f"仅 {both_sig_count}/{total} 个象限双通道显著, 但都不在 US announce / CN effective 预期位置上,"
+            f"仅 {both_sig_count}/{total} 个象限双通道显著，但都不在 US announce / CN effective 预期位置上，"
             "方向不完全符合 H3。"
         )
     else:
@@ -487,7 +487,7 @@ def _h4_from_regression(
         confidence=confidence,
         evidence_summary=summary,
         metric_snapshot=metric_snapshot,
-        next_step="可继续叠加 sector / size 等协变量,或检验非线性 gap_length 项的稳健性。",
+        next_step="可继续叠加 sector / size 等协变量，或检验非线性 gap_length 项的稳健性。",
         key_label="regression p",
         key_value=reg_p,
         n_obs=n_obs,
@@ -623,7 +623,7 @@ def _h5_from_regression(
         confidence=confidence,
         evidence_summary=summary,
         metric_snapshot=metric_snapshot,
-        next_step="可加入 sector / size 协变量稳健性检验,或区分 limit_up vs limit_down 暴露。",
+        next_step="可加入 sector / size 协变量稳健性检验，或区分 limit_up vs limit_down 暴露。",
         key_label="limit_coef p",
         key_value=limit_p,
         n_obs=n_obs,
@@ -688,7 +688,7 @@ def _h6(
         evidence_summary=summary,
         metric_snapshot=f"CN size Q1-Q2 avg={float(small):.2f}; Q4-Q5 avg={float(large):.2f}",
         next_step=(
-            "补充真实或重建的 weight_change 后,用 weight_change 直接替代 size proxy。"
+            "补充真实或重建的 weight_change 后，用 weight_change 直接替代 size proxy。"
             "注意当前 hs300_rdd_candidates.reconstructed.csv 的 running_variable 仅是"
             "rank 映射(顶=600..尾=1),不能直接当真实流通市值用——需要重新抓取每批次"
             "公告日的成分股流通股本 × 收盘价才能算出可信的 weight_change。"
@@ -718,7 +718,7 @@ def _h6_from_weight_change(
     if "ticker" not in weight_change.columns or "ticker" not in gap_event_level.columns:
         return _pending(
             hypothesis,
-            "weight_change / gap_event_level 缺少 ticker 列,无法 join。",
+            "weight_change / gap_event_level 缺少 ticker 列，无法 join。",
             "确认 hs300_weight_change.csv 与 cma_gap_event_level.csv 都按 ticker 标识。",
         )
     cn_weights = weight_change.loc[weight_change["market"] == "CN"].copy()
@@ -726,7 +726,7 @@ def _h6_from_weight_change(
     if cn_weights.empty or cn_events.empty:
         return _pending(
             hypothesis,
-            "CN 没有 weight_change 或 gap_event_level 行,无法用真实权重替代 size proxy。",
+            "CN 没有 weight_change 或 gap_event_level 行，无法用真实权重替代 size proxy。",
             "重跑 index-inclusion-compute-h6-weight-change 取 CN 流通市值后再做。",
         )
     merged = cn_events.merge(
@@ -739,7 +739,7 @@ def _h6_from_weight_change(
             confidence="低",
             evidence_summary=(
                 f"CN 实际匹配上 weight_proxy + announce_jump 的事件只有 {len(merged)} 条,"
-                "样本太小,无法分组比较。"
+                "样本太小，无法分组比较。"
             ),
             metric_snapshot=f"matched events={len(merged)}",
             next_step="扩大 weight_change 样本或允许跨批次 ticker 复用。",
@@ -766,7 +766,7 @@ def _h6_from_weight_change(
         confidence = "低"
         summary = (
             f"CN 重权重 announce_jump 高于轻权重 ({heavy_mean:+.2%} vs {light_mean:+.2%}),"
-            "但绝对量级小,方向支持 H6 但不强。"
+            "但绝对量级小，方向支持 H6 但不强。"
         )
     else:
         verdict = "证据不足"
@@ -805,7 +805,7 @@ def _h7(
     if heterogeneity_sector.empty or not required.issubset(heterogeneity_sector.columns):
         return _pending(
             hypothesis,
-            "缺少 sector 异质性表,无法测试行业结构差异。",
+            "缺少 sector 异质性表，无法测试行业结构差异。",
             "重跑 CMA M4 sector 维度异质性。",
         )
     cn = heterogeneity_sector.loc[heterogeneity_sector["market"] == "CN"].copy()
@@ -829,7 +829,7 @@ def _h7(
             metric_snapshot=(
                 f"US eligible sectors={len(us_eligible)}; CN sector 状态={cn_status}"
             ),
-            next_step="将 sector_min_events 阈值降低,或确保 sector 字段被填充。",
+            next_step="将 sector_min_events 阈值降低，或确保 sector 字段被填充。",
             key_label="US sector spread",
             key_value=float("nan"),
             n_obs=int(us_eligible["n_events"].sum()) if not us_eligible.empty else 0,
@@ -877,7 +877,7 @@ def _h7(
         evidence_summary=summary,
         metric_snapshot=metric_snapshot,
         next_step=(
-            "若 CN sector 字段补齐,可做 CN-US 行业 × 阶段交互回归;否则限定为美股结论。"
+            "若 CN sector 字段补齐，可做 CN-US 行业 × 阶段交互回归；否则限定为美股结论。"
         ),
         key_label="US sector spread",
         key_value=spread,

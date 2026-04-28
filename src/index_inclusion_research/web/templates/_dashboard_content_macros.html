@@ -115,7 +115,7 @@
     {% endif %}
   {% endfor %}
 </nav>
-<nav class="cma-sensitivity-threshold-filter" data-active="0.10" aria-label="切换 p 值显著性阈值,实时刷新 H1 / H4 / H5 卡片上的显著性指示">
+<nav class="cma-sensitivity-threshold-filter" data-active="0.10" aria-label="切换 p 值显著性阈值，实时刷新 H1 / H4 / H5 卡片上的显著性指示">
   <span class="cma-sensitivity-threshold-label">p 阈值</span>
   {% for t in ['0.01', '0.05', '0.10', '0.15', '0.20'] %}
   <button type="button" class="cma-sensitivity-threshold-chip{% if t == '0.10' %} is-active{% endif %}" data-threshold="{{ t }}">{{ t }}</button>
@@ -154,7 +154,7 @@
       <span class="cma-verdict-sensitivity-icon">{% if not p_is_num %}·{% elif p_sig_at_default %}✓{% else %}—{% endif %}</span>
       <span class="cma-verdict-sensitivity-text">
         {%- if not p_is_num -%}
-          头条指标不是 p,不在 sweep 范围
+          头条指标不是 p，不在 sweep 范围
         {%- elif p_sig_at_default -%}
           在 p&lt;0.10 下显著(p={{ '%.3f'|format(verdict.p_value) }})
         {%- else -%}
