@@ -38,9 +38,11 @@ def test_build_evidence_manifest_summarises_current_files(tmp_path) -> None:
     raw = tmp_path / "data" / "raw"
     processed = tmp_path / "data" / "processed"
     tables = tmp_path / "results" / "real_tables"
+    regressions = tmp_path / "results" / "real_regressions"
     raw.mkdir(parents=True)
     processed.mkdir(parents=True)
     tables.mkdir(parents=True)
+    regressions.mkdir(parents=True)
     pd.DataFrame(
         [
             {"market": "US", "year": 2019, "aum_trillion": 4.0},
@@ -75,6 +77,16 @@ def test_build_evidence_manifest_summarises_current_files(tmp_path) -> None:
             {"hid": "H2", "verdict": "证据不足"},
         ]
     ).to_csv(tables / "cma_hypothesis_verdicts.csv", index=False)
+    pd.DataFrame(
+        [
+            {
+                "spec_id": "announce_1to3",
+                "over_threshold_covariates": 0,
+                "max_abs_smd": 0.21,
+                "is_default": True,
+            }
+        ]
+    ).to_csv(regressions / "match_robustness_grid.csv", index=False)
     checks = [CheckResult("fixture", "pass", "ok")]
 
     manifest = build_evidence_manifest(
@@ -88,6 +100,7 @@ def test_build_evidence_manifest_summarises_current_files(tmp_path) -> None:
     assert coverage["H6_weight_change"]["status"] == "pass"
     assert coverage["H7_cn_sector"]["status"] == "pass"
     assert coverage["RDD_L3_boundary"]["status"] == "warn"
+    assert coverage["Match_robustness"]["status"] == "pass"
     assert coverage["doctor"]["value"] == "1 pass / 0 warn / 0 fail"
 
 

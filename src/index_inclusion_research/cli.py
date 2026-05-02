@@ -40,6 +40,10 @@ def run_match_controls_main() -> int | None:
     return _run_package_main("index_inclusion_research.match_controls")
 
 
+def run_match_robustness_main() -> int | None:
+    return _run_package_main("index_inclusion_research.match_robustness")
+
+
 def run_event_study_main() -> int | None:
     return _run_package_main("index_inclusion_research.run_event_study")
 

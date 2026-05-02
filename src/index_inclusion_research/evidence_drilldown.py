@@ -285,6 +285,95 @@ def _detail_verdicts(detail: dict[str, Any], *, root: Path) -> None:
     )
 
 
+def _detail_match_robustness(detail: dict[str, Any], *, root: Path) -> None:
+    grid_path = root / "results" / "real_regressions" / "match_robustness_grid.csv"
+    balance_path = root / "results" / "real_regressions" / "match_robustness_balance.csv"
+    summary_path = root / "results" / "real_regressions" / "match_robustness_summary.md"
+    default_balance_path = root / "results" / "real_regressions" / "match_balance.csv"
+    matched_events_path = root / "data" / "processed" / "real_matched_events.csv"
+    prices_path = root / "data" / "raw" / "real_prices.csv"
+    for path in (
+        grid_path,
+        balance_path,
+        summary_path,
+        default_balance_path,
+        matched_events_path,
+        prices_path,
+    ):
+        _add_source(detail, path, root=root)
+
+    grid = _read_csv(grid_path)
+    if not grid.empty:
+        over = pd.to_numeric(
+            grid.get("over_threshold_covariates", pd.Series(index=grid.index)),
+            errors="coerce",
+        ).fillna(float("inf"))
+        max_abs = pd.to_numeric(
+            grid.get("max_abs_smd", pd.Series(index=grid.index)),
+            errors="coerce",
+        ).fillna(float("inf"))
+        ranked = grid.assign(_over_sort=over, _max_abs_sort=max_abs).sort_values(
+            ["_over_sort", "_max_abs_sort", "spec_id"], ignore_index=True
+        )
+        best = ranked.iloc[0]
+        detail["summary_cards"].append(
+            {
+                "label": "best spec",
+                "value": str(best.get("spec_id", "")),
+                "detail": (
+                    f"over={int(float(best['_over_sort']))}; "
+                    f"max|SMD|={float(best['_max_abs_sort']):.3f}"
+                ),
+            }
+        )
+        if "is_default" in grid.columns:
+            default = grid.loc[grid["is_default"].astype(bool)]
+            if not default.empty:
+                row = default.iloc[0]
+                detail["summary_cards"].append(
+                    {
+                        "label": "default spec",
+                        "value": str(row.get("spec_id", "")),
+                        "detail": (
+                            f"over={int(row.get('over_threshold_covariates', 0))}; "
+                            f"max|SMD|={float(row.get('max_abs_smd', 0.0)):.3f}"
+                        ),
+                    }
+                )
+        detail["summary_cards"].append(
+            {"label": "spec count", "value": str(len(grid)), "detail": "local grid"}
+        )
+    detail["tables"].extend(
+        [
+            _table_payload(
+                "match_robustness_grid",
+                "match robustness grid",
+                grid,
+                source_path=grid_path,
+                root=root,
+            ),
+            _table_payload(
+                "match_robustness_balance",
+                "match robustness balance rows",
+                _read_csv(balance_path),
+                source_path=balance_path,
+                root=root,
+                limit=120,
+            ),
+            _table_payload(
+                "default_match_balance",
+                "default match balance",
+                _read_csv(default_balance_path),
+                source_path=default_balance_path,
+                root=root,
+            ),
+        ]
+    )
+    detail["notes"].append(
+        "This robustness page is local-only: it reuses the matched-event sample and local price history; no web collection is performed."
+    )
+
+
 def _detail_doctor(detail: dict[str, Any], manifest: dict[str, Any], *, root: Path) -> None:
     doctor_payload = manifest.get("doctor", {})
     checks = doctor_payload.get("checks", []) if isinstance(doctor_payload, dict) else []
@@ -299,6 +388,7 @@ DETAIL_BUILDERS = {
     "H7_cn_sector": _detail_h7,
     "RDD_L3_boundary": _detail_rdd,
     "CMA_verdicts": _detail_verdicts,
+    "Match_robustness": _detail_match_robustness,
 }
 
 

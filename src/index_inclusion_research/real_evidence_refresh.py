@@ -42,6 +42,11 @@ BASE_REFRESH_STEPS: tuple[PipelineStep, ...] = (
         description="Build matched real control events",
     ),
     PipelineStep(
+        slug="match-robustness",
+        callable_path="index_inclusion_research.match_robustness:main",
+        description="Build local-only matched balance robustness grid",
+    ),
+    PipelineStep(
         slug="build-matched-panel",
         callable_path="index_inclusion_research.build_price_panel:main",
         argv=(
@@ -354,6 +359,59 @@ def _build_verdict_coverage(tables_dir: Path) -> dict[str, str]:
     )
 
 
+def _build_match_robustness_coverage(root: Path) -> dict[str, str]:
+    path = root / "results" / "real_regressions" / "match_robustness_grid.csv"
+    grid = _read_csv(path)
+    if grid.empty or "spec_id" not in grid.columns:
+        return _coverage_row(
+            "Match_robustness",
+            "Match robustness",
+            "missing",
+            "0 specs",
+            f"missing or invalid: {_relative_label(path, root=root)}",
+        )
+    over_source = (
+        grid["over_threshold_covariates"]
+        if "over_threshold_covariates" in grid.columns
+        else pd.Series(index=grid.index, dtype="float64")
+    )
+    max_abs_source = (
+        grid["max_abs_smd"]
+        if "max_abs_smd" in grid.columns
+        else pd.Series(index=grid.index, dtype="float64")
+    )
+    over = pd.to_numeric(over_source, errors="coerce")
+    max_abs = pd.to_numeric(max_abs_source, errors="coerce")
+    ranked = grid.assign(
+        _over_sort=over.fillna(float("inf")),
+        _max_abs_sort=max_abs.fillna(float("inf")),
+    ).sort_values(["_over_sort", "_max_abs_sort", "spec_id"], ignore_index=True)
+    best = ranked.iloc[0]
+    best_over_value = float(best["_over_sort"])
+    best_max_value = float(best["_max_abs_sort"])
+    best_over = int(best_over_value) if best_over_value < float("inf") else 0
+    best_max = best_max_value if best_max_value < float("inf") else float("nan")
+    default = (
+        grid.loc[grid["is_default"].astype(bool)]
+        if "is_default" in grid.columns
+        else pd.DataFrame()
+    )
+    detail_bits = [f"specs={len(grid)}"]
+    if not default.empty:
+        row = default.iloc[0]
+        detail_bits.append(
+            "default="
+            f"{row.get('spec_id')} over={int(row.get('over_threshold_covariates', 0))}"
+        )
+    return _coverage_row(
+        "Match_robustness",
+        "Match robustness",
+        "pass" if best_over == 0 else "warn",
+        f"best={best.get('spec_id')}; over={best_over}; max|SMD|={best_max:.3f}",
+        "; ".join(detail_bits),
+    )
+
+
 def build_evidence_manifest(
     *,
     root: Path = ROOT,
@@ -372,6 +430,7 @@ def build_evidence_manifest(
         _build_h7_coverage(root),
         _build_rdd_coverage(root),
         _build_verdict_coverage(tables_dir),
+        _build_match_robustness_coverage(root),
         _coverage_row(
             "doctor",
             "doctor",

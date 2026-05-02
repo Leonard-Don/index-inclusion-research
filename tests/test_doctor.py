@@ -16,6 +16,7 @@ from index_inclusion_research.doctor import (
     check_h6_weight_change_readiness,
     check_h7_cn_sector_readiness,
     check_hypothesis_paper_ids_resolve,
+    check_match_robustness_grid,
     check_matched_sample_balance,
     check_p_gated_verdict_sensitivity,
     check_paper_verdict_section_synced,
@@ -86,6 +87,40 @@ def test_check_matched_sample_balance_warns_on_imbalance(tmp_path: Path) -> None
     result = check_matched_sample_balance(csv_path=csv)
     assert result.status == "warn"
     assert "mkt_cap_log" in result.message
+
+
+def test_check_match_robustness_grid_warns_when_missing(tmp_path: Path) -> None:
+    result = check_match_robustness_grid(csv_path=tmp_path / "missing.csv")
+    assert result.status == "warn"
+    assert "not found" in result.message
+
+
+def test_check_match_robustness_grid_passes_with_ranked_specs(tmp_path: Path) -> None:
+    csv = tmp_path / "match_robustness_grid.csv"
+    pd.DataFrame(
+        [
+            {
+                "spec_id": "announce_1to3",
+                "over_threshold_covariates": 2,
+                "max_abs_smd": 0.35,
+            },
+            {
+                "spec_id": "effective_1to2",
+                "over_threshold_covariates": 0,
+                "max_abs_smd": 0.20,
+            },
+            {
+                "spec_id": "announce_1to1",
+                "over_threshold_covariates": 1,
+                "max_abs_smd": 0.28,
+            },
+        ]
+    ).to_csv(csv, index=False)
+
+    result = check_match_robustness_grid(csv_path=csv)
+
+    assert result.status == "pass"
+    assert "best=effective_1to2" in result.message
 
 
 def test_check_verdicts_csv_health_warns_when_missing(tmp_path: Path) -> None:

@@ -120,6 +120,60 @@ def test_rdd_evidence_detail_surfaces_live_status(tmp_path: Path) -> None:
     assert detail["tables"][0]["key"] == "rdd_status"
 
 
+def test_match_robustness_evidence_detail_surfaces_grid_and_balance(tmp_path: Path) -> None:
+    _write_manifest(tmp_path, "Match_robustness")
+    regressions = tmp_path / "results" / "real_regressions"
+    processed = tmp_path / "data" / "processed"
+    raw = tmp_path / "data" / "raw"
+    regressions.mkdir(parents=True)
+    processed.mkdir(parents=True)
+    raw.mkdir(parents=True)
+    pd.DataFrame(
+        [
+            {
+                "spec_id": "announce_1to3",
+                "reference_date_column": "announce_date",
+                "control_ratio": 3,
+                "over_threshold_covariates": 1,
+                "max_abs_smd": 0.31,
+                "is_default": True,
+            },
+            {
+                "spec_id": "effective_1to2",
+                "reference_date_column": "effective_date",
+                "control_ratio": 2,
+                "over_threshold_covariates": 0,
+                "max_abs_smd": 0.19,
+                "is_default": False,
+            },
+        ]
+    ).to_csv(regressions / "match_robustness_grid.csv", index=False)
+    pd.DataFrame(
+        [
+            {
+                "spec_id": "effective_1to2",
+                "market": "CN",
+                "covariate": "mkt_cap_log",
+                "smd": 0.19,
+            }
+        ]
+    ).to_csv(regressions / "match_robustness_balance.csv", index=False)
+    pd.DataFrame(
+        [{"market": "CN", "covariate": "mkt_cap_log", "smd": 0.31}]
+    ).to_csv(regressions / "match_balance.csv", index=False)
+    (processed / "real_matched_events.csv").write_text("market,ticker\nCN,000001\n")
+    (raw / "real_prices.csv").write_text("market,ticker,date\nCN,000001,2024-01-01\n")
+    (regressions / "match_robustness_summary.md").write_text("local-only\n")
+
+    detail = build_evidence_detail("Match_robustness", root=tmp_path)
+
+    assert detail is not None
+    tables_by_key = {table["key"]: table for table in detail["tables"]}
+    assert detail["summary_cards"][0]["value"] == "effective_1to2"
+    assert tables_by_key["match_robustness_grid"]["total_rows"] == 2
+    assert tables_by_key["match_robustness_balance"]["rows"][0]["spec_id"] == "effective_1to2"
+
+
 def test_unknown_or_unlisted_evidence_item_returns_none(tmp_path: Path) -> None:
     _write_manifest(tmp_path, "H2_passive_aum")
 
