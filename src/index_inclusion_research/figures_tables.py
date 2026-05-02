@@ -8,6 +8,7 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+from index_inclusion_research import paths
 from index_inclusion_research.analysis import compute_event_study
 from index_inclusion_research.literature import compute_retention_summary
 from index_inclusion_research.loaders import (
@@ -37,7 +38,7 @@ from index_inclusion_research.result_contract import (
     load_rdd_status,
 )
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = paths.project_root()
 
 
 def _read_csv_if_exists(path: str | Path, parse_dates: list[str] | None = None) -> pd.DataFrame:

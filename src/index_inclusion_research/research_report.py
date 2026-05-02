@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from index_inclusion_research import paths
 from index_inclusion_research.loaders import save_dataframe
 from index_inclusion_research.result_contract import (
     build_results_manifest,
@@ -12,7 +13,7 @@ from index_inclusion_research.result_contract import (
     load_results_manifest,
 )
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = paths.project_root()
 
 
 def _best_row(frame: pd.DataFrame, phase: str, window_slug: str) -> pd.DataFrame:

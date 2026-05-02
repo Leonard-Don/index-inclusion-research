@@ -647,6 +647,7 @@ def _h6(
     *,
     weight_change: pd.DataFrame | None = None,
     gap_event_level: pd.DataFrame | None = None,
+    h6_weight_robustness: pd.DataFrame | None = None,
     significance_level: float = SIGNIFICANCE_LEVEL,
 ) -> dict[str, object]:
     if (
@@ -659,6 +660,7 @@ def _h6(
             hypothesis,
             weight_change=weight_change,
             gap_event_level=gap_event_level,
+            h6_weight_robustness=h6_weight_robustness,
             significance_level=significance_level,
         )
     required = {"market", "bucket", "asymmetry_index"}
@@ -711,6 +713,7 @@ def _h6_from_weight_change(
     *,
     weight_change: pd.DataFrame,
     gap_event_level: pd.DataFrame,
+    h6_weight_robustness: pd.DataFrame | None = None,
     significance_level: float = SIGNIFICANCE_LEVEL,  # noqa: ARG001 — H6 weight-change path is decided by spread, not p
 ) -> dict[str, object]:
     """H6 verdict path that uses real weight_change instead of size proxy.
@@ -809,12 +812,40 @@ def _h6_from_weight_change(
             f"matched={len(merged)}, median weight={median_weight:.4f},"
             f" heavy announce_jump={heavy_mean:+.2%}, light={light_mean:+.2%},"
             f" spread={spread:+.2%}"
+            f"{_h6_robustness_snapshot(h6_weight_robustness)}"
         ),
-        next_step="可以再按 sector × weight 交互或多分位回归检验稳健性。",
+        next_step=(
+            "稳健性表见 cma_h6_weight_robustness.csv；下一步可继续扩展到"
+            " sector × weight 交互或事件级 permutation。"
+        ),
         key_label="heavy−light spread",
         key_value=spread,
         n_obs=int(len(merged)),
     )
+
+
+def _h6_robustness_snapshot(frame: pd.DataFrame | None) -> str:
+    if frame is None or frame.empty:
+        return ""
+    required = {"test", "status", "coefficient", "p_value"}
+    if not required.issubset(frame.columns):
+        return ""
+    focus = frame.loc[
+        frame["test"].astype(str).isin(
+            ["ols_weight", "sector_fe_weight", "median_quantreg_weight"]
+        )
+        & (frame["status"].astype(str) == "pass")
+    ].copy()
+    if focus.empty:
+        return ""
+    chunks: list[str] = []
+    for _, row in focus.head(3).iterrows():
+        coef = _num(row, "coefficient")
+        p_value = _num(row, "p_value")
+        chunks.append(
+            f"{row['test']} coef={_fmt_num(coef, 4)}, p={_fmt_num(p_value, 3)}"
+        )
+    return "; robustness: " + "; ".join(chunks)
 
 
 # ── H7 行业结构差异 ─────────────────────────────────────────────────

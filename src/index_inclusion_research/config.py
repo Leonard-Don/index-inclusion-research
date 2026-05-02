@@ -5,9 +5,11 @@ from typing import Any
 
 import yaml
 
+from index_inclusion_research import paths
+
 
 def default_config_path() -> Path:
-    return Path(__file__).resolve().parents[2] / "config" / "markets.yml"
+    return paths.config_path()
 
 
 def load_project_config(path: str | Path | None = None) -> dict[str, Any]:

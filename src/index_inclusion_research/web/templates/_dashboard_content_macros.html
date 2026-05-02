@@ -103,6 +103,30 @@
 {% endif %}
 {%- endmacro %}
 
+{% macro render_cma_evidence_coverage(payload) -%}
+{% if payload and payload.available and payload.rows %}
+<div class="cma-evidence-coverage" aria-label="真实证据覆盖状态">
+  <div class="cma-evidence-head">
+    <span class="cma-evidence-kicker">真实证据覆盖</span>
+    {% if payload.generated_at %}
+    <span class="cma-evidence-generated">{{ payload.generated_at }}</span>
+    {% endif %}
+  </div>
+  <div class="cma-evidence-grid">
+    {% for row in payload.rows %}
+    <a class="cma-evidence-card" data-status="{{ row.status }}" href="{{ url_for('show_evidence_detail', item=row.item) }}">
+      <span class="cma-evidence-status">{{ row.status }}</span>
+      <h3>{{ row.label or row.item }}</h3>
+      <strong>{{ row.value }}</strong>
+      {% if row.detail %}<p>{{ row.detail }}</p>{% endif %}
+      <span class="cma-evidence-link-label">查看明细</span>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{%- endmacro %}
+
 {% macro render_cma_verdict_cards(payload, mode) -%}
 {% if payload and payload.rows %}
 {% set verdict_tiers_present = payload.rows | map(attribute='verdict') | list | unique | list %}
@@ -235,6 +259,10 @@
   </ul>
   {% endif %}
 
+  {% if mode != 'brief' %}
+  {{ render_cma_evidence_coverage(cma_section.evidence_coverage) }}
+  {% endif %}
+
   {% if mode != 'brief' and cma_section.hypothesis_verdicts and cma_section.hypothesis_verdicts.rows %}
   {% if cma_section.verdict_diff and cma_section.verdict_diff.available %}
   {% set diff = cma_section.verdict_diff %}
@@ -315,7 +343,7 @@
 
   {% if mode == 'full' and cma_section.hypothesis_map and cma_section.hypothesis_map.rows %}
   <div class="result-card cma-hypothesis">
-    <div class="table-label">结构假设对照（H1–H6）</div>
+    <div class="table-label">结构假设对照（H1–H7）</div>
     <div class="table-wrap">
       <table>
         <thead>
@@ -344,8 +372,10 @@
   {% if mode == 'full' and cma_section.detail_tables %}
   <div class="cma-detail-stack">
     {{ render_cma_collapsible_table(cma_section.detail_tables.window_summary_all, '窗口摘要全集（6 窗口 × 4 象限）') }}
-    {{ render_cma_collapsible_table(cma_section.detail_tables.hypothesis_verdicts, '假说裁决全集（H1–H6）') }}
+    {{ render_cma_collapsible_table(cma_section.detail_tables.hypothesis_verdicts, '假说裁决全集（H1–H7）') }}
     {{ render_cma_collapsible_table(cma_section.detail_tables.mechanism_panel, '机制回归面板（4 象限 × 5 outcome × 3 规格）') }}
+    {{ render_cma_collapsible_table(cma_section.detail_tables.h6_weight_explanation, 'H6 权重解释层（coverage / 方向 / 规格 / final read）') }}
+    {{ render_cma_collapsible_table(cma_section.detail_tables.h6_weight_robustness, 'H6 权重稳健性（分位 / OLS / sector FE / 分位数回归）') }}
     {{ render_cma_collapsible_table(cma_section.detail_tables.heterogeneity_size, '异质性 · 市值五分位') }}
     {{ render_cma_collapsible_table(cma_section.detail_tables.heterogeneity_liquidity, '异质性 · 流动性五分位') }}
     {{ render_cma_collapsible_table(cma_section.detail_tables.heterogeneity_sector, '异质性 · 行业') }}

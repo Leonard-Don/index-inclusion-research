@@ -720,6 +720,13 @@ def test_cross_market_section_renders_in_full_mode() -> None:
             assert verdict_cards.count() == 7
             track_cards = section.locator(".cma-track-card")
             assert track_cards.count() == 3
+            evidence_cards = section.locator(".cma-evidence-card")
+            assert evidence_cards.count() >= 2
+            h6_evidence = section.locator(
+                ".cma-evidence-card:has-text('H6 weight_change')"
+            )
+            assert h6_evidence.count() == 1
+            assert h6_evidence.first.get_attribute("href") == "/evidence/H6_weight_change"
             assert (
                 section.locator(".cma-verdict-card:has-text('H3')").count()
                 >= 1
@@ -729,11 +736,12 @@ def test_cross_market_section_renders_in_full_mode() -> None:
             assert hypothesis_rows.count() == 7
 
             collapsibles = section.locator("details.cma-collapsible")
-            assert collapsibles.count() >= 10
+            assert collapsibles.count() >= 11
 
             summaries = [
                 "窗口摘要全集",
                 "机制回归面板",
+                "H6 权重解释层",
                 "异质性 · 市值五分位",
                 "异质性 · 流动性五分位",
                 "异质性 · 行业",
@@ -754,6 +762,45 @@ def test_cross_market_section_renders_in_full_mode() -> None:
             first_collapsible.locator("table tbody tr").first.wait_for(
                 state="visible", timeout=2000
             )
+        finally:
+            browser.close()
+
+
+def test_evidence_detail_and_rdd_l3_workbench_pages_render() -> None:
+    with (
+        _running_dashboard_server() as base_url,
+        playwright_sync_api.sync_playwright() as playwright,
+    ):
+        browser = playwright.chromium.launch()
+        try:
+            page = browser.new_page(viewport={"width": 1440, "height": 960})
+
+            response = page.goto(
+                f"{base_url}/api/evidence/H6_weight_change",
+                wait_until="domcontentloaded",
+            )
+            assert response is not None
+            assert response.status == 200
+            assert "matched_weight_events" in page.locator("body").inner_text()
+
+            page.goto(
+                f"{base_url}/evidence/H6_weight_change",
+                wait_until="domcontentloaded",
+            )
+            page.wait_for_load_state("networkidle")
+            assert "H6 weight_change" in page.locator("h1").inner_text()
+            assert page.locator(".evidence-detail-table:has-text('H6 explanation layer')").count() == 1
+            assert page.locator("a[href='/rdd-l3']").count() >= 1
+
+            page.goto(f"{base_url}/rdd-l3", wait_until="domcontentloaded")
+            page.wait_for_load_state("networkidle")
+            assert "官方候选导入工作台" in page.locator("h1").inner_text()
+            assert page.locator("form[action='/rdd-l3/check']").count() == 1
+            assert page.locator("form[action='/rdd-l3/import']").count() == 1
+            assert page.locator("form[action='/rdd-l3/collection']").count() == 1
+            assert page.locator(".rdd-collection-status").count() == 1
+            assert page.locator(".evidence-detail-table:has-text('批次采集清单预览')").count() == 1
+            assert page.locator(".evidence-detail-table:has-text('边界参考预览')").count() == 1
         finally:
             browser.close()
 

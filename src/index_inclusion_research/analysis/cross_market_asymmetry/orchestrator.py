@@ -4,8 +4,11 @@ from pathlib import Path
 
 import pandas as pd
 
+from index_inclusion_research import paths as project_paths
+
 from . import (
     gap_period,
+    h6_robustness,
     heterogeneity,
     hypotheses,
     mechanism_panel,
@@ -14,7 +17,7 @@ from . import (
     verdicts,
 )
 
-ROOT = Path(__file__).resolve().parents[4]
+ROOT = project_paths.project_root()
 REAL_TABLES_DIR = ROOT / "results" / "real_tables"
 REAL_FIGURES_DIR = ROOT / "results" / "real_figures"
 REAL_EVENT_PANEL = ROOT / "data" / "processed" / "real_event_panel.csv"
@@ -77,7 +80,12 @@ def _append_research_summary(
         )
     if not hypothesis_verdicts.empty:
         lines.append("")
-        lines.append("### 假说裁决摘要")
+        lines.append("### CN/US 不对称机制裁决")
+        lines.append("")
+        lines.append(
+            "下面 7 条假说回答的是 \"为什么 CN/US 反应不一致\","
+            "不是回答 \"指数纳入是否产生超额收益\"(后者见上文事件研究主结论)。"
+        )
         lines.append("")
         lines.append(
             "| 假说 | 名称 | 裁决 | 可信度 | 头条指标 | 值 | n | 关键证据 |"
@@ -143,7 +151,9 @@ def run_cma_pipeline(
     gap_summary = gap_period.summarize_gap_metrics(gap)
     gap_period.export_gap_tables(gap, gap_summary, output_dir=tables_dir)
     gap_period.render_gap_figures(gap, gap_summary, output_dir=figures_dir)
-    pre_runup_bootstrap = gap_period.compute_pre_runup_bootstrap_test(gap)
+    pre_runup_bootstrap = gap_period.compute_pre_runup_bootstrap_test(
+        gap, block_by="announce_date"
+    )
     gap_period.export_pre_runup_bootstrap_table(pre_runup_bootstrap, output_dir=tables_dir)
     gap_drift_regression = gap_period.compute_gap_drift_cross_market_regression(gap)
     gap_period.export_gap_drift_cross_market_regression_table(
@@ -198,6 +208,14 @@ def run_cma_pipeline(
     weight_change_frame = (
         pd.read_csv(WEIGHT_CHANGE_PATH) if WEIGHT_CHANGE_PATH.exists() else None
     )
+    h6_weight_robustness = h6_robustness.compute_h6_weight_robustness(
+        weight_change_frame,
+        gap,
+    )
+    h6_robustness.export_h6_weight_robustness(
+        h6_weight_robustness,
+        output_dir=tables_dir,
+    )
     build_kwargs: dict[str, object] = {
         "gap_summary": gap_summary,
         "mechanism_panel": mech_table,
@@ -210,11 +228,27 @@ def run_cma_pipeline(
         "heterogeneity_sector": het_tables.get("sector", pd.DataFrame()),
         "weight_change": weight_change_frame,
         "gap_event_level": gap,
+        "h6_weight_robustness": h6_weight_robustness,
         "limit_regression": limit_regression,
     }
     if significance_level is not None:
         build_kwargs["significance_level"] = significance_level
     hypothesis_verdicts = verdicts.build_hypothesis_verdicts(**build_kwargs)
+    h6_verdict = None
+    if not hypothesis_verdicts.empty and "hid" in hypothesis_verdicts.columns:
+        h6_rows = hypothesis_verdicts.loc[
+            hypothesis_verdicts["hid"].astype(str) == "H6"
+        ]
+        if not h6_rows.empty:
+            h6_verdict = h6_rows.iloc[0]
+    h6_weight_explanation = h6_robustness.build_h6_weight_explanation(
+        h6_verdict=h6_verdict,
+        robustness=h6_weight_robustness,
+    )
+    h6_robustness.export_h6_weight_explanation(
+        h6_weight_explanation,
+        output_dir=tables_dir,
+    )
     verdicts_csv_path = tables_dir / "cma_hypothesis_verdicts.csv"
     # Auto-snapshot the previous verdicts so users can always run
     # `index-inclusion-verdict-summary --compare-with cma_hypothesis_verdicts.previous.csv`
@@ -235,10 +269,17 @@ def run_cma_pipeline(
     paper_event_counts = (
         pd.read_csv(event_counts_path) if event_counts_path.exists() else None
     )
+    event_study_summary_path = tables_dir / "event_study_summary.csv"
+    paper_event_study_summary = (
+        pd.read_csv(event_study_summary_path)
+        if event_study_summary_path.exists()
+        else None
+    )
     verdicts.export_paper_verdict_section(
         hypothesis_verdicts,
         output_path=paper_verdict_path,
         event_counts=paper_event_counts,
+        event_study_summary=paper_event_study_summary,
     )
     hypotheses.export_track_verdict_summary(
         hypothesis_verdicts, output_dir=tables_dir

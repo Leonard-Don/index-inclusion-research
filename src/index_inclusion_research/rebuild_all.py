@@ -31,11 +31,12 @@ import logging
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-ROOT = Path(__file__).resolve().parents[2]
+from index_inclusion_research import paths
+
+ROOT = paths.project_root()
 
 
 @dataclass(frozen=True)

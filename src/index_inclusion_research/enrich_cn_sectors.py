@@ -19,7 +19,9 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-ROOT = Path(__file__).resolve().parents[2]
+from index_inclusion_research import paths
+
+ROOT = paths.project_root()
 DEFAULT_EVENTS = ROOT / "data" / "raw" / "real_events.csv"
 DEFAULT_METADATA = ROOT / "data" / "raw" / "real_metadata.csv"
 

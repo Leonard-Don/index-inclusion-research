@@ -3,7 +3,9 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+from index_inclusion_research import paths
+
+ROOT = paths.project_root()
 
 
 _PROFILE_PATHS: dict[str, dict[str, dict[str, str]]] = {

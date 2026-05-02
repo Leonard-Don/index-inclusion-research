@@ -88,6 +88,10 @@ def test_project_metadata_declares_flask_and_console_scripts() -> None:
         project["scripts"]["index-inclusion-generate-research-report"]
         == "index_inclusion_research.cli:run_generate_research_report_main"
     )
+    assert (
+        project["scripts"]["index-inclusion-refresh-real-evidence"]
+        == "index_inclusion_research.cli:run_refresh_real_evidence_main"
+    )
 
 
 def test_track_console_wrappers_delegate_to_expected_package_modules(monkeypatch) -> None:
@@ -124,6 +128,7 @@ def test_package_console_wrappers_delegate_to_expected_package_modules(monkeypat
     cli.run_hs300_rdd_main()
     cli.run_generate_sample_data_main()
     cli.run_download_real_data_main()
+    cli.run_refresh_real_evidence_main()
     cli.run_make_figures_tables_main()
     cli.run_generate_research_report_main()
 
@@ -135,6 +140,7 @@ def test_package_console_wrappers_delegate_to_expected_package_modules(monkeypat
         "index_inclusion_research.hs300_rdd",
         "index_inclusion_research.sample_data",
         "index_inclusion_research.real_data",
+        "index_inclusion_research.real_evidence_refresh",
         "index_inclusion_research.figures_tables",
         "index_inclusion_research.research_report",
     ]
@@ -163,6 +169,7 @@ def test_python_module_fallback_targets_are_directly_runnable() -> None:
         "sample_data.py",
         "real_data.py",
         "enrich_cn_sectors.py",
+        "real_evidence_refresh.py",
         "figures_tables.py",
         "research_report.py",
     ]

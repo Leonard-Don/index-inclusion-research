@@ -25,14 +25,18 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-ROOT = Path(__file__).resolve().parents[2]
+from index_inclusion_research import paths
+
+ROOT = paths.project_root()
 DEFAULT_VERDICTS_CSV = ROOT / "results" / "real_tables" / "cma_hypothesis_verdicts.csv"
 DEFAULT_RESULTS_DIR = ROOT / "results" / "real_tables"
 DEFAULT_RDD_STATUS_DIR = ROOT / "results" / "literature" / "hs300_rdd"
 DEFAULT_PAPER_VERDICTS_DOC = ROOT / "docs" / "paper_outline_verdicts.md"
 DEFAULT_EVENT_COUNTS_CSV = DEFAULT_RESULTS_DIR / "event_counts_by_year.csv"
+DEFAULT_EVENT_STUDY_SUMMARY_CSV = DEFAULT_RESULTS_DIR / "event_study_summary.csv"
 DEFAULT_WEIGHT_CHANGE_CSV = ROOT / "data" / "processed" / "hs300_weight_change.csv"
 DEFAULT_HETEROGENEITY_SECTOR_CSV = DEFAULT_RESULTS_DIR / "cma_heterogeneity_sector.csv"
+DEFAULT_MATCH_BALANCE_CSV = ROOT / "results" / "real_regressions" / "match_balance.csv"
 
 EXPECTED_HIDS: tuple[str, ...] = ("H1", "H2", "H3", "H4", "H5", "H6", "H7")
 EXPECTED_CMA_OUTPUTS: tuple[str, ...] = (
@@ -46,6 +50,8 @@ EXPECTED_CMA_OUTPUTS: tuple[str, ...] = (
     "cma_gap_drift_market_regression.csv",
     "cma_h3_channel_concentration.csv",
     "cma_h5_limit_predictive_regression.csv",
+    "cma_h6_weight_robustness.csv",
+    "cma_h6_weight_explanation.csv",
 )
 
 Status = str  # one of "pass" / "warn" / "fail"
@@ -204,6 +210,7 @@ def check_paper_verdict_section_synced(
     csv_path: Path = DEFAULT_VERDICTS_CSV,
     doc_path: Path = DEFAULT_PAPER_VERDICTS_DOC,
     event_counts_path: Path = DEFAULT_EVENT_COUNTS_CSV,
+    event_study_summary_path: Path = DEFAULT_EVENT_STUDY_SUMMARY_CSV,
 ) -> CheckResult:
     """Generated paper verdict markdown should match the current verdict CSV."""
     if not csv_path.exists():
@@ -227,6 +234,11 @@ def check_paper_verdict_section_synced(
             if event_counts_path.exists()
             else None
         )
+        event_study_summary = (
+            pd.read_csv(event_study_summary_path)
+            if event_study_summary_path.exists()
+            else None
+        )
     except (OSError, ValueError) as exc:
         return CheckResult(
             name="paper_verdict_section_synced",
@@ -242,6 +254,7 @@ def check_paper_verdict_section_synced(
         expected = render_paper_verdict_section(
             verdicts,
             event_counts=event_counts,
+            event_study_summary=event_study_summary,
         )
         actual = doc_path.read_text()
     except (OSError, ValueError, KeyError) as exc:
@@ -726,6 +739,65 @@ def check_console_scripts_importable() -> CheckResult:
 # ── orchestrator ─────────────────────────────────────────────────────
 
 
+def check_matched_sample_balance(
+    *,
+    csv_path: Path = DEFAULT_MATCH_BALANCE_CSV,
+    smd_threshold: float = 0.25,
+) -> CheckResult:
+    """Matched-sample covariate balance (Stuart 2010): warn when |SMD| > 0.25."""
+    if not csv_path.exists():
+        return CheckResult(
+            name="matched_sample_balance",
+            status="warn",
+            message=f"covariate balance CSV not found: {_relative_label(csv_path)}",
+            fix="Re-run `index-inclusion-match-controls` to emit match_balance.csv.",
+        )
+    try:
+        df = pd.read_csv(csv_path)
+    except (OSError, ValueError) as exc:
+        return CheckResult(
+            name="matched_sample_balance",
+            status="fail",
+            message=f"covariate balance CSV is unreadable: {exc}",
+            fix="Re-run `index-inclusion-match-controls` to regenerate match_balance.csv.",
+        )
+    if df.empty:
+        return CheckResult(
+            name="matched_sample_balance",
+            status="warn",
+            message="covariate balance CSV is empty.",
+            fix="Confirm matched_events has both treatment_group=1 and =0 rows, then re-run match-controls.",
+        )
+    if "smd" not in df.columns:
+        return CheckResult(
+            name="matched_sample_balance",
+            status="fail",
+            message="covariate balance CSV is missing the 'smd' column.",
+            fix="Regenerate via `index-inclusion-match-controls`; do not hand-edit the CSV.",
+        )
+    abs_smd = df["smd"].abs()
+    over = df.loc[abs_smd >= smd_threshold]
+    max_abs = float(abs_smd.max()) if not abs_smd.empty else float("nan")
+    if not over.empty:
+        rows = ", ".join(
+            f"{r['market']}/{r['covariate']}={r['smd']:+.2f}"
+            for _, r in over.head(5).iterrows()
+        )
+        return CheckResult(
+            name="matched_sample_balance",
+            status="warn",
+            message=(
+                f"{len(over)} covariate(s) exceed |SMD|>={smd_threshold:.2f}: {rows}"
+            ),
+            fix="Tighten the matching distance or relax sector/cap criteria, then re-run match-controls.",
+        )
+    return CheckResult(
+        name="matched_sample_balance",
+        status="pass",
+        message=f"all covariates pass |SMD|<{smd_threshold:.2f} (max={max_abs:.3f}).",
+    )
+
+
 DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_hypothesis_paper_ids_resolve,
     check_verdicts_csv_health,
@@ -736,6 +808,7 @@ DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_h6_weight_change_readiness,
     check_h7_cn_sector_readiness,
     check_rdd_l3_sample_readiness,
+    check_matched_sample_balance,
     check_chart_builders_register,
     check_console_scripts_importable,
 )

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import pandas as pd
 
 from index_inclusion_research.analysis.cross_market_asymmetry.dashboard_section import (
@@ -99,6 +101,7 @@ def test_section_has_expected_top_level_keys(tmp_path):
         "figures",
         "hypothesis_map",
         "hypothesis_verdicts",
+        "evidence_coverage",
     ):
         assert key in section, f"missing key: {key}"
 
@@ -247,8 +250,10 @@ def test_section_missing_tables_yield_empty_rows(tmp_path):
     assert section["figures"] == {}
     assert section["detail_tables"] == {
         "window_summary_all": {"columns": [], "rows": []},
-        "hypothesis_verdicts": {"columns": [], "rows": []},
-        "mechanism_panel": {"columns": [], "rows": []},
+            "hypothesis_verdicts": {"columns": [], "rows": []},
+            "mechanism_panel": {"columns": [], "rows": []},
+            "h6_weight_explanation": {"columns": [], "rows": []},
+            "h6_weight_robustness": {"columns": [], "rows": []},
         "heterogeneity_size": {"columns": [], "rows": []},
         "heterogeneity_liquidity": {"columns": [], "rows": []},
         "heterogeneity_sector": {"columns": [], "rows": []},
@@ -346,6 +351,30 @@ def test_section_full_mode_exposes_all_detail_tables(tmp_path):
             }
         ]
     ).to_csv(tables / "cma_car_path.csv", index=False)
+    pd.DataFrame(
+        [
+            {
+                "test": "coverage",
+                "status": "pass",
+                "coefficient": None,
+                "p_value": None,
+                "n_obs": 12,
+                "detail": "matched events=12",
+            }
+        ]
+    ).to_csv(tables / "cma_h6_weight_robustness.csv", index=False)
+    pd.DataFrame(
+        [
+            {
+                "topic": "sample_coverage",
+                "status": "pass",
+                "headline": "12 个 CN 事件同时匹配 weight_proxy 与 announce_jump",
+                "detail": "matched events=12",
+                "metric": "matched_events",
+                "value": 12,
+            }
+        ]
+    ).to_csv(tables / "cma_h6_weight_explanation.csv", index=False)
 
     section = build_cross_market_section(
         tables_dir=tables, figures_dir=figures, mode="full"
@@ -355,6 +384,8 @@ def test_section_full_mode_exposes_all_detail_tables(tmp_path):
         "window_summary_all",
         "hypothesis_verdicts",
         "mechanism_panel",
+        "h6_weight_explanation",
+        "h6_weight_robustness",
         "heterogeneity_size",
         "heterogeneity_liquidity",
         "heterogeneity_sector",
@@ -366,6 +397,36 @@ def test_section_full_mode_exposes_all_detail_tables(tmp_path):
     ):
         assert key in detail, f"missing detail table: {key}"
         assert detail[key]["rows"], f"detail table {key} has no rows"
+
+
+def test_section_exposes_evidence_coverage_from_manifest(tmp_path):
+    tables = tmp_path / "tables"
+    figures = tmp_path / "figures"
+    _seed_tables(tables)
+    (tables / "evidence_refresh_manifest.json").write_text(
+        json.dumps(
+            {
+                "generated_at": "2026-05-02T00:00:00+00:00",
+                "coverage": [
+                    {
+                        "item": "H6_weight_change",
+                        "label": "H6 weight_change",
+                        "status": "pass",
+                        "value": "matched=12",
+                        "detail": "fixture",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    section = build_cross_market_section(
+        tables_dir=tables, figures_dir=figures, mode="full"
+    )
+
+    assert section["evidence_coverage"]["available"] is True
+    assert section["evidence_coverage"]["rows"][0]["item"] == "H6_weight_change"
 
 
 def test_section_demo_mode_has_empty_detail_tables(tmp_path):

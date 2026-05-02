@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 
+from index_inclusion_research import paths
 from index_inclusion_research.loaders import save_dataframe
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = paths.project_root()
 
 
 def _market_tickers(prefix: str) -> list[str]:

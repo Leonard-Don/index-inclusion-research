@@ -185,3 +185,180 @@ def build_matched_sample(
         ascending=[True, True, False, False],
     )
     return matched_events.reset_index(drop=True), pd.DataFrame(diagnostics)
+
+
+_BALANCE_COVARIATES: tuple[str, ...] = (
+    "mkt_cap_log",
+    "pre_event_return",
+    "pre_event_volatility",
+)
+
+
+def _balance_snapshot(
+    prices: pd.DataFrame,
+    market: str,
+    ticker: str,
+    reference_date: pd.Timestamp,
+    lookback_days: int,
+) -> dict[str, object] | None:
+    snap = _compute_security_snapshot(
+        prices=prices,
+        market=market,
+        ticker=ticker,
+        reference_date=reference_date,
+        lookback_days=lookback_days,
+    )
+    if snap is None:
+        return None
+    cap = snap.get("mkt_cap")
+    cap_log = float(np.log(cap)) if cap is not None and not pd.isna(cap) and cap > 0 else float("nan")
+    return {
+        "mkt_cap_log": cap_log,
+        "pre_event_return": float(snap.get("pre_event_return", float("nan"))),
+        "pre_event_volatility": float(snap.get("pre_event_volatility", float("nan"))),
+        "sector": snap.get("sector"),
+    }
+
+
+def compute_covariate_balance(
+    matched_events: pd.DataFrame,
+    prices: pd.DataFrame,
+    *,
+    lookback_days: int = 20,
+    reference_date_column: str = "announce_date",
+    smd_threshold: float = 0.10,
+) -> pd.DataFrame:
+    """Stuart (2010) covariate balance table for a matched sample.
+
+    Returns one row per (market, covariate) with treated/control means, pooled
+    standard deviation, standardised mean difference (SMD), and a boolean
+    ``balanced`` flag indicating |SMD| < ``smd_threshold``. ``treatment_group``
+    is read from ``matched_events`` (1 = treated, 0 = control).
+    """
+    if matched_events.empty or "treatment_group" not in matched_events.columns:
+        return pd.DataFrame(
+            columns=[
+                "market",
+                "covariate",
+                "treated_mean",
+                "control_mean",
+                "treated_std",
+                "control_std",
+                "pooled_std",
+                "smd",
+                "balanced",
+                "n_treated",
+                "n_control",
+            ]
+        )
+
+    history_by_key = {
+        (str(market), str(ticker)): group.sort_values("date").reset_index(drop=True)
+        for (market, ticker), group in prices.groupby(["market", "ticker"], dropna=False)
+    }
+    snapshot_cache: dict[tuple[str, str, str, int], dict[str, object] | None] = {}
+
+    def get_balance_snapshot(
+        market: str,
+        ticker: str,
+        reference_date: pd.Timestamp,
+    ) -> dict[str, object] | None:
+        cache_key = (
+            str(market),
+            str(ticker),
+            pd.Timestamp(reference_date).date().isoformat(),
+            lookback_days,
+        )
+        if cache_key in snapshot_cache:
+            return snapshot_cache[cache_key]
+        history = history_by_key.get((str(market), str(ticker)))
+        if history is None:
+            snapshot_cache[cache_key] = None
+            return None
+        snap = _balance_snapshot(
+            prices=history,
+            market=str(market),
+            ticker=str(ticker),
+            reference_date=reference_date,
+            lookback_days=lookback_days,
+        )
+        snapshot_cache[cache_key] = snap
+        return snap
+
+    rows_with_snap: list[dict[str, object]] = []
+    for event in matched_events.itertuples(index=False):
+        reference_date = getattr(event, reference_date_column, None)
+        if reference_date is None or pd.isna(reference_date):
+            continue
+        snap = get_balance_snapshot(
+            market=str(event.market),
+            ticker=str(event.ticker),
+            reference_date=pd.Timestamp(reference_date),
+        )
+        if snap is None:
+            continue
+        rows_with_snap.append(
+            {
+                "market": event.market,
+                "treatment_group": int(getattr(event, "treatment_group", 1)),
+                **snap,
+            }
+        )
+    snap_frame = pd.DataFrame(rows_with_snap)
+    if snap_frame.empty:
+        return pd.DataFrame(
+            columns=[
+                "market",
+                "covariate",
+                "treated_mean",
+                "control_mean",
+                "treated_std",
+                "control_std",
+                "pooled_std",
+                "smd",
+                "balanced",
+                "n_treated",
+                "n_control",
+            ]
+        )
+
+    rows: list[dict[str, object]] = []
+    for market, sub in snap_frame.groupby("market"):
+        treated = sub.loc[sub["treatment_group"] == 1]
+        control = sub.loc[sub["treatment_group"] == 0]
+        n_t = int(len(treated))
+        n_c = int(len(control))
+        for covariate in _BALANCE_COVARIATES:
+            t_vals = treated[covariate].dropna()
+            c_vals = control[covariate].dropna()
+            t_mean = float(t_vals.mean()) if not t_vals.empty else float("nan")
+            c_mean = float(c_vals.mean()) if not c_vals.empty else float("nan")
+            t_std = float(t_vals.std(ddof=1)) if len(t_vals) > 1 else float("nan")
+            c_std = float(c_vals.std(ddof=1)) if len(c_vals) > 1 else float("nan")
+            if not np.isfinite(t_std) and not np.isfinite(c_std):
+                pooled = float("nan")
+            else:
+                t_var = t_std**2 if np.isfinite(t_std) else 0.0
+                c_var = c_std**2 if np.isfinite(c_std) else 0.0
+                pooled = float(math.sqrt((t_var + c_var) / 2.0))
+            if pooled and pooled > 0 and np.isfinite(t_mean) and np.isfinite(c_mean):
+                smd = float((t_mean - c_mean) / pooled)
+            else:
+                smd = float("nan")
+            balanced = bool(np.isfinite(smd) and abs(smd) < smd_threshold)
+            rows.append(
+                {
+                    "market": market,
+                    "covariate": covariate,
+                    "treated_mean": t_mean,
+                    "control_mean": c_mean,
+                    "treated_std": t_std,
+                    "control_std": c_std,
+                    "pooled_std": pooled,
+                    "smd": smd,
+                    "balanced": balanced,
+                    "n_treated": n_t,
+                    "n_control": n_c,
+                }
+            )
+    return pd.DataFrame(rows)

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from index_inclusion_research import paths
 from index_inclusion_research.analysis.rdd_candidates import (
     OPTIONAL_COLUMNS,
     REQUIRED_COLUMNS,
@@ -15,7 +16,7 @@ from index_inclusion_research.analysis.rdd_candidates import (
 )
 from index_inclusion_research.loaders import save_dataframe
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = paths.project_root()
 
 DEFAULT_INPUT = ROOT / "data" / "raw" / "hs300_rdd_candidates.reconstructed.csv"
 DEFAULT_OUTPUT_DIR = ROOT / "results" / "literature" / "hs300_rdd_l3_collection"

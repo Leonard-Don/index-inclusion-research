@@ -746,13 +746,12 @@ def _build_paper_verdict_citations(paper_id: str) -> list[dict[str, object]]:
     to the static registry-only view (verdict / key_value blank) when
     the CSV is missing or unreadable.
     """
-    from pathlib import Path as _Path
-
+    from index_inclusion_research import paths
     from index_inclusion_research.analysis.cross_market_asymmetry import (
         hypotheses as cma_hypotheses,
     )
 
-    root = _Path(__file__).resolve().parents[2]
+    root = paths.project_root()
     csv_path = root.joinpath(*_VERDICTS_CSV_REL)
     verdicts: pd.DataFrame | None = None
     if csv_path.exists():

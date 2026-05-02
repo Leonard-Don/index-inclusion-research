@@ -68,6 +68,10 @@ def run_compute_h6_weight_change_main() -> int | None:
     return _run_package_main("index_inclusion_research.compute_h6_weight_change")
 
 
+def run_refresh_real_evidence_main() -> int | None:
+    return _run_package_main("index_inclusion_research.real_evidence_refresh")
+
+
 def run_rebuild_all_main() -> int | None:
     return _run_package_main("index_inclusion_research.rebuild_all")
 

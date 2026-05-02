@@ -39,6 +39,7 @@ def build_hypothesis_verdicts(
     heterogeneity_sector: pd.DataFrame | None = None,
     weight_change: pd.DataFrame | None = None,
     gap_event_level: pd.DataFrame | None = None,
+    h6_weight_robustness: pd.DataFrame | None = None,
     significance_level: float = SIGNIFICANCE_LEVEL,
 ) -> pd.DataFrame:
     """Build the 7-hypothesis verdict frame.
@@ -93,6 +94,7 @@ def build_hypothesis_verdicts(
             heterogeneity_size,
             weight_change=weight_change,
             gap_event_level=gap_event_level,
+            h6_weight_robustness=h6_weight_robustness,
             significance_level=significance_level,
         ),
         _h7(
@@ -186,6 +188,7 @@ def export_hypothesis_verdicts(
     channel_concentration: pd.DataFrame | None = None,
     limit_regression: Mapping[str, object] | None = None,
     heterogeneity_sector: pd.DataFrame | None = None,
+    h6_weight_robustness: pd.DataFrame | None = None,
     significance_level: float = SIGNIFICANCE_LEVEL,
 ) -> Path:
     output_dir = Path(output_dir)
@@ -202,6 +205,7 @@ def export_hypothesis_verdicts(
         channel_concentration=channel_concentration,
         limit_regression=limit_regression,
         heterogeneity_sector=heterogeneity_sector,
+        h6_weight_robustness=h6_weight_robustness,
         significance_level=significance_level,
     )
     verdicts.to_csv(out_path, index=False)

@@ -26,7 +26,9 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-ROOT = Path(__file__).resolve().parents[2]
+from index_inclusion_research import paths
+
+ROOT = paths.project_root()
 DEFAULT_INPUT = ROOT / "data" / "raw" / "hs300_rdd_candidates.reconstructed.csv"
 DEFAULT_OUTPUT = ROOT / "data" / "processed" / "hs300_weight_change.csv"
 DEFAULT_LOCAL_PRICES = ROOT / "data" / "raw" / "real_prices.csv"

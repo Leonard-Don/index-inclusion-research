@@ -19,7 +19,9 @@ from pathlib import Path
 
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[2]
+from index_inclusion_research import paths
+
+ROOT = paths.project_root()
 DEFAULT_VERDICTS = ROOT / "results" / "real_tables" / "cma_hypothesis_verdicts.csv"
 DEFAULT_TRACK_SUMMARY = ROOT / "results" / "real_tables" / "cma_track_verdict_summary.csv"
 
@@ -73,7 +75,8 @@ def render_summary(
     """Render the verdict picture as a multi-line string."""
     lines: list[str] = []
     lines.append("=" * 72)
-    lines.append(" INDEX-INCLUSION RESEARCH · 假说裁决摘要")
+    lines.append(" INDEX-INCLUSION RESEARCH · CN/US 不对称机制裁决")
+    lines.append(" (论文核心 \"是否产生超额收益\" 见 event_study_summary.csv)")
     lines.append("=" * 72)
 
     if verdicts.empty:
@@ -328,6 +331,30 @@ def render_verdict_diff(
 DEFAULT_SENSITIVITY_THRESHOLDS: tuple[float, ...] = (0.05, 0.10, 0.15)
 
 
+def _benjamini_hochberg_q(p_values: list[float]) -> list[float]:
+    """Benjamini-Hochberg adjusted q-values for the given list of p-values.
+
+    NaN inputs propagate to NaN outputs and are ignored when computing m
+    (the number of tested hypotheses). The result is monotone non-decreasing
+    in original p-value order after sorting.
+    """
+    indexed = [(i, p) for i, p in enumerate(p_values) if not math.isnan(p)]
+    m = len(indexed)
+    out = [float("nan")] * len(p_values)
+    if m == 0:
+        return out
+    indexed.sort(key=lambda kv: kv[1])
+    raw_adjusted: list[float] = []
+    for rank, (_, p) in enumerate(indexed, start=1):
+        raw_adjusted.append(min(1.0, p * m / rank))
+    monotone = raw_adjusted[:]
+    for i in range(len(monotone) - 2, -1, -1):
+        monotone[i] = min(monotone[i], monotone[i + 1])
+    for (orig_idx, _), q in zip(indexed, monotone, strict=True):
+        out[orig_idx] = q
+    return out
+
+
 def build_sensitivity_table(
     verdicts: pd.DataFrame,
     thresholds: Sequence[float] = DEFAULT_SENSITIVITY_THRESHOLDS,
@@ -341,6 +368,11 @@ def build_sensitivity_table(
     spread / share / ratio, not a p) get ``None`` in every threshold
     column.
 
+    Two multiple-testing columns are also included: ``bonferroni_p =
+    min(1, p * m)`` and ``bh_q`` (Benjamini-Hochberg q-value), where
+    m is the number of hypotheses that carry a structured p_value.
+    Hypotheses without a p_value get NaN in both columns.
+
     Downstream consumers (``render_sensitivity_table``,
     ``render_summary_json``) can answer "if I tightened the threshold
     from 0.10 to 0.05, which verdicts flip?" without re-parsing
@@ -349,21 +381,32 @@ def build_sensitivity_table(
     if verdicts.empty:
         return pd.DataFrame(columns=["hid", "name_cn", "p_value"])
     threshs = tuple(sorted({float(t) for t in thresholds}))
-    rows: list[dict[str, object]] = []
+    p_values: list[float] = []
+    base_rows: list[dict[str, object]] = []
     for _, v in verdicts.iterrows():
         raw = v.get("p_value") if "p_value" in v.index else None
         try:
             p = float(raw) if raw is not None else float("nan")
         except (TypeError, ValueError):
             p = float("nan")
+        p_values.append(p)
+        base_rows.append(
+            {
+                "hid": str(v.get("hid", "")),
+                "name_cn": str(v.get("name_cn", "")),
+                "p_value": p,
+            }
+        )
+    m = sum(1 for p in p_values if not math.isnan(p))
+    bh_qs = _benjamini_hochberg_q(p_values)
+    rows: list[dict[str, object]] = []
+    for base, p, bh_q in zip(base_rows, p_values, bh_qs, strict=True):
         has_p = not math.isnan(p)
-        row: dict[str, object] = {
-            "hid": str(v.get("hid", "")),
-            "name_cn": str(v.get("name_cn", "")),
-            "p_value": p,
-        }
+        row = dict(base)
         for t in threshs:
             row[f"sig_at_{t}"] = (p < t) if has_p else None
+        row["bonferroni_p"] = min(1.0, p * m) if has_p and m > 0 else float("nan")
+        row["bh_q"] = bh_q
         rows.append(row)
     return pd.DataFrame(rows)
 
@@ -396,7 +439,7 @@ def render_sensitivity_table(
         # Header
         thresh_cols = [f"p<{t}" for t in threshs]
         header = (
-            f"  {'hid':<5}{'p_value':>9}  "
+            f"  {'hid':<5}{'p_value':>9}{'bonf_p':>9}{'bh_q':>9}  "
             + "  ".join(f"{c:>6}" for c in thresh_cols)
         )
         lines.append(header)
@@ -406,9 +449,15 @@ def render_sensitivity_table(
             for t in threshs:
                 flag = row[f"sig_at_{t}"]
                 cells.append("✓" if flag else "—")
+            bonf = row.get("bonferroni_p", float("nan"))
+            bhq = row.get("bh_q", float("nan"))
+            bonf_text = f"{float(bonf):.4f}" if pd.notna(bonf) else "    —"
+            bhq_text = f"{float(bhq):.4f}" if pd.notna(bhq) else "    —"
             lines.append(
                 f"  {str(row['hid']):<5}"
-                f"{float(row['p_value']):>9.4f}  "
+                f"{float(row['p_value']):>9.4f}"
+                f"{bonf_text:>9}"
+                f"{bhq_text:>9}  "
                 + "  ".join(f"{c:>6}" for c in cells)
             )
         # tally: at each threshold, how many sig?
@@ -419,6 +468,13 @@ def render_sensitivity_table(
             total = len(p_gated)
             tally_parts.append(f"p<{t}: {sig_count}/{total} 显著")
         lines.append("  " + " · ".join(tally_parts))
+        if "bh_q" in p_gated.columns:
+            bh_sig = int((p_gated["bh_q"] < 0.10).fillna(False).sum())
+            lines.append(
+                f"  Bonferroni (raw·m): bonf_p<0.10 通过 "
+                f"{int((p_gated['bonferroni_p'] < 0.10).fillna(False).sum())}/{len(p_gated)};"
+                f" Benjamini-Hochberg: bh_q<0.10 通过 {bh_sig}/{len(p_gated)}"
+            )
 
     if not non_p.empty:
         lines.append("")
