@@ -71,6 +71,21 @@ index-inclusion-plan-hs300-rdd-l3 --force
 - `boundary_reference.csv`：每批次 cutoff 附近的参考排名快照
 - `collection_plan.md`：人类可读的采集计划摘要
 
+如果允许联网，可以直接采集中证官网公告附件：
+
+```bash
+index-inclusion-collect-hs300-rdd-l3 --force
+```
+
+它会下载并解析中证官网“定期调整结果”公告附件中的沪深300调入名单与备选名单，生成 `official_candidate_draft.csv`、`online_source_audit.csv` 和 `online_collection_report.md`。确认草稿后写入正式 L3：
+
+```bash
+index-inclusion-prepare-hs300-rdd \
+  --input results/literature/hs300_rdd_l3_collection/official_candidate_draft.csv \
+  --output data/raw/hs300_rdd_candidates.csv \
+  --force
+```
+
 ## 4. 浏览器 L3 工作台
 
 如果更适合在浏览器里操作，启动 dashboard 后打开 `/rdd-l3`。这个工作台和 `prepare-hs300-rdd` 共享一套预检规则：先一键刷新 L3 采集包，并直接预览批次清单 / 正式填报模板 / 边界参考；拿到官方候选名单后再上传预检字段、来源、cutoff 两侧覆盖和处理 / 对照样本，最后确认写入 `data/raw/hs300_rdd_candidates.csv` 并刷新 RDD 状态与 evidence manifest。

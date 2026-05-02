@@ -51,12 +51,36 @@ index-inclusion-plan-hs300-rdd-l3 --force
 
 `boundary_reference.csv` 默认每个批次在 cutoff 左右各列出 15 个最近的 L2 重建候选，方便优先核对正式来源；它只是采集参考，不能直接复制为 L3 的 `running_variable`。
 
+如果允许联网，可以先采集中证官网的正式公告附件：
+
+```bash
+index-inclusion-collect-hs300-rdd-l3 --force
+```
+
+该命令会搜索中证指数官网新闻公告，下载“沪深300、中证500、中证1000 等指数定期调整结果”官方附件，解析其中的“沪深300 指数样本调整名单”和“沪深300 指数备选名单”，并生成：
+
+- `results/literature/hs300_rdd_l3_collection/official_candidate_draft.csv`
+- `results/literature/hs300_rdd_l3_collection/online_source_audit.csv`
+- `results/literature/hs300_rdd_l3_collection/online_collection_report.md`
+
+确认草稿后可以写入正式文件：
+
+```bash
+index-inclusion-prepare-hs300-rdd \
+  --input results/literature/hs300_rdd_l3_collection/official_candidate_draft.csv \
+  --output data/raw/hs300_rdd_candidates.csv \
+  --force
+```
+
+线上采集口径使用官方调入顺序与官方备选排序映射边界序数变量；这比公开重建 L2 更强，但论文正文仍应说明 `running_variable` 是由公告附件序数映射得到，而不是单独发布的市值分数。
+
 ## 正式文件路径
 
 - 真实候选样本：`data/raw/hs300_rdd_candidates.csv`
 - 字段模板：`data/raw/hs300_rdd_candidates.template.csv`
 - 导入命令：`index-inclusion-prepare-hs300-rdd`
 - 采集包命令：`index-inclusion-plan-hs300-rdd-l3`
+- 线上采集命令：`index-inclusion-collect-hs300-rdd-l3`
 
 ## 必需列
 
