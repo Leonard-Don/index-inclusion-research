@@ -146,6 +146,75 @@ def test_matching_controls_keep_event_direction_and_flip_treatment_group() -> No
     assert control["matched_to_event_id"] == treated["event_id"]
 
 
+def test_balance_aware_matching_can_penalize_sector_instead_of_hard_filter() -> None:
+    events = pd.DataFrame(
+        [
+            {
+                "market": "CN",
+                "index_name": "CSI300",
+                "ticker": "CN01",
+                "announce_date": pd.Timestamp("2024-01-08"),
+                "effective_date": pd.Timestamp("2024-01-08"),
+                "event_type": "addition",
+                "sector": "Technology",
+                "inclusion": 1,
+                "treatment_group": 1,
+                "event_id": "event-1",
+            }
+        ]
+    )
+    rows: list[dict[str, object]] = []
+    for ticker, sector, mkt_cap in (
+        ("CN01", "Technology", 1.0e9),
+        ("CN02", "Technology", 1.8e9),
+        ("CN03", "Industrials", 1.0e9),
+    ):
+        for idx, date in enumerate(pd.bdate_range("2024-01-02", periods=6)):
+            rows.append(
+                {
+                    "market": "CN",
+                    "ticker": ticker,
+                    "date": date,
+                    "close": 100 + idx,
+                    "ret": 0.001,
+                    "volume": 1_000_000,
+                    "turnover": 0.01,
+                    "mkt_cap": mkt_cap,
+                    "sector": sector,
+                }
+            )
+    prices = pd.DataFrame(rows)
+
+    exact, _ = build_matched_sample(
+        events,
+        prices,
+        lookback_days=3,
+        num_controls=1,
+        sector_filter_mode="exact_when_available",
+    )
+    penalized, diagnostics = build_matched_sample(
+        events,
+        prices,
+        lookback_days=3,
+        num_controls=1,
+        sector_filter_mode="penalized",
+        distance_weights={
+            "size": 1.0,
+            "pre_event_return": 1.0,
+            "pre_event_volatility": 20.0,
+            "sector_mismatch": 0.5,
+        },
+        directional_penalties={
+            "larger_mkt_cap": 8.0,
+            "lower_pre_event_volatility": 8.0,
+        },
+    )
+
+    assert exact.loc[exact["treatment_group"] == 0, "ticker"].iloc[0] == "CN02"
+    assert penalized.loc[penalized["treatment_group"] == 0, "ticker"].iloc[0] == "CN03"
+    assert bool(diagnostics["sector_relaxed"].iloc[0]) is True
+
+
 def test_event_study_and_regression_dataset_outputs() -> None:
     events = _sample_events()
     events["announce_date"] = pd.to_datetime(events["announce_date"])

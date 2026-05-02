@@ -10,6 +10,16 @@ defaults:
     num_controls: 3
     conflict_window_days: 30
     reference_date_column: announce_date
+    smd_threshold: 0.25
+    sector_filter_mode: penalized
+    distance_weights:
+      size: 1.0
+      pre_event_return: 1.0
+      pre_event_volatility: 20.0
+      sector_mismatch: 0.5
+    directional_penalties:
+      larger_mkt_cap: 8.0
+      lower_pre_event_volatility: 8.0
 
 markets:
   CN:
