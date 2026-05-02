@@ -21,6 +21,7 @@ REAL_EVENT_PANEL = ROOT / "data" / "processed" / "real_event_panel.csv"
 REAL_MATCHED_EVENT_PANEL = ROOT / "data" / "processed" / "real_matched_event_panel.csv"
 REAL_EVENTS_CLEAN = ROOT / "data" / "processed" / "real_events_clean.csv"
 WEIGHT_CHANGE_PATH = ROOT / "data" / "processed" / "hs300_weight_change.csv"
+PAPER_VERDICT_PATH = ROOT / "docs" / "paper_outline_verdicts.md"
 
 APPEND_MARKER = "## 六、美股 vs A股 不对称"
 
@@ -118,6 +119,7 @@ def run_cma_pipeline(
     tables_dir: Path = REAL_TABLES_DIR,
     figures_dir: Path = REAL_FIGURES_DIR,
     research_summary_path: Path | None = None,
+    paper_verdict_path: Path | None = None,
     aum_path: Path | None = None,
     significance_level: float | None = None,
 ) -> dict[str, object]:
@@ -221,7 +223,12 @@ def run_cma_pipeline(
         previous_path.write_bytes(verdicts_csv_path.read_bytes())
     hypothesis_verdicts.to_csv(verdicts_csv_path, index=False)
     verdicts.export_hypothesis_verdicts_tex(hypothesis_verdicts, output_dir=tables_dir)
-    paper_verdict_path = ROOT / "docs" / "paper_outline_verdicts.md"
+    if paper_verdict_path is None:
+        paper_verdict_path = (
+            PAPER_VERDICT_PATH
+            if tables_dir.resolve() == REAL_TABLES_DIR.resolve()
+            else tables_dir / "paper_outline_verdicts.md"
+        )
     event_counts_path = tables_dir / "event_counts_by_year.csv"
     paper_event_counts = (
         pd.read_csv(event_counts_path) if event_counts_path.exists() else None
@@ -247,6 +254,7 @@ def run_cma_pipeline(
     return {
         "tables_dir": tables_dir,
         "figures_dir": figures_dir,
+        "paper_verdict_path": paper_verdict_path,
         "tables_count": sum(1 for _ in tables_dir.glob("cma_*")),
         "figures_count": sum(1 for _ in figures_dir.glob("cma_*.png")),
     }
