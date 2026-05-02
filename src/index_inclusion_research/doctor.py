@@ -37,6 +37,7 @@ DEFAULT_EVENT_STUDY_SUMMARY_CSV = DEFAULT_RESULTS_DIR / "event_study_summary.csv
 DEFAULT_WEIGHT_CHANGE_CSV = ROOT / "data" / "processed" / "hs300_weight_change.csv"
 DEFAULT_HETEROGENEITY_SECTOR_CSV = DEFAULT_RESULTS_DIR / "cma_heterogeneity_sector.csv"
 DEFAULT_MATCH_BALANCE_CSV = ROOT / "results" / "real_regressions" / "match_balance.csv"
+DEFAULT_MATCH_ROBUSTNESS_GRID_CSV = ROOT / "results" / "real_regressions" / "match_robustness_grid.csv"
 
 EXPECTED_HIDS: tuple[str, ...] = ("H1", "H2", "H3", "H4", "H5", "H6", "H7")
 EXPECTED_CMA_OUTPUTS: tuple[str, ...] = (
@@ -798,6 +799,85 @@ def check_matched_sample_balance(
     )
 
 
+def check_match_robustness_grid(
+    *,
+    csv_path: Path = DEFAULT_MATCH_ROBUSTNESS_GRID_CSV,
+    expected_min_specs: int = 3,
+) -> CheckResult:
+    """Confirm the local matched-sample robustness grid is available."""
+    if not csv_path.exists():
+        return CheckResult(
+            name="match_robustness_grid",
+            status="warn",
+            message=f"match robustness grid not found: {_relative_label(csv_path)}",
+            fix="Run `index-inclusion-match-robustness` to refresh the local-only grid.",
+        )
+    try:
+        grid = pd.read_csv(csv_path)
+    except (OSError, ValueError) as exc:
+        return CheckResult(
+            name="match_robustness_grid",
+            status="fail",
+            message=f"match robustness grid is unreadable: {exc}",
+            fix="Regenerate it with `index-inclusion-match-robustness`.",
+        )
+    if grid.empty:
+        return CheckResult(
+            name="match_robustness_grid",
+            status="warn",
+            message="match robustness grid is empty.",
+            fix="Confirm the matched sample and local prices exist, then re-run `index-inclusion-match-robustness`.",
+        )
+    required = {"spec_id", "over_threshold_covariates", "max_abs_smd"}
+    missing = required - set(grid.columns)
+    if missing:
+        return CheckResult(
+            name="match_robustness_grid",
+            status="fail",
+            message=f"match robustness grid is missing column(s): {sorted(missing)}.",
+            fix="Regenerate it with the current `index-inclusion-match-robustness` CLI.",
+        )
+
+    over = pd.to_numeric(grid["over_threshold_covariates"], errors="coerce")
+    max_abs = pd.to_numeric(grid["max_abs_smd"], errors="coerce")
+    ranked = grid.assign(
+        _over_sort=over.fillna(float("inf")),
+        _max_abs_sort=max_abs.fillna(float("inf")),
+    ).sort_values(["_over_sort", "_max_abs_sort", "spec_id"], ignore_index=True)
+    best = ranked.iloc[0]
+    best_over = int(float(best["_over_sort"])) if float(best["_over_sort"]) < float("inf") else 0
+    best_max = (
+        float(best["_max_abs_sort"])
+        if float(best["_max_abs_sort"]) < float("inf")
+        else float("nan")
+    )
+    details: list[str] = []
+    if best_over:
+        details.append(
+            f"best spec still has {best_over} covariate(s) over threshold; matched_sample_balance remains the quality gate"
+        )
+    if len(grid) < expected_min_specs:
+        return CheckResult(
+            name="match_robustness_grid",
+            status="warn",
+            message=(
+                f"match robustness grid has {len(grid)} spec(s), expected at least "
+                f"{expected_min_specs}."
+            ),
+            fix="Re-run with multiple `--control-ratios` or `--reference-date-columns`.",
+            details=tuple(details),
+        )
+    return CheckResult(
+        name="match_robustness_grid",
+        status="pass",
+        message=(
+            f"{len(grid)} local robustness spec(s) available; best={best['spec_id']} "
+            f"(over={best_over}, max|SMD|={best_max:.3f})."
+        ),
+        details=tuple(details),
+    )
+
+
 DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_hypothesis_paper_ids_resolve,
     check_verdicts_csv_health,
@@ -809,6 +889,7 @@ DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_h7_cn_sector_readiness,
     check_rdd_l3_sample_readiness,
     check_matched_sample_balance,
+    check_match_robustness_grid,
     check_chart_builders_register,
     check_console_scripts_importable,
 )
