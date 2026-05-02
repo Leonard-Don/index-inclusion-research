@@ -21,6 +21,7 @@ REAL_EVENT_PANEL = ROOT / "data" / "processed" / "real_event_panel.csv"
 REAL_MATCHED_EVENT_PANEL = ROOT / "data" / "processed" / "real_matched_event_panel.csv"
 REAL_EVENTS_CLEAN = ROOT / "data" / "processed" / "real_events_clean.csv"
 WEIGHT_CHANGE_PATH = ROOT / "data" / "processed" / "hs300_weight_change.csv"
+DEFAULT_PASSIVE_AUM_PATH = ROOT / "data" / "raw" / "passive_aum.csv"
 PAPER_VERDICT_PATH = ROOT / "docs" / "paper_outline_verdicts.md"
 
 APPEND_MARKER = "## 六、美股 vs A股 不对称"
@@ -186,8 +187,9 @@ def run_cma_pipeline(
     break_df = time_series.summarize_structural_break(rolling)
     time_series.export_time_series_tables(rolling, break_df, output_dir=tables_dir)
     aum_frame = None
-    if aum_path is not None and Path(aum_path).exists():
-        aum_frame = pd.read_csv(aum_path)
+    resolved_aum_path = Path(aum_path) if aum_path is not None else DEFAULT_PASSIVE_AUM_PATH
+    if resolved_aum_path.exists():
+        aum_frame = pd.read_csv(resolved_aum_path)
     time_series.render_rolling_figure(
         rolling, output_dir=figures_dir, aum_frame=aum_frame
     )

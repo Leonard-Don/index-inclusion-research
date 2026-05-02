@@ -13,6 +13,7 @@ import pandas as pd
 
 from index_inclusion_research.compute_h6_weight_change import (
     attach_market_caps,
+    build_local_market_cap_fetcher,
     compute_weight_change_table,
     compute_weight_proxy,
     export_weight_change_table,
@@ -124,6 +125,43 @@ def test_compute_weight_change_table_end_to_end() -> None:
     assert abs(out["weight_proxy"].sum() - 1.0) < 1e-9
 
 
+def test_build_local_market_cap_fetcher_uses_latest_pre_announce_row(
+    tmp_path: Path,
+) -> None:
+    prices = pd.DataFrame(
+        [
+            {"market": "CN", "ticker": "1", "date": "2022-05-20", "mkt_cap": 90.0},
+            {"market": "CN", "ticker": "000001", "date": "2022-05-26", "mkt_cap": 100.0},
+            {"market": "CN", "ticker": "000001", "date": "2022-05-30", "mkt_cap": 999.0},
+            {"market": "US", "ticker": "ABC", "date": "2022-05-26", "mkt_cap": 50.0},
+        ]
+    )
+    path = tmp_path / "real_prices.csv"
+    prices.to_csv(path, index=False)
+
+    fetcher = build_local_market_cap_fetcher(path, lookback_days=10)
+
+    assert fetcher("CN", "000001", "2022-05-27") == 100.0
+    assert fetcher("CN", "1", "2022-05-27") == 100.0
+    assert fetcher("US", "ABC", "2022-05-27") == 50.0
+
+
+def test_build_local_market_cap_fetcher_respects_lookback_window(
+    tmp_path: Path,
+) -> None:
+    prices = pd.DataFrame(
+        [
+            {"market": "CN", "ticker": "000001", "date": "2022-05-01", "mkt_cap": 100.0},
+        ]
+    )
+    path = tmp_path / "real_prices.csv"
+    prices.to_csv(path, index=False)
+
+    fetcher = build_local_market_cap_fetcher(path, lookback_days=5)
+
+    assert fetcher("CN", "000001", "2022-05-27") is None
+
+
 # ── export ───────────────────────────────────────────────────────────
 
 
@@ -161,3 +199,34 @@ def test_main_refuses_overwrite_without_force(tmp_path: Path) -> None:
     rc = main(["--input", str(input_path), "--output", str(output_path)])
     assert rc == 1
     assert "existing" in output_path.read_text()
+
+
+def test_main_uses_local_prices_by_default(tmp_path: Path) -> None:
+    input_path = tmp_path / "candidates.csv"
+    _candidates_fixture().to_csv(input_path, index=False)
+    prices = pd.DataFrame(
+        [
+            {"market": "CN", "ticker": "000001", "date": "2022-05-26", "mkt_cap": 60.0},
+            {"market": "CN", "ticker": "000002", "date": "2022-05-26", "mkt_cap": 30.0},
+            {"market": "CN", "ticker": "000003", "date": "2022-05-26", "mkt_cap": 10.0},
+        ]
+    )
+    prices_path = tmp_path / "real_prices.csv"
+    prices.to_csv(prices_path, index=False)
+    output_path = tmp_path / "out.csv"
+
+    rc = main(
+        [
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--local-prices",
+            str(prices_path),
+        ]
+    )
+
+    assert rc == 0
+    out = pd.read_csv(output_path)
+    assert len(out) == 3
+    assert abs(out["weight_proxy"].sum() - 1.0) < 1e-9

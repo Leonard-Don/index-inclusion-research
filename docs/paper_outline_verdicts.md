@@ -1,6 +1,6 @@
 ## 假说裁决叙述
 
-基于跨市场不对称(CMA)pipeline 自动产出,7 条机制假说的当前裁决分布: **3 项部分支持 / 3 项证据不足 / 1 项待补数据**。 详见 `results/real_tables/cma_hypothesis_verdicts.csv`。
+基于跨市场不对称(CMA)pipeline 自动产出,7 条机制假说的当前裁决分布: **1 项支持 / 1 项部分支持 / 5 项证据不足**。 详见 `results/real_tables/cma_hypothesis_verdicts.csv`。
 
 ### 样本概述
 
@@ -21,9 +21,10 @@
 CN-US pre-runup 差异 0.50% 在 bootstrap 下不显著 (p=0.640, CI95=[-1.65%, 2.74%])，方向偏 CN 但跨市场差异口径无法归因为信息泄露。
 _细节_: CN pre-runup=3.09%; US pre-runup=2.59%; diff=0.50%, bootstrap p=0.640, CI95=[-1.65%, 2.74%]
 
-### H2 · 被动基金 AUM 差异 —— 待补数据(可信度:低)
-当前有 rolling CAR，但缺少被动 AUM 年度数据，不能检验 AUM 上升与生效日效应衰减的关系。
-_细节_: NA
+### H2 · 被动基金 AUM 差异 —— 证据不足(可信度:低)
+**US AUM ratio = 13.481**, n = 12
+AUM 与 US 生效日 rolling CAR 的方向关系不稳定，当前不支持 H2。
+_细节_: US AUM 0.99→13.37; US effective rolling CAR 0.04%→0.05%
 
 ### H3 · 散户 vs 机构结构 —— 部分支持(可信度:中)
 **双通道命中率 = 0.500**, n = 4
@@ -40,21 +41,17 @@ _细节_: CN gap_drift=0.76%; US gap_drift=-0.33%; regression cn_coef=0.61%, p=0
 CN 事件级涨跌停命中率对 announce-day CAR 不具显著预测力 (limit_coef=0.0757, p=0.213, n=936)，H5 缺乏支持。
 _细节_: CN limit_coef=0.0757, p=0.213, R²=0.006, n=936
 
-### H6 · 指数权重可预测性 —— 部分支持(可信度:低)
-**Q1Q2−Q4Q5 spread = 1.172**, n = 118
-CN 小市值 cell 的不对称指数高于大市值，方向符合权重难预判的 proxy 解释。
-_细节_: CN size Q1-Q2 avg=1.11; Q4-Q5 avg=-0.07
+### H6 · 指数权重可预测性 —— 证据不足(可信度:中)
+**heavy−light spread = -0.019**, n = 67
+CN 重权重 announce_jump 并不明显高于轻权重 (+1.29% vs +3.20%,spread=-1.90%),H6 不被支持。
+_细节_: matched=67, median weight=0.0039, heavy announce_jump=+1.29%, light=+3.20%, spread=-1.90%
 
-### H7 · 行业结构差异 —— 部分支持(可信度:低)
+### H7 · 行业结构差异 —— 支持(可信度:中)
 **US sector spread = 5.954**, n = 187
-US 行业间 asymmetry_index spread = 5.95(Materials +3.90 vs Real Estate -2.05),行业结构在 inclusion 效应中显著起作用。CN 状态:待补 sector。
-_细节_: US eligible sectors=8, max=+3.90(Materials), min=-2.05(Real Estate), spread=5.95, n=187; CN sector 未填充
+US 行业间 asymmetry_index spread = 5.95(Materials +3.90 vs Real Estate -2.05),行业结构在 inclusion 效应中显著起作用。CN 状态:已分行业。
+_细节_: US eligible sectors=8, max=+3.90(Materials), min=-2.05(Real Estate), spread=5.95, n=187; CN sectors=35
 
 ### 限制与稳健性补强方向
-
-**当前 verdicts 标注 待补数据 的项**(下游研究可补齐再重跑):
-
-- H2 被动基金 AUM 差异: 补充 data/raw/passive_aum.csv（market, year, aum_trillion）后重跑 CMA。
 
 **通用稳健性补强**:
 

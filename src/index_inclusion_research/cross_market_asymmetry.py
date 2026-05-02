@@ -50,7 +50,7 @@ def main(argv: list[str] | None = None) -> None:
         default=None,
         help=(
             "Optional passive AUM overlay CSV (columns: market, year, aum_trillion). "
-            "If absent, AUM overlay is skipped."
+            "If absent, data/raw/passive_aum.csv is used when present."
         ),
     )
     parser.add_argument(

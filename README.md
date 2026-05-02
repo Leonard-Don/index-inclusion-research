@@ -29,12 +29,12 @@
 | 假说 | 名称 | 裁决 | 头条指标 | 主线 |
 |---|---|---|---|---|
 | H1 | 信息泄露与预运行 | 证据不足 | bootstrap p = 0.640 (n=436) | 制度识别 |
-| H2 | 被动基金 AUM 差异 | 待补数据 | — | 需求曲线 |
+| H2 | 被动基金 AUM 差异 | 证据不足 | US AUM ratio = 13.48 (n=12) | 需求曲线 |
 | H3 | 散户 vs 机构结构 | 部分支持 | 双通道命中率 = 0.500 | 短期价格压力 |
 | H4 | 卖空约束 | 证据不足 | regression p = 0.537 (n=436) | 制度识别 |
 | H5 | 涨跌停限制 | 证据不足 | limit_coef p = 0.213 (n=936) | 制度识别 |
-| H6 | 指数权重可预测性 | 部分支持 | Q1Q2−Q4Q5 spread = 1.17 (n=118) | 需求曲线 |
-| H7 | 行业结构差异 | 部分支持 | US sector spread = 5.95 (n=187) | 制度识别 |
+| H6 | 指数权重可预测性 | 证据不足 | heavy−light spread = -0.019 (n=67) | 需求曲线 |
+| H7 | 行业结构差异 | 支持 | US sector spread = 5.95 (n=187) | 制度识别 |
 
 数据可重现:`make rebuild` 跑 10 步流水线刷新所有产出。详见 [results/real_tables/cma_hypothesis_verdicts.csv](results/real_tables/cma_hypothesis_verdicts.csv) 和 [docs/paper_outline_verdicts.md](docs/paper_outline_verdicts.md)。
 
@@ -333,6 +333,13 @@ index-inclusion-download-real-data
 
 ```bash
 python3 -m index_inclusion_research.real_data
+```
+
+下载完成后可以回填 A 股行业标签，并用本地价格面板重建 H6 权重 proxy：
+
+```bash
+python3 -m index_inclusion_research.enrich_cn_sectors --force
+index-inclusion-compute-h6-weight-change --force
 ```
 
 真实数据说明见 [docs/real_data_notes.md](docs/real_data_notes.md)。
@@ -718,7 +725,11 @@ index-inclusion-cma
 index-inclusion-cma --tex-only
 ```
 
-需要叠加被动基金 AUM 到时序图(同时解锁 H2 verdict):准备 `data/raw/passive_aum.csv`(列:`market, year, aum_trillion`)后
+需要叠加被动基金 AUM 到时序图(同时解锁 H2 verdict):默认会自动读取
+`data/raw/passive_aum.csv`(列:`market, year, aum_trillion`)；当前文件使用 FRED /
+Federal Reserve Z.1 的 US ETF 总资产序列
+[`BOGZ1FL564090005A`](https://fred.stlouisfed.org/series/BOGZ1FL564090005A)
+作为 US AUM proxy。若要覆盖成别的 AUM 文件：
 
 ```bash
 index-inclusion-cma --aum data/raw/passive_aum.csv

@@ -196,8 +196,12 @@ def _h2(
             "US rolling CAR 或 US AUM 年度序列不足，无法判断趋势。",
             "至少准备两个年份以上的 US 被动 AUM，并保留 rolling CAR 输出。",
         )
-    aum_up = float(us_aum["aum_trillion"].iloc[-1]) > float(us_aum["aum_trillion"].iloc[0])
-    effect_down = float(us_roll["car_mean"].iloc[-1]) < float(us_roll["car_mean"].iloc[0])
+    first_aum = float(us_aum["aum_trillion"].iloc[0])
+    last_aum = float(us_aum["aum_trillion"].iloc[-1])
+    first_car = float(us_roll["car_mean"].iloc[0])
+    last_car = float(us_roll["car_mean"].iloc[-1])
+    aum_up = last_aum > first_aum
+    effect_down = last_car < first_car
     if aum_up and effect_down:
         verdict = "部分支持"
         confidence = "中"
@@ -212,10 +216,13 @@ def _h2(
         confidence=confidence,
         evidence_summary=summary,
         metric_snapshot=(
-            f"US AUM {float(us_aum['aum_trillion'].iloc[0]):.2f}→{float(us_aum['aum_trillion'].iloc[-1]):.2f}; "
-            f"US effective rolling CAR {_fmt_pct(float(us_roll['car_mean'].iloc[0]))}→{_fmt_pct(float(us_roll['car_mean'].iloc[-1]))}"
+            f"US AUM {first_aum:.2f}→{last_aum:.2f}; "
+            f"US effective rolling CAR {_fmt_pct(first_car)}→{_fmt_pct(last_car)}"
         ),
         next_step="用年度面板回归替代趋势首尾比较，并加入 CN AUM 作为对照。",
+        key_label="US AUM ratio",
+        key_value=last_aum / first_aum if first_aum > 0 else float("nan"),
+        n_obs=int(len(us_roll)),
     )
 
 
@@ -709,7 +716,8 @@ def _h6_from_weight_change(
     """H6 verdict path that uses real weight_change instead of size proxy.
 
     Joins the per-event ``weight_proxy`` (from compute_h6_weight_change)
-    with the gap event panel on (market, ticker), splits by the median
+    with the gap event panel on ticker + announce_date when available,
+    splits by the median
     weight_proxy within CN events, and compares the mean
     ``announce_jump`` between the heavy-weight and light-weight groups.
     H6 predicts heavy-weight events should show LARGER announce_jump
@@ -729,8 +737,25 @@ def _h6_from_weight_change(
             "CN 没有 weight_change 或 gap_event_level 行，无法用真实权重替代 size proxy。",
             "重跑 index-inclusion-compute-h6-weight-change 取 CN 流通市值后再做。",
         )
+    for frame in (cn_weights, cn_events):
+        frame["ticker"] = frame["ticker"].astype(str).str.strip().str.zfill(6)
+        if "announce_date" in frame.columns:
+            frame["announce_date"] = (
+                pd.to_datetime(frame["announce_date"], errors="coerce")
+                .dt.normalize()
+                .dt.strftime("%Y-%m-%d")
+            )
+    join_cols = ["ticker"]
+    if {"announce_date"}.issubset(cn_weights.columns) and {"announce_date"}.issubset(
+        cn_events.columns
+    ):
+        join_cols.append("announce_date")
+    weight_cols = [*join_cols, "weight_proxy"]
+    cn_weights_for_join = cn_weights[weight_cols].drop_duplicates(
+        subset=join_cols, keep="last"
+    )
     merged = cn_events.merge(
-        cn_weights[["ticker", "weight_proxy"]], on="ticker", how="inner"
+        cn_weights_for_join, on=join_cols, how="inner"
     ).dropna(subset=["weight_proxy", "announce_jump"])
     if len(merged) < 6:
         return _make_verdict(

@@ -162,6 +162,7 @@ def test_python_module_fallback_targets_are_directly_runnable() -> None:
         "reconstruct_hs300_rdd_candidates.py",
         "sample_data.py",
         "real_data.py",
+        "enrich_cn_sectors.py",
         "figures_tables.py",
         "research_report.py",
     ]

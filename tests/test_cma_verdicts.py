@@ -165,6 +165,42 @@ def test_h6_uses_weight_change_when_provided() -> None:
     assert h6["key_label"] == "heavy−light spread"
 
 
+def test_h6_weight_change_joins_on_announce_date_when_present() -> None:
+    weight_change = pd.DataFrame(
+        [
+            {"market": "CN", "ticker": "000001", "announce_date": "2020-01-01", "weight_proxy": 0.90},
+            {"market": "CN", "ticker": "000002", "announce_date": "2020-01-01", "weight_proxy": 0.80},
+            {"market": "CN", "ticker": "000003", "announce_date": "2020-01-01", "weight_proxy": 0.70},
+            {"market": "CN", "ticker": "000001", "announce_date": "2020-06-01", "weight_proxy": 0.003},
+            {"market": "CN", "ticker": "000002", "announce_date": "2020-06-01", "weight_proxy": 0.002},
+            {"market": "CN", "ticker": "000003", "announce_date": "2020-06-01", "weight_proxy": 0.001},
+        ]
+    )
+    gap_event_level = pd.DataFrame(
+        [
+            {"market": "CN", "ticker": "000001", "announce_date": "2020-01-01", "announce_jump": 0.03},
+            {"market": "CN", "ticker": "000002", "announce_date": "2020-01-01", "announce_jump": 0.03},
+            {"market": "CN", "ticker": "000003", "announce_date": "2020-01-01", "announce_jump": 0.03},
+            {"market": "CN", "ticker": "000001", "announce_date": "2020-06-01", "announce_jump": 0.005},
+            {"market": "CN", "ticker": "000002", "announce_date": "2020-06-01", "announce_jump": 0.005},
+            {"market": "CN", "ticker": "000003", "announce_date": "2020-06-01", "announce_jump": 0.005},
+        ]
+    )
+
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+        weight_change=weight_change,
+        gap_event_level=gap_event_level,
+    )
+
+    h6 = verdicts.set_index("hid").loc["H6"]
+    assert int(h6["n_obs"]) == 6
+    assert "matched=6" in h6["metric_snapshot"]
+
+
 def test_h6_falls_back_to_size_proxy_when_no_weight_change() -> None:
     verdicts = build_hypothesis_verdicts(
         gap_summary=_gap_summary(),
@@ -220,6 +256,8 @@ def test_h2_uses_aum_when_available() -> None:
     h2 = verdicts.set_index("hid").loc["H2"]
     assert h2["verdict"] == "部分支持"
     assert "US AUM" in h2["metric_snapshot"]
+    assert h2["key_label"] == "US AUM ratio"
+    assert abs(float(h2["key_value"]) - 3.5) < 1e-9
 
 
 def test_verdict_rows_carry_paper_ids_from_hypothesis_registry() -> None:

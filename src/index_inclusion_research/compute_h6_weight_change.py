@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_INPUT = ROOT / "data" / "raw" / "hs300_rdd_candidates.reconstructed.csv"
 DEFAULT_OUTPUT = ROOT / "data" / "processed" / "hs300_weight_change.csv"
+DEFAULT_LOCAL_PRICES = ROOT / "data" / "raw" / "real_prices.csv"
 
 
 # ── pure functions ───────────────────────────────────────────────────
@@ -39,6 +40,16 @@ DEFAULT_OUTPUT = ROOT / "data" / "processed" / "hs300_weight_change.csv"
 # failure. Production wiring uses akshare for CN and yfinance for US;
 # tests inject a closure backed by a fixture dict.
 MarketCapFetcher = Callable[[str, str, str], float | None]
+
+
+def _normalise_key(market: object, ticker: object) -> tuple[str, str]:
+    market_text = str(market).strip().upper()
+    ticker_text = str(ticker).strip()
+    if ticker_text.endswith(".0"):
+        ticker_text = ticker_text[:-2]
+    if market_text == "CN":
+        ticker_text = ticker_text.zfill(6)
+    return market_text, ticker_text
 
 
 def attach_market_caps(
@@ -116,6 +127,63 @@ def compute_weight_change_table(
     """End-to-end pipeline: candidates + fetcher → weight_change frame."""
     enriched = attach_market_caps(candidates, fetcher=fetcher)
     return compute_weight_proxy(enriched)
+
+
+def build_local_market_cap_fetcher(
+    prices_path: str | Path = DEFAULT_LOCAL_PRICES,
+    *,
+    lookback_days: int = 10,
+) -> MarketCapFetcher:
+    """Build a ``MarketCapFetcher`` from a local real_prices.csv file.
+
+    The fetcher returns the latest positive ``mkt_cap`` observation at or
+    before ``announce_date`` within ``lookback_days``. This keeps the H6
+    reconstruction reproducible from the project-local real price panel
+    instead of re-querying one external API call per candidate.
+    """
+    path = Path(prices_path)
+    required = ["market", "ticker", "date", "mkt_cap"]
+    prices = pd.read_csv(path, usecols=required, dtype={"ticker": str})
+    prices["market"] = prices["market"].astype(str).str.strip().str.upper()
+    prices["ticker"] = prices["ticker"].astype(str).str.strip()
+    cn_mask = prices["market"] == "CN"
+    prices.loc[cn_mask, "ticker"] = prices.loc[cn_mask, "ticker"].str.zfill(6)
+    prices["date"] = pd.to_datetime(prices["date"], errors="coerce").dt.normalize()
+    prices["mkt_cap"] = pd.to_numeric(prices["mkt_cap"], errors="coerce")
+    prices = prices.loc[
+        prices["date"].notna()
+        & prices["mkt_cap"].notna()
+        & (prices["mkt_cap"] > 0)
+    ].copy()
+    prices = prices.sort_values(["market", "ticker", "date"])
+
+    lookup: dict[tuple[str, str], tuple[pd.DatetimeIndex, list[float]]] = {}
+    for (market, ticker), group in prices.groupby(["market", "ticker"], sort=False):
+        lookup[(str(market), str(ticker))] = (
+            pd.DatetimeIndex(group["date"]),
+            [float(value) for value in group["mkt_cap"]],
+        )
+
+    lookback_delta = pd.Timedelta(days=lookback_days)
+
+    def _fetch(market: str, ticker: str, announce_date: str) -> float | None:
+        key = _normalise_key(market, ticker)
+        entry = lookup.get(key)
+        if entry is None:
+            return None
+        dates, values = entry
+        target = pd.to_datetime(announce_date, errors="coerce")
+        if pd.isna(target):
+            return None
+        target = pd.Timestamp(target).normalize()
+        position = dates.searchsorted(target, side="right") - 1
+        if position < 0:
+            return None
+        if dates[position] < target - lookback_delta:
+            return None
+        return values[position]
+
+    return _fetch
 
 
 def export_weight_change_table(
@@ -222,6 +290,30 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Overwrite an existing output file.",
     )
     parser.add_argument(
+        "--local-prices",
+        default=str(DEFAULT_LOCAL_PRICES),
+        help=(
+            "Local real_prices.csv used for market-cap lookup before falling "
+            f"back to live APIs (default: {DEFAULT_LOCAL_PRICES})."
+        ),
+    )
+    parser.add_argument(
+        "--no-local-prices",
+        action="store_true",
+        help="Skip the local real_prices.csv lookup and use live API fetchers.",
+    )
+    parser.add_argument(
+        "--fallback-network",
+        action="store_true",
+        help="When local prices miss a row, fall back to akshare/yfinance.",
+    )
+    parser.add_argument(
+        "--lookback-days",
+        type=int,
+        default=10,
+        help="Maximum days before announce_date to accept a local mkt_cap row.",
+    )
+    parser.add_argument(
         "--limit", type=int, default=None,
         help="Optional limit on number of candidate rows to process (for smoke runs).",
     )
@@ -242,16 +334,46 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
 
-    candidates = pd.read_csv(input_path)
+    candidates = pd.read_csv(input_path, dtype={"ticker": str})
     if args.limit:
         candidates = candidates.head(args.limit)
+
+    fetcher: MarketCapFetcher = production_market_cap_fetcher
+    source_message = "live akshare (CN) + yfinance (US)"
+    local_prices_path = Path(args.local_prices)
+    if not args.no_local_prices and local_prices_path.exists():
+        local_fetcher = build_local_market_cap_fetcher(
+            local_prices_path, lookback_days=args.lookback_days
+        )
+        source_message = (
+            f"local prices {local_prices_path} "
+            f"(lookback={args.lookback_days}d)"
+        )
+        if args.fallback_network:
+            source_message += " with live API fallback"
+
+            def _fetch_with_fallback(
+                market: str, ticker: str, announce_date: str
+            ) -> float | None:
+                local_value = local_fetcher(market, ticker, announce_date)
+                if local_value is not None:
+                    return local_value
+                return production_market_cap_fetcher(market, ticker, announce_date)
+
+            fetcher = _fetch_with_fallback
+        else:
+            fetcher = local_fetcher
+    elif not args.no_local_prices:
+        print(
+            f"[compute-h6-weight-change] local prices not found: {local_prices_path}; "
+            "falling back to live APIs."
+        )
+
     print(
         f"[compute-h6-weight-change] processing {len(candidates)} rows; "
-        "this hits akshare (CN) + yfinance (US) sequentially and may take minutes."
+        f"market caps from {source_message}."
     )
-    weight_frame = compute_weight_change_table(
-        candidates, fetcher=production_market_cap_fetcher
-    )
+    weight_frame = compute_weight_change_table(candidates, fetcher=fetcher)
     if weight_frame.empty:
         print(
             "[compute-h6-weight-change] no rows survived market-cap fetch — "
