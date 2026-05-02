@@ -13,8 +13,11 @@ from index_inclusion_research.doctor import (
     CheckResult,
     check_chart_builders_register,
     check_console_scripts_importable,
+    check_h6_weight_change_readiness,
+    check_h7_cn_sector_readiness,
     check_hypothesis_paper_ids_resolve,
     check_p_gated_verdict_sensitivity,
+    check_paper_verdict_section_synced,
     check_pending_data_verdicts,
     check_rdd_l3_sample_readiness,
     check_results_directory_populated,
@@ -293,6 +296,152 @@ def test_check_results_directory_populated_passes_when_complete(tmp_path: Path) 
         expected_files=("alpha.csv", "beta.csv"),
     )
     assert result.status == "pass"
+
+
+def test_check_paper_verdict_section_synced_warns_when_stale(tmp_path: Path) -> None:
+    verdicts = pd.DataFrame(
+        [
+            {
+                "hid": "H1",
+                "name_cn": "信息泄露",
+                "verdict": "证据不足",
+                "confidence": "中",
+                "evidence_summary": "old",
+                "metric_snapshot": "m",
+                "key_label": "p",
+                "key_value": 0.5,
+                "n_obs": 10,
+            }
+        ]
+    )
+    csv = tmp_path / "verdicts.csv"
+    doc = tmp_path / "paper_outline_verdicts.md"
+    verdicts.to_csv(csv, index=False)
+    doc.write_text("## 假说裁决叙述\n\nstale\n")
+
+    result = check_paper_verdict_section_synced(
+        csv_path=csv,
+        doc_path=doc,
+        event_counts_path=tmp_path / "missing_counts.csv",
+    )
+
+    assert result.status == "warn"
+    assert "out of sync" in result.message
+
+
+def test_check_paper_verdict_section_synced_passes_when_rendered(
+    tmp_path: Path,
+) -> None:
+    from index_inclusion_research.analysis.cross_market_asymmetry.verdicts import (
+        render_paper_verdict_section,
+    )
+
+    verdicts = pd.DataFrame(
+        [
+            {
+                "hid": "H1",
+                "name_cn": "信息泄露",
+                "verdict": "证据不足",
+                "confidence": "中",
+                "evidence_summary": "evidence",
+                "metric_snapshot": "details",
+                "key_label": "p",
+                "key_value": 0.5,
+                "n_obs": 10,
+            }
+        ]
+    )
+    csv = tmp_path / "verdicts.csv"
+    doc = tmp_path / "paper_outline_verdicts.md"
+    verdicts.to_csv(csv, index=False)
+    doc.write_text(render_paper_verdict_section(verdicts))
+
+    result = check_paper_verdict_section_synced(
+        csv_path=csv,
+        doc_path=doc,
+        event_counts_path=tmp_path / "missing_counts.csv",
+    )
+
+    assert result.status == "pass"
+
+
+def test_check_h6_weight_change_readiness_warns_when_missing(
+    tmp_path: Path,
+) -> None:
+    verdicts = tmp_path / "verdicts.csv"
+    pd.DataFrame(
+        [
+            {
+                "hid": "H6",
+                "key_label": "Q1Q2-Q4Q5 spread",
+                "key_value": 1.23,
+            }
+        ]
+    ).to_csv(verdicts, index=False)
+
+    result = check_h6_weight_change_readiness(
+        weight_change_path=tmp_path / "missing_weight.csv",
+        verdicts_csv_path=verdicts,
+    )
+
+    assert result.status == "warn"
+    assert "size heterogeneity as a proxy" in result.message
+    assert any("current H6 headline" in detail for detail in result.details)
+
+
+def test_check_h6_weight_change_readiness_passes_with_cn_weight_proxy(
+    tmp_path: Path,
+) -> None:
+    csv = tmp_path / "hs300_weight_change.csv"
+    pd.DataFrame(
+        [
+            {"market": "CN", "ticker": "000001", "weight_proxy": 0.01},
+            {"market": "US", "ticker": "AAPL", "weight_proxy": 0.02},
+        ]
+    ).to_csv(csv, index=False)
+
+    result = check_h6_weight_change_readiness(
+        weight_change_path=csv,
+        verdicts_csv_path=tmp_path / "missing_verdicts.csv",
+    )
+
+    assert result.status == "pass"
+    assert "CN weight_change" in result.message
+
+
+def test_check_h7_cn_sector_readiness_warns_when_cn_only_unknown(
+    tmp_path: Path,
+) -> None:
+    csv = tmp_path / "sector.csv"
+    pd.DataFrame(
+        [
+            {"market": "CN", "bucket": "Unknown", "n_events": 118},
+            {"market": "US", "bucket": "Tech", "n_events": 20},
+        ]
+    ).to_csv(csv, index=False)
+
+    result = check_h7_cn_sector_readiness(sector_csv_path=csv)
+
+    assert result.status == "warn"
+    assert "US-only" in result.message
+    assert "CN Unknown events: 118" in result.details
+
+
+def test_check_h7_cn_sector_readiness_passes_with_cn_sector_bucket(
+    tmp_path: Path,
+) -> None:
+    csv = tmp_path / "sector.csv"
+    pd.DataFrame(
+        [
+            {"market": "CN", "bucket": "Financials", "n_events": 12},
+            {"market": "CN", "bucket": "Unknown", "n_events": 5},
+        ]
+    ).to_csv(csv, index=False)
+
+    result = check_h7_cn_sector_readiness(sector_csv_path=csv)
+
+    assert result.status == "pass"
+    assert "CN sector bucket" in result.message
 
 
 def test_check_chart_builders_register_passes_with_real_module() -> None:

@@ -29,6 +29,10 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_VERDICTS_CSV = ROOT / "results" / "real_tables" / "cma_hypothesis_verdicts.csv"
 DEFAULT_RESULTS_DIR = ROOT / "results" / "real_tables"
 DEFAULT_RDD_STATUS_DIR = ROOT / "results" / "literature" / "hs300_rdd"
+DEFAULT_PAPER_VERDICTS_DOC = ROOT / "docs" / "paper_outline_verdicts.md"
+DEFAULT_EVENT_COUNTS_CSV = DEFAULT_RESULTS_DIR / "event_counts_by_year.csv"
+DEFAULT_WEIGHT_CHANGE_CSV = ROOT / "data" / "processed" / "hs300_weight_change.csv"
+DEFAULT_HETEROGENEITY_SECTOR_CSV = DEFAULT_RESULTS_DIR / "cma_heterogeneity_sector.csv"
 
 EXPECTED_HIDS: tuple[str, ...] = ("H1", "H2", "H3", "H4", "H5", "H6", "H7")
 EXPECTED_CMA_OUTPUTS: tuple[str, ...] = (
@@ -192,6 +196,87 @@ def check_results_directory_populated(
         name="results_directory_populated",
         status="pass",
         message=f"All {len(expected_files)} canonical CMA outputs are present.",
+    )
+
+
+def check_paper_verdict_section_synced(
+    *,
+    csv_path: Path = DEFAULT_VERDICTS_CSV,
+    doc_path: Path = DEFAULT_PAPER_VERDICTS_DOC,
+    event_counts_path: Path = DEFAULT_EVENT_COUNTS_CSV,
+) -> CheckResult:
+    """Generated paper verdict markdown should match the current verdict CSV."""
+    if not csv_path.exists():
+        return CheckResult(
+            name="paper_verdict_section_synced",
+            status="warn",
+            message=f"verdicts CSV not found: {csv_path}",
+            fix="Run `index-inclusion-cma` to regenerate verdict artifacts.",
+        )
+    if not doc_path.exists():
+        return CheckResult(
+            name="paper_verdict_section_synced",
+            status="warn",
+            message=f"paper verdict section not found: {doc_path}",
+            fix="Run `index-inclusion-cma` to regenerate docs/paper_outline_verdicts.md.",
+        )
+    try:
+        verdicts = pd.read_csv(csv_path, keep_default_na=False)
+        event_counts = (
+            pd.read_csv(event_counts_path)
+            if event_counts_path.exists()
+            else None
+        )
+    except (OSError, ValueError) as exc:
+        return CheckResult(
+            name="paper_verdict_section_synced",
+            status="warn",
+            message=f"Unable to read verdict inputs: {exc}",
+            fix="Inspect / regenerate CMA verdict outputs via `index-inclusion-cma`.",
+        )
+    try:
+        from index_inclusion_research.analysis.cross_market_asymmetry.verdicts import (
+            render_paper_verdict_section,
+        )
+
+        expected = render_paper_verdict_section(
+            verdicts,
+            event_counts=event_counts,
+        )
+        actual = doc_path.read_text()
+    except (OSError, ValueError, KeyError) as exc:
+        return CheckResult(
+            name="paper_verdict_section_synced",
+            status="warn",
+            message=f"Unable to render or read paper verdict section: {exc}",
+            fix="Run `index-inclusion-cma` and inspect docs/paper_outline_verdicts.md.",
+        )
+    if actual == expected:
+        return CheckResult(
+            name="paper_verdict_section_synced",
+            status="pass",
+            message=f"{_relative_label(doc_path)} matches the current CMA verdict CSV.",
+        )
+
+    def _summary_line(text: str) -> str:
+        return next(
+            (
+                line.strip()
+                for line in text.splitlines()
+                if "当前裁决分布" in line
+            ),
+            "(summary line not found)",
+        )
+
+    return CheckResult(
+        name="paper_verdict_section_synced",
+        status="warn",
+        message=f"{_relative_label(doc_path)} is out of sync with the current CMA verdict CSV.",
+        fix="Run `index-inclusion-cma` to regenerate docs/paper_outline_verdicts.md.",
+        details=(
+            f"expected: {_summary_line(expected)}",
+            f"actual: {_summary_line(actual)}",
+        ),
     )
 
 
@@ -383,6 +468,134 @@ def check_pending_data_verdicts(
     )
 
 
+def check_h6_weight_change_readiness(
+    *,
+    weight_change_path: Path = DEFAULT_WEIGHT_CHANGE_CSV,
+    verdicts_csv_path: Path = DEFAULT_VERDICTS_CSV,
+) -> CheckResult:
+    """H6 should be explicit when it still relies on size proxy instead of weight_change."""
+    label = _relative_label(weight_change_path)
+    if weight_change_path.exists():
+        try:
+            weight_change = pd.read_csv(weight_change_path)
+        except (OSError, ValueError) as exc:
+            return CheckResult(
+                name="h6_weight_change_readiness",
+                status="warn",
+                message=f"H6 weight_change table is unreadable: {exc}",
+                fix="Regenerate it with `index-inclusion-compute-h6-weight-change --force`.",
+            )
+        required = {"market", "ticker", "weight_proxy"}
+        missing = required - set(weight_change.columns)
+        if missing:
+            return CheckResult(
+                name="h6_weight_change_readiness",
+                status="warn",
+                message=f"{label} is missing column(s): {sorted(missing)}.",
+                fix="Regenerate it with `index-inclusion-compute-h6-weight-change --force`.",
+            )
+        cn_rows = weight_change.loc[
+            (weight_change["market"].astype(str) == "CN")
+            & weight_change["weight_proxy"].notna()
+        ]
+        if cn_rows.empty:
+            return CheckResult(
+                name="h6_weight_change_readiness",
+                status="warn",
+                message=f"{label} exists but has no CN rows with weight_proxy.",
+                fix="Regenerate with CN market-cap coverage, then rerun `index-inclusion-cma`.",
+            )
+        return CheckResult(
+            name="h6_weight_change_readiness",
+            status="pass",
+            message=f"H6 has {len(cn_rows)} CN weight_change row(s) available.",
+        )
+
+    details: list[str] = [f"missing: {label}"]
+    if verdicts_csv_path.exists():
+        try:
+            verdicts = pd.read_csv(verdicts_csv_path)
+            h6 = verdicts.loc[verdicts["hid"].astype(str) == "H6"]
+            if not h6.empty:
+                row = h6.iloc[0]
+                details.append(
+                    f"current H6 headline: {row.get('key_label', 'unknown')} = {row.get('key_value', 'NA')}"
+                )
+        except (OSError, ValueError, KeyError):
+            pass
+    return CheckResult(
+        name="h6_weight_change_readiness",
+        status="warn",
+        message="H6 is still using size heterogeneity as a proxy because weight_change is missing.",
+        fix="Run `index-inclusion-compute-h6-weight-change --force`, then `index-inclusion-cma` to replace the size proxy.",
+        details=tuple(details),
+    )
+
+
+def check_h7_cn_sector_readiness(
+    *,
+    sector_csv_path: Path = DEFAULT_HETEROGENEITY_SECTOR_CSV,
+) -> CheckResult:
+    """H7 should say when sector evidence is US-only because CN sector is missing."""
+    label = _relative_label(sector_csv_path)
+    if not sector_csv_path.exists():
+        return CheckResult(
+            name="h7_cn_sector_readiness",
+            status="warn",
+            message=f"sector heterogeneity table not found: {label}",
+            fix="Run `index-inclusion-cma` after filling sector data.",
+        )
+    try:
+        sector = pd.read_csv(sector_csv_path)
+    except (OSError, ValueError) as exc:
+        return CheckResult(
+            name="h7_cn_sector_readiness",
+            status="warn",
+            message=f"sector heterogeneity table is unreadable: {exc}",
+            fix="Regenerate CMA outputs via `index-inclusion-cma`.",
+        )
+    required = {"market", "bucket", "n_events"}
+    missing = required - set(sector.columns)
+    if missing:
+        return CheckResult(
+            name="h7_cn_sector_readiness",
+            status="warn",
+            message=f"{label} is missing column(s): {sorted(missing)}.",
+            fix="Regenerate CMA outputs via `index-inclusion-cma`.",
+        )
+    cn = sector.loc[sector["market"].astype(str) == "CN"].copy()
+    if cn.empty:
+        return CheckResult(
+            name="h7_cn_sector_readiness",
+            status="warn",
+            message="H7 sector table has no CN rows.",
+            fix="Populate CN sector fields, then rerun `index-inclusion-cma`.",
+        )
+    known = cn.loc[
+        ~cn["bucket"].astype(str).str.strip().str.lower().isin(
+            {"", "unknown", "nan", "none"}
+        )
+    ]
+    if known.empty:
+        total_events = int(cn["n_events"].fillna(0).sum())
+        return CheckResult(
+            name="h7_cn_sector_readiness",
+            status="warn",
+            message="H7 CN sector is not populated; current sector evidence is US-only.",
+            fix="Fill CN sector in the source event/metadata tables, then rerun `index-inclusion-cma`.",
+            details=(f"CN Unknown events: {total_events}",),
+        )
+    return CheckResult(
+        name="h7_cn_sector_readiness",
+        status="pass",
+        message=f"H7 has {len(known)} CN sector bucket(s) available.",
+        details=tuple(
+            f"{row['bucket']}: n={int(row['n_events'])}"
+            for _, row in known.head(5).iterrows()
+        ),
+    )
+
+
 def check_rdd_l3_sample_readiness(
     *,
     root: Path = ROOT,
@@ -517,8 +730,11 @@ DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_hypothesis_paper_ids_resolve,
     check_verdicts_csv_health,
     check_results_directory_populated,
+    check_paper_verdict_section_synced,
     check_p_gated_verdict_sensitivity,
     check_pending_data_verdicts,
+    check_h6_weight_change_readiness,
+    check_h7_cn_sector_readiness,
     check_rdd_l3_sample_readiness,
     check_chart_builders_register,
     check_console_scripts_importable,

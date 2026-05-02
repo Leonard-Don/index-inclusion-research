@@ -626,7 +626,7 @@ index-inclusion-verdict-summary --format json --sensitivity 0.05 0.10 | jq '.sen
 
 **3. GUI 层** — dashboard CMA section 的 verdict 网格上方有 5 个阈值 chip(0.01 / 0.05 / 0.10 / 0.15 / 0.20),默认 0.10 active。点击其他 chip,H1/H4/H5 卡片底部的 sensitivity strip 实时翻"在 p<X 下显著(p=...)"或"在 p<X 下不显著(p=...)";non-p 卡片始终标"头条指标不是 p,不在 sweep 范围"。给 advisor / 同事演示时直接点鼠标即可。
 
-**4. CI 层** — `index-inclusion-doctor` 第 4 项 `p_gated_verdict_sensitivity` 自动 flag 处于 [0.05, 0.10) 边缘区间的假说(default 显著但 strict 翻 not_sig — 审稿人会追问 robustness 的典型情形):
+**4. CI 层** — `index-inclusion-doctor` 的 `p_gated_verdict_sensitivity` 检查会自动 flag 处于 [0.05, 0.10) 边缘区间的假说(default 显著但 strict 翻 not_sig — 审稿人会追问 robustness 的典型情形):
 
 ```text
 ✓  p_gated_verdict_sensitivity
@@ -638,7 +638,7 @@ index-inclusion-verdict-summary --format json --sensitivity 0.05 0.10 | jq '.sen
 
 ### Doctor 严格门禁与机器可读输出
 
-`index-inclusion-doctor` 默认只在 `fail` 时返回非零退出码；`warn` 用来标记研究边界或数据缺口，例如 H2 AUM 待补、HS300 RDD 仍处在公开重建 L2 样本。常规 CI 使用默认模式，让 warning 保持可见但不阻断；需要让 warning 也阻断发布门禁或严格 CI 时，可以显式开启严格模式：
+`index-inclusion-doctor` 默认只在 `fail` 时返回非零退出码；`warn` 用来标记研究边界、生成物漂移或数据缺口，例如 H2 AUM 待补、H6 weight_change 仍未生成、H7 CN sector 未填充、HS300 RDD 仍处在公开重建 L2 样本。常规 CI 使用默认模式，让 warning 保持可见但不阻断；需要让 warning 也阻断发布门禁或严格 CI 时，可以显式开启严格模式：
 
 ```bash
 index-inclusion-doctor --fail-on-warn

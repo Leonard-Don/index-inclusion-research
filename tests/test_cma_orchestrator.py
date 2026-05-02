@@ -106,6 +106,8 @@ def test_orchestrator_runs_on_toy_data(tmp_path):
     for name in expected_figures:
         assert (tmp_path / "figures" / name).exists(), f"missing figure: {name}"
 
+    assert (tmp_path / "tables" / "paper_outline_verdicts.md").exists()
+    assert result["paper_verdict_path"] == tmp_path / "tables" / "paper_outline_verdicts.md"
     summary = (tmp_path / "summary.md").read_text()
     assert "六、美股 vs A股 不对称" in summary
     assert "假说裁决摘要" in summary
