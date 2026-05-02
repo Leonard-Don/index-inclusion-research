@@ -252,6 +252,15 @@ def compute_covariate_balance(
             ]
         )
 
+    if "matched_to_event_id" in matched_events.columns:
+        has_treated = matched_events.groupby("matched_to_event_id")["treatment_group"].transform(
+            lambda values: (pd.to_numeric(values, errors="coerce") == 1).any()
+        )
+        has_control = matched_events.groupby("matched_to_event_id")["treatment_group"].transform(
+            lambda values: (pd.to_numeric(values, errors="coerce") == 0).any()
+        )
+        matched_events = matched_events.loc[has_treated & has_control].copy()
+
     history_by_key = {
         (str(market), str(ticker)): group.sort_values("date").reset_index(drop=True)
         for (market, ticker), group in prices.groupby(["market", "ticker"], dropna=False)

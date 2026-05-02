@@ -52,6 +52,7 @@ def _build_matched_for_balance(
             }
         )
     for i in range(1, n_control + 1):
+        matched_event_number = ((i - 1) % n_treated) + 1 if n_treated else 1
         rows.append(
             {
                 "event_id": f"e1-ctrl-{i:02d}",
@@ -59,7 +60,7 @@ def _build_matched_for_balance(
                 "ticker": f"CN_C{i}",
                 "treatment_group": 0,
                 "announce_date": pd.Timestamp(announce),
-                "matched_to_event_id": "e1",
+                "matched_to_event_id": f"e{matched_event_number}",
             }
         )
     return pd.DataFrame(rows)
@@ -139,6 +140,18 @@ def test_compute_covariate_balance_empty_matched_returns_empty_frame():
     out = compute_covariate_balance(empty, prices)
     assert out.empty
     assert {"market", "covariate", "smd", "balanced"}.issubset(out.columns)
+
+
+def test_compute_covariate_balance_excludes_unmatched_treated_groups():
+    matched = _build_matched_for_balance(n_treated=2, n_control=1)
+    prices = _build_prices_for_balance(treated_caps=[1.0e9, 100.0e9], control_caps=[1.0e9])
+
+    out = compute_covariate_balance(matched, prices, lookback_days=10)
+
+    cap_row = out.loc[out["covariate"] == "mkt_cap_log"].iloc[0]
+    assert cap_row["n_treated"] == 1
+    assert cap_row["n_control"] == 1
+    assert np.isclose(cap_row["treated_mean"], cap_row["control_mean"])
 
 
 def test_compute_covariate_balance_deterministic():
