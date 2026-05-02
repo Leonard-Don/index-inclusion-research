@@ -21,7 +21,7 @@
 
 下面 7 条假说回答的是 "为什么 CN/US 在公告日 / 生效日的反应不一致",而**不是**直接回答 "指数纳入是否产生超额收益"(那个问题在上节已回答)。
 
-基于跨市场不对称(CMA)pipeline 自动产出,7 条 CN/US 不对称机制假说的当前裁决分布: **1 项支持 / 1 项部分支持 / 5 项证据不足**。 详见 `results/real_tables/cma_hypothesis_verdicts.csv`。
+基于跨市场不对称(CMA)pipeline 自动产出,7 条 CN/US 不对称机制假说的当前裁决分布: **3 项支持 / 4 项证据不足**。 详见 `results/real_tables/cma_hypothesis_verdicts.csv`。
 
 ### 样本概述
 
@@ -47,20 +47,20 @@ _细节_: CN pre-runup=3.09%; US pre-runup=2.59%; diff=0.50%, bootstrap p=0.875,
 AUM 与 US 生效日 rolling CAR 的方向关系不稳定，当前不支持 H2。
 _细节_: US AUM 0.99→13.37; US effective rolling CAR 0.04%→0.05%
 
-### H3 · 散户 vs 机构结构 —— 部分支持(可信度:中)
-**双通道命中率 = 0.500**, n = 4
-仅 US announce 一个预期象限双通道显著，共 2/4 个象限通过双通道判据，另一条预期象限只有单通道显著，不能完全确认 H3。
-_细节_: channel concentration 2/4 both-sig: CN announce=✓, CN effective=T, US announce=✓, US effective=T
+### H3 · 散户 vs 机构结构 —— 支持(可信度:高)
+**双通道命中率 = 0.750**, n = 4
+US announce 与 CN effective 两条预期量能集中四象限均双通道显著 (turnover + volume p<0.10),共 3/4 个象限通过双通道判据。
+_细节_: channel concentration 3/4 both-sig: CN announce=✓, CN effective=✓, US announce=✓, US effective=T
 
 ### H4 · 卖空约束 —— 证据不足(可信度:中)
 **regression p = 0.537**, n = 436
 控制 gap_length_days 后 CN-US gap_drift 差异 0.61% 不显著 (p=0.537)，跨市场差异口径无法支持 H4 套利约束解释。
 _细节_: CN gap_drift=0.76%; US gap_drift=-0.33%; regression cn_coef=0.61%, p=0.537, n=436
 
-### H5 · 涨跌停限制 —— 证据不足(可信度:中)
-**limit_coef p = 0.213**, n = 936
-CN 事件级涨跌停命中率对 announce-day CAR 不具显著预测力 (limit_coef=0.0757, p=0.213, n=936)，H5 缺乏支持。
-_细节_: CN limit_coef=0.0757, p=0.213, R²=0.006, n=936
+### H5 · 涨跌停限制 —— 支持(可信度:高)
+**limit_coef p = 0.008**, n = 936
+CN 事件级涨跌停命中率正向预测 announce-day CAR (limit_coef=0.1549, p=0.008, R²=0.011, n=936)，支持 H5 涨跌停截断机制。
+_细节_: CN limit_coef=0.1549, p=0.008, R²=0.011, n=936
 
 ### H6 · 指数权重可预测性 —— 证据不足(可信度:中)
 **heavy−light spread = -0.019**, n = 67

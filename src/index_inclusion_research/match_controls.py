@@ -51,12 +51,16 @@ def main(argv: list[str] | None = None) -> int:
         lookback_days=matching["lookback_days"],
         num_controls=matching["num_controls"],
         reference_date_column=matching["reference_date_column"],
+        sector_filter_mode=matching.get("sector_filter_mode", "exact_when_available"),
+        distance_weights=matching.get("distance_weights"),
+        directional_penalties=matching.get("directional_penalties"),
     )
     balance = compute_covariate_balance(
         matched_events,
         prices,
         lookback_days=matching["lookback_days"],
         reference_date_column=matching["reference_date_column"],
+        smd_threshold=matching.get("smd_threshold", 0.25),
     )
     save_dataframe(matched_events, args.output_events)
     save_dataframe(diagnostics, args.output_diagnostics)

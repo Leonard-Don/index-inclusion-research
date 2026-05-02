@@ -94,6 +94,15 @@ def _sample_counts(sample: pd.DataFrame) -> tuple[int, int]:
     return int((treatment == 1).sum()), int((treatment == 0).sum())
 
 
+def _balance_counts(balance: pd.DataFrame, fallback_sample: pd.DataFrame) -> tuple[int, int]:
+    if not balance.empty and {"market", "n_treated", "n_control"}.issubset(balance.columns):
+        market_counts = balance[["market", "n_treated", "n_control"]].drop_duplicates()
+        treated = pd.to_numeric(market_counts["n_treated"], errors="coerce").fillna(0)
+        control = pd.to_numeric(market_counts["n_control"], errors="coerce").fillna(0)
+        return int(treated.sum()), int(control.sum())
+    return _sample_counts(fallback_sample)
+
+
 def _summarise_spec(
     *,
     spec_id: str,
@@ -104,7 +113,7 @@ def _summarise_spec(
     smd_threshold: float,
     is_default: bool,
 ) -> dict[str, object]:
-    n_treated, n_control = _sample_counts(sample)
+    n_treated, n_control = _balance_counts(balance, sample)
     if balance.empty or "smd" not in balance.columns:
         return {
             "spec_id": spec_id,

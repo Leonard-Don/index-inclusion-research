@@ -58,6 +58,10 @@ def test_project_metadata_declares_flask_and_console_scripts() -> None:
     assert project["scripts"]["index-inclusion-build-event-sample"] == "index_inclusion_research.cli:run_build_event_sample_main"
     assert project["scripts"]["index-inclusion-build-price-panel"] == "index_inclusion_research.cli:run_build_price_panel_main"
     assert project["scripts"]["index-inclusion-match-controls"] == "index_inclusion_research.cli:run_match_controls_main"
+    assert (
+        project["scripts"]["index-inclusion-match-robustness"]
+        == "index_inclusion_research.cli:run_match_robustness_main"
+    )
     assert project["scripts"]["index-inclusion-run-event-study"] == "index_inclusion_research.cli:run_event_study_main"
     assert project["scripts"]["index-inclusion-run-regressions"] == "index_inclusion_research.cli:run_regressions_main"
     assert project["scripts"]["index-inclusion-price-pressure"] == "index_inclusion_research.cli:run_price_pressure_track_main"
@@ -101,6 +105,7 @@ def test_track_console_wrappers_delegate_to_expected_package_modules(monkeypatch
     cli.run_build_event_sample_main()
     cli.run_build_price_panel_main()
     cli.run_match_controls_main()
+    cli.run_match_robustness_main()
     cli.run_event_study_main()
     cli.run_regressions_main()
     cli.run_prepare_hs300_rdd_candidates_main()
@@ -110,6 +115,7 @@ def test_track_console_wrappers_delegate_to_expected_package_modules(monkeypatch
         "index_inclusion_research.build_event_sample",
         "index_inclusion_research.build_price_panel",
         "index_inclusion_research.match_controls",
+        "index_inclusion_research.match_robustness",
         "index_inclusion_research.run_event_study",
         "index_inclusion_research.run_regressions",
         "index_inclusion_research.prepare_hs300_rdd_candidates",

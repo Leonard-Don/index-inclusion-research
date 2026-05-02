@@ -43,16 +43,39 @@ def _compute_security_snapshot(
     }
 
 
-def _distance_score(target: dict[str, object], candidate: dict[str, object]) -> float:
+def _distance_score(
+    target: dict[str, object],
+    candidate: dict[str, object],
+    *,
+    size_weight: float = 1.0,
+    return_weight: float = 1.0,
+    volatility_weight: float = 0.5,
+    sector_mismatch_penalty: float = 0.25,
+    larger_mkt_cap_penalty: float = 1.0,
+    lower_volatility_penalty: float = 1.0,
+) -> float:
     target_cap = target.get("mkt_cap")
     candidate_cap = candidate.get("mkt_cap")
     if pd.isna(target_cap) or pd.isna(candidate_cap) or target_cap <= 0 or candidate_cap <= 0:
         return math.inf
-    size_distance = abs(np.log(target_cap) - np.log(candidate_cap))
+    target_log_cap = np.log(target_cap)
+    candidate_log_cap = np.log(candidate_cap)
+    size_distance = abs(target_log_cap - candidate_log_cap)
+    if candidate_log_cap > target_log_cap:
+        size_distance *= larger_mkt_cap_penalty
     return_distance = abs(float(target["pre_event_return"]) - float(candidate["pre_event_return"]))
-    vol_distance = abs(float(target["pre_event_volatility"]) - float(candidate["pre_event_volatility"]))
-    sector_distance = 0.0 if target.get("sector") == candidate.get("sector") else 0.25
-    return float(size_distance + return_distance + 0.5 * vol_distance + sector_distance)
+    target_volatility = float(target["pre_event_volatility"])
+    candidate_volatility = float(candidate["pre_event_volatility"])
+    vol_distance = abs(target_volatility - candidate_volatility)
+    if candidate_volatility < target_volatility:
+        vol_distance *= lower_volatility_penalty
+    sector_distance = 0.0 if target.get("sector") == candidate.get("sector") else sector_mismatch_penalty
+    return float(
+        size_weight * size_distance
+        + return_weight * return_distance
+        + volatility_weight * vol_distance
+        + sector_distance
+    )
 
 
 def build_matched_sample(
@@ -61,7 +84,22 @@ def build_matched_sample(
     lookback_days: int = 20,
     num_controls: int = 3,
     reference_date_column: str = "announce_date",
+    sector_filter_mode: str = "exact_when_available",
+    distance_weights: dict[str, float] | None = None,
+    directional_penalties: dict[str, float] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    distance_weights = distance_weights or {}
+    directional_penalties = directional_penalties or {}
+    size_weight = float(distance_weights.get("size", 1.0))
+    return_weight = float(distance_weights.get("pre_event_return", 1.0))
+    volatility_weight = float(distance_weights.get("pre_event_volatility", 0.5))
+    sector_mismatch_penalty = float(distance_weights.get("sector_mismatch", 0.25))
+    larger_mkt_cap_penalty = float(directional_penalties.get("larger_mkt_cap", 1.0))
+    lower_volatility_penalty = float(directional_penalties.get("lower_pre_event_volatility", 1.0))
+    valid_sector_modes = {"exact_when_available", "penalized"}
+    if sector_filter_mode not in valid_sector_modes:
+        raise ValueError(f"sector_filter_mode must be one of {sorted(valid_sector_modes)}")
+
     treated = events.copy()
     if "treatment_group" not in treated.columns:
         treated["treatment_group"] = 1
@@ -139,7 +177,11 @@ def build_matched_sample(
             continue
 
         candidate_frame = pd.DataFrame(candidates)
-        if pd.notna(target_snapshot.get("sector")) and "sector" in candidate_frame:
+        if (
+            sector_filter_mode == "exact_when_available"
+            and pd.notna(target_snapshot.get("sector"))
+            and "sector" in candidate_frame
+        ):
             sector_candidates = candidate_frame.loc[candidate_frame["sector"] == target_snapshot["sector"]].copy()
         else:
             sector_candidates = candidate_frame.iloc[0:0].copy()
@@ -149,11 +191,22 @@ def build_matched_sample(
 
         target = target_snapshot
         sector_candidates["distance"] = sector_candidates.apply(
-            lambda row, target=target: _distance_score(target, row.to_dict()),
+            lambda row, target=target: _distance_score(
+                target,
+                row.to_dict(),
+                size_weight=size_weight,
+                return_weight=return_weight,
+                volatility_weight=volatility_weight,
+                sector_mismatch_penalty=sector_mismatch_penalty,
+                larger_mkt_cap_penalty=larger_mkt_cap_penalty,
+                lower_volatility_penalty=lower_volatility_penalty,
+            ),
             axis=1,
         )
         sector_candidates = sector_candidates.replace([np.inf, -np.inf], np.nan).dropna(subset=["distance"])
         selected = sector_candidates.nsmallest(num_controls, "distance")
+        if sector_filter_mode == "penalized" and pd.notna(target_snapshot.get("sector")) and not selected.empty:
+            relaxed_sector = bool((selected["sector"] != target_snapshot["sector"]).any())
 
         diagnostics.append(
             {
@@ -161,6 +214,7 @@ def build_matched_sample(
                 "status": "matched" if not selected.empty else "skipped_no_valid_match",
                 "selected_controls": int(len(selected)),
                 "sector_relaxed": relaxed_sector,
+                "sector_filter_mode": sector_filter_mode,
             }
         )
         for rank, candidate in enumerate(selected.itertuples(index=False), start=1):
