@@ -2,20 +2,27 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
+import index_inclusion_research.doctor as doctor_module
 from index_inclusion_research.doctor import (
     CheckResult,
     check_chart_builders_register,
     check_console_scripts_importable,
     check_hypothesis_paper_ids_resolve,
     check_p_gated_verdict_sensitivity,
+    check_pending_data_verdicts,
+    check_rdd_l3_sample_readiness,
     check_results_directory_populated,
     check_verdicts_csv_health,
+    doctor_exit_code,
     main,
     render_results,
+    render_results_json,
     run_all_checks,
 )
 
@@ -183,6 +190,83 @@ def test_check_p_gated_sensitivity_respects_custom_thresholds(
     assert result_tight.status == "warn"
 
 
+def test_check_pending_data_verdicts_warns_when_hypothesis_is_pending(
+    tmp_path: Path,
+) -> None:
+    csv = tmp_path / "verdicts.csv"
+    pd.DataFrame(
+        [
+            {"hid": "H1", "name": "信息泄露与预运行", "verdict": "证据不足"},
+            {"hid": "H2", "name": "被动基金 AUM 差异", "verdict": "待补数据"},
+        ]
+    ).to_csv(csv, index=False)
+    result = check_pending_data_verdicts(csv_path=csv)
+    assert result.status == "warn"
+    assert "1 hypothesis" in result.message
+    assert any("H2" in detail for detail in result.details)
+
+
+def test_check_pending_data_verdicts_passes_when_no_pending_data(
+    tmp_path: Path,
+) -> None:
+    csv = tmp_path / "verdicts.csv"
+    pd.DataFrame(
+        [
+            {"hid": "H1", "verdict": "证据不足"},
+            {"hid": "H2", "verdict": "部分支持"},
+        ]
+    ).to_csv(csv, index=False)
+    result = check_pending_data_verdicts(csv_path=csv)
+    assert result.status == "pass"
+
+
+def test_check_rdd_l3_sample_readiness_warns_on_reconstructed_fallback(
+    tmp_path: Path,
+) -> None:
+    reconstructed = tmp_path / "data" / "raw" / "hs300_rdd_candidates.reconstructed.csv"
+    reconstructed.parent.mkdir(parents=True)
+    reconstructed.write_text("ticker\n000001\n")
+    status_dir = tmp_path / "results" / "literature" / "hs300_rdd"
+    status_dir.mkdir(parents=True)
+    pd.DataFrame(
+        [
+            {
+                "status": "reconstructed",
+                "source_kind": "reconstructed",
+                "candidate_rows": 118,
+                "candidate_batches": 6,
+            }
+        ]
+    ).to_csv(status_dir / "rdd_status.csv", index=False)
+    result = check_rdd_l3_sample_readiness(root=tmp_path, status_dir=status_dir)
+    assert result.status == "warn"
+    assert "public reconstructed L2 sample" in result.message
+    assert any("hs300_rdd_candidates.reconstructed.csv" in d for d in result.details)
+
+
+def test_check_rdd_l3_sample_readiness_passes_when_formal_sample_active(
+    tmp_path: Path,
+) -> None:
+    formal = tmp_path / "data" / "raw" / "hs300_rdd_candidates.csv"
+    formal.parent.mkdir(parents=True)
+    formal.write_text("ticker\n000001\n")
+    status_dir = tmp_path / "results" / "literature" / "hs300_rdd"
+    status_dir.mkdir(parents=True)
+    pd.DataFrame(
+        [
+            {
+                "status": "real",
+                "source_kind": "real",
+                "candidate_rows": 200,
+                "candidate_batches": 8,
+            }
+        ]
+    ).to_csv(status_dir / "rdd_status.csv", index=False)
+    result = check_rdd_l3_sample_readiness(root=tmp_path, status_dir=status_dir)
+    assert result.status == "pass"
+    assert "Formal HS300 RDD L3 sample is active" in result.message
+
+
 def test_check_results_directory_populated_warns_when_missing(tmp_path: Path) -> None:
     result = check_results_directory_populated(
         results_dir=tmp_path / "no-such-dir",
@@ -280,6 +364,43 @@ def test_render_results_color_includes_ansi() -> None:
     assert "\033[" in text
 
 
+def test_render_results_json_returns_machine_readable_payload() -> None:
+    text = render_results_json(
+        [
+            CheckResult(name="alpha", status="pass", message="ok"),
+            CheckResult(
+                name="beta",
+                status="warn",
+                message="hmm",
+                fix="do X",
+                details=("d1", "d2"),
+            ),
+        ]
+    )
+    payload = json.loads(text)
+    assert payload["summary"] == {"pass": 1, "warn": 1, "fail": 0, "total": 2}
+    assert payload["checks"][1]["name"] == "beta"
+    assert payload["checks"][1]["details"] == ["d1", "d2"]
+
+
+def test_doctor_exit_code_defaults_to_fail_count_only() -> None:
+    results = [
+        CheckResult(name="alpha", status="warn", message="research gap"),
+        CheckResult(name="beta", status="pass", message="ok"),
+    ]
+    assert doctor_exit_code(results) == 0
+    assert doctor_exit_code(results, fail_on_warn=True) == 1
+
+
+def test_doctor_exit_code_counts_failures_and_strict_warnings() -> None:
+    results = [
+        CheckResult(name="alpha", status="fail", message="broken"),
+        CheckResult(name="beta", status="warn", message="research gap"),
+    ]
+    assert doctor_exit_code(results) == 1
+    assert doctor_exit_code(results, fail_on_warn=True) == 2
+
+
 # ── CLI ──────────────────────────────────────────────────────────────
 
 
@@ -287,5 +408,32 @@ def test_main_returns_zero_when_all_checks_pass(capsys) -> None:
     rc = main(["--no-color"])
     captured = capsys.readouterr().out
     assert "doctor" in captured
-    # In a healthy repo, all checks should pass and return 0.
+    # Warnings are allowed for known research data gaps; only failures are non-zero.
     assert rc == 0
+
+
+def test_main_can_emit_json(capsys, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        doctor_module,
+        "run_all_checks",
+        lambda: [CheckResult(name="alpha", status="pass", message="ok")],
+    )
+    rc = doctor_module.main(["--format", "json"])
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert payload["summary"]["pass"] == 1
+    assert payload["checks"][0]["name"] == "alpha"
+
+
+def test_main_fail_on_warn_returns_nonzero_for_warnings(
+    capsys,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        doctor_module,
+        "run_all_checks",
+        lambda: [CheckResult(name="alpha", status="warn", message="research gap")],
+    )
+    rc = doctor_module.main(["--no-color", "--fail-on-warn"])
+    assert rc == 1
+    assert "research gap" in capsys.readouterr().out

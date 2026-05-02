@@ -140,6 +140,12 @@ def test_package_console_wrappers_delegate_to_expected_package_modules(monkeypat
     ]
 
 
+def test_console_wrapper_propagates_package_main_return_code(monkeypatch) -> None:
+    monkeypatch.setattr(cli, "_run_package_main", lambda module_name: 7)
+
+    assert cli.run_doctor_main() == 7
+
+
 def test_python_module_fallback_targets_are_directly_runnable() -> None:
     module_files = [
         "literature_dashboard.py",
