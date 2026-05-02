@@ -2,6 +2,7 @@ __pycache__/
 .pytest_cache/
 .playwright-cli/
 .venv/
+.claude/
 *.egg-info/
 *.pyc
 .DS_Store

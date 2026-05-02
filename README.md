@@ -38,7 +38,7 @@
 
 数据可重现:`make rebuild` 跑 10 步流水线刷新所有产出。详见 [results/real_tables/cma_hypothesis_verdicts.csv](results/real_tables/cma_hypothesis_verdicts.csv) 和 [docs/paper_outline_verdicts.md](docs/paper_outline_verdicts.md)。
 
-想知道 "如果阈值是 0.05 而不是 0.10,结论会怎样?" — 项目把这个问题做成了**四层入口**(数据 / CLI / dashboard / doctor),终端一行看 sweep:`index-inclusion-verdict-summary --sensitivity` ,详见 [#p-阈值灵敏度分析](#p-阈值灵敏度分析)。
+想知道 "如果阈值是 0.05 而不是 0.10,结论会怎样?" — 项目把这个问题做成了**五层入口**(决定 / 数据 / CLI / dashboard / doctor),终端一行看 sweep:`index-inclusion-verdict-summary --sensitivity` ,详见 [#p-阈值灵敏度分析](#p-阈值灵敏度分析)。
 
 ## GitHub 首页先看什么
 
@@ -535,7 +535,7 @@ index-inclusion-rebuild-all
 index-inclusion-verdict-summary
 ```
 
-按用途分组(共 21 个 console scripts):
+按用途分组(共 23 个 console scripts):
 - **数据流水线**:`build-event-sample` / `build-price-panel` / `match-controls` / `run-event-study` / `run-regressions`
 - **样本数据**:`generate-sample-data` / `download-real-data`
 - **报表与图表**:`make-figures-tables` / `generate-research-report`
@@ -634,7 +634,22 @@ index-inclusion-verdict-summary --format json --sensitivity 0.05 0.10 | jq '.sen
     none sit in the [0.05, 0.1) boundary.
 ```
 
-如果出现 boundary 项,doctor 会变 warn 并在 details 列出 hid + p,fix 建议指向 `verdict-summary --sensitivity` 同时看双阈值。这条检查不会让 CI fail(语义是 "research robustness signal" 而非 "project broken"),但会在 `make doctor` / CI 输出里显眼。
+如果出现 boundary 项,doctor 会变 warn 并在 details 列出 hid + p,fix 建议指向 `verdict-summary --sensitivity` 同时看双阈值。默认 GitHub Actions 会运行 `index-inclusion-doctor --format json` 并展示这些 warning，但不会因为 warning fail(语义是 "research robustness signal" 而非 "project broken")；本地 `make doctor` 也会显示同一组信号。
+
+### Doctor 严格门禁与机器可读输出
+
+`index-inclusion-doctor` 默认只在 `fail` 时返回非零退出码；`warn` 用来标记研究边界或数据缺口，例如 H2 AUM 待补、HS300 RDD 仍处在公开重建 L2 样本。常规 CI 使用默认模式，让 warning 保持可见但不阻断；需要让 warning 也阻断发布门禁或严格 CI 时，可以显式开启严格模式：
+
+```bash
+index-inclusion-doctor --fail-on-warn
+```
+
+需要给后续脚本或 CI 注释机器人消费时，使用 JSON 输出：
+
+```bash
+index-inclusion-doctor --format json | jq '.summary'
+index-inclusion-doctor --format json --fail-on-warn
+```
 
 ## 开发与验证
 

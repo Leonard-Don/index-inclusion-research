@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import json
 import logging
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_VERDICTS_CSV = ROOT / "results" / "real_tables" / "cma_hypothesis_verdicts.csv"
 DEFAULT_RESULTS_DIR = ROOT / "results" / "real_tables"
+DEFAULT_RDD_STATUS_DIR = ROOT / "results" / "literature" / "hs300_rdd"
 
 EXPECTED_HIDS: tuple[str, ...] = ("H1", "H2", "H3", "H4", "H5", "H6", "H7")
 EXPECTED_CMA_OUTPUTS: tuple[str, ...] = (
@@ -67,6 +69,10 @@ class CheckResult:
 
 
 # ── individual checks ────────────────────────────────────────────────
+
+
+def _relative_label(path: Path) -> str:
+    return str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else str(path)
 
 
 def check_hypothesis_paper_ids_resolve(
@@ -318,6 +324,137 @@ def check_p_gated_verdict_sensitivity(
     )
 
 
+def check_pending_data_verdicts(
+    *,
+    csv_path: Path = DEFAULT_VERDICTS_CSV,
+) -> CheckResult:
+    """Surface hypotheses that are structurally generated but still data-gapped."""
+    if not csv_path.exists():
+        return CheckResult(
+            name="pending_data_verdicts",
+            status="warn",
+            message=f"verdicts CSV not found: {csv_path}",
+            fix="Run `index-inclusion-cma` to generate the verdicts CSV.",
+        )
+    try:
+        df = pd.read_csv(csv_path)
+    except (OSError, ValueError) as exc:
+        return CheckResult(
+            name="pending_data_verdicts",
+            status="warn",
+            message=f"verdicts CSV unreadable: {exc}",
+            fix="Inspect / regenerate cma_hypothesis_verdicts.csv via `index-inclusion-cma`.",
+        )
+    required = {"hid", "verdict"}
+    missing_columns = required - set(df.columns)
+    if missing_columns:
+        return CheckResult(
+            name="pending_data_verdicts",
+            status="warn",
+            message=f"verdicts CSV is missing column(s): {sorted(missing_columns)}.",
+            fix="Run `index-inclusion-cma` to regenerate the current verdict schema.",
+        )
+
+    pending = df.loc[df["verdict"].astype(str).str.strip() == "待补数据"].copy()
+    if pending.empty:
+        return CheckResult(
+            name="pending_data_verdicts",
+            status="pass",
+            message="No hypotheses are currently marked as 待补数据.",
+        )
+
+    details: list[str] = []
+    for _, row in pending.iterrows():
+        hid = str(row.get("hid", "")).strip() or "unknown"
+        name = str(row.get("name_cn", row.get("name", ""))).strip()
+        headline = str(row.get("key_label", row.get("headline_metric", ""))).strip()
+        pieces = [hid]
+        if name:
+            pieces.append(name)
+        if headline and headline != "nan":
+            pieces.append(headline)
+        details.append(" · ".join(pieces))
+    return CheckResult(
+        name="pending_data_verdicts",
+        status="warn",
+        message=f"{len(pending)} hypothesis verdict(s) are still marked 待补数据.",
+        fix="Collect the missing mechanism data or keep the dashboard/paper language explicitly framed as a data gap.",
+        details=tuple(details),
+    )
+
+
+def check_rdd_l3_sample_readiness(
+    *,
+    root: Path = ROOT,
+    status_dir: Path = DEFAULT_RDD_STATUS_DIR,
+) -> CheckResult:
+    """Keep CLI doctor aligned with dashboard result-health around HS300 RDD evidence."""
+    formal_path = root / "data" / "raw" / "hs300_rdd_candidates.csv"
+    reconstructed_path = root / "data" / "raw" / "hs300_rdd_candidates.reconstructed.csv"
+    try:
+        from index_inclusion_research.result_contract import load_rdd_status
+
+        live_status = load_rdd_status(root, output_dir=status_dir)
+    except Exception as exc:  # noqa: BLE001 - doctor should report diagnostics, not crash
+        return CheckResult(
+            name="rdd_l3_sample_readiness",
+            status="warn",
+            message=f"Unable to read HS300 RDD status: {exc}",
+            fix="Run `index-inclusion-hs300-rdd` and inspect results/literature/hs300_rdd/rdd_status.csv.",
+        )
+
+    mode = str(live_status.get("mode", "") or "")
+    source_kind = str(live_status.get("source_kind", "") or "")
+    rows = live_status.get("candidate_rows")
+    batches = live_status.get("candidate_batches")
+    if formal_path.exists() and (mode == "real" or source_kind == "real"):
+        suffix = (
+            f" ({rows} candidate rows across {batches} batches)"
+            if rows and batches
+            else ""
+        )
+        return CheckResult(
+            name="rdd_l3_sample_readiness",
+            status="pass",
+            message=f"Formal HS300 RDD L3 sample is active{suffix}.",
+        )
+
+    formal_label = _relative_label(formal_path)
+    reconstructed_label = _relative_label(reconstructed_path)
+    if formal_path.exists():
+        return CheckResult(
+            name="rdd_l3_sample_readiness",
+            status="warn",
+            message=(
+                f"{formal_label} exists, but live RDD status is still "
+                f"{mode or source_kind or 'unknown'}."
+            ),
+            fix="Rerun `index-inclusion-hs300-rdd && index-inclusion-make-figures-tables && index-inclusion-generate-research-report && index-inclusion-cma`.",
+        )
+
+    if reconstructed_path.exists():
+        details = [f"active fallback: {reconstructed_label}"]
+        if rows and batches:
+            details.append(f"current status: {rows} candidate rows across {batches} batches")
+        return CheckResult(
+            name="rdd_l3_sample_readiness",
+            status="warn",
+            message=(
+                f"Formal HS300 RDD L3 sample is missing ({formal_label}); "
+                "dashboard evidence remains on the public reconstructed L2 sample."
+            ),
+            fix="Import a formal boundary candidate file with `index-inclusion-prepare-hs300-rdd --input /path/to/raw_candidates.xlsx --check-only` before promoting this to L3 evidence.",
+            details=tuple(details),
+        )
+
+    return CheckResult(
+        name="rdd_l3_sample_readiness",
+        status="warn",
+        message=f"Neither {formal_label} nor {reconstructed_label} is available.",
+        fix="Run `index-inclusion-reconstruct-hs300-rdd --all-batches --force` or import a formal candidate file.",
+    )
+
+
 def check_console_scripts_importable() -> CheckResult:
     """Every console_script declared in pyproject.toml resolves to a callable."""
     pyproject = ROOT / "pyproject.toml"
@@ -381,6 +518,8 @@ DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_verdicts_csv_health,
     check_results_directory_populated,
     check_p_gated_verdict_sensitivity,
+    check_pending_data_verdicts,
+    check_rdd_l3_sample_readiness,
     check_chart_builders_register,
     check_console_scripts_importable,
 )
@@ -435,6 +574,42 @@ def render_results(results: Sequence[CheckResult], *, color: bool = True) -> str
     return "\n".join(lines).rstrip() + "\n"
 
 
+def results_summary(results: Sequence[CheckResult]) -> dict[str, int]:
+    return {
+        "pass": sum(1 for r in results if r.status == "pass"),
+        "warn": sum(1 for r in results if r.status == "warn"),
+        "fail": sum(1 for r in results if r.status == "fail"),
+        "total": len(results),
+    }
+
+
+def results_payload(results: Sequence[CheckResult]) -> dict[str, object]:
+    return {
+        "summary": results_summary(results),
+        "checks": [
+            {
+                "name": result.name,
+                "status": result.status,
+                "message": result.message,
+                "fix": result.fix,
+                "details": list(result.details),
+            }
+            for result in results
+        ],
+    }
+
+
+def render_results_json(results: Sequence[CheckResult]) -> str:
+    return json.dumps(results_payload(results), ensure_ascii=False, indent=2) + "\n"
+
+
+def doctor_exit_code(results: Sequence[CheckResult], *, fail_on_warn: bool = False) -> int:
+    summary = results_summary(results)
+    if fail_on_warn:
+        return summary["fail"] + summary["warn"]
+    return summary["fail"]
+
+
 # ── CLI ──────────────────────────────────────────────────────────────
 
 
@@ -449,6 +624,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--no-color", action="store_true",
         help="Disable ANSI colour escape codes.",
     )
+    parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Choose human-readable text or machine-readable JSON output.",
+    )
+    parser.add_argument(
+        "--fail-on-warn",
+        action="store_true",
+        help="Return a non-zero exit code when checks produce warnings.",
+    )
     return parser
 
 
@@ -459,10 +645,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     results = run_all_checks()
-    enable_color = not args.no_color and sys.stdout.isatty()
-    print(render_results(results, color=enable_color))
-    fail_count = sum(1 for r in results if r.status == "fail")
-    return fail_count
+    if args.format == "json":
+        print(render_results_json(results), end="")
+    else:
+        enable_color = not args.no_color and sys.stdout.isatty()
+        print(render_results(results, color=enable_color), end="")
+    return doctor_exit_code(results, fail_on_warn=args.fail_on_warn)
 
 
 if __name__ == "__main__":
