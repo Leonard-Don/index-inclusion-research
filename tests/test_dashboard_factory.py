@@ -70,6 +70,12 @@ def test_create_dashboard_app_and_register_routes() -> None:
     assert "/run/<analysis_id>" in rules
     assert "/paper/<paper_id>/pdf" in rules
     assert "/api/chart/<chart_id>" in rules
+    assert "/evidence/<item>" in rules
+    assert "/api/evidence/<item>" in rules
+    assert "/rdd-l3" in rules
+    assert "/rdd-l3/check" in rules
+    assert "/rdd-l3/import" in rules
+    assert "/rdd-l3/collection" in rules
     assert "/verdict/<hid>" in rules
 
 
@@ -109,6 +115,9 @@ def test_register_dashboard_routes_uses_stable_endpoint_names() -> None:
         assert url_for("home") == "/"
         assert url_for("refresh_status") == "/refresh/status"
         assert url_for("show_analysis", analysis_id="demo") == "/analysis/demo"
+        assert url_for("show_evidence_detail", item="H6_weight_change") == "/evidence/H6_weight_change"
+        assert url_for("show_rdd_l3_workbench") == "/rdd-l3"
+        assert url_for("refresh_rdd_l3_collection") == "/rdd-l3/collection"
 
 
 def test_build_dashboard_shell_wires_runtime_refresh_and_app() -> None:

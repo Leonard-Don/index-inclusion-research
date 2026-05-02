@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Literal
 
@@ -104,6 +105,8 @@ def build_cross_market_section(
     }
     time_series_rolling = _safe_read(tables_dir / "cma_time_series_rolling.csv")
     time_series_break = _safe_read(tables_dir / "cma_time_series_break.csv")
+    h6_weight_robustness = _safe_read(tables_dir / "cma_h6_weight_robustness.csv")
+    h6_weight_explanation = _safe_read(tables_dir / "cma_h6_weight_explanation.csv")
     ar_path = _safe_read(tables_dir / "cma_ar_path.csv")
     car_path = _safe_read(tables_dir / "cma_car_path.csv")
     if hypothesis_verdicts.empty and any(
@@ -141,6 +144,8 @@ def build_cross_market_section(
             "window_summary_all": _frame_to_payload(window_summary),
             "hypothesis_verdicts": _frame_to_payload(hypothesis_verdicts),
             "mechanism_panel": _frame_to_payload(mechanism_panel),
+            "h6_weight_robustness": _frame_to_payload(h6_weight_robustness),
+            "h6_weight_explanation": _frame_to_payload(h6_weight_explanation),
             "time_series_rolling": _frame_to_payload(time_series_rolling),
             "time_series_break": _frame_to_payload(time_series_break),
             "ar_path": _frame_to_payload(ar_path),
@@ -180,11 +185,70 @@ def build_cross_market_section(
             "rows": hypothesis_verdicts.to_dict(orient="records") if mode != "brief" else [],
         },
         "track_summary": _build_track_summary_payload(hypothesis_verdicts, mode),
+        "evidence_coverage": _build_evidence_coverage_payload(
+            tables_dir=tables_dir,
+            h6_weight_robustness=h6_weight_robustness,
+            hypothesis_verdicts=hypothesis_verdicts,
+            mode=mode,
+        ),
         "verdict_diff": _build_verdict_diff_payload(
             hypothesis_verdicts, tables_dir=tables_dir, mode=mode
         ),
         "detail_tables": detail_tables,
     }
+
+
+def _build_evidence_coverage_payload(
+    *,
+    tables_dir: Path,
+    h6_weight_robustness: pd.DataFrame,
+    hypothesis_verdicts: pd.DataFrame,
+    mode: str,
+) -> dict[str, object]:
+    if mode == "brief":
+        return {"available": False, "rows": []}
+    manifest_path = tables_dir / "evidence_refresh_manifest.json"
+    if manifest_path.exists():
+        try:
+            payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+            rows = payload.get("coverage", [])
+            if isinstance(rows, list) and rows:
+                return {
+                    "available": True,
+                    "generated_at": str(payload.get("generated_at", "")),
+                    "rows": rows,
+                }
+        except (OSError, ValueError, TypeError):
+            pass
+
+    rows: list[dict[str, object]] = []
+    if not h6_weight_robustness.empty and "test" in h6_weight_robustness.columns:
+        coverage = h6_weight_robustness.loc[
+            h6_weight_robustness["test"].astype(str) == "coverage"
+        ]
+        if not coverage.empty:
+            row = coverage.iloc[0]
+            rows.append(
+                {
+                    "item": "H6_weight_change",
+                    "label": "H6 weight_change",
+                    "status": str(row.get("status", "warn")),
+                    "value": f"matched={int(row.get('n_obs', 0) or 0)}",
+                    "detail": str(row.get("detail", "")),
+                }
+            )
+    if not hypothesis_verdicts.empty and "verdict" in hypothesis_verdicts.columns:
+        pending = int((hypothesis_verdicts["verdict"].astype(str) == "待补数据").sum())
+        rows.append(
+            {
+                "item": "CMA_verdicts",
+                "label": "CMA verdicts",
+                "status": "pass" if pending == 0 else "warn",
+                "value": f"pending={pending}",
+                "detail": "current H1-H7 generated verdict rows",
+            }
+        )
+    return {"available": bool(rows), "rows": rows}
 
 
 def _build_verdict_diff_payload(

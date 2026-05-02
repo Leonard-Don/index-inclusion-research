@@ -1,4 +1,4 @@
-.PHONY: setup test lint serve coverage clean help rebuild verdicts doctor
+.PHONY: setup sync lock test lint typecheck serve coverage clean help rebuild verdicts doctor
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -7,8 +7,17 @@ help: ## Show this help
 setup: ## Install the project in editable mode with dev dependencies
 	python3 -m pip install -e ".[dev]"
 
+sync: ## Install pinned dependencies from uv.lock (reproducible)
+	uv sync --extra dev
+
+lock: ## Refresh uv.lock from pyproject.toml
+	uv lock
+
 lint: ## Run ruff linter
 	python3 -m ruff check .
+
+typecheck: ## Run mypy on the package source (advisory; not enforced)
+	python3 -m mypy src/index_inclusion_research
 
 test: ## Run unit tests (excludes browser smoke)
 	pytest -q

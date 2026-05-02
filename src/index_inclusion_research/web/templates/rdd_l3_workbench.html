@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HS300 RDD L3 官方候选导入工作台</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body data-table-density="cozy">
+  <a class="skip-link" href="#main-content">跳到主内容</a>
+  <main id="main-content" class="shell evidence-page rdd-l3-page" tabindex="-1">
+    <nav class="evidence-topbar" aria-label="RDD 工作台导航">
+      <a href="{{ url_for('home', mode='full', _anchor='cross_market_asymmetry') }}">首页总览</a>
+      <a href="{{ url_for('show_evidence_detail', item='RDD_L3_boundary') }}">RDD 证据明细</a>
+    </nav>
+
+    <section class="section evidence-hero">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">HS300 RDD L3</div>
+          <h1>官方候选导入工作台</h1>
+        </div>
+        <div class="section-intro">{{ status.message }}</div>
+      </div>
+      <div class="evidence-summary-grid">
+        <article class="result-card evidence-summary-card" data-status="{{ status.mode }}">
+          <div class="table-label">当前模式</div>
+          <strong>{{ status.evidence_tier }} · {{ status.evidence_status }}</strong>
+          <p>{{ status.coverage_note }}</p>
+        </article>
+        <article class="result-card evidence-summary-card">
+          <div class="table-label">来源</div>
+          <strong>{{ status.source_label }}</strong>
+          <p>{{ status.source_file }}</p>
+        </article>
+        <article class="result-card evidence-summary-card">
+          <div class="table-label">批次</div>
+          <strong>{{ status.candidate_batches or '—' }}</strong>
+          <p>treated={{ status.treated_rows or '—' }} · control={{ status.control_rows or '—' }}</p>
+        </article>
+      </div>
+    </section>
+
+    {% if error %}
+    <section class="section evidence-section-compact">
+      <div class="result-card evidence-note-card evidence-error">{{ error }}</div>
+    </section>
+    {% endif %}
+
+    <section class="section evidence-section-compact">
+      <div class="rdd-workbench-grid">
+        <form class="result-card rdd-upload-form" action="{{ url_for('check_rdd_l3_candidates') }}" method="post" enctype="multipart/form-data">
+          <div class="table-label">预检候选文件</div>
+          <label>候选名单文件<input type="file" name="candidate_file" accept=".csv,.tsv,.xlsx,.xls" required></label>
+          <label>Excel sheet<input type="text" name="sheet" placeholder="0 或 sheet 名"></label>
+          <label>批次 ID<input type="text" name="batch_id" placeholder="缺省时自动识别"></label>
+          <label>公告日<input type="date" name="announce_date"></label>
+          <label>生效日<input type="date" name="effective_date"></label>
+          <label>来源<input type="text" name="source" placeholder="中证指数公告 / 人工摘录"></label>
+          <label>来源 URL<input type="url" name="source_url" placeholder="https://"></label>
+          <button type="submit">运行 L3 预检</button>
+        </form>
+
+        <form class="result-card rdd-upload-form" action="{{ url_for('import_rdd_l3_candidates') }}" method="post" enctype="multipart/form-data">
+          <div class="table-label">正式写入 L3</div>
+          <label>官方候选名单文件<input type="file" name="candidate_file" accept=".csv,.tsv,.xlsx,.xls" required></label>
+          <label>Excel sheet<input type="text" name="sheet" placeholder="0 或 sheet 名"></label>
+          <label>批次 ID<input type="text" name="batch_id"></label>
+          <label>公告日<input type="date" name="announce_date"></label>
+          <label>生效日<input type="date" name="effective_date"></label>
+          <label>来源<input type="text" name="source" placeholder="正式来源名称"></label>
+          <label>来源 URL<input type="url" name="source_url" placeholder="https://"></label>
+          <label class="rdd-confirm"><input type="checkbox" name="confirm_import" value="1" required> 我确认这是官方或人工摘录的原始候选排名表，不是公开重建样本。</label>
+          <button type="submit">写入并刷新 RDD 状态</button>
+        </form>
+      </div>
+    </section>
+
+    {% if preflight_result %}
+    <section class="section evidence-section-compact">
+      <div class="result-card">
+        <div class="table-label">预检结果</div>
+        <h2>{{ preflight_result.preflight.status_label }}</h2>
+        <div class="rdd-check-grid">
+          {% for check in preflight_result.preflight.checks %}
+          <article class="rdd-check-card" data-status="{{ check.status }}">
+            <strong>{{ check.status_label }} · {{ check.label }}</strong>
+            <p>{{ check.copy }}</p>
+            {% if check.next_step %}<code>{{ check.next_step }}</code>{% endif %}
+          </article>
+          {% endfor %}
+        </div>
+        {% if preflight_result.preflight.next_commands %}
+        <div class="rdd-command-list">
+          {% for command in preflight_result.preflight.next_commands %}
+          <code>{{ command }}</code>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </section>
+
+    {% for block in [preflight_result.audit_preview, preflight_result.candidate_preview] %}
+    <section class="section evidence-section-compact">
+      <div class="result-card evidence-detail-table">
+        <div class="table-label">{{ '批次审计预览' if loop.first else '候选样本预览' }}</div>
+        {% if block.rows %}
+        <div class="table-wrap">
+          <table>
+            <thead><tr>{% for col in block.columns %}<th>{{ col }}</th>{% endfor %}</tr></thead>
+            <tbody>
+              {% for row in block.rows %}
+              <tr>{% for col in block.columns %}<td>{{ row[col] if row[col] is not none else '—' }}</td>{% endfor %}</tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="evidence-source-line">显示 {{ block.shown_rows }} / {{ block.total_rows }} 行</div>
+        {% else %}
+        <div class="surface-empty">当前没有可展示行。</div>
+        {% endif %}
+      </div>
+    </section>
+    {% endfor %}
+    {% endif %}
+
+    {% if import_result %}
+    <section class="section evidence-section-compact">
+      <div class="result-card">
+        <div class="table-label">写入结果</div>
+        <h2>{{ import_result.preflight.status_label }}</h2>
+        <div class="evidence-path-grid">
+          {% for path in import_result.written_paths %}
+          <article class="evidence-path-card" data-exists="{{ '1' if path.exists else '0' }}">
+            <div class="table-label">已写入</div>
+            <a href="{{ path.href }}">{{ path.label }}</a>
+          </article>
+          {% endfor %}
+          {% if import_result.refresh %}
+          {% for path in import_result.refresh.manifest_paths %}
+          <article class="evidence-path-card" data-exists="{{ '1' if path.exists else '0' }}">
+            <div class="table-label">manifest</div>
+            <a href="{{ path.href }}">{{ path.label }}</a>
+          </article>
+          {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    <section class="section evidence-section-compact">
+      <div class="rdd-workbench-grid">
+        <div class="result-card">
+          <div class="table-label">采集包</div>
+          <div class="rdd-collection-status" data-status="{{ collection_status.status }}">
+            <strong>{{ collection_status.status_label }}</strong>
+            <span>
+              批次={{ collection_status.batch_count }} · cutoff 覆盖={{ collection_status.crossing_batches }} ·
+              模板行={{ collection_status.template_rows }} · 边界参考={{ collection_status.boundary_reference_rows }}
+            </span>
+            {% if collection_status.generated_at %}
+            <time>{{ collection_status.generated_at }}</time>
+            {% endif %}
+          </div>
+          <form class="rdd-inline-form" action="{{ url_for('refresh_rdd_l3_collection') }}" method="post">
+            <label>每侧边界行数<input type="number" name="boundary_window" min="1" max="80" value="15"></label>
+            <button type="submit">刷新采集包</button>
+          </form>
+          <div class="evidence-path-grid evidence-path-grid-single">
+            {% for path in collection_status.paths %}
+            <article class="evidence-path-card" data-exists="{{ '1' if path.exists else '0' }}">
+              {% if path.href %}<a href="{{ path.href }}">{{ path.label }}</a>{% else %}<span>{{ path.label }}</span>{% endif %}
+            </article>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="result-card">
+          <div class="table-label">关键命令</div>
+          <div class="rdd-command-list">
+            {% for command in commands %}
+            <code>{{ command }}</code>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {% if collection_result %}
+    <section class="section evidence-section-compact">
+      <div class="result-card">
+        <div class="table-label">采集包刷新结果</div>
+        <h2>{{ collection_result.candidate_batches }} 个批次 / {{ collection_result.candidate_rows }} 行参考样本</h2>
+        <p class="evidence-source-line">边界参考 {{ collection_result.boundary_reference_rows }} 行；这些文件只用于正式名单采集核对，不会把 L2 running_variable 提升成 L3。</p>
+        <div class="evidence-path-grid">
+          {% for path in collection_result.written_paths %}
+          <article class="evidence-path-card" data-exists="{{ '1' if path.exists else '0' }}">
+            <div class="table-label">已刷新</div>
+            <a href="{{ path.href }}">{{ path.label }}</a>
+          </article>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    {% if collection_tables %}
+    {% for table in collection_tables %}
+    <section class="section evidence-section-compact">
+      <div class="result-card evidence-detail-table">
+        <div class="table-label">{{ table.title }}</div>
+        {% if table.source_path.href %}
+        <div class="evidence-source-line"><a href="{{ table.source_path.href }}">{{ table.source_path.label }}</a></div>
+        {% else %}
+        <div class="evidence-source-line">{{ table.source_path.label }}</div>
+        {% endif %}
+        {% if table.rows %}
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>{% for col in table.columns %}<th>{{ col }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+              {% for row in table.rows %}
+              <tr>
+                {% for col in table.columns %}
+                <td>{{ row[col] if row[col] is not none else '—' }}</td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="evidence-source-line">显示 {{ table.shown_rows }} / {{ table.total_rows }} 行</div>
+        {% else %}
+        <div class="surface-empty">当前没有可展示行；先刷新采集包。</div>
+        {% endif %}
+      </div>
+    </section>
+    {% endfor %}
+    {% endif %}
+  </main>
+</body>
+</html>

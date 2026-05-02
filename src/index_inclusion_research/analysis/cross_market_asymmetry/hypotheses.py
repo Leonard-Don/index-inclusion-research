@@ -1,3 +1,26 @@
+"""CN/US asymmetry mechanism hypotheses (H1..H7).
+
+These 7 hypotheses answer the question **"why do CN and US react
+differently around the announce / effective dates?"** — they are NOT
+the place to read whether index inclusion produces a significant CAR
+overall (that headline is in ``event_study_summary.csv`` and is
+rendered as the "主结论" section of ``paper_outline_verdicts.md``).
+
+Each hypothesis carries a CN/US comparison metric:
+
+- H1 信息泄露与预运行 — CN vs US pre-runup
+- H2 被动基金 AUM 差异 — US AUM growth × effective rolling CAR
+- H3 散户 vs 机构结构 — 4 quadrant turnover/volume channels
+- H4 卖空约束 — CN-vs-US gap_drift OLS
+- H5 涨跌停限制 — CN limit-hit predictive regression
+- H6 指数权重可预测性 — CN heavy-vs-light weight spread
+- H7 行业结构差异 — US sector asymmetry spread
+
+The verdict tier (支持 / 部分支持 / 证据不足 / 待补数据) refers to
+whether the **asymmetry mechanism** is supported, not to whether the
+inclusion effect itself exists.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

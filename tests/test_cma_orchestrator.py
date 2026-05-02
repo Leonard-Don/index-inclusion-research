@@ -87,6 +87,8 @@ def test_orchestrator_runs_on_toy_data(tmp_path):
         "cma_time_series_rolling.csv",
         "cma_time_series_break.csv",
         "cma_hypothesis_map.csv",
+        "cma_h6_weight_robustness.csv",
+        "cma_h6_weight_explanation.csv",
         "cma_hypothesis_verdicts.csv",
         "cma_hypothesis_verdicts.tex",
         "cma_track_verdict_summary.csv",
@@ -110,7 +112,7 @@ def test_orchestrator_runs_on_toy_data(tmp_path):
     assert result["paper_verdict_path"] == tmp_path / "tables" / "paper_outline_verdicts.md"
     summary = (tmp_path / "summary.md").read_text()
     assert "六、美股 vs A股 不对称" in summary
-    assert "假说裁决摘要" in summary
+    assert "CN/US 不对称机制裁决" in summary
     assert "announce" in summary or "effective" in summary
     assert result["tables_count"] == len(expected_tables)
 

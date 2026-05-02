@@ -4,6 +4,7 @@ import argparse
 import shlex
 from pathlib import Path
 
+from index_inclusion_research import paths
 from index_inclusion_research.analysis.rdd_candidates import (
     build_candidate_batch_audit,
     prepare_candidate_frame,
@@ -13,7 +14,7 @@ from index_inclusion_research.analysis.rdd_candidates import (
 )
 from index_inclusion_research.loaders import save_dataframe
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = paths.project_root()
 
 DEFAULT_OUTPUT = ROOT / "data" / "raw" / "hs300_rdd_candidates.csv"
 DEFAULT_RECONSTRUCTED_INPUT = ROOT / "data" / "raw" / "hs300_rdd_candidates.reconstructed.csv"

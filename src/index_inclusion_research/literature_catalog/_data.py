@@ -17,11 +17,12 @@ from pathlib import Path
 
 
 def _resolve_pdf_root() -> Path:
+    from index_inclusion_research import paths
+
     env_root = os.environ.get("INDEX_INCLUSION_PDF_ROOT")
     if env_root:
         return Path(env_root).expanduser()
-    repo_root = Path(__file__).resolve().parents[3]
-    repo_candidate = repo_root / "data" / "pdfs"
+    repo_candidate = paths.data_dir() / "pdfs"
     if repo_candidate.exists():
         return repo_candidate
     return Path("~/Documents/paper/index_effect_pdfs").expanduser()

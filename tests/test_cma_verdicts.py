@@ -201,6 +201,47 @@ def test_h6_weight_change_joins_on_announce_date_when_present() -> None:
     assert "matched=6" in h6["metric_snapshot"]
 
 
+def test_h6_metric_snapshot_includes_robustness_when_supplied() -> None:
+    weight_change = pd.DataFrame(
+        [
+            {"market": "CN", "ticker": f"{i:06d}", "weight_proxy": i / 1000}
+            for i in range(1, 7)
+        ]
+    )
+    gap_event_level = pd.DataFrame(
+        [
+            {"market": "CN", "ticker": f"{i:06d}", "announce_jump": i / 1000}
+            for i in range(1, 7)
+        ]
+    )
+    robustness = pd.DataFrame(
+        [
+            {
+                "test": "ols_weight",
+                "status": "pass",
+                "coefficient": 0.0123,
+                "p_value": 0.045,
+                "n_obs": 6,
+                "detail": "fixture",
+            }
+        ]
+    )
+
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+        weight_change=weight_change,
+        gap_event_level=gap_event_level,
+        h6_weight_robustness=robustness,
+    )
+
+    h6 = verdicts.set_index("hid").loc["H6"]
+    assert "robustness: ols_weight" in h6["metric_snapshot"]
+    assert "cma_h6_weight_robustness.csv" in h6["next_step"]
+
+
 def test_h6_falls_back_to_size_proxy_when_no_weight_change() -> None:
     verdicts = build_hypothesis_verdicts(
         gap_summary=_gap_summary(),
@@ -651,12 +692,17 @@ def test_render_paper_verdict_section_summarises_aggregates_and_each_hid(tmp_pat
         time_series_rolling=_rolling(),
     )
     text = render_paper_verdict_section(verdicts)
-    assert text.startswith("## 假说裁决叙述")
+    # New title positions verdicts as the CN/US asymmetry mechanism layer.
+    assert "## 机制层裁决:CN/US 不对称的结构性来源" in text
     # aggregate header mentions verdict counts
     assert "支持" in text or "部分支持" in text
     # each hid surfaces as a section heading
     for hid in ("H1", "H2", "H3", "H4", "H5", "H6", "H7"):
         assert f"### {hid}" in text
+    # engineering appendix is always appended
+    assert "附录:工程产品与复现框架" in text
+    assert "Dashboard" in text
+    assert "HS300 RDD L3" in text
 
 
 def test_export_paper_verdict_section_writes_markdown(tmp_path) -> None:
@@ -673,8 +719,82 @@ def test_export_paper_verdict_section_writes_markdown(tmp_path) -> None:
     result = export_paper_verdict_section(verdicts, output_path=out)
     assert result == out
     content = out.read_text()
-    assert "## 假说裁决叙述" in content
+    assert "## 机制层裁决:CN/US 不对称的结构性来源" in content
     assert "H1" in content and "H7" in content
+
+
+def test_render_paper_verdict_section_emits_main_finding_block_when_event_study_provided() -> None:
+    from index_inclusion_research.analysis.cross_market_asymmetry.verdicts import (
+        render_paper_verdict_section,
+    )
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+    )
+    event_study_summary = pd.DataFrame(
+        [
+            {
+                "market": "CN", "event_phase": "announce", "inclusion": 1,
+                "window": "[-1,+1]", "window_slug": "m1_p1",
+                "n_events": 118, "mean_car": 0.0175, "std_car": 0.0385,
+                "se_car": 0.0035, "ci_low_95": 0.011, "ci_high_95": 0.024,
+                "t_stat": 4.93, "p_value": 0.000003,
+            },
+            {
+                "market": "CN", "event_phase": "effective", "inclusion": 1,
+                "window": "[-1,+1]", "window_slug": "m1_p1",
+                "n_events": 118, "mean_car": 0.0042, "std_car": 0.038,
+                "se_car": 0.0035, "ci_low_95": -0.003, "ci_high_95": 0.011,
+                "t_stat": 1.21, "p_value": 0.227,
+            },
+            {
+                "market": "US", "event_phase": "announce", "inclusion": 1,
+                "window": "[-1,+1]", "window_slug": "m1_p1",
+                "n_events": 318, "mean_car": 0.0147, "std_car": 0.04,
+                "se_car": 0.002, "ci_low_95": 0.011, "ci_high_95": 0.018,
+                "t_stat": 7.20, "p_value": 0.0000001,
+            },
+            {
+                "market": "US", "event_phase": "effective", "inclusion": 1,
+                "window": "[-1,+1]", "window_slug": "m1_p1",
+                "n_events": 318, "mean_car": -0.0012, "std_car": 0.04,
+                "se_car": 0.002, "ci_low_95": -0.005, "ci_high_95": 0.003,
+                "t_stat": -0.55, "p_value": 0.582,
+            },
+        ]
+    )
+    text = render_paper_verdict_section(
+        verdicts,
+        event_study_summary=event_study_summary,
+    )
+    # main finding block sits before the mechanism layer
+    assert "## 主结论:指数纳入是否产生显著超额收益" in text
+    main_idx = text.index("## 主结论")
+    mechanism_idx = text.index("## 机制层裁决")
+    assert main_idx < mechanism_idx
+    # the table renders headline numbers
+    assert "+1.75%" in text
+    assert "+1.47%" in text
+    # findings paragraphs appear
+    assert "公告日均显著正向" in text
+    assert "生效日效应基本消散" in text
+
+
+def test_render_paper_verdict_section_skips_main_finding_without_event_study() -> None:
+    from index_inclusion_research.analysis.cross_market_asymmetry.verdicts import (
+        render_paper_verdict_section,
+    )
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+    )
+    text = render_paper_verdict_section(verdicts)
+    assert "## 主结论" not in text
+    assert "## 机制层裁决" in text
 
 
 def test_render_paper_verdict_section_includes_sample_and_methods_when_event_counts_provided(
@@ -727,6 +847,8 @@ def test_render_paper_verdict_section_handles_empty_input() -> None:
     )
     text = render_paper_verdict_section(pd.DataFrame())
     assert "暂无 verdict 数据" in text
+    # the appendix is omitted when there's no verdict data either
+    assert "## 机制层裁决" in text
 
 
 def test_export_hypothesis_verdicts_tex_writes_booktabs_table(tmp_path) -> None:

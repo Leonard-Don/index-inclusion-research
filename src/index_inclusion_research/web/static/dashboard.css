@@ -2713,6 +2713,319 @@
       gap: 12px;
       align-content: start;
     }
+    .cma-evidence-coverage {
+      margin: 18px 0;
+      display: grid;
+      gap: 10px;
+    }
+    .cma-evidence-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .cma-evidence-kicker,
+    .cma-evidence-generated {
+      color: var(--muted);
+      font-size: 11.5px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .cma-evidence-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 10px;
+    }
+    .cma-evidence-card {
+      display: grid;
+      gap: 7px;
+      padding: 13px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(15, 92, 110, 0.16);
+      background: rgba(255, 255, 255, 0.58);
+      min-width: 0;
+      color: inherit;
+      text-decoration: none;
+      transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+    }
+    .cma-evidence-card:hover {
+      border-color: rgba(15, 92, 110, 0.32);
+      box-shadow: 0 12px 28px rgba(28, 45, 58, 0.08);
+      transform: translateY(-1px);
+    }
+    .cma-evidence-card h3,
+    .cma-evidence-card p {
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+    .cma-evidence-card h3 {
+      font-size: 14px;
+      line-height: 1.25;
+      color: #203040;
+    }
+    .cma-evidence-card strong {
+      color: #172430;
+      font-size: 18px;
+      font-variant-numeric: tabular-nums;
+    }
+    .cma-evidence-card p {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .cma-evidence-link-label {
+      color: #0f5c6e;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .cma-evidence-status {
+      justify-self: start;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: rgba(15, 92, 110, 0.11);
+      color: #0f5c6e;
+      font-size: 10.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+    .cma-evidence-card[data-status="warn"] .cma-evidence-status {
+      background: rgba(195, 106, 45, 0.16);
+      color: #9a561f;
+    }
+    .cma-evidence-card[data-status="missing"] .cma-evidence-status,
+    .cma-evidence-card[data-status="fail"] .cma-evidence-status {
+      background: rgba(166, 59, 40, 0.12);
+      color: #8d3325;
+    }
+    .evidence-page {
+      padding-top: 28px;
+    }
+    .evidence-topbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .evidence-topbar a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 7px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(15, 92, 110, 0.16);
+      background: rgba(255, 255, 255, 0.68);
+      color: #12313a;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .evidence-hero h1 {
+      margin: 0;
+      font-size: clamp(30px, 5vw, 58px);
+      line-height: 0.98;
+      letter-spacing: 0;
+      color: #172430;
+    }
+    .evidence-summary-grid,
+    .evidence-path-grid,
+    .rdd-check-grid,
+    .rdd-workbench-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+      min-width: 0;
+    }
+    .evidence-path-grid-single {
+      grid-template-columns: 1fr;
+    }
+    .evidence-summary-card,
+    .evidence-path-card,
+    .evidence-note-card,
+    .evidence-detail-table {
+      min-width: 0;
+    }
+    .evidence-summary-card strong {
+      display: block;
+      margin: 5px 0 8px;
+      color: #172430;
+      font-size: 22px;
+      line-height: 1.15;
+      overflow-wrap: anywhere;
+    }
+    .evidence-summary-card p,
+    .evidence-note-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .evidence-path-card {
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(15, 92, 110, 0.14);
+      background: rgba(255, 255, 255, 0.62);
+    }
+    .evidence-path-card a,
+    .evidence-path-card span {
+      color: #12313a;
+      overflow-wrap: anywhere;
+      font-weight: 700;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+    }
+    .evidence-path-card[data-exists="0"] {
+      border-style: dashed;
+      opacity: 0.72;
+    }
+    .evidence-section-compact {
+      margin-top: 18px;
+    }
+    .evidence-source-line {
+      margin: 8px 0;
+      color: var(--muted);
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+    .evidence-error {
+      border-color: rgba(166, 59, 40, 0.24);
+      color: #8d3325;
+    }
+    .rdd-upload-form {
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+    .rdd-upload-form label {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .rdd-upload-form input {
+      width: 100%;
+      min-height: 38px;
+      border-radius: 8px;
+      border: 1px solid rgba(40, 56, 70, 0.18);
+      background: rgba(255, 255, 255, 0.78);
+      padding: 8px 10px;
+      color: #172430;
+      font: inherit;
+      min-width: 0;
+    }
+    .rdd-upload-form button {
+      justify-self: start;
+      min-height: 38px;
+      border: 0;
+      border-radius: 8px;
+      background: #0f5c6e;
+      color: #fff;
+      padding: 8px 14px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .rdd-confirm {
+      grid-template-columns: auto 1fr;
+      align-items: start;
+      color: #203040;
+      line-height: 1.45;
+    }
+    .rdd-confirm input {
+      width: auto;
+      min-height: auto;
+      margin-top: 3px;
+    }
+    .rdd-check-card {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(15, 92, 110, 0.14);
+      background: rgba(255, 255, 255, 0.62);
+    }
+    .rdd-check-card[data-status="warn"] {
+      border-color: rgba(195, 106, 45, 0.26);
+    }
+    .rdd-check-card[data-status="block"] {
+      border-color: rgba(166, 59, 40, 0.26);
+    }
+    .rdd-check-card p,
+    .rdd-check-card code {
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+    .rdd-command-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .rdd-command-list code {
+      display: block;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(23, 36, 48, 0.07);
+      color: #172430;
+      overflow-wrap: anywhere;
+    }
+    .rdd-collection-status {
+      display: grid;
+      gap: 6px;
+      margin: 8px 0 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(15, 92, 110, 0.14);
+      background: rgba(15, 92, 110, 0.06);
+    }
+    .rdd-collection-status strong {
+      color: #172430;
+      font-size: 16px;
+    }
+    .rdd-collection-status span,
+    .rdd-collection-status time {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .rdd-collection-status[data-status="missing"] {
+      border-color: rgba(195, 106, 45, 0.24);
+      background: rgba(195, 106, 45, 0.08);
+    }
+    .rdd-inline-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: end;
+      margin: 10px 0 12px;
+    }
+    .rdd-inline-form label {
+      display: grid;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .rdd-inline-form input {
+      width: 120px;
+      min-height: 36px;
+      border-radius: 8px;
+      border: 1px solid rgba(40, 56, 70, 0.18);
+      background: rgba(255, 255, 255, 0.78);
+      padding: 7px 10px;
+      color: #172430;
+      font: inherit;
+    }
+    .rdd-inline-form button {
+      min-height: 36px;
+      border: 0;
+      border-radius: 8px;
+      background: #203040;
+      color: #fff;
+      padding: 8px 13px;
+      font-weight: 900;
+      cursor: pointer;
+    }
     .cma-verdict-head {
       display: flex;
       justify-content: space-between;

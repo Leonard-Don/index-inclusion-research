@@ -17,9 +17,10 @@ from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
+from index_inclusion_research import paths
 from index_inclusion_research.loaders import load_events, save_dataframe
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = paths.project_root()
 WIKI_URL = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
 CN_EVENT_SOURCE = ROOT / "data" / "raw" / "cn_csi300_changes.csv"
 

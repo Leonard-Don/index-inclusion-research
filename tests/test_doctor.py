@@ -16,6 +16,7 @@ from index_inclusion_research.doctor import (
     check_h6_weight_change_readiness,
     check_h7_cn_sector_readiness,
     check_hypothesis_paper_ids_resolve,
+    check_matched_sample_balance,
     check_p_gated_verdict_sensitivity,
     check_paper_verdict_section_synced,
     check_pending_data_verdicts,
@@ -53,6 +54,38 @@ def test_check_hypothesis_paper_ids_resolve_flags_typos() -> None:
     assert result.status == "fail"
     # H6 references shleifer_1986
     assert any("shleifer_1986" in d for d in result.details)
+
+
+def test_check_matched_sample_balance_warns_when_missing(tmp_path: Path) -> None:
+    result = check_matched_sample_balance(csv_path=tmp_path / "missing.csv")
+    assert result.status == "warn"
+    assert "not found" in result.message
+
+
+def test_check_matched_sample_balance_passes_when_all_below_threshold(tmp_path: Path) -> None:
+    csv = tmp_path / "match_balance.csv"
+    pd.DataFrame(
+        [
+            {"market": "CN", "covariate": "mkt_cap_log", "smd": 0.05},
+            {"market": "CN", "covariate": "pre_event_return", "smd": -0.08},
+            {"market": "US", "covariate": "mkt_cap_log", "smd": 0.10},
+        ]
+    ).to_csv(csv, index=False)
+    result = check_matched_sample_balance(csv_path=csv)
+    assert result.status == "pass"
+
+
+def test_check_matched_sample_balance_warns_on_imbalance(tmp_path: Path) -> None:
+    csv = tmp_path / "match_balance.csv"
+    pd.DataFrame(
+        [
+            {"market": "CN", "covariate": "mkt_cap_log", "smd": 0.40},
+            {"market": "US", "covariate": "pre_event_return", "smd": 0.05},
+        ]
+    ).to_csv(csv, index=False)
+    result = check_matched_sample_balance(csv_path=csv)
+    assert result.status == "warn"
+    assert "mkt_cap_log" in result.message
 
 
 def test_check_verdicts_csv_health_warns_when_missing(tmp_path: Path) -> None:
@@ -317,12 +350,13 @@ def test_check_paper_verdict_section_synced_warns_when_stale(tmp_path: Path) -> 
     csv = tmp_path / "verdicts.csv"
     doc = tmp_path / "paper_outline_verdicts.md"
     verdicts.to_csv(csv, index=False)
-    doc.write_text("## 假说裁决叙述\n\nstale\n")
+    doc.write_text("## 机制层裁决:CN/US 不对称的结构性来源\n\nstale\n")
 
     result = check_paper_verdict_section_synced(
         csv_path=csv,
         doc_path=doc,
         event_counts_path=tmp_path / "missing_counts.csv",
+        event_study_summary_path=tmp_path / "missing_event_study.csv",
     )
 
     assert result.status == "warn"
@@ -360,6 +394,7 @@ def test_check_paper_verdict_section_synced_passes_when_rendered(
         csv_path=csv,
         doc_path=doc,
         event_counts_path=tmp_path / "missing_counts.csv",
+        event_study_summary_path=tmp_path / "missing_event_study.csv",
     )
 
     assert result.status == "pass"

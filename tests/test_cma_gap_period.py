@@ -61,6 +61,8 @@ def test_compute_gap_metrics_schema():
         "ticker",
         "announce_date",
         "effective_date",
+        "sector",
+        "batch_id",
         "gap_length_days",
         "pre_announce_runup",
         "announce_jump",
@@ -69,6 +71,16 @@ def test_compute_gap_metrics_schema():
         "post_effective_reversal",
     }
     assert expected.issubset(out.columns)
+
+
+def test_compute_gap_metrics_carries_sector_and_batch_id():
+    events, panel = _build_events_and_panel()
+    events.loc[events["event_id"] == 1, "sector"] = "Finance"
+    events.loc[events["event_id"] == 1, "batch_id"] = "2024H1"
+    out = compute_gap_metrics(events, panel)
+    cn = out.loc[out["event_id"] == 1].iloc[0]
+    assert cn["sector"] == "Finance"
+    assert cn["batch_id"] == "2024H1"
 
 
 def test_compute_gap_metrics_computes_gap_length():
@@ -185,6 +197,88 @@ def test_compute_pre_runup_bootstrap_handles_small_sample():
 
     assert result["n_cn"] == 1
     assert result["n_us"] == 1
+    assert math.isnan(result["boot_p_value"])
+    assert result["n_boot"] == 0
+
+
+def _gap_event_level_with_clusters(cn_clusters, us_clusters):
+    """Each cluster is a list of values that share an announce_date."""
+    rows = []
+    for c_idx, values in enumerate(cn_clusters):
+        for i, v in enumerate(values):
+            rows.append(
+                {
+                    "market": "CN",
+                    "pre_announce_runup": v,
+                    "event_id": f"cn-{c_idx}-{i}",
+                    "announce_date": f"2024-01-{c_idx + 1:02d}",
+                }
+            )
+    for c_idx, values in enumerate(us_clusters):
+        for i, v in enumerate(values):
+            rows.append(
+                {
+                    "market": "US",
+                    "pre_announce_runup": v,
+                    "event_id": f"us-{c_idx}-{i}",
+                    "announce_date": f"2024-02-{c_idx + 1:02d}",
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def test_compute_pre_runup_bootstrap_block_returns_cluster_method_and_counts():
+    from index_inclusion_research.analysis.cross_market_asymmetry.gap_period import (
+        compute_pre_runup_bootstrap_test,
+    )
+    cn_clusters = [[0.05, 0.05, 0.05]] * 20
+    us_clusters = [[0.0, 0.0]] * 20
+    panel = _gap_event_level_with_clusters(cn_clusters, us_clusters)
+    result = compute_pre_runup_bootstrap_test(
+        panel, n_boot=500, seed=0, block_by="announce_date"
+    )
+    assert result["cluster_method"] == "announce_date"
+    assert result["n_cn_clusters"] == 20
+    assert result["n_us_clusters"] == 20
+    assert result["n_cn"] == 60
+    assert result["n_us"] == 40
+    assert result["boot_p_value"] < 0.05
+
+
+def test_compute_pre_runup_bootstrap_block_widens_ci_when_within_cluster_correlated():
+    from index_inclusion_research.analysis.cross_market_asymmetry.gap_period import (
+        compute_pre_runup_bootstrap_test,
+    )
+    rng = __import__("numpy").random.default_rng(11)
+    # 10 perfectly-correlated clusters of size 5 (all events in a cluster share a value)
+    cn_cluster_means = list(rng.normal(0.0, 0.04, size=10))
+    us_cluster_means = list(rng.normal(0.0, 0.04, size=10))
+    cn_clusters = [[m] * 5 for m in cn_cluster_means]
+    us_clusters = [[m] * 5 for m in us_cluster_means]
+    panel = _gap_event_level_with_clusters(cn_clusters, us_clusters)
+    iid = compute_pre_runup_bootstrap_test(panel, n_boot=2000, seed=0)
+    block = compute_pre_runup_bootstrap_test(
+        panel, n_boot=2000, seed=0, block_by="announce_date"
+    )
+    iid_width = iid["boot_ci_high"] - iid["boot_ci_low"]
+    block_width = block["boot_ci_high"] - block["boot_ci_low"]
+    # Block bootstrap should produce a wider CI when within-cluster values are
+    # perfectly correlated, because effective sample size is # clusters not # events.
+    assert block_width > iid_width
+
+
+def test_compute_pre_runup_bootstrap_block_falls_back_when_too_few_clusters():
+    from index_inclusion_research.analysis.cross_market_asymmetry.gap_period import (
+        compute_pre_runup_bootstrap_test,
+    )
+    panel = _gap_event_level_with_clusters([[0.01, 0.02, 0.03]], [[0.0, 0.01]])
+    result = compute_pre_runup_bootstrap_test(
+        panel, n_boot=500, seed=0, block_by="announce_date"
+    )
+    import math
+
+    assert result["n_cn_clusters"] == 1
+    assert result["n_us_clusters"] == 1
     assert math.isnan(result["boot_p_value"])
     assert result["n_boot"] == 0
 

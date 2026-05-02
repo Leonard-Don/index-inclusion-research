@@ -196,6 +196,8 @@ def register_dashboard_routes(
         methods=["GET"],
     )
     _register_chart_api(app, root)
+    _register_evidence_routes(app, root)
+    _register_rdd_l3_workbench_routes(app, root)
     return app
 
 
@@ -236,6 +238,161 @@ def _register_chart_api(app: Flask, root: Path) -> None:
 
     chart_api.__name__ = "chart_api"
     app.add_url_rule("/api/chart/<chart_id>", endpoint="chart_api", view_func=chart_api, methods=["GET"])
+
+
+def _register_evidence_routes(app: Flask, root: Path) -> None:
+    """Register evidence drilldown page and JSON endpoints."""
+    from flask import abort, jsonify, render_template
+
+    from index_inclusion_research.evidence_drilldown import build_evidence_detail
+
+    def show_evidence_detail(item: str):
+        detail = build_evidence_detail(item, root=root)
+        if detail is None:
+            abort(404)
+        return render_template("evidence_detail.html", detail=detail)
+
+    def evidence_api(item: str):
+        detail = build_evidence_detail(item, root=root)
+        if detail is None:
+            abort(404)
+        return jsonify(detail)
+
+    show_evidence_detail.__name__ = "show_evidence_detail"
+    evidence_api.__name__ = "evidence_api"
+    app.add_url_rule(
+        "/evidence/<item>",
+        endpoint="show_evidence_detail",
+        view_func=show_evidence_detail,
+        methods=["GET"],
+    )
+    app.add_url_rule(
+        "/api/evidence/<item>",
+        endpoint="evidence_api",
+        view_func=evidence_api,
+        methods=["GET"],
+    )
+
+
+def _rdd_defaults_from_form(form) -> dict[str, object]:
+    from index_inclusion_research.rdd_l3_workbench import _defaults
+
+    return _defaults(
+        batch_id=form.get("batch_id") or None,
+        announce_date=form.get("announce_date") or None,
+        effective_date=form.get("effective_date") or None,
+        source=form.get("source") or None,
+        source_url=form.get("source_url") or None,
+        note=form.get("note") or None,
+        sector=form.get("sector") or None,
+    )
+
+
+def _register_rdd_l3_workbench_routes(app: Flask, root: Path) -> None:
+    """Register the official HS300 RDD L3 candidate import workbench."""
+    from flask import render_template, request
+
+    from index_inclusion_research import rdd_l3_workbench
+
+    def show_rdd_l3_workbench():
+        context = rdd_l3_workbench.build_rdd_l3_workbench_context(root=root)
+        return render_template("rdd_l3_workbench.html", **context)
+
+    def check_rdd_l3_candidates():
+        preflight = None
+        error = ""
+        try:
+            storage = request.files.get("candidate_file")
+            if storage is None or not storage.filename:
+                raise ValueError("请选择要预检的候选名单文件。")
+            input_path = rdd_l3_workbench.save_uploaded_candidate_file(storage)
+            preflight = rdd_l3_workbench.build_candidate_preflight_result(
+                input_path,
+                sheet=request.form.get("sheet") or None,
+                defaults=_rdd_defaults_from_form(request.form),
+            )
+        except Exception as exc:  # noqa: BLE001
+            error = f"{type(exc).__name__}: {exc}"
+        context = rdd_l3_workbench.build_rdd_l3_workbench_context(
+            root=root,
+            preflight_result=preflight,
+            error=error,
+        )
+        return render_template("rdd_l3_workbench.html", **context)
+
+    def import_rdd_l3_candidates():
+        import_result = None
+        error = ""
+        try:
+            storage = request.files.get("candidate_file")
+            if storage is None or not storage.filename:
+                raise ValueError("请选择要写入的官方候选名单文件。")
+            if request.form.get("confirm_import") != "1":
+                raise ValueError("正式写入前需要勾选确认项。")
+            input_path = rdd_l3_workbench.save_uploaded_candidate_file(storage)
+            import_result = rdd_l3_workbench.import_official_candidates(
+                input_path,
+                sheet=request.form.get("sheet") or None,
+                defaults=_rdd_defaults_from_form(request.form),
+            )
+            import_result["refresh"] = rdd_l3_workbench.refresh_rdd_and_manifest()
+        except Exception as exc:  # noqa: BLE001
+            error = f"{type(exc).__name__}: {exc}"
+        context = rdd_l3_workbench.build_rdd_l3_workbench_context(
+            root=root,
+            import_result=import_result,
+            error=error,
+        )
+        return render_template("rdd_l3_workbench.html", **context)
+
+    def refresh_rdd_l3_collection():
+        collection_result = None
+        error = ""
+        try:
+            raw_window = request.form.get("boundary_window") or ""
+            boundary_window = int(raw_window) if raw_window.strip() else 15
+            collection_result = rdd_l3_workbench.refresh_collection_package(
+                root=root,
+                boundary_window=boundary_window,
+                force=True,
+            )
+        except Exception as exc:  # noqa: BLE001
+            error = f"{type(exc).__name__}: {exc}"
+        context = rdd_l3_workbench.build_rdd_l3_workbench_context(
+            root=root,
+            collection_result=collection_result,
+            error=error,
+        )
+        return render_template("rdd_l3_workbench.html", **context)
+
+    show_rdd_l3_workbench.__name__ = "show_rdd_l3_workbench"
+    check_rdd_l3_candidates.__name__ = "check_rdd_l3_candidates"
+    import_rdd_l3_candidates.__name__ = "import_rdd_l3_candidates"
+    refresh_rdd_l3_collection.__name__ = "refresh_rdd_l3_collection"
+    app.add_url_rule(
+        "/rdd-l3",
+        endpoint="show_rdd_l3_workbench",
+        view_func=show_rdd_l3_workbench,
+        methods=["GET"],
+    )
+    app.add_url_rule(
+        "/rdd-l3/check",
+        endpoint="check_rdd_l3_candidates",
+        view_func=check_rdd_l3_candidates,
+        methods=["POST"],
+    )
+    app.add_url_rule(
+        "/rdd-l3/import",
+        endpoint="import_rdd_l3_candidates",
+        view_func=import_rdd_l3_candidates,
+        methods=["POST"],
+    )
+    app.add_url_rule(
+        "/rdd-l3/collection",
+        endpoint="refresh_rdd_l3_collection",
+        view_func=refresh_rdd_l3_collection,
+        methods=["POST"],
+    )
 
 
 @dataclass(frozen=True)

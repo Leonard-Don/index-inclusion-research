@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from index_inclusion_research import paths
 from index_inclusion_research.analysis import (
     build_regression_dataset,
     compute_event_study,
@@ -23,7 +24,7 @@ from index_inclusion_research.pipeline import (
 )
 from index_inclusion_research.real_data import build_real_dataset
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = paths.project_root()
 
 RAW_REAL_PATHS = {
     "events": ROOT / "data" / "raw" / "real_events.csv",

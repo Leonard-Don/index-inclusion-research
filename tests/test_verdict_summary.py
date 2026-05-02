@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from index_inclusion_research.verdict_summary import (
     build_sensitivity_table,
@@ -306,7 +307,7 @@ def test_main_prints_summary_when_csv_present(tmp_path: Path, capsys) -> None:
     ])
     assert rc == 0
     out = capsys.readouterr().out
-    assert "假说裁决摘要" in out
+    assert "CN/US 不对称机制裁决" in out
     assert "H1" in out and "H3" in out
 
 
@@ -380,8 +381,40 @@ def test_build_sensitivity_table_dedupes_and_sorts_thresholds() -> None:
         _verdicts_with_p_value_fixture(),
         thresholds=(0.10, 0.05, 0.10, 0.15),  # duplicates + unsorted
     )
-    expected = ["hid", "name_cn", "p_value", "sig_at_0.05", "sig_at_0.1", "sig_at_0.15"]
+    expected = [
+        "hid",
+        "name_cn",
+        "p_value",
+        "sig_at_0.05",
+        "sig_at_0.1",
+        "sig_at_0.15",
+        "bonferroni_p",
+        "bh_q",
+    ]
     assert list(table.columns) == expected
+
+
+def test_build_sensitivity_table_adds_bonferroni_and_bh_columns() -> None:
+    table = build_sensitivity_table(
+        _verdicts_with_p_value_fixture(),
+        thresholds=(0.05, 0.10, 0.15),
+    )
+    by_hid = table.set_index("hid")
+    # Fixture has 3 hypotheses with p-values (H1=0.012, H4=0.12, H5=0.30) plus
+    # H6 with NaN, so m = 3 for the multiple-testing correction.
+    assert by_hid.loc["H1", "bonferroni_p"] == pytest.approx(0.036, abs=1e-6)
+    assert by_hid.loc["H4", "bonferroni_p"] == pytest.approx(0.36, abs=1e-6)
+    assert by_hid.loc["H5", "bonferroni_p"] == pytest.approx(0.90, abs=1e-6)
+    # H6 has no p-value, so both columns are NaN.
+    import math
+
+    assert math.isnan(float(by_hid.loc["H6", "bonferroni_p"]))
+    assert math.isnan(float(by_hid.loc["H6", "bh_q"]))
+    # BH q-values: sorted [0.012, 0.12, 0.30], raw [0.036, 0.18, 0.30], monotone-min
+    # from the right gives [0.036, 0.18, 0.30].
+    assert by_hid.loc["H1", "bh_q"] == pytest.approx(0.036, abs=1e-6)
+    assert by_hid.loc["H4", "bh_q"] == pytest.approx(0.18, abs=1e-6)
+    assert by_hid.loc["H5", "bh_q"] == pytest.approx(0.30, abs=1e-6)
 
 
 def test_build_sensitivity_table_handles_empty_verdicts() -> None:

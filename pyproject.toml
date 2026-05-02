@@ -38,6 +38,7 @@ index-inclusion-reconstruct-hs300-rdd = "index_inclusion_research.cli:run_recons
 index-inclusion-plan-hs300-rdd-l3 = "index_inclusion_research.cli:run_plan_hs300_rdd_l3_main"
 index-inclusion-prepare-passive-aum = "index_inclusion_research.cli:run_prepare_passive_aum_main"
 index-inclusion-compute-h6-weight-change = "index_inclusion_research.cli:run_compute_h6_weight_change_main"
+index-inclusion-refresh-real-evidence = "index_inclusion_research.cli:run_refresh_real_evidence_main"
 index-inclusion-rebuild-all = "index_inclusion_research.cli:run_rebuild_all_main"
 index-inclusion-verdict-summary = "index_inclusion_research.cli:run_verdict_summary_main"
 index-inclusion-doctor = "index_inclusion_research.cli:run_doctor_main"
@@ -49,10 +50,14 @@ index-inclusion-cma = "index_inclusion_research.cli:run_cma_main"
 
 [project.optional-dependencies]
 dev = [
+  "mypy>=1.10",
+  "pandas-stubs>=2.2",
   "playwright>=1.54",
   "pytest>=8.0",
   "pytest-cov>=6.0",
   "ruff>=0.15",
+  "types-PyYAML>=6.0",
+  "types-requests>=2.31",
 ]
 
 [tool.setuptools.packages.find]
@@ -68,8 +73,49 @@ target-version = "py311"
 select = ["E4", "E7", "E9", "F", "I", "B", "UP"]
 ignore = ["E402"]
 
+[tool.mypy]
+python_version = "3.11"
+files = ["src/index_inclusion_research"]
+strict = false
+ignore_missing_imports = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_optional = true
+check_untyped_defs = false
+exclude = [
+  "src/index_inclusion_research/web/",
+]
+
+[[tool.mypy.overrides]]
+module = [
+  "akshare.*",
+  "yfinance.*",
+  "statsmodels.*",
+  "matplotlib.*",
+  "scipy.*",
+  "bs4.*",
+  "playwright.*",
+]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
   "browser_smoke: browser-based dashboard smoke checks that are opt-in by default",
+]
+
+[tool.coverage.run]
+source = ["src/index_inclusion_research"]
+omit = [
+  "src/index_inclusion_research/web/*",
+  "src/index_inclusion_research/literature_dashboard.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
 ]

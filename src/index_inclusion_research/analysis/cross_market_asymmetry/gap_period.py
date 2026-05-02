@@ -62,6 +62,8 @@ def compute_gap_metrics(events: pd.DataFrame, panel: pd.DataFrame) -> pd.DataFra
                 "ticker": ev["ticker"],
                 "announce_date": ev["announce_date"].date().isoformat(),
                 "effective_date": ev["effective_date"].date().isoformat(),
+                "sector": ev.get("sector", pd.NA),
+                "batch_id": ev.get("batch_id", pd.NA),
                 "gap_length_days": gap_days,
                 "pre_announce_runup": pre_runup,
                 "announce_jump": announce_jump,
@@ -154,28 +156,46 @@ def export_gap_tables(
     return {"event_level": event_path, "summary": summary_path}
 
 
+def _cluster_arrays(values: np.ndarray, keys: np.ndarray) -> list[np.ndarray]:
+    order = np.argsort(keys, kind="stable")
+    sorted_keys = keys[order]
+    sorted_values = values[order]
+    _, starts = np.unique(sorted_keys, return_index=True)
+    splits = np.split(sorted_values, starts[1:])
+    return splits
+
+
 def compute_pre_runup_bootstrap_test(
     gap_event_level: pd.DataFrame,
     *,
     n_boot: int = 5000,
     seed: int = 0,
+    block_by: str | None = None,
 ) -> dict[str, float]:
     """Bootstrap test for H0: mean(CN pre_announce_runup) == mean(US pre_announce_runup).
 
-    Resamples each market with replacement n_boot times, builds the empirical
-    distribution of (CN_mean - US_mean), and reports a percentile two-sided
-    p-value plus 95% CI. Returns NaN values when either market has < 2 events.
+    With ``block_by=None`` (default) each event is resampled independently — iid
+    bootstrap. With ``block_by="announce_date"`` (or any column name) clusters of
+    events sharing that key are resampled as units, preserving within-cluster
+    dependence (date-clustered block bootstrap).
+
+    Returns NaN-filled fields when either market has < 2 events (or, when
+    blocking, < 2 clusters).
     """
-    cn_values = (
-        gap_event_level.loc[gap_event_level["market"] == "CN", "pre_announce_runup"]
-        .dropna()
-        .to_numpy()
-    )
-    us_values = (
-        gap_event_level.loc[gap_event_level["market"] == "US", "pre_announce_runup"]
-        .dropna()
-        .to_numpy()
-    )
+    cn_sub = gap_event_level.loc[gap_event_level["market"] == "CN"]
+    us_sub = gap_event_level.loc[gap_event_level["market"] == "US"]
+    if block_by is not None and block_by in gap_event_level.columns:
+        cn_sub = cn_sub.dropna(subset=["pre_announce_runup", block_by])
+        us_sub = us_sub.dropna(subset=["pre_announce_runup", block_by])
+        cn_values = cn_sub["pre_announce_runup"].to_numpy(dtype=float)
+        us_values = us_sub["pre_announce_runup"].to_numpy(dtype=float)
+        cn_keys = cn_sub[block_by].astype(str).to_numpy()
+        us_keys = us_sub[block_by].astype(str).to_numpy()
+    else:
+        cn_values = cn_sub["pre_announce_runup"].dropna().to_numpy(dtype=float)
+        us_values = us_sub["pre_announce_runup"].dropna().to_numpy(dtype=float)
+        cn_keys = us_keys = None
+
     n_cn = int(cn_values.size)
     n_us = int(us_values.size)
     base = {
@@ -188,14 +208,35 @@ def compute_pre_runup_bootstrap_test(
         "n_cn": n_cn,
         "n_us": n_us,
         "n_boot": 0,
+        "cluster_method": "iid" if block_by is None else block_by,
+        "n_cn_clusters": n_cn,
+        "n_us_clusters": n_us,
     }
     if n_cn < 2 or n_us < 2:
         return base
 
     rng = np.random.default_rng(seed)
-    cn_idx = rng.integers(0, n_cn, size=(n_boot, n_cn))
-    us_idx = rng.integers(0, n_us, size=(n_boot, n_us))
-    diffs = cn_values[cn_idx].mean(axis=1) - us_values[us_idx].mean(axis=1)
+    if cn_keys is not None and us_keys is not None:
+        cn_clusters = _cluster_arrays(cn_values, cn_keys)
+        us_clusters = _cluster_arrays(us_values, us_keys)
+        n_cn_groups = len(cn_clusters)
+        n_us_groups = len(us_clusters)
+        base["n_cn_clusters"] = n_cn_groups
+        base["n_us_clusters"] = n_us_groups
+        if n_cn_groups < 2 or n_us_groups < 2:
+            return base
+        diffs = np.empty(n_boot, dtype=float)
+        for i in range(n_boot):
+            cn_pick = rng.integers(0, n_cn_groups, size=n_cn_groups)
+            us_pick = rng.integers(0, n_us_groups, size=n_us_groups)
+            cn_draw = np.concatenate([cn_clusters[j] for j in cn_pick])
+            us_draw = np.concatenate([us_clusters[j] for j in us_pick])
+            diffs[i] = cn_draw.mean() - us_draw.mean()
+    else:
+        cn_idx = rng.integers(0, n_cn, size=(n_boot, n_cn))
+        us_idx = rng.integers(0, n_us, size=(n_boot, n_us))
+        diffs = cn_values[cn_idx].mean(axis=1) - us_values[us_idx].mean(axis=1)
+
     diff_mean = float(cn_values.mean() - us_values.mean())
     if diff_mean > 0:
         p_one = float((diffs <= 0).mean())
@@ -203,17 +244,18 @@ def compute_pre_runup_bootstrap_test(
         p_one = float((diffs >= 0).mean())
     else:
         p_one = 0.5
-    return {
-        "cn_mean": float(cn_values.mean()),
-        "us_mean": float(us_values.mean()),
-        "diff_mean": diff_mean,
-        "boot_p_value": float(min(2 * p_one, 1.0)),
-        "boot_ci_low": float(np.percentile(diffs, 2.5)),
-        "boot_ci_high": float(np.percentile(diffs, 97.5)),
-        "n_cn": n_cn,
-        "n_us": n_us,
-        "n_boot": n_boot,
-    }
+    base.update(
+        {
+            "cn_mean": float(cn_values.mean()),
+            "us_mean": float(us_values.mean()),
+            "diff_mean": diff_mean,
+            "boot_p_value": float(min(2 * p_one, 1.0)),
+            "boot_ci_low": float(np.percentile(diffs, 2.5)),
+            "boot_ci_high": float(np.percentile(diffs, 97.5)),
+            "n_boot": n_boot,
+        }
+    )
+    return base
 
 
 def export_pre_runup_bootstrap_table(

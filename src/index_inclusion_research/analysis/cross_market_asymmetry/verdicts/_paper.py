@@ -1,13 +1,17 @@
 """Render hypothesis verdicts as a paper-ready markdown section.
 
-This module handles the cross-market-asymmetry verdict narrative that
-gets pasted into ``docs/paper_outline.md`` (or fed into a LaTeX
-template). The pipeline is:
+This module handles the paper-ready narrative for ``docs/paper_outline_verdicts.md``.
+The pipeline is:
 
-1. ``_sample_summary_block`` — preamble describing the event sample.
-2. ``_methods_block`` — short methods recap.
-3. one paragraph per verdict row (HID · name —— verdict).
-4. ``_limitations_block`` — caveats + outstanding ``待补数据`` items.
+1. ``_main_finding_block`` — headline result (does inclusion produce abnormal CAR?).
+2. ``_sample_summary_block`` — preamble describing the event sample.
+3. ``_methods_block`` — short methods recap.
+4. one paragraph per verdict row (HID · name —— verdict). The verdicts
+   collectively answer the **CN/US asymmetry mechanism** question, not
+   the "is there an effect?" question; that one is answered by step 1.
+5. ``_limitations_block`` — caveats + outstanding ``待补数据`` items.
+6. ``_engineering_appendix_block`` — pointers to dashboard / HS300 L3
+   workflow as engineering artifacts that sit outside the core narrative.
 
 Public API: ``render_paper_verdict_section`` and the thin
 ``export_paper_verdict_section`` writer; both are re-exported from
@@ -19,6 +23,151 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+
+_MAIN_FINDING_QUADRANTS: tuple[tuple[str, str], ...] = (
+    ("CN", "announce"),
+    ("CN", "effective"),
+    ("US", "announce"),
+    ("US", "effective"),
+)
+
+
+def _main_finding_block(event_study_summary: pd.DataFrame | None) -> list[str]:
+    """Render the headline result: does index inclusion produce a significant
+    abnormal return on the [-1, +1] window?
+
+    Reads the standard ``event_study_summary.csv`` shape (one row per
+    market × event_phase × inclusion × window_slug). When the input is
+    missing or malformed, returns an empty block — caller falls back to
+    the legacy verdict-only narrative.
+    """
+    if event_study_summary is None or event_study_summary.empty:
+        return []
+    required = {
+        "market",
+        "event_phase",
+        "inclusion",
+        "window_slug",
+        "n_events",
+        "mean_car",
+        "t_stat",
+        "p_value",
+    }
+    if not required.issubset(event_study_summary.columns):
+        return []
+    sub = event_study_summary.loc[
+        (event_study_summary["inclusion"] == 1)
+        & (event_study_summary["window_slug"] == "m1_p1")
+    ].copy()
+    if sub.empty:
+        return []
+
+    by_key = sub.set_index(["market", "event_phase"], drop=False)
+    cells: dict[tuple[str, str], dict[str, float]] = {}
+    rows_md: list[str] = []
+    for market, phase in _MAIN_FINDING_QUADRANTS:
+        try:
+            row = by_key.loc[(market, phase)]
+        except KeyError:
+            continue
+        if isinstance(row, pd.DataFrame):
+            row = row.iloc[0]
+        cells[(market, phase)] = {
+            "n": int(row["n_events"]),
+            "mean_car": float(row["mean_car"]),
+            "t": float(row["t_stat"]),
+            "p": float(row["p_value"]),
+        }
+        rows_md.append(
+            f"| {market} | {phase} | {int(row['n_events'])} | "
+            f"{float(row['mean_car']) * 100:+.2f}% | "
+            f"{float(row['t_stat']):.2f} | "
+            f"{float(row['p_value']):.4f} |"
+        )
+
+    if not rows_md:
+        return []
+
+    lines: list[str] = ["## 主结论:指数纳入是否产生显著超额收益", ""]
+    lines.append(
+        "本节用事件研究 CAR[-1,+1] 直接回答论文核心问题。"
+        "下方 7 条机制假说回答的是 CN/US 反应不一致的来源,"
+        "**不是**回答\"是否上涨\"本身。"
+    )
+    lines.append("")
+    lines.append("| 市场 | 阶段 | n | mean CAR[-1,+1] | t | p |")
+    lines.append("|---|---|---|---|---|---|")
+    lines.extend(rows_md)
+    lines.append("")
+
+    findings: list[str] = []
+    cn_announce = cells.get(("CN", "announce"))
+    us_announce = cells.get(("US", "announce"))
+    cn_effective = cells.get(("CN", "effective"))
+    us_effective = cells.get(("US", "effective"))
+    if cn_announce and us_announce:
+        findings.append(
+            f"- **公告日均显著正向**:CN {cn_announce['mean_car'] * 100:+.2f}% "
+            f"(t={cn_announce['t']:.2f}, p={cn_announce['p']:.4f})、"
+            f"US {us_announce['mean_car'] * 100:+.2f}% "
+            f"(t={us_announce['t']:.2f}, p={us_announce['p']:.4f})。"
+            "与 Shleifer (1986)、Harris-Gurel (1986)、Lynch-Mendenhall (1997) 等"
+            "指数效应文献方向一致。"
+        )
+    if cn_effective and us_effective:
+        findings.append(
+            f"- **生效日效应基本消散**:CN {cn_effective['mean_car'] * 100:+.2f}% "
+            f"(p={cn_effective['p']:.4f})、"
+            f"US {us_effective['mean_car'] * 100:+.2f}% "
+            f"(p={us_effective['p']:.4f})。"
+            "公告日已完成主要 price discovery,与 Greenwood-Sammon (2022) "
+            "\"S&P500 inclusion effect 已弱化\" 的发现方向一致。"
+        )
+    if findings:
+        lines.append("**论文核心发现**")
+        lines.append("")
+        lines.extend(findings)
+        lines.append(
+            "- **机制定位**:超额收益主要发生在公告日,"
+            "意味着\"为何上涨\"的解释焦点应推向公告期机制(信息泄露 / 行业结构 / 关注度提升),"
+            "而非生效日的被动配置需求冲击。"
+        )
+        lines.append("")
+    lines.append("---")
+    lines.append("")
+    return lines
+
+
+def _engineering_appendix_block() -> list[str]:
+    """Render the engineering-products appendix.
+
+    Dashboard + HS300 RDD L3 工作台 are infrastructure that supports the
+    research but is not part of the core paper narrative; this block
+    points readers to the dedicated docs.
+    """
+    return [
+        "---",
+        "",
+        "## 附录:工程产品与复现框架",
+        "",
+        "本仓库除论文核心实证外,还包含两个独立的工程产品。它们**不属于论文核心叙事**,",
+        "但支撑研究透明度与复现性,论文中可作为方法附录或补充材料引用:",
+        "",
+        "### Dashboard(界面层)",
+        "",
+        "`index-inclusion-dashboard` 提供一页式总展板,3 分钟汇报 / 展示 / 完整材料三种模式,",
+        "支持 verdict ↔ literature 双向链接、ECharts 交互图表、真实证据卡 drilldown。",
+        "完整 CLI 参考见 [docs/cli_reference.md](cli_reference.md);"
+        "架构见 [docs/dashboard_architecture.md](dashboard_architecture.md)。",
+        "",
+        "### HS300 RDD L3 候选采集工作台",
+        "",
+        "`/rdd-l3` 浏览器工作台 + `index-inclusion-prepare-hs300-rdd` / "
+        "`reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` CLI 工具链,",
+        "覆盖从公开重建(L2)到中证官方候选(L3)的完整采集流程。",
+        "完整工作流见 [docs/hs300_rdd_workflow.md](hs300_rdd_workflow.md)。",
+        "",
+    ]
 
 
 def _sample_summary_block(event_counts: pd.DataFrame | None) -> list[str]:
@@ -97,20 +246,39 @@ def render_paper_verdict_section(
     verdicts: pd.DataFrame,
     *,
     event_counts: pd.DataFrame | None = None,
+    event_study_summary: pd.DataFrame | None = None,
 ) -> str:
     """Render verdicts as a paper-ready markdown section.
 
-    Output starts with an aggregate summary line (X 支持 / Y 部分支持 /
-    Z 证据不足 / W 待补数据), followed by one paragraph per hypothesis
-    that combines name, verdict, key metric, and the human-readable
-    evidence_summary. When ``event_counts`` is supplied, a sample
-    summary preamble + a methods block sit before the verdict
-    paragraphs and a limitations block sits after — yielding a draft
-    that can be pasted into ``docs/paper_outline.md`` or fed into a
-    LaTeX paper template.
+    Structure:
+
+    1. 主结论 — does index inclusion produce a significant CAR? (read
+       from ``event_study_summary`` for inclusion=1 × [-1,+1] window).
+    2. 机制层裁决 — CN/US asymmetry mechanisms (verdicts CSV → 7 H rows).
+       This part **does not** answer "is there an effect?"; it answers
+       "why do the two markets respond differently?".
+    3. 限制与稳健性补强方向 (when sample summary is available).
+    4. 工程产品与复现框架附录 (dashboard / HS300 L3 pointers).
+
+    When ``event_study_summary`` is omitted, step 1 is skipped — the
+    document starts directly at the mechanism-level narrative (legacy
+    behavior).
     """
+    main_finding_lines = _main_finding_block(event_study_summary)
+
     if verdicts is None or verdicts.empty:
-        return "## 假说裁决叙述\n\n(暂无 verdict 数据。先跑 `index-inclusion-cma`。)\n"
+        if main_finding_lines:
+            return "\n".join(
+                main_finding_lines
+                + [
+                    "## 机制层裁决:CN/US 不对称的结构性来源",
+                    "",
+                    "(暂无 verdict 数据。先跑 `index-inclusion-cma`。)",
+                    "",
+                ]
+                + _engineering_appendix_block()
+            ).rstrip() + "\n"
+        return "## 机制层裁决:CN/US 不对称的结构性来源\n\n(暂无 verdict 数据。先跑 `index-inclusion-cma`。)\n"
 
     counts: dict[str, int] = {}
     for _, row in verdicts.iterrows():
@@ -123,10 +291,16 @@ def render_paper_verdict_section(
             aggregate_parts.append(f"{counts[label]} 项{label}")
 
     lines: list[str] = []
-    lines.append("## 假说裁决叙述")
+    lines.extend(main_finding_lines)
+    lines.append("## 机制层裁决:CN/US 不对称的结构性来源")
     lines.append("")
     lines.append(
-        f"基于跨市场不对称(CMA)pipeline 自动产出,7 条机制假说的当前裁决分布:"
+        "下面 7 条假说回答的是 \"为什么 CN/US 在公告日 / 生效日的反应不一致\","
+        "而**不是**直接回答 \"指数纳入是否产生超额收益\"(那个问题在上节已回答)。"
+    )
+    lines.append("")
+    lines.append(
+        f"基于跨市场不对称(CMA)pipeline 自动产出,7 条 CN/US 不对称机制假说的当前裁决分布:"
         f" **{' / '.join(aggregate_parts) if aggregate_parts else '无可裁决项'}**。"
         " 详见 `results/real_tables/cma_hypothesis_verdicts.csv`。"
     )
@@ -168,6 +342,7 @@ def render_paper_verdict_section(
         lines.append("")
     if sample_lines:
         lines.extend(_limitations_block(verdicts))
+    lines.extend(_engineering_appendix_block())
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -176,9 +351,16 @@ def export_paper_verdict_section(
     *,
     output_path: Path,
     event_counts: pd.DataFrame | None = None,
+    event_study_summary: pd.DataFrame | None = None,
 ) -> Path:
     """Write the paper-ready verdict section to ``output_path`` (a .md file)."""
     out_path = Path(output_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(render_paper_verdict_section(verdicts, event_counts=event_counts))
+    out_path.write_text(
+        render_paper_verdict_section(
+            verdicts,
+            event_counts=event_counts,
+            event_study_summary=event_study_summary,
+        )
+    )
     return out_path

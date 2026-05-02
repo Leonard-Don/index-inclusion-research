@@ -23,7 +23,9 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-ROOT = Path(__file__).resolve().parents[2]
+from index_inclusion_research import paths
+
+ROOT = paths.project_root()
 DEFAULT_OUTPUT = ROOT / "data" / "raw" / "passive_aum.csv"
 
 REQUIRED_COLS: tuple[str, ...] = ("market", "year", "aum_trillion")

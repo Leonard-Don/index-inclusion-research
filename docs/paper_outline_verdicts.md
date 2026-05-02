@@ -1,6 +1,27 @@
-## 假说裁决叙述
+## 主结论:指数纳入是否产生显著超额收益
 
-基于跨市场不对称(CMA)pipeline 自动产出,7 条机制假说的当前裁决分布: **1 项支持 / 1 项部分支持 / 5 项证据不足**。 详见 `results/real_tables/cma_hypothesis_verdicts.csv`。
+本节用事件研究 CAR[-1,+1] 直接回答论文核心问题。下方 7 条机制假说回答的是 CN/US 反应不一致的来源,**不是**回答"是否上涨"本身。
+
+| 市场 | 阶段 | n | mean CAR[-1,+1] | t | p |
+|---|---|---|---|---|---|
+| CN | announce | 118 | +1.75% | 4.93 | 0.0000 |
+| CN | effective | 118 | +0.42% | 0.93 | 0.3551 |
+| US | announce | 318 | +1.47% | 5.19 | 0.0000 |
+| US | effective | 318 | -0.12% | -0.51 | 0.6105 |
+
+**论文核心发现**
+
+- **公告日均显著正向**:CN +1.75% (t=4.93, p=0.0000)、US +1.47% (t=5.19, p=0.0000)。与 Shleifer (1986)、Harris-Gurel (1986)、Lynch-Mendenhall (1997) 等指数效应文献方向一致。
+- **生效日效应基本消散**:CN +0.42% (p=0.3551)、US -0.12% (p=0.6105)。公告日已完成主要 price discovery,与 Greenwood-Sammon (2022) "S&P500 inclusion effect 已弱化" 的发现方向一致。
+- **机制定位**:超额收益主要发生在公告日,意味着"为何上涨"的解释焦点应推向公告期机制(信息泄露 / 行业结构 / 关注度提升),而非生效日的被动配置需求冲击。
+
+---
+
+## 机制层裁决:CN/US 不对称的结构性来源
+
+下面 7 条假说回答的是 "为什么 CN/US 在公告日 / 生效日的反应不一致",而**不是**直接回答 "指数纳入是否产生超额收益"(那个问题在上节已回答)。
+
+基于跨市场不对称(CMA)pipeline 自动产出,7 条 CN/US 不对称机制假说的当前裁决分布: **1 项支持 / 1 项部分支持 / 5 项证据不足**。 详见 `results/real_tables/cma_hypothesis_verdicts.csv`。
 
 ### 样本概述
 
@@ -17,9 +38,9 @@
 - **HS300 RDD**: cutoff=300 的运行变量断点，公告日 `[-1,+1]` 主结果。
 
 ### H1 · 信息泄露与预运行 —— 证据不足(可信度:中)
-**bootstrap p = 0.640**, n = 436
-CN-US pre-runup 差异 0.50% 在 bootstrap 下不显著 (p=0.640, CI95=[-1.65%, 2.74%])，方向偏 CN 但跨市场差异口径无法归因为信息泄露。
-_细节_: CN pre-runup=3.09%; US pre-runup=2.59%; diff=0.50%, bootstrap p=0.640, CI95=[-1.65%, 2.74%]
+**bootstrap p = 0.875**, n = 436
+CN-US pre-runup 差异 0.50% 在 bootstrap 下不显著 (p=0.875, CI95=[-3.25%, 4.70%])，方向偏 CN 但跨市场差异口径无法归因为信息泄露。
+_细节_: CN pre-runup=3.09%; US pre-runup=2.59%; diff=0.50%, bootstrap p=0.875, CI95=[-3.25%, 4.70%]
 
 ### H2 · 被动基金 AUM 差异 —— 证据不足(可信度:低)
 **US AUM ratio = 13.481**, n = 12
@@ -44,7 +65,7 @@ _细节_: CN limit_coef=0.0757, p=0.213, R²=0.006, n=936
 ### H6 · 指数权重可预测性 —— 证据不足(可信度:中)
 **heavy−light spread = -0.019**, n = 67
 CN 重权重 announce_jump 并不明显高于轻权重 (+1.29% vs +3.20%,spread=-1.90%),H6 不被支持。
-_细节_: matched=67, median weight=0.0039, heavy announce_jump=+1.29%, light=+3.20%, spread=-1.90%
+_细节_: matched=67, median weight=0.0039, heavy announce_jump=+1.29%, light=+3.20%, spread=-1.90%; robustness: ols_weight coef=-0.0061, p=0.001; sector_fe_weight coef=-0.0436, p=1.000; median_quantreg_weight coef=-0.0057, p=0.312
 
 ### H7 · 行业结构差异 —— 支持(可信度:中)
 **US sector spread = 5.954**, n = 187
@@ -61,3 +82,22 @@ _细节_: US eligible sectors=8, max=+3.90(Materials), min=-2.05(Real Estate), s
   bootstrap / permutation 检验，以及 sector × size 的交互检验，进一步压低单通道误判风险。
 - 长窗口(>120 日)的 retention ratio 在样本量收缩时会跳到 NA,
   当前 demand_curve 主线主要靠 `[0,+60]` / `[0,+120]` 给出方向性结论。
+
+---
+
+## 附录:工程产品与复现框架
+
+本仓库除论文核心实证外,还包含两个独立的工程产品。它们**不属于论文核心叙事**,
+但支撑研究透明度与复现性,论文中可作为方法附录或补充材料引用:
+
+### Dashboard(界面层)
+
+`index-inclusion-dashboard` 提供一页式总展板,3 分钟汇报 / 展示 / 完整材料三种模式,
+支持 verdict ↔ literature 双向链接、ECharts 交互图表、真实证据卡 drilldown。
+完整 CLI 参考见 [docs/cli_reference.md](cli_reference.md);架构见 [docs/dashboard_architecture.md](dashboard_architecture.md)。
+
+### HS300 RDD L3 候选采集工作台
+
+`/rdd-l3` 浏览器工作台 + `index-inclusion-prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` CLI 工具链,
+覆盖从公开重建(L2)到中证官方候选(L3)的完整采集流程。
+完整工作流见 [docs/hs300_rdd_workflow.md](hs300_rdd_workflow.md)。

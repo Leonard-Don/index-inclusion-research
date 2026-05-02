@@ -11,6 +11,7 @@ import yfinance as yf
 
 logger = logging.getLogger(__name__)
 
+from index_inclusion_research import paths
 from index_inclusion_research.analysis.rdd_candidates import (
     build_candidate_batch_audit,
     summarize_candidate_audit,
@@ -24,7 +25,7 @@ from index_inclusion_research.analysis.rdd_reconstruction import (
 )
 from index_inclusion_research.loaders import save_dataframe
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = paths.project_root()
 
 DEFAULT_EVENTS = ROOT / "data" / "raw" / "real_events.csv"
 DEFAULT_PRICES = ROOT / "data" / "raw" / "real_prices.csv"

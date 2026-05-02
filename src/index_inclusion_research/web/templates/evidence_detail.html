@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ detail.label }}｜真实证据明细</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body data-table-density="cozy">
+  <a class="skip-link" href="#main-content">跳到主内容</a>
+  <main id="main-content" class="shell evidence-page" tabindex="-1">
+    <nav class="evidence-topbar" aria-label="证据明细导航">
+      <a href="{{ url_for('home', mode='full', _anchor='cross_market_asymmetry') }}">首页总览</a>
+      <a href="{{ url_for('show_rdd_l3_workbench') }}">RDD L3 工作台</a>
+      <a href="{{ url_for('evidence_api', item=detail.item) }}">JSON</a>
+    </nav>
+
+    <section class="section evidence-hero">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">真实证据明细</div>
+          <h1>{{ detail.label }}</h1>
+        </div>
+        <div class="section-intro">{{ detail.detail }}</div>
+      </div>
+      <div class="evidence-summary-grid">
+        <article class="result-card evidence-summary-card" data-status="{{ detail.status }}">
+          <div class="table-label">状态</div>
+          <strong>{{ detail.status }}</strong>
+          <p>{{ detail.value }}</p>
+        </article>
+        {% if detail.generated_at %}
+        <article class="result-card evidence-summary-card">
+          <div class="table-label">生成时间</div>
+          <strong>{{ detail.generated_at }}</strong>
+          <p>来自 evidence_refresh_manifest.json</p>
+        </article>
+        {% endif %}
+        {% for card in detail.summary_cards %}
+        <article class="result-card evidence-summary-card">
+          <div class="table-label">{{ card.label }}</div>
+          <strong>{{ card.value }}</strong>
+          {% if card.detail %}<p>{{ card.detail }}</p>{% endif %}
+        </article>
+        {% endfor %}
+      </div>
+    </section>
+
+    {% if detail.source_paths %}
+    <section class="section evidence-section-compact">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">Artifact</div>
+          <h2>来源文件</h2>
+        </div>
+      </div>
+      <div class="evidence-path-grid">
+        {% for path in detail.source_paths %}
+        <article class="result-card evidence-path-card" data-exists="{{ '1' if path.exists else '0' }}">
+          <div class="table-label">{{ '已找到' if path.exists else '缺失' }}</div>
+          {% if path.href %}
+          <a href="{{ path.href }}">{{ path.label }}</a>
+          {% else %}
+          <span>{{ path.label }}</span>
+          {% endif %}
+        </article>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if detail.notes %}
+    <section class="section evidence-section-compact">
+      <div class="result-card evidence-note-card">
+        {% for note in detail.notes %}
+        <p>{{ note }}</p>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% for table in detail.tables %}
+    <section class="section evidence-section-compact">
+      <div class="result-card evidence-detail-table">
+        <div class="table-label">{{ table.title }}</div>
+        {% if table.source_path %}<div class="evidence-source-line">{{ table.source_path }}</div>{% endif %}
+        {% if table.rows %}
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                {% for col in table.columns %}<th>{{ col }}</th>{% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in table.rows %}
+              <tr>
+                {% for col in table.columns %}
+                <td>
+                  {% set value = row[col] %}
+                  {% if value is number %}
+                    {% if value is integer %}{{ value }}{% else %}{{ '%.4f'|format(value) }}{% endif %}
+                  {% elif value is none %}—{% else %}{{ value }}{% endif %}
+                </td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="evidence-source-line">显示 {{ table.shown_rows }} / {{ table.total_rows }} 行</div>
+        {% else %}
+        <div class="surface-empty">当前没有可展示行。</div>
+        {% endif %}
+      </div>
+    </section>
+    {% endfor %}
+  </main>
+</body>
+</html>
