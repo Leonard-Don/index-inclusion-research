@@ -221,3 +221,66 @@ def test_run_cma_pipeline_writes_previous_snapshot_on_second_run(tmp_path):
     )
     assert previous.exists()
     assert previous.read_bytes() == first_content
+
+
+def test_run_cma_pipeline_autoloads_default_passive_aum(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+):
+    event_panel = _make_min_event_panel()
+    events = _make_min_events()
+    event_panel_path = tmp_path / "ep.csv"
+    matched_path = tmp_path / "mp.csv"
+    events_path = tmp_path / "ev.csv"
+    event_panel.to_csv(event_panel_path, index=False)
+    event_panel.to_csv(matched_path, index=False)
+    events.to_csv(events_path, index=False)
+    aum_path = tmp_path / "passive_aum.csv"
+    pd.DataFrame(
+        {
+            "market": ["US", "US"],
+            "year": [2014, 2020],
+            "aum_trillion": [2.0, 7.0],
+        }
+    ).to_csv(aum_path, index=False)
+    monkeypatch.setattr(orchestrator, "DEFAULT_PASSIVE_AUM_PATH", aum_path)
+    monkeypatch.setattr(
+        orchestrator.time_series,
+        "build_rolling_car",
+        lambda _panel: pd.DataFrame(
+            [
+                {
+                    "market": "US",
+                    "event_phase": "effective",
+                    "window_start_year": 2010,
+                    "window_end_year": 2014,
+                    "car_mean": 0.004,
+                    "car_se": 0.001,
+                    "car_t": 4.0,
+                    "n_events": 2,
+                },
+                {
+                    "market": "US",
+                    "event_phase": "effective",
+                    "window_start_year": 2016,
+                    "window_end_year": 2020,
+                    "car_mean": -0.002,
+                    "car_se": 0.001,
+                    "car_t": -2.0,
+                    "n_events": 2,
+                },
+            ]
+        ),
+    )
+
+    orchestrator.run_cma_pipeline(
+        event_panel_path=event_panel_path,
+        matched_panel_path=matched_path,
+        events_path=events_path,
+        tables_dir=tmp_path / "tables",
+        figures_dir=tmp_path / "figures",
+    )
+
+    verdicts = pd.read_csv(tmp_path / "tables" / "cma_hypothesis_verdicts.csv")
+    h2 = verdicts.set_index("hid").loc["H2"]
+    assert h2["verdict"] != "待补数据"
+    assert "US AUM" in h2["metric_snapshot"]
