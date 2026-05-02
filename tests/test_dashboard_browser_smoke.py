@@ -153,7 +153,7 @@ def test_dashboard_browser_smoke() -> None:
         assert "核心文件" in page.locator("[data-refresh-snapshot-source]").inner_text()
         assert (
             page.locator("[data-refresh-health-summary]").inner_text().strip()
-            == "结果健康需关注"
+            == "结果健康良好"
         )
         topbar_metrics = page.evaluate(
             """

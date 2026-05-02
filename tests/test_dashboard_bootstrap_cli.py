@@ -77,6 +77,10 @@ def test_project_metadata_declares_flask_and_console_scripts() -> None:
         == "index_inclusion_research.cli:run_reconstruct_hs300_rdd_candidates_main"
     )
     assert (
+        project["scripts"]["index-inclusion-collect-hs300-rdd-l3"]
+        == "index_inclusion_research.cli:run_collect_hs300_rdd_l3_main"
+    )
+    assert (
         project["scripts"]["index-inclusion-generate-sample-data"]
         == "index_inclusion_research.cli:run_generate_sample_data_main"
     )
@@ -110,6 +114,7 @@ def test_track_console_wrappers_delegate_to_expected_package_modules(monkeypatch
     cli.run_regressions_main()
     cli.run_prepare_hs300_rdd_candidates_main()
     cli.run_reconstruct_hs300_rdd_candidates_main()
+    cli.run_collect_hs300_rdd_l3_main()
 
     assert calls == [
         "index_inclusion_research.build_event_sample",
@@ -120,6 +125,7 @@ def test_track_console_wrappers_delegate_to_expected_package_modules(monkeypatch
         "index_inclusion_research.run_regressions",
         "index_inclusion_research.prepare_hs300_rdd_candidates",
         "index_inclusion_research.reconstruct_hs300_rdd_candidates",
+        "index_inclusion_research.hs300_rdd_online_sources",
     ]
 
 
@@ -172,6 +178,7 @@ def test_python_module_fallback_targets_are_directly_runnable() -> None:
         "run_regressions.py",
         "prepare_hs300_rdd_candidates.py",
         "reconstruct_hs300_rdd_candidates.py",
+        "hs300_rdd_online_sources.py",
         "sample_data.py",
         "real_data.py",
         "enrich_cn_sectors.py",

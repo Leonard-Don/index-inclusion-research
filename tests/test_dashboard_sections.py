@@ -101,6 +101,7 @@ def test_build_limits_section_derives_live_rdd_tier_for_summary_cards_and_scope_
     def _apply_live_status(frame: pd.DataFrame) -> pd.DataFrame:
         updated = frame.copy()
         mask = updated["分析层"] == "中国 RDD 扩展"
+        updated.loc[mask, "证据等级"] = ""
         updated.loc[mask, "证据状态"] = "公开重建样本"
         updated.loc[mask, "当前口径"] = "当前使用公开数据重建的边界样本。"
         updated.loc[mask, "来源摘要"] = "公开重建候选样本文件 · 批次 2024-05-31 · 311 条候选"

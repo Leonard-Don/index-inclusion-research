@@ -64,6 +64,10 @@ def run_plan_hs300_rdd_l3_main() -> int | None:
     return _run_package_main("index_inclusion_research.hs300_rdd_l3_collection")
 
 
+def run_collect_hs300_rdd_l3_main() -> int | None:
+    return _run_package_main("index_inclusion_research.hs300_rdd_online_sources")
+
+
 def run_prepare_passive_aum_main() -> int | None:
     return _run_package_main("index_inclusion_research.prepare_passive_aum")
 
