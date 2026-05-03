@@ -44,8 +44,9 @@
 ## 6. 多重检验
 
 - **当前阈值**：决定层 p<0.10（默认）；输出层附 Bonferroni 与 Benjamini-Hochberg q-value。
-- **Pre-registration**：本项目的 7 假说 **post-hoc** 拟合自数据，**未做 Pre-Analysis Plan 公开**。
-  下一轮 verdict 修订前建议先冻结假说与阈值，详见 `docs/verdict_iteration.md` 的预注册流程。
+- **Pre-registration**：7 假说 PAP 草稿见 [`docs/pre_registration.md`](pre_registration.md)（冻结日 2026-05-03）。
+  在 PAP §7 决策日志签字之前，仍按 **post-hoc** 表述；签字后可升级为 **confirmatory**。
+  详细 verdict 迭代流程见 [`docs/verdict_iteration.md`](verdict_iteration.md)。
 
 ## 7. CMA 假说证据强度分层
 
