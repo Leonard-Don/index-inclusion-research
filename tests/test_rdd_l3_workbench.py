@@ -131,9 +131,12 @@ def test_workbench_context_uses_supplied_root_paths(tmp_path: Path) -> None:
 
     assert context["status"]["mode"] == "missing"
     assert context["collection_status"]["status"] == "missing"
+    assert context["online_collection_status"]["status"] == "missing"
     assert context["collection_status"]["paths"][0]["label"].startswith("results/literature")
     assert context["collection_tables"][0]["key"] == "batch_collection_checklist"
+    assert context["online_collection_tables"][0]["key"] == "online_year_coverage"
     assert context["collection_tables"][0]["rows"] == []
+    assert context["online_collection_tables"][0]["rows"] == []
     assert context["import_paths"][0]["label"] == "data/raw/hs300_rdd_candidates.csv"
 
 
@@ -160,3 +163,68 @@ def test_refresh_collection_package_builds_browser_workbench_artifacts(tmp_path:
     assert tables["formal_candidate_template"]["total_rows"] == 2
     assert tables["boundary_reference"]["total_rows"] == 2
     assert tables["boundary_reference"]["rows"][0]["ticker"] in {"000686", "000001"}
+
+
+def test_workbench_context_surfaces_online_collection_diagnostics(tmp_path: Path) -> None:
+    collection_dir = tmp_path / "results" / "literature" / "hs300_rdd_l3_collection"
+    collection_dir.mkdir(parents=True)
+    pd.DataFrame(
+        [
+            {"ticker": "000001", "batch_id": "csi300-2023-05"},
+            {"ticker": "000002", "batch_id": "csi300-2023-05"},
+        ]
+    ).to_csv(collection_dir / "official_candidate_draft.csv", index=False)
+    pd.DataFrame([{"status": "parsed"}, {"status": "detail_fetched"}]).to_csv(
+        collection_dir / "online_source_audit.csv",
+        index=False,
+    )
+    pd.DataFrame(
+        [
+            {
+                "search_term": "沪深300",
+                "raw_rows": 4,
+                "title_matched_rows": 3,
+                "theme_matched_rows": 3,
+                "matched_rows": 3,
+                "date_filtered_matched_rows": 2,
+                "matched_publish_dates": "2023-05-26",
+                "reason": "",
+            }
+        ]
+    ).to_csv(collection_dir / "online_search_diagnostics.csv", index=False)
+    pd.DataFrame(
+        [
+            {
+                "year": 2022,
+                "notice_rows": 1,
+                "attachment_rows": 0,
+                "usable_attachment_rows": 0,
+                "candidate_rows": 0,
+                "candidate_batches": 0,
+                "status": "notice_only",
+            },
+            {
+                "year": 2023,
+                "notice_rows": 2,
+                "attachment_rows": 1,
+                "usable_attachment_rows": 1,
+                "candidate_rows": 2,
+                "candidate_batches": 1,
+                "status": "candidate_found",
+            },
+        ]
+    ).to_csv(collection_dir / "online_year_coverage.csv", index=False)
+    (collection_dir / "online_collection_report.md").write_text("# report\n", encoding="utf-8")
+
+    context = rdd_l3_workbench.build_rdd_l3_workbench_context(root=tmp_path)
+
+    status = context["online_collection_status"]
+    assert status["status"] == "ready"
+    assert status["candidate_rows"] == 2
+    assert status["source_rows"] == 2
+    assert status["search_rows"] == 1
+    assert status["candidate_years"] == ["2023"]
+    assert status["notice_only_years"] == ["2022"]
+    tables = {table["key"]: table for table in context["online_collection_tables"]}
+    assert tables["online_year_coverage"]["total_rows"] == 2
+    assert tables["online_search_diagnostics"]["rows"][0]["search_term"] == "沪深300"

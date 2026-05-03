@@ -100,6 +100,7 @@ index-inclusion-dashboard
 - `/verdict/<hid>`：跳转 verdict 卡片（可分享 URL）
 - `/evidence/<item>`：真实证据卡 drilldown
 - `/rdd-l3`：HS300 RDD L3 官方候选导入工作台
+- `/rdd-l3` 同时展示线上采集诊断：`online_search_diagnostics.csv` 与 `online_year_coverage.csv`
 
 历史副页 (`/library`、`/review`、`/framework`、`/supplement`、`/analysis/<id>`) 全部 302 redirect 到首页对应锚点。改默认端口：`--port 5002`。
 
