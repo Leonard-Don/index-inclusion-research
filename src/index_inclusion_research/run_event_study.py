@@ -6,7 +6,10 @@ from pathlib import Path
 import pandas as pd
 
 from index_inclusion_research import load_project_config
-from index_inclusion_research.analysis import compute_event_study
+from index_inclusion_research.analysis import (
+    compute_event_study,
+    compute_patell_bmp_summary,
+)
 from index_inclusion_research.loaders import save_dataframe
 from index_inclusion_research.workflow_profiles import (
     add_profile_argument,
@@ -29,11 +32,14 @@ def main(argv: list[str] | None = None) -> int:
 
     config = load_project_config(args.config)
     panel = pd.read_csv(args.panel, parse_dates=["event_date_raw", "mapped_market_date", "event_date", "date"])
-    event_level, summary, average_paths = compute_event_study(panel, config["defaults"]["car_windows"])
+    car_windows = config["defaults"]["car_windows"]
+    event_level, summary, average_paths = compute_event_study(panel, car_windows)
+    patell_bmp = compute_patell_bmp_summary(panel, car_windows)
     output_dir = Path(args.output_dir)
     save_dataframe(event_level, output_dir / "event_level_metrics.csv")
     save_dataframe(summary, output_dir / "event_study_summary.csv")
     save_dataframe(average_paths, output_dir / "average_paths.csv")
+    save_dataframe(patell_bmp, output_dir / "patell_bmp_summary.csv")
     print(f"Saved event-study outputs to {output_dir} (profile: {args.profile})")
     return 0
 

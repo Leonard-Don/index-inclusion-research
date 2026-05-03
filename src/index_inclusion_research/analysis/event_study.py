@@ -207,6 +207,144 @@ def compute_event_level_metrics(
     return pd.DataFrame(rows)
 
 
+def compute_patell_bmp_summary(
+    panel: pd.DataFrame,
+    car_windows: list[list[int]] | list[tuple[int, int]],
+    *,
+    estimation_window: tuple[int, int] = (-20, -2),
+    group_columns: tuple[str, ...] = ("market", "event_phase", "inclusion"),
+) -> pd.DataFrame:
+    """Patell (1976) and BMP (1991) standardized event-study tests.
+
+    Each AR_it is standardized by sigma_i estimated from a pre-event window;
+    Patell Z assumes SCAR ~ N(0, 1) under H0; BMP t uses cross-sectional
+    variance of SCARs (robust to event-induced variance increase).
+
+    The default estimation window is [-20, -2] (in-panel proxy, ~18 days).
+    The literature standard is [-250, -21]; see docs/limitations.md.
+    """
+    if panel.empty or "ar" not in panel.columns or "relative_day" not in panel.columns:
+        return pd.DataFrame()
+
+    work = panel.copy()
+    if "treatment_group" in work.columns:
+        work = work.loc[work["treatment_group"] == 1]
+    if work.empty:
+        return pd.DataFrame()
+
+    est_lo, est_hi = estimation_window
+    if est_hi < est_lo:
+        raise ValueError("estimation_window must be (low, high) with low <= high")
+
+    est_mask = work["relative_day"].between(est_lo, est_hi, inclusive="both")
+    est_window = work.loc[est_mask, ["event_id", "event_phase", "ar"]].dropna(subset=["ar"])
+    if est_window.empty:
+        return pd.DataFrame()
+
+    sigma_per_event = (
+        est_window.groupby(["event_id", "event_phase"], dropna=False)["ar"]
+        .std(ddof=1)
+        .rename("sigma_estimation")
+        .reset_index()
+    )
+    n_per_event = (
+        est_window.groupby(["event_id", "event_phase"], dropna=False)["ar"]
+        .count()
+        .rename("n_estimation")
+        .reset_index()
+    )
+
+    summary_rows: list[dict[str, object]] = []
+    windows = _normalise_windows(car_windows)
+    group_cols_list = list(group_columns)
+
+    for window in windows:
+        win_mask = work["relative_day"].between(window.start, window.end, inclusive="both")
+        window_frame = work.loc[win_mask].copy()
+        if window_frame.empty:
+            continue
+
+        agg_spec: dict[str, tuple[str, str]] = {
+            "car": ("ar", "sum"),
+            "window_obs": ("ar", "count"),
+        }
+        for col in group_cols_list:
+            if col in window_frame.columns and col not in {"event_id", "event_phase"}:
+                agg_spec[col] = (col, "first")
+
+        car_per_event = (
+            window_frame.groupby(["event_id", "event_phase"], dropna=False)
+            .agg(**agg_spec)
+            .reset_index()
+        )
+
+        merged = car_per_event.merge(
+            sigma_per_event, on=["event_id", "event_phase"], how="left"
+        ).merge(n_per_event, on=["event_id", "event_phase"], how="left")
+        valid = merged.dropna(subset=["sigma_estimation"]).copy()
+        valid = valid.loc[valid["sigma_estimation"] > 0]
+
+        window_length = max(window.end - window.start + 1, 1)
+        valid["scar"] = valid["car"] / (valid["sigma_estimation"] * np.sqrt(window_length))
+
+        existing_group_cols = [col for col in group_cols_list if col in valid.columns]
+        if not existing_group_cols:
+            existing_group_cols = ["event_phase"]
+
+        for keys, group in valid.groupby(existing_group_cols, dropna=False):
+            n = len(group)
+            if not isinstance(keys, tuple):
+                keys = (keys,)
+            row: dict[str, object] = dict(zip(existing_group_cols, keys, strict=False))
+            row["window"] = window.label
+            row["window_slug"] = window.slug
+            row["n_events"] = n
+
+            if n < 1:
+                row.update(
+                    {
+                        "patell_z": np.nan,
+                        "patell_p": np.nan,
+                        "bmp_t": np.nan,
+                        "bmp_p": np.nan,
+                        "mean_scar": np.nan,
+                        "std_scar": np.nan,
+                    }
+                )
+                summary_rows.append(row)
+                continue
+
+            scar_values = group["scar"].to_numpy()
+            patell_z = float(scar_values.sum() / np.sqrt(n))
+            patell_p = float(2.0 * stats.norm.sf(abs(patell_z)))
+
+            if n > 1:
+                bmp_t_stat, bmp_p_val = stats.ttest_1samp(
+                    scar_values, popmean=0.0, nan_policy="omit"
+                )
+                bmp_t = float(bmp_t_stat)
+                bmp_p = float(bmp_p_val)
+                std_scar = float(np.std(scar_values, ddof=1))
+            else:
+                bmp_t = np.nan
+                bmp_p = np.nan
+                std_scar = np.nan
+
+            row.update(
+                {
+                    "patell_z": patell_z,
+                    "patell_p": patell_p,
+                    "bmp_t": bmp_t,
+                    "bmp_p": bmp_p,
+                    "mean_scar": float(np.mean(scar_values)),
+                    "std_scar": std_scar,
+                }
+            )
+            summary_rows.append(row)
+
+    return pd.DataFrame(summary_rows)
+
+
 def compute_event_study(
     panel: pd.DataFrame,
     car_windows: list[list[int]] | list[tuple[int, int]],
