@@ -13,6 +13,20 @@ from ..hypotheses import StructuralHypothesis
 
 SIGNIFICANCE_LEVEL = 0.10
 
+# Evidence tier per hypothesis. ``core`` hypotheses have adequate sample
+# size for paper main tables; ``supplementary`` hypotheses are
+# structurally underpowered (small n) and belong in the appendix.
+# See docs/limitations.md §7 and docs/paper_outline_verdicts.md.
+EVIDENCE_TIER: dict[str, str] = {
+    "H1": "core",          # n≈436 events
+    "H2": "supplementary", # n=12 annual AUM observations
+    "H3": "supplementary", # n=4 quadrants for dual-channel test
+    "H4": "supplementary", # gap_drift regression p=0.537
+    "H5": "core",          # n≈936 event-day observations
+    "H6": "supplementary", # n=67 matched events
+    "H7": "core",          # n≈187 US sector spread
+}
+
 
 def _row(
     frame: pd.DataFrame,
@@ -113,6 +127,7 @@ def _make_verdict(
         "paper_ids": " | ".join(hypothesis.paper_ids),
         "paper_count": len(hypothesis.paper_ids),
         "track": hypothesis.track,
+        "evidence_tier": EVIDENCE_TIER.get(hypothesis.hid, "supplementary"),
     }
 
 
