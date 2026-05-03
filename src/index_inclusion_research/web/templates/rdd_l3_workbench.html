@@ -211,7 +211,8 @@
           <strong>{{ online_collection_status.status_label }}</strong>
           <span>
             候选行={{ online_collection_status.candidate_rows }} · 来源行={{ online_collection_status.source_rows }} ·
-            搜索词={{ online_collection_status.search_rows }} · 年份={{ online_collection_status.year_rows }}
+            搜索词={{ online_collection_status.search_rows }} · 年份={{ online_collection_status.year_rows }} ·
+            来源入口={{ online_collection_status.hint_rows }}
           </span>
           {% if online_collection_status.generated_at %}
           <time>{{ online_collection_status.generated_at }}</time>
@@ -264,7 +265,14 @@
               {% for row in table.rows %}
               <tr>
                 {% for col in table.columns %}
-                <td>{{ row[col] if row[col] is not none else '—' }}</td>
+                {% set cell = row[col] %}
+                <td>
+                  {% if cell is not none and col in ['source_url', 'detail_url', 'attachment_url'] and cell|string %}
+                  <a href="{{ cell }}" target="_blank" rel="noopener">{{ cell }}</a>
+                  {% else %}
+                  {{ cell if cell is not none else '—' }}
+                  {% endif %}
+                </td>
                 {% endfor %}
               </tr>
               {% endfor %}

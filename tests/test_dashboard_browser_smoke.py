@@ -803,6 +803,7 @@ def test_evidence_detail_and_rdd_l3_workbench_pages_render() -> None:
             assert page.locator(".evidence-detail-table:has-text('线上年份覆盖诊断')").count() == 1
             assert page.locator(".evidence-detail-table:has-text('线上来源审计预览')").count() == 1
             assert page.locator(".evidence-detail-table:has-text('线上补录缺口清单')").count() == 1
+            assert page.locator(".evidence-detail-table:has-text('线上缺口来源查找入口')").count() == 1
             assert page.locator(".evidence-detail-table:has-text('线上搜索诊断预览')").count() == 1
             assert page.locator(".evidence-detail-table:has-text('批次采集清单预览')").count() == 1
             assert page.locator(".evidence-detail-table:has-text('边界参考预览')").count() == 1

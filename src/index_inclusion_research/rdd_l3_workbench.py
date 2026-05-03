@@ -300,6 +300,7 @@ def online_collection_paths_for_root(root: Path) -> list[Path]:
         collection_dir / hs300_rdd_online_sources.DEFAULT_SEARCH_DIAGNOSTICS_OUTPUT.name,
         collection_dir / hs300_rdd_online_sources.DEFAULT_YEAR_COVERAGE_OUTPUT.name,
         collection_dir / hs300_rdd_online_sources.DEFAULT_MANUAL_GAP_WORKLIST_OUTPUT.name,
+        collection_dir / hs300_rdd_online_sources.DEFAULT_GAP_SOURCE_HINTS_OUTPUT.name,
         collection_dir / hs300_rdd_online_sources.DEFAULT_REPORT_OUTPUT.name,
     ]
 
@@ -356,12 +357,13 @@ def _status_count(frame: pd.DataFrame, status: str) -> int:
 def build_online_collection_status(*, root: Path = ROOT) -> dict[str, Any]:
     root = Path(root)
     paths = online_collection_paths_for_root(root)
-    draft_path, audit_path, search_path, year_path, gap_path, report_path = paths
+    draft_path, audit_path, search_path, year_path, gap_path, hint_path, report_path = paths
     draft = _read_csv(draft_path)
     audit = _read_csv(audit_path)
     search = _read_csv(search_path)
     years = _read_csv(year_path)
-    has_diagnostics = search_path.exists() and year_path.exists() and gap_path.exists()
+    hints = _read_csv(hint_path)
+    has_diagnostics = search_path.exists() and year_path.exists() and gap_path.exists() and hint_path.exists()
     candidate_years: list[str] = []
     notice_only_years: list[str] = []
     no_notice_years: list[str] = []
@@ -379,6 +381,7 @@ def build_online_collection_status(*, root: Path = ROOT) -> dict[str, Any]:
         "source_rows": int(len(audit)),
         "search_rows": int(len(search)),
         "year_rows": int(len(years)),
+        "hint_rows": int(len(hints)),
         "candidate_years": candidate_years,
         "notice_only_years": notice_only_years,
         "no_notice_years": no_notice_years,
@@ -472,6 +475,7 @@ def build_online_collection_preview_tables(*, root: Path = ROOT) -> list[dict[st
     search_path = collection_dir / hs300_rdd_online_sources.DEFAULT_SEARCH_DIAGNOSTICS_OUTPUT.name
     year_path = collection_dir / hs300_rdd_online_sources.DEFAULT_YEAR_COVERAGE_OUTPUT.name
     gap_path = collection_dir / hs300_rdd_online_sources.DEFAULT_MANUAL_GAP_WORKLIST_OUTPUT.name
+    hint_path = collection_dir / hs300_rdd_online_sources.DEFAULT_GAP_SOURCE_HINTS_OUTPUT.name
     audit = _select_columns(
         _read_csv(audit_path),
         [
@@ -513,6 +517,20 @@ def build_online_collection_preview_tables(*, root: Path = ROOT) -> list[dict[st
             "suggested_next_step",
         ],
     )
+    hints = _select_columns(
+        _read_csv(hint_path),
+        [
+            "year",
+            "priority",
+            "gap_type",
+            "source_kind",
+            "source_label",
+            "source_url",
+            "query",
+            "expected_evidence",
+            "notes",
+        ],
+    )
     years = _select_columns(
         _read_csv(year_path),
         [
@@ -545,6 +563,12 @@ def build_online_collection_preview_tables(*, root: Path = ROOT) -> list[dict[st
             "title": "线上补录缺口清单",
             "source_path": _path_payload(gap_path, root=root),
             **_payload_table(gaps, limit=20),
+        },
+        {
+            "key": "online_gap_source_hints",
+            "title": "线上缺口来源查找入口",
+            "source_path": _path_payload(hint_path, root=root),
+            **_payload_table(hints, limit=24),
         },
         {
             "key": "online_search_diagnostics",

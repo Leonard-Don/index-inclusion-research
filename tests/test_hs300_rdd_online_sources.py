@@ -174,6 +174,7 @@ def test_main_passes_date_window_to_collector(monkeypatch, tmp_path: Path) -> No
             "search_diagnostics_output": tmp_path / "search.csv",
             "year_coverage_output": tmp_path / "year.csv",
             "manual_gap_worklist_output": tmp_path / "gaps.csv",
+            "gap_source_hints_output": tmp_path / "hints.csv",
             "report_output": tmp_path / "report.md",
             "formal_output": None,
             "candidate_rows": 0,
@@ -181,6 +182,7 @@ def test_main_passes_date_window_to_collector(monkeypatch, tmp_path: Path) -> No
             "search_rows": 1,
             "year_rows": 3,
             "gap_rows": 1,
+            "hint_rows": 3,
             "candidate_batches": 0,
             "status": "no_candidates",
         }
@@ -212,6 +214,7 @@ def test_main_passes_date_window_to_collector(monkeypatch, tmp_path: Path) -> No
     assert captured["search_diagnostics_output"] == online_sources.DEFAULT_SEARCH_DIAGNOSTICS_OUTPUT
     assert captured["year_coverage_output"] == online_sources.DEFAULT_YEAR_COVERAGE_OUTPUT
     assert captured["manual_gap_worklist_output"] == online_sources.DEFAULT_MANUAL_GAP_WORKLIST_OUTPUT
+    assert captured["gap_source_hints_output"] == online_sources.DEFAULT_GAP_SOURCE_HINTS_OUTPUT
 
 
 def test_collect_official_sources_writes_audit_when_no_candidates(monkeypatch, tmp_path: Path) -> None:
@@ -263,6 +266,7 @@ def test_collect_official_sources_writes_audit_when_no_candidates(monkeypatch, t
         search_diagnostics_output=tmp_path / "online_search_diagnostics.csv",
         year_coverage_output=tmp_path / "online_year_coverage.csv",
         manual_gap_worklist_output=tmp_path / "online_manual_gap_worklist.csv",
+        gap_source_hints_output=tmp_path / "online_gap_source_hints.csv",
         report_output=tmp_path / "online_collection_report.md",
         attachment_dir=tmp_path / "official_attachments",
         since="2020-01-01",
@@ -280,6 +284,7 @@ def test_collect_official_sources_writes_audit_when_no_candidates(monkeypatch, t
     assert (tmp_path / "online_search_diagnostics.csv").exists()
     assert (tmp_path / "online_year_coverage.csv").exists()
     assert (tmp_path / "online_manual_gap_worklist.csv").exists()
+    assert (tmp_path / "online_gap_source_hints.csv").exists()
     report = (tmp_path / "online_collection_report.md").read_text(encoding="utf-8")
     assert "没有解析出" in report
 
@@ -341,6 +346,7 @@ def test_collect_official_sources_audits_excel_additions_without_controls(monkey
         search_diagnostics_output=tmp_path / "online_search_diagnostics.csv",
         year_coverage_output=tmp_path / "online_year_coverage.csv",
         manual_gap_worklist_output=tmp_path / "online_manual_gap_worklist.csv",
+        gap_source_hints_output=tmp_path / "online_gap_source_hints.csv",
         report_output=tmp_path / "online_collection_report.md",
         attachment_dir=tmp_path / "official_attachments",
         force=True,
@@ -363,6 +369,17 @@ def test_collect_official_sources_audits_excel_additions_without_controls(monkey
     assert gaps.loc[0, "gap_type"] == "parsed_additions_missing_controls"
     assert gaps.loc[0, "addition_rows"] == 1
     assert "reserve" in gaps.loc[0, "missing_evidence"]
+    hints = pd.read_csv(tmp_path / "online_gap_source_hints.csv")
+    assert outputs["hint_rows"] == len(hints)
+    assert {
+        "official_attachment",
+        "wayback_attachment",
+        "web_search_csindex",
+        "cninfo_fulltext_search",
+    }.issubset(set(hints["source_kind"]))
+    assert hints.loc[hints["source_kind"] == "official_attachment", "source_url"].iloc[0].startswith(
+        "https://oss-ch.csindex.com.cn/"
+    )
 
 
 def test_collect_official_sources_audits_notice_detail_errors(monkeypatch, tmp_path: Path) -> None:
@@ -402,6 +419,7 @@ def test_collect_official_sources_audits_notice_detail_errors(monkeypatch, tmp_p
         search_diagnostics_output=tmp_path / "online_search_diagnostics.csv",
         year_coverage_output=tmp_path / "online_year_coverage.csv",
         manual_gap_worklist_output=tmp_path / "online_manual_gap_worklist.csv",
+        gap_source_hints_output=tmp_path / "online_gap_source_hints.csv",
         report_output=tmp_path / "online_collection_report.md",
         attachment_dir=tmp_path / "official_attachments",
         force=True,
@@ -438,6 +456,7 @@ def test_collect_official_sources_writes_diagnostics_and_years_when_no_notices(m
         search_diagnostics_output=tmp_path / "online_search_diagnostics.csv",
         year_coverage_output=tmp_path / "online_year_coverage.csv",
         manual_gap_worklist_output=tmp_path / "online_manual_gap_worklist.csv",
+        gap_source_hints_output=tmp_path / "online_gap_source_hints.csv",
         report_output=tmp_path / "online_collection_report.md",
         attachment_dir=tmp_path / "official_attachments",
         since="2020-01-01",
@@ -458,6 +477,10 @@ def test_collect_official_sources_writes_diagnostics_and_years_when_no_notices(m
     gaps = pd.read_csv(tmp_path / "online_manual_gap_worklist.csv")
     assert set(gaps["gap_type"]) == {"year_without_notice"}
     assert set(gaps["priority"]) == {"P3"}
+    hints = pd.read_csv(tmp_path / "online_gap_source_hints.csv")
+    assert outputs["hint_rows"] == len(hints)
+    assert set(hints["source_kind"]) == {"web_search_csindex", "web_search_general", "cninfo_fulltext_search"}
+    assert hints["query"].str.contains("沪深300").all()
     report = (tmp_path / "online_collection_report.md").read_text(encoding="utf-8")
     assert "搜索诊断" in report
     assert "年份覆盖" in report
