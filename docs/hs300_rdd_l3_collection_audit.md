@@ -48,6 +48,7 @@
 - `online_gap_source_hints.csv`：把每个缺口展开为中证详情页、官方附件、Wayback、站内网页搜索和巨潮全文搜索入口；它只提供查找线索，不替代正式 L3 证据。
 
 CLI 入口：`index-inclusion-collect-hs300-rdd-l3`（见 `docs/hs300_rdd_workflow.md`）。
+浏览器入口：`/rdd-l3` 的“刷新线上诊断”表单复用同一采集器，可填写公告日期窗口、每个搜索词返回行数、最多公告数和补充搜索词。
 
 ## 4. 推荐执行顺序
 

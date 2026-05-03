@@ -168,6 +168,80 @@ def test_refresh_collection_package_builds_browser_workbench_artifacts(tmp_path:
     assert tables["boundary_reference"]["rows"][0]["ticker"] in {"000686", "000001"}
 
 
+def test_refresh_online_collection_uses_root_paths_and_extra_terms(monkeypatch, tmp_path: Path) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_collect(**kwargs):
+        captured.update(kwargs)
+        pd.DataFrame([{"ticker": "000001", "batch_id": "csi300-2023-05"}]).to_csv(kwargs["draft_output"], index=False)
+        pd.DataFrame([{"source_kind": "official_rebalance_result_notice"}]).to_csv(kwargs["audit_output"], index=False)
+        pd.DataFrame([{"search_term": "沪深300", "raw_rows": 1}]).to_csv(
+            kwargs["search_diagnostics_output"],
+            index=False,
+        )
+        pd.DataFrame([{"year": 2023, "status": "candidate_found"}]).to_csv(
+            kwargs["year_coverage_output"],
+            index=False,
+        )
+        pd.DataFrame([{"year": 2023, "priority": "P1"}]).to_csv(
+            kwargs["manual_gap_worklist_output"],
+            index=False,
+        )
+        pd.DataFrame([{"year": 2023, "source_kind": "web_search_csindex"}]).to_csv(
+            kwargs["gap_source_hints_output"],
+            index=False,
+        )
+        kwargs["report_output"].write_text("# report\n", encoding="utf-8")
+        return {
+            "draft_output": kwargs["draft_output"],
+            "audit_output": kwargs["audit_output"],
+            "search_diagnostics_output": kwargs["search_diagnostics_output"],
+            "year_coverage_output": kwargs["year_coverage_output"],
+            "manual_gap_worklist_output": kwargs["manual_gap_worklist_output"],
+            "gap_source_hints_output": kwargs["gap_source_hints_output"],
+            "report_output": kwargs["report_output"],
+            "formal_output": None,
+            "candidate_rows": 1,
+            "source_rows": 1,
+            "search_rows": 1,
+            "year_rows": 1,
+            "gap_rows": 1,
+            "hint_rows": 1,
+            "candidate_batches": 1,
+            "status": "parsed",
+        }
+
+    monkeypatch.setattr(
+        rdd_l3_workbench.hs300_rdd_online_sources,
+        "collect_official_hs300_sources",
+        fake_collect,
+    )
+
+    result = rdd_l3_workbench.refresh_online_collection(
+        root=tmp_path,
+        since="2020-01-01",
+        until="2022-12-31",
+        notice_rows=120,
+        max_notices=6,
+        extra_search_terms=("沪深300历史样本调整",),
+    )
+
+    collection_dir = tmp_path / "results" / "literature" / "hs300_rdd_l3_collection"
+    assert captured["output_dir"] == collection_dir
+    assert captured["draft_output"] == collection_dir / "official_candidate_draft.csv"
+    assert captured["gap_source_hints_output"] == collection_dir / "online_gap_source_hints.csv"
+    assert captured["since"] == "2020-01-01"
+    assert captured["until"] == "2022-12-31"
+    assert captured["notice_rows"] == 120
+    assert captured["max_notices"] == 6
+    assert captured["formal_output"] is None
+    assert "沪深300历史样本调整" in captured["search_terms"]
+    assert result["status"] == "parsed"
+    assert result["hint_rows"] == 1
+    assert result["online_status"]["status"] == "ready"
+    assert any(path["label"].endswith("online_gap_source_hints.csv") for path in result["written_paths"])
+
+
 def test_workbench_context_surfaces_online_collection_diagnostics(tmp_path: Path) -> None:
     collection_dir = tmp_path / "results" / "literature" / "hs300_rdd_l3_collection"
     collection_dir.mkdir(parents=True)

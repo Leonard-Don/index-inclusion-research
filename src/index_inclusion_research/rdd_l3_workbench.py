@@ -611,12 +611,68 @@ def refresh_collection_package(
     }
 
 
+def refresh_online_collection(
+    *,
+    root: Path = ROOT,
+    since: str | None = None,
+    until: str | None = None,
+    notice_rows: int = hs300_rdd_online_sources.DEFAULT_NOTICE_ROWS,
+    max_notices: int | None = None,
+    extra_search_terms: tuple[str, ...] = (),
+    force: bool = True,
+) -> dict[str, Any]:
+    root = Path(root)
+    collection_dir = root / "results" / "literature" / "hs300_rdd_l3_collection"
+    collection_dir.mkdir(parents=True, exist_ok=True)
+    search_terms = tuple(dict.fromkeys([*hs300_rdd_online_sources.SEARCH_TERMS, *extra_search_terms]))
+    outputs = hs300_rdd_online_sources.collect_official_hs300_sources(
+        output_dir=collection_dir,
+        draft_output=collection_dir / hs300_rdd_online_sources.DEFAULT_DRAFT_OUTPUT.name,
+        audit_output=collection_dir / hs300_rdd_online_sources.DEFAULT_AUDIT_OUTPUT.name,
+        search_diagnostics_output=collection_dir / hs300_rdd_online_sources.DEFAULT_SEARCH_DIAGNOSTICS_OUTPUT.name,
+        year_coverage_output=collection_dir / hs300_rdd_online_sources.DEFAULT_YEAR_COVERAGE_OUTPUT.name,
+        manual_gap_worklist_output=collection_dir / hs300_rdd_online_sources.DEFAULT_MANUAL_GAP_WORKLIST_OUTPUT.name,
+        gap_source_hints_output=collection_dir / hs300_rdd_online_sources.DEFAULT_GAP_SOURCE_HINTS_OUTPUT.name,
+        report_output=collection_dir / hs300_rdd_online_sources.DEFAULT_REPORT_OUTPUT.name,
+        attachment_dir=collection_dir / hs300_rdd_online_sources.DEFAULT_ATTACHMENT_DIR.name,
+        formal_output=None,
+        force=force,
+        max_notices=max_notices,
+        since=since,
+        until=until,
+        notice_rows=notice_rows,
+        search_terms=search_terms,
+    )
+    written_paths = [
+        outputs["draft_output"],
+        outputs["audit_output"],
+        outputs["search_diagnostics_output"],
+        outputs["year_coverage_output"],
+        outputs["manual_gap_worklist_output"],
+        outputs["gap_source_hints_output"],
+        outputs["report_output"],
+    ]
+    return {
+        "candidate_rows": int(outputs["candidate_rows"]),
+        "source_rows": int(outputs["source_rows"]),
+        "search_rows": int(outputs["search_rows"]),
+        "year_rows": int(outputs["year_rows"]),
+        "gap_rows": int(outputs["gap_rows"]),
+        "hint_rows": int(outputs["hint_rows"]),
+        "candidate_batches": int(outputs["candidate_batches"] or 0),
+        "status": str(outputs["status"]),
+        "written_paths": [_path_payload(Path(path), root=root) for path in written_paths],
+        "online_status": build_online_collection_status(root=root),
+    }
+
+
 def build_rdd_l3_workbench_context(
     *,
     root: Path = ROOT,
     preflight_result: dict[str, Any] | None = None,
     import_result: dict[str, Any] | None = None,
     collection_result: dict[str, Any] | None = None,
+    online_collection_result: dict[str, Any] | None = None,
     error: str = "",
 ) -> dict[str, Any]:
     root = Path(root)
@@ -638,9 +694,11 @@ def build_rdd_l3_workbench_context(
         "preflight_result": preflight_result,
         "import_result": import_result,
         "collection_result": collection_result,
+        "online_collection_result": online_collection_result,
         "error": error,
         "commands": [
             "index-inclusion-plan-hs300-rdd-l3 --force",
+            "index-inclusion-collect-hs300-rdd-l3 --force",
             "index-inclusion-prepare-hs300-rdd --input /path/to/raw_candidates.xlsx --sheet 0 --check-only",
             "index-inclusion-prepare-hs300-rdd --input /path/to/raw_candidates.xlsx --sheet 0 --output data/raw/hs300_rdd_candidates.csv --force",
             "index-inclusion-hs300-rdd",
