@@ -467,8 +467,22 @@ def build_collection_preview_tables(*, root: Path = ROOT) -> list[dict[str, Any]
 def build_online_collection_preview_tables(*, root: Path = ROOT) -> list[dict[str, Any]]:
     root = Path(root)
     collection_dir = root / "results" / "literature" / "hs300_rdd_l3_collection"
+    audit_path = collection_dir / hs300_rdd_online_sources.DEFAULT_AUDIT_OUTPUT.name
     search_path = collection_dir / hs300_rdd_online_sources.DEFAULT_SEARCH_DIAGNOSTICS_OUTPUT.name
     year_path = collection_dir / hs300_rdd_online_sources.DEFAULT_YEAR_COVERAGE_OUTPUT.name
+    audit = _select_columns(
+        _read_csv(audit_path),
+        [
+            "publish_date",
+            "title",
+            "attachment_name",
+            "status",
+            "usable_for_l3",
+            "addition_rows",
+            "control_rows",
+            "reason",
+        ],
+    )
     search = _select_columns(
         _read_csv(search_path),
         [
@@ -489,6 +503,8 @@ def build_online_collection_preview_tables(*, root: Path = ROOT) -> list[dict[st
             "notice_rows",
             "attachment_rows",
             "usable_attachment_rows",
+            "parsed_addition_rows",
+            "parsed_control_rows",
             "candidate_rows",
             "candidate_batches",
             "status",
@@ -500,6 +516,12 @@ def build_online_collection_preview_tables(*, root: Path = ROOT) -> list[dict[st
             "title": "线上年份覆盖诊断",
             "source_path": _path_payload(year_path, root=root),
             **_payload_table(years, limit=20),
+        },
+        {
+            "key": "online_source_audit",
+            "title": "线上来源审计预览",
+            "source_path": _path_payload(audit_path, root=root),
+            **_payload_table(audit, limit=20),
         },
         {
             "key": "online_search_diagnostics",

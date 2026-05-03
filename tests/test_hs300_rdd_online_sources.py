@@ -43,6 +43,20 @@ def _attachment_link() -> online_sources.AttachmentLink:
     )
 
 
+def _excel_attachment_path(tmp_path: Path) -> Path:
+    path = tmp_path / "指数样本调整名单.xlsx"
+    frame = pd.DataFrame(
+        [
+            ["指数代码", "指数简称", "调出", None, "调入", None],
+            [None, None, "证券代码", "证券简称", "证券代码", "证券简称"],
+            ["000300", "沪深300", "600837", "海通证券", "601058", "赛轮轮胎"],
+            ["930767", "沪深300优选", "6837.HK", "海通证券", "601058", "赛轮轮胎"],
+        ]
+    )
+    frame.to_excel(path, index=False, header=False)
+    return path
+
+
 def test_parse_hs300_attachment_text_extracts_additions_and_reserves() -> None:
     parsed = online_sources.parse_hs300_attachment_text(SAMPLE_ATTACHMENT_TEXT)
 
@@ -51,6 +65,17 @@ def test_parse_hs300_attachment_text_extracts_additions_and_reserves() -> None:
     assert [row["rank"] for row in parsed.reserves] == [1, 2, 3]
     assert [row["security_name"] for row in parsed.reserves] == ["华工科技", "拓荆科技", "信立泰"]
     assert parsed.usable_for_l3
+
+
+def test_parse_hs300_excel_attachment_extracts_adjustment_additions_only(tmp_path: Path) -> None:
+    parsed = online_sources.parse_hs300_excel_attachment(_excel_attachment_path(tmp_path))
+
+    assert [row["ticker"] for row in parsed.deletions] == ["600837"]
+    assert [row["security_name"] for row in parsed.deletions] == ["海通证券"]
+    assert [row["ticker"] for row in parsed.additions] == ["601058"]
+    assert [row["security_name"] for row in parsed.additions] == ["赛轮轮胎"]
+    assert parsed.reserves == []
+    assert not parsed.usable_for_l3
 
 
 def test_build_candidate_rows_maps_official_order_around_cutoff() -> None:
@@ -252,6 +277,81 @@ def test_collect_official_sources_writes_audit_when_no_candidates(monkeypatch, t
     assert (tmp_path / "online_year_coverage.csv").exists()
     report = (tmp_path / "online_collection_report.md").read_text(encoding="utf-8")
     assert "没有解析出" in report
+
+
+def test_collect_official_sources_audits_excel_additions_without_controls(monkeypatch, tmp_path: Path) -> None:
+    excel_path = _excel_attachment_path(tmp_path)
+
+    def fake_query(session, *, search_diagnostics=None, **kwargs):
+        if search_diagnostics is not None:
+            search_diagnostics.append(
+                {
+                    "search_term": "沪深300等指数样本",
+                    "requested_rows": kwargs["rows"],
+                    "api_code": "200",
+                    "status": "ok",
+                    "raw_rows": 1,
+                    "matched_rows": 1,
+                    "matched_notice_ids": "15546",
+                }
+            )
+        return [
+            {
+                "id": 15546,
+                "title": "关于调整沪深300等指数样本的公告",
+                "theme": "指数调样",
+                "publish_date": "2025-02-06",
+                "detail_url": "https://www.csindex.com.cn/zh-CN/about/newsDetail?id=15546",
+            }
+        ]
+
+    def fake_detail(session, notice_id: int):
+        return {
+            "id": notice_id,
+            "title": "关于调整沪深300等指数样本的公告",
+            "publishDate": "2025-02-06",
+            "content": "本次调整将于2025年2月7日生效。",
+            "enclosureList": [
+                {
+                    "fileName": "指数样本调整名单.xlsx",
+                    "fileUrl": "https://oss-ch.csindex.com.cn/notice/20250206175421-指数样本调整名单.xlsx",
+                }
+            ],
+        }
+
+    def fake_download(session, link, output_dir: Path) -> Path:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / "指数样本调整名单.xlsx"
+        output_path.write_bytes(excel_path.read_bytes())
+        return output_path
+
+    monkeypatch.setattr(online_sources, "query_rebalance_announcements", fake_query)
+    monkeypatch.setattr(online_sources, "fetch_notice_detail", fake_detail)
+    monkeypatch.setattr(online_sources, "_download_attachment", fake_download)
+
+    outputs = online_sources.collect_official_hs300_sources(
+        output_dir=tmp_path,
+        draft_output=tmp_path / "official_candidate_draft.csv",
+        audit_output=tmp_path / "online_source_audit.csv",
+        search_diagnostics_output=tmp_path / "online_search_diagnostics.csv",
+        year_coverage_output=tmp_path / "online_year_coverage.csv",
+        report_output=tmp_path / "online_collection_report.md",
+        attachment_dir=tmp_path / "official_attachments",
+        force=True,
+    )
+
+    audit = pd.read_csv(tmp_path / "online_source_audit.csv")
+    attachment = audit.loc[audit["source_kind"] == "official_adjustment_backup_attachment"].iloc[0]
+    assert outputs["status"] == "no_candidates"
+    assert attachment["status"] == "parsed_without_l3_controls"
+    assert attachment["addition_rows"] == 1
+    assert attachment["control_rows"] == 0
+    assert "reserve controls are absent" in attachment["reason"]
+    coverage = pd.read_csv(tmp_path / "online_year_coverage.csv")
+    assert coverage.loc[0, "status"] == "notice_only"
+    assert coverage.loc[0, "usable_attachment_rows"] == 0
+    assert coverage.loc[0, "parsed_addition_rows"] == 1
+    assert coverage.loc[0, "parsed_control_rows"] == 0
 
 
 def test_collect_official_sources_audits_notice_detail_errors(monkeypatch, tmp_path: Path) -> None:

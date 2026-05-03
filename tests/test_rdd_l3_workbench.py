@@ -135,6 +135,7 @@ def test_workbench_context_uses_supplied_root_paths(tmp_path: Path) -> None:
     assert context["collection_status"]["paths"][0]["label"].startswith("results/literature")
     assert context["collection_tables"][0]["key"] == "batch_collection_checklist"
     assert context["online_collection_tables"][0]["key"] == "online_year_coverage"
+    assert context["online_collection_tables"][1]["key"] == "online_source_audit"
     assert context["collection_tables"][0]["rows"] == []
     assert context["online_collection_tables"][0]["rows"] == []
     assert context["import_paths"][0]["label"] == "data/raw/hs300_rdd_candidates.csv"
@@ -227,4 +228,6 @@ def test_workbench_context_surfaces_online_collection_diagnostics(tmp_path: Path
     assert status["notice_only_years"] == ["2022"]
     tables = {table["key"]: table for table in context["online_collection_tables"]}
     assert tables["online_year_coverage"]["total_rows"] == 2
+    assert tables["online_source_audit"]["total_rows"] == 2
+    assert tables["online_source_audit"]["rows"][0]["status"] == "parsed"
     assert tables["online_search_diagnostics"]["rows"][0]["search_term"] == "沪深300"

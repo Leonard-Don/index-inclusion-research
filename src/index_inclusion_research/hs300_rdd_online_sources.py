@@ -75,6 +75,8 @@ YEAR_COVERAGE_COLUMNS = [
     "notice_rows",
     "attachment_rows",
     "usable_attachment_rows",
+    "parsed_addition_rows",
+    "parsed_control_rows",
     "candidate_rows",
     "candidate_batches",
     "status",
@@ -397,6 +399,73 @@ def _pdf_to_text(pdf_path: Path) -> str:
     return result.stdout
 
 
+def _ticker_text(value: object) -> str:
+    text = _clean_text(value)
+    if re.fullmatch(r"\d+(?:\.0)?", text):
+        text = text.split(".", maxsplit=1)[0]
+    return text.zfill(6) if text.isdigit() else text
+
+
+def _is_missing_marker(value: object) -> bool:
+    return _clean_text(value) in {"", "-", "—", "nan", "NaN", "None"}
+
+
+def _is_hs300_excel_row(row: pd.Series) -> bool:
+    index_code = _ticker_text(row.iloc[0] if len(row) > 0 else "")
+    index_name = _clean_text(row.iloc[1] if len(row) > 1 else "")
+    return index_code == "000300" or index_name == "沪深300"
+
+
+def _excel_adjustment_rows(frame: pd.DataFrame) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    deletions: list[dict[str, object]] = []
+    additions: list[dict[str, object]] = []
+    if frame.empty or frame.shape[1] < 6:
+        return deletions, additions
+    for _, row in frame.iterrows():
+        if not _is_hs300_excel_row(row):
+            continue
+        delete_code = _ticker_text(row.iloc[2])
+        delete_name = _clean_text(row.iloc[3])
+        add_code = _ticker_text(row.iloc[4])
+        add_name = _clean_text(row.iloc[5])
+        order = len(additions) + 1
+        if re.fullmatch(r"\d{6}", delete_code) and not _is_missing_marker(delete_name):
+            deletions.append(
+                {
+                    "order": order,
+                    "ticker": delete_code,
+                    "security_name": delete_name,
+                    "role": "deletion",
+                }
+            )
+        if re.fullmatch(r"\d{6}", add_code) and not _is_missing_marker(add_name):
+            additions.append(
+                {
+                    "order": order,
+                    "ticker": add_code,
+                    "security_name": add_name,
+                    "role": "addition",
+                }
+            )
+    return deletions, additions
+
+
+def parse_hs300_excel_attachment(excel_path: Path) -> ParsedHs300Attachment:
+    deletions: list[dict[str, object]] = []
+    additions: list[dict[str, object]] = []
+    workbook = pd.ExcelFile(excel_path)
+    for sheet_name in workbook.sheet_names:
+        frame = pd.read_excel(workbook, sheet_name=sheet_name, header=None, dtype=object)
+        sheet_deletions, sheet_additions = _excel_adjustment_rows(frame)
+        for row in sheet_deletions:
+            row["order"] = len(deletions) + 1
+            deletions.append(row)
+        for row in sheet_additions:
+            row["order"] = len(additions) + 1
+            additions.append(row)
+    return ParsedHs300Attachment(deletions=deletions, additions=additions, reserves=[])
+
+
 def _section(text: str, start_pattern: str, end_pattern: str) -> str:
     start = re.search(start_pattern, text)
     if not start:
@@ -654,6 +723,16 @@ def _build_year_coverage_frame(
         notice_rows = int((source_year["source_kind"] == "official_rebalance_result_notice").sum()) if not source_year.empty else 0
         attachment_rows = int((source_year["source_kind"] == "official_adjustment_backup_attachment").sum()) if not source_year.empty else 0
         usable_attachment_rows = int(source_year["usable_for_l3"].fillna(False).sum()) if not source_year.empty else 0
+        parsed_addition_rows = (
+            int(pd.to_numeric(source_year["addition_rows"], errors="coerce").fillna(0).sum())
+            if not source_year.empty
+            else 0
+        )
+        parsed_control_rows = (
+            int(pd.to_numeric(source_year["control_rows"], errors="coerce").fillna(0).sum())
+            if not source_year.empty
+            else 0
+        )
         if candidate_frame.empty:
             candidate_year = pd.DataFrame(columns=candidate_frame.columns)
         else:
@@ -672,6 +751,8 @@ def _build_year_coverage_frame(
                 "notice_rows": notice_rows,
                 "attachment_rows": attachment_rows,
                 "usable_attachment_rows": usable_attachment_rows,
+                "parsed_addition_rows": parsed_addition_rows,
+                "parsed_control_rows": parsed_control_rows,
                 "candidate_rows": candidate_rows,
                 "candidate_batches": candidate_batches,
                 "status": status,
@@ -695,6 +776,22 @@ def _build_report(
 ) -> str:
     summary = summarize_candidate_audit(candidate_audit)
     usable_sources = int(audit_frame["usable_for_l3"].fillna(False).sum()) if not audit_frame.empty else 0
+    partial_sources = int((audit_frame["status"].astype(str) == "parsed_without_l3_controls").sum()) if not audit_frame.empty else 0
+    partial_addition_rows = (
+        int(
+            pd.to_numeric(
+                audit_frame.loc[
+                    audit_frame["status"].astype(str) == "parsed_without_l3_controls",
+                    "addition_rows",
+                ],
+                errors="coerce",
+            )
+            .fillna(0)
+            .sum()
+        )
+        if not audit_frame.empty
+        else 0
+    )
     search_raw_rows = int(search_diagnostics_frame["raw_rows"].sum()) if not search_diagnostics_frame.empty else 0
     search_matched_rows = int(search_diagnostics_frame["matched_rows"].sum()) if not search_diagnostics_frame.empty else 0
     search_date_rows = int(search_diagnostics_frame["date_filtered_matched_rows"].sum()) if not search_diagnostics_frame.empty else 0
@@ -716,6 +813,7 @@ def _build_report(
         f"- 标题/主题匹配公告数：`{search_matched_rows}`",
         f"- 日期窗口内匹配公告数：`{search_date_rows}`",
         f"- 可用官方附件数：`{usable_sources}`",
+        f"- 已解析但缺备选对照附件数：`{partial_sources}`（调入行 `{partial_addition_rows}`）",
         f"- 候选行数：`{len(candidate_frame)}`",
         f"- 批次数：`{summary.get('candidate_batches')}`",
         f"- 调入样本数：`{summary.get('treated_rows')}`",
@@ -832,18 +930,28 @@ def collect_official_hs300_sources(
             local_path: Path | None = None
             parsed: ParsedHs300Attachment | None = None
             status = "skipped"
-            reason = "Attachment is not a PDF adjustment/result list."
-            if link.file_url.lower().endswith(".pdf"):
+            reason = "Attachment is not a supported adjustment/result list."
+            suffix = Path(link.file_url.split("?", maxsplit=1)[0]).suffix.lower()
+            if suffix in {".pdf", ".xls", ".xlsx"}:
                 try:
                     local_path = _download_attachment(session, link, attachment_dir)
-                    parsed = parse_hs300_attachment_text(_pdf_to_text(local_path))
+                    if suffix == ".pdf":
+                        parsed = parse_hs300_attachment_text(_pdf_to_text(local_path))
+                    else:
+                        parsed = parse_hs300_excel_attachment(local_path)
                     if parsed.usable_for_l3:
                         candidate_rows.extend(build_candidate_rows(link, parsed))
                         status = "parsed"
                         reason = "Official adjustment and reserve lists parsed for HS300."
                     else:
                         status = "parsed_without_l3_controls"
-                        reason = "Attachment did not expose both HS300 additions and reserve controls."
+                        if parsed.additions:
+                            reason = (
+                                "Official HS300 additions parsed, but reserve controls are absent; "
+                                "manual/archival reserve-list evidence is still required for L3 RDD."
+                            )
+                        else:
+                            reason = "Attachment did not expose both HS300 additions and reserve controls."
                 except Exception as exc:  # pragma: no cover - exercised by live collection, not unit fixtures
                     status = "error"
                     reason = str(exc)
