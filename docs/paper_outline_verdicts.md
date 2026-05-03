@@ -2,6 +2,14 @@
 
 本节用事件研究 CAR[-1,+1] 直接回答论文核心问题。下方 7 条机制假说回答的是 CN/US 反应不一致的来源,**不是**回答"是否上涨"本身。
 
+> **Disclosure: post-hoc, not pre-registered.** 下方 7 条 CMA 假说(H1–H7)是在观察到 announce-vs-effective 不对称结果**之后**形成的,属于 post-hoc 解释。本项目**未公开 Pre-Analysis Plan (PAP)**。意涵:
+>
+> - Verdict 阈值(默认 p<0.10、inner=0.05)合理但**未事前承诺**。
+> - 多重检验校正(Bonferroni、Benjamini-Hochberg)已在 `cma_hypothesis_verdicts.csv` 中报告,但是在假说选定之**后**应用的。
+> - 样本量限制是数据本身的约束(如 H2 n=12 来自 Federal Reserve Z.1 年度数据),不是看到结果后再剔除样本。
+>
+> 论文主表建议**只引用 `evidence_tier=core` 的假说(H1/H5/H7)**,supplementary 走附录。下一轮迭代前请按 `docs/verdict_iteration.md` 的预注册流程冻结假说与阈值。完整数据与方法限制见 [docs/limitations.md](limitations.md)。
+
 | 市场 | 阶段 | n | mean CAR[-1,+1] | t | p |
 |---|---|---|---|---|---|
 | CN | announce | 118 | +1.75% | 4.93 | 0.0000 |
