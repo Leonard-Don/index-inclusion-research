@@ -78,6 +78,48 @@ def test_parse_hs300_excel_attachment_extracts_adjustment_additions_only(tmp_pat
     assert not parsed.usable_for_l3
 
 
+def _multi_sheet_excel_path(tmp_path: Path) -> Path:
+    path = tmp_path / "中证指数调入调出名单.xlsx"
+    addition_frame = pd.DataFrame(
+        [
+            ["指数代码", "指数简称", "证券代码", "证券简称"],
+            ["000300", "沪深300", "002049", "紫光国微"],
+            ["000300", "沪深300", "002384", "东山精密"],
+            ["000905", "中证500", "300251", "光线传媒"],
+        ]
+    )
+    deletion_frame = pd.DataFrame(
+        [
+            ["指数代码", "指数简称", "证券代码", "证券简称"],
+            ["000300", "沪深300", "600837", "海通证券"],
+            ["000300", "沪深300", "002129", "TCL中环"],
+        ]
+    )
+    reserve_frame = pd.DataFrame(
+        [
+            ["指数代码", "指数简称", "排序", "证券代码", "证券简称"],
+            ["000300", "沪深300", "1", "300308", "中际旭创"],
+            ["000300", "沪深300", "2", "603233", "大参林"],
+            ["000905", "中证500", "1", "688037", "芯源微"],
+        ]
+    )
+    with pd.ExcelWriter(path) as writer:
+        addition_frame.to_excel(writer, sheet_name="调入", index=False, header=False)
+        deletion_frame.to_excel(writer, sheet_name="调出", index=False, header=False)
+        reserve_frame.to_excel(writer, sheet_name="备选名单", index=False, header=False)
+    return path
+
+
+def test_parse_hs300_excel_attachment_multi_sheet_2020_layout(tmp_path: Path) -> None:
+    parsed = online_sources.parse_hs300_excel_attachment(_multi_sheet_excel_path(tmp_path))
+
+    assert [row["ticker"] for row in parsed.additions] == ["002049", "002384"]
+    assert [row["ticker"] for row in parsed.deletions] == ["600837", "002129"]
+    assert [row["rank"] for row in parsed.reserves] == [1, 2]
+    assert [row["security_name"] for row in parsed.reserves] == ["中际旭创", "大参林"]
+    assert parsed.usable_for_l3
+
+
 def test_build_candidate_rows_maps_official_order_around_cutoff() -> None:
     parsed = online_sources.parse_hs300_attachment_text(SAMPLE_ATTACHMENT_TEXT)
     rows = online_sources.build_candidate_rows(_attachment_link(), parsed)
@@ -91,6 +133,28 @@ def test_build_candidate_rows_maps_official_order_around_cutoff() -> None:
 
     validated = online_sources.validate_candidate_frame(frame)
     assert _reconstructed_source_reason(Path("official_candidate_draft.csv"), validated) == ""
+
+
+def test_infer_csi300_effective_date_matches_known_batches() -> None:
+    # Validates the 2nd-Friday-of-next-month convention against every batch in the
+    # current formal L3 file plus the 5 batches recoverable from 2020-2022 archives.
+    expectations = {
+        ("2020-11-27", "关于调整沪深300和中证香港100等指数样本的公告"): "2020-12-11",
+        ("2021-05-28", "关于调整沪深300和中证香港100等指数样本的公告"): "2021-06-11",
+        ("2021-11-26", "关于调整沪深300和中证香港100等指数样本的公告"): "2021-12-10",
+        ("2022-05-27", "关于沪深300和中证香港100等指数定期调整结果的公告"): "2022-06-10",
+        ("2022-11-25", "关于沪深300和中证香港100等指数定期调整结果的公告"): "2022-12-09",
+        ("2023-05-26", "关于沪深300、中证500、中证1000等指数定期调整结果的公告"): "2023-06-09",
+        ("2024-11-29", "关于沪深300、中证500、中证1000、中证A500等指数定期调整结果的公告"): "2024-12-13",
+        ("2025-11-28", "关于沪深300、中证500、中证1000、中证A500等指数定期调整结果的公告"): "2025-12-12",
+    }
+    for (publish, title), expected in expectations.items():
+        assert online_sources._infer_csi300_effective_date(publish, title) == expected
+
+    # Defensive: do not infer for non-HS300 titles or empty inputs.
+    assert online_sources._infer_csi300_effective_date("2025-07-25", "中证500等指数样本调整") == ""
+    assert online_sources._infer_csi300_effective_date("", "关于调整沪深300指数样本的公告") == ""
+    assert online_sources._infer_csi300_effective_date("2025-11-28", "") == ""
 
 
 def test_filter_notices_by_publish_date_window() -> None:

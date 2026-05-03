@@ -9,6 +9,11 @@
 
 | batch_id | 公告时点 |
 |---|---|
+| csi300-2020-11 | 2020-11 |
+| csi300-2021-05 | 2021-05 |
+| csi300-2021-11 | 2021-11 |
+| csi300-2022-05 | 2022-05 |
+| csi300-2022-11 | 2022-11 |
 | csi300-2023-05 | 2023-05 |
 | csi300-2023-11 | 2023-11 |
 | csi300-2024-05 | 2024-05 |
@@ -16,7 +21,7 @@
 | csi300-2025-05 | 2025-05 |
 | csi300-2025-11 | 2025-11 |
 
-总行数 159；时间跨度：**2023-05 到 2025-11，共 6 个批次（约 2.5 年）**。
+总行数 356；时间跨度：**2020-11 到 2025-11，共 11 个批次（5 年）**。
 
 参考 L2 公开重建数据（`hs300_rdd_candidates.reconstructed.csv`）：1887 行，
 覆盖更长时间但**不等价于中证官方历史排名**，仅作辅助。
@@ -108,5 +113,6 @@ CLI 入口：`index-inclusion-collect-hs300-rdd-l3`（见 `docs/hs300_rdd_workfl
 | 2026-05-03 | 创建本文档；首次审计 L3 = 6 批次（2023-05 → 2025-11） | csi300-2023-05 .. csi300-2025-11 | leo |
 | 2026-05-03 | 为线上采集新增历史搜索词、搜索诊断和年份覆盖输出 | 2020-2022 优先诊断窗口 | leo |
 | 2026-05-03 | 跑 collect-hs300-rdd-l3 `--since 2020-01-01 --until 2022-12-31`（3 个补充搜索词）。命中 5 个公告（2020-11、2021-05、2021-11、2022-05、2022-11）+ 6 个官方 Excel 附件，但全部为 addition-only 名单，**无 reserve/control list**。0 行进入 L3 草稿；9 行写入 manual_gap_worklist（P2，需手工 archive 检索）。结论：2020-2022 缺口是结构性 reserve-list 缺失，不是搜索词问题，需走 Wayback / CNInfo / 站内 web 搜索补 reserve 名单。 | 2020-2022 收口诊断 | claude |
+| 2026-05-03 | **结论修正**：人工 inspect Excel 附件后发现每个 2020-2022 文件都有 `调入 / 调出 / 备选名单` 三个 sheet，`备选名单` 含 `排序` 列直接给 RDD running variable。原 parser 只处理 6 列单 sheet 格式（2025+），漏读多 sheet 格式。修补 `_excel_single_role_rows` + `_excel_reserve_rows` + 按 sheet 名 dispatch；补 `_infer_csi300_effective_date` fallback（2nd Friday of next month），覆盖 2010-2025 所有批次。再跑 collector 得 5 个新批次 197 行，合并入正式 L3 → 11 批次 356 行。doctor 13/0/0；verdicts diff vs PAP 基线：0 changed；RDD `car_m1_p1` tau=0.039, p=0.048（n=120，新 L3）。 | csi300-2020-11 .. csi300-2022-11 | claude（PAP §7 已记录）|
 | _待填_ | _手工补 2014-2019_ | _待填_ | _待填_ |
 | _待填_ | _切换主表到 L3_ | _全量_ | _待填_ |
