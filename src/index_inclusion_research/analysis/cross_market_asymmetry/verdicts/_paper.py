@@ -255,8 +255,8 @@ def _limitations_block(verdicts: pd.DataFrame) -> list[str]:
         [
             "**通用稳健性补强**:",
             "",
-            "- HS300 RDD 当前 `running_variable` 是公开重建排名(顶=600..尾=1),不等同于真实流通市值;",
-            "  正式批次候选样本(L3)上线前，RDD 结论限定为公开重建口径，不可表述为中证官方历史候选排名。",
+            "- HS300 RDD 当前已使用 L3 官方候选边界样本，但仅覆盖 2023-05 到 2025-11 共 6 个批次；",
+            "  在扩展到 ≥10 年以前，RDD 结论仍应限定为初步识别证据，不可表述为完整中证官方历史 ranking score 因果结论。",
             "- 跨市场比较默认按事件汇总(announce vs effective × CN vs US 4 象限),后续可叠加事件级",
             "  bootstrap / permutation 检验，以及 sector × size 的交互检验，进一步压低单通道误判风险。",
             "- 长窗口(>120 日)的 retention ratio 在样本量收缩时会跳到 NA,",
