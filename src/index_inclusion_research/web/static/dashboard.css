@@ -3997,6 +3997,16 @@
     .echart-container-wide {
       height: 480px;
     }
+    /* Track-panel feature lead chart: match the feature img footprint
+       (panelsHeight test caps the whole .track-panels at ≤1080px). */
+    .figure-feature > .echart-panel {
+      margin: 16px 16px 0;
+    }
+    .figure-feature .echart-container,
+    .figure-feature .echart-container-wide {
+      height: 360px;
+      min-height: 320px;
+    }
     .echart-loading::after {
       content: "加载图表…";
       position: absolute;
