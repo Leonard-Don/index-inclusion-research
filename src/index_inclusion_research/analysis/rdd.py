@@ -6,6 +6,7 @@ import matplotlib
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
+from scipy import stats
 
 matplotlib.use("Agg")
 from matplotlib import pyplot as plt
@@ -103,6 +104,106 @@ def run_rdd_suite(
         for outcome_col in outcome_cols
     ]
     return pd.DataFrame(rows)
+
+
+def compute_mccrary_density_test(
+    frame: pd.DataFrame,
+    *,
+    running_col: str = "distance_to_cutoff",
+    bandwidth: float | None = None,
+    bin_size: float | None = None,
+    n_bootstrap: int = 500,
+    seed: int = 42,
+) -> dict[str, float | int]:
+    """Histogram-based density discontinuity test (McCrary 2008 spirit).
+
+    Tests whether the density of the running variable jumps at the cutoff.
+    A significant positive jump indicates units may be sorting in
+    (manipulation); a significant negative jump indicates units sorting out.
+
+    Returns a dict with `log_density_diff`, `std_error`, `z_stat`, `p_value`,
+    `n_obs`, `bandwidth`, `bin_size`. NaN-filled when the sample is empty
+    or both sides of the cutoff have zero local mass.
+
+    This is not the original triangular-kernel local-linear estimator from
+    McCrary (2008); it is a histogram approximation suitable for the
+    relatively coarse running variables used in index-inclusion RDDs.
+    """
+    distances = pd.to_numeric(frame[running_col], errors="coerce").dropna().to_numpy(dtype=float)
+    n_obs = int(distances.size)
+    result: dict[str, float | int] = {
+        "n_obs": n_obs,
+        "bandwidth": float("nan"),
+        "bin_size": float("nan"),
+        "log_density_diff": float("nan"),
+        "std_error": float("nan"),
+        "z_stat": float("nan"),
+        "p_value": float("nan"),
+    }
+    if n_obs == 0:
+        return result
+
+    sigma = float(np.std(distances, ddof=1)) if n_obs > 1 else 0.0
+    if bandwidth is None:
+        if sigma > 0:
+            bandwidth = max(1.84 * sigma * (n_obs ** (-1 / 5)), 1e-6)
+        else:
+            bandwidth = float(np.max(np.abs(distances)) or 1.0)
+    if bin_size is None:
+        bin_size = max(bandwidth / 5.0, 1e-6)
+
+    def _density_diff(sample: np.ndarray, current_bin: float) -> float:
+        n = sample.size
+        if n == 0:
+            return float("nan")
+        n_left = int(np.sum((sample >= -current_bin) & (sample < 0.0)))
+        n_right = int(np.sum((sample >= 0.0) & (sample < current_bin)))
+        if n_left == 0 or n_right == 0:
+            return float("nan")
+        density_left = n_left / (current_bin * n)
+        density_right = n_right / (current_bin * n)
+        return float(np.log(density_right) - np.log(density_left))
+
+    # Auto-widen bin if discrete running variable produces empty cells,
+    # up to the full bandwidth. Useful for ordinal / rank-style running
+    # variables (HS300 adjustment list order).
+    point = _density_diff(distances, bin_size)
+    while not np.isfinite(point) and bin_size < bandwidth:
+        bin_size = min(bin_size * 2.0, bandwidth)
+        point = _density_diff(distances, bin_size)
+
+    result["bandwidth"] = float(bandwidth)
+    result["bin_size"] = float(bin_size)
+    if not np.isfinite(point):
+        return result
+
+    rng = np.random.default_rng(seed)
+    boot = np.empty(n_bootstrap, dtype=float)
+    for i in range(n_bootstrap):
+        sample = rng.choice(distances, size=n_obs, replace=True)
+        boot[i] = _density_diff(sample, bin_size)
+    boot = boot[np.isfinite(boot)]
+    if boot.size < 5:
+        result["log_density_diff"] = point
+        return result
+
+    se = float(np.std(boot, ddof=1))
+    if se <= 0:
+        result["log_density_diff"] = point
+        result["std_error"] = se
+        return result
+
+    z = float(point / se)
+    p = float(2.0 * stats.norm.sf(abs(z)))
+    result.update(
+        {
+            "log_density_diff": float(point),
+            "std_error": se,
+            "z_stat": z,
+            "p_value": p,
+        }
+    )
+    return result
 
 
 def plot_rdd_bins(

@@ -12,6 +12,7 @@ from index_inclusion_research.analysis import (
     plot_rdd_bins,
     run_rdd_suite,
 )
+from index_inclusion_research.analysis.rdd import compute_mccrary_density_test
 from index_inclusion_research.analysis.rdd_candidates import (
     build_candidate_batch_audit as _build_candidate_batch_audit,
 )
@@ -505,6 +506,11 @@ def run_analysis(
     outcome_cols = ["car_m1_p1", "car_m3_p3", "turnover_change", "volume_change"]
     rdd_summary = run_rdd_suite(event_level, outcome_cols=outcome_cols)
     save_dataframe(rdd_summary, OUTPUT_DIR / "rdd_summary.csv")
+
+    mccrary = compute_mccrary_density_test(
+        event_level, running_col="distance_to_cutoff"
+    )
+    save_dataframe(pd.DataFrame([mccrary]), OUTPUT_DIR / "mccrary_density_test.csv")
 
     for outcome_col in outcome_cols:
         plot_rdd_bins(
