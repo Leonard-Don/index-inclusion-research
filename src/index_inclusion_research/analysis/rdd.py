@@ -61,6 +61,9 @@ def fit_local_linear_rdd(
             "t_stat": np.nan,
             "p_value": np.nan,
             "r_squared": np.nan,
+            "intercept": np.nan,
+            "running_slope": np.nan,
+            "interaction_slope": np.nan,
         }
 
     inferred_bandwidth = choose_bandwidth(work[running_col]) if bandwidth is None else float(bandwidth)
@@ -83,6 +86,9 @@ def fit_local_linear_rdd(
         "t_stat": float(model.tvalues[treatment_col]),
         "p_value": float(model.pvalues[treatment_col]),
         "r_squared": float(model.rsquared),
+        "intercept": float(model.params["const"]),
+        "running_slope": float(model.params[running_col]),
+        "interaction_slope": float(model.params["interaction"]),
     }
 
 

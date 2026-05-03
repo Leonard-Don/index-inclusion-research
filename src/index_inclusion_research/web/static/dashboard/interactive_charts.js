@@ -449,6 +449,17 @@ const CHART_OPTION_BUILDERS = {
 
 
 function buildRddScatterOption(payload) {
+  const fits = Array.isArray(payload.fits) ? payload.fits : [];
+  const defaultBw = payload.default_bandwidth;
+  const fitColor = bw => {
+    // Highlight the default bandwidth; fade the others so the plot
+    // stays readable when multiple bandwidths are toggled on.
+    if (defaultBw != null && Math.abs(bw - defaultBw) < 1e-9) return '#1f6feb';
+    const palette = ['#5c6b77', '#8a6d3b', '#247346', '#a63b28', '#3a4554', '#5d4f8a', '#7a8b3f', '#5f676d'];
+    const ix = fits.findIndex(f => Math.abs(f.bandwidth - bw) < 1e-9);
+    return palette[(ix >= 0 ? ix : 0) % palette.length];
+  };
+
   const ecSeries = payload.series.map(s => ({
     name: s.name,
     type: 'scatter',
@@ -457,8 +468,37 @@ function buildRddScatterOption(payload) {
     symbolSize: 6,
     emphasis: { focus: 'series', itemStyle: { opacity: 1 } },
   }));
+
+  // One fit-line series per bandwidth — connects (cutoff − bw, predicted)
+  // → (cutoff, predicted from below) and (cutoff, predicted from above) →
+  // (cutoff + bw, predicted) so the slope on each side is visible. Legend
+  // toggles which bandwidth is shown.
+  const fitSeriesNames = [];
+  for (const fit of fits) {
+    const name = `bw=${fit.bandwidth} (τ=${(fit.tau * 100).toFixed(2)}%, p=${fit.p_value.toFixed(3)}, n=${fit.n_obs})`;
+    fitSeriesNames.push(name);
+    const isDefault = defaultBw != null && Math.abs(fit.bandwidth - defaultBw) < 1e-9;
+    const color = fitColor(fit.bandwidth);
+    const baseSeries = {
+      name,
+      type: 'line',
+      symbol: 'none',
+      smooth: false,
+      itemStyle: { color },
+      lineStyle: { color, width: isDefault ? 2.5 : 1.6, type: isDefault ? 'solid' : 'dashed' },
+      emphasis: { focus: 'series', lineStyle: { width: 3 } },
+      bandwidth: fit.bandwidth,
+      tau: fit.tau,
+      p_value: fit.p_value,
+      n_obs: fit.n_obs,
+    };
+    ecSeries.push({ ...baseSeries, side: 'left', data: fit.line_left });
+    ecSeries.push({ ...baseSeries, side: 'right', data: fit.line_right });
+  }
+
   if (payload.cutoff != null) {
     ecSeries.push({
+      name: '__cutoff_marker__',
       type: 'line',
       data: [],
       markLine: {
@@ -470,24 +510,78 @@ function buildRddScatterOption(payload) {
       },
     });
   }
+
+  // Default legend selection: scatter series + only the default-bandwidth
+  // fit. Legend click toggles other bandwidths on/off — that's the de-facto
+  // bandwidth slider.
+  const legendData = [...payload.series.map(s => s.name), ...fitSeriesNames];
+  const legendSelected = {};
+  for (const name of payload.series.map(s => s.name)) legendSelected[name] = true;
+  const defaultFitName = (() => {
+    if (defaultBw == null) return null;
+    const fit = fits.find(f => Math.abs(f.bandwidth - defaultBw) < 1e-9);
+    if (!fit) return null;
+    return `bw=${fit.bandwidth} (τ=${(fit.tau * 100).toFixed(2)}%, p=${fit.p_value.toFixed(3)}, n=${fit.n_obs})`;
+  })();
+  for (const name of fitSeriesNames) {
+    legendSelected[name] = name === defaultFitName;
+  }
+
+  const subtitleText = (() => {
+    if (defaultBw == null || fits.length === 0) {
+      return '点击图例切换 bandwidth · 默认隐藏其它带宽';
+    }
+    const fit = fits.find(f => Math.abs(f.bandwidth - defaultBw) < 1e-9) || fits[0];
+    return (
+      `默认 bandwidth=${fit.bandwidth} · τ=${(fit.tau * 100).toFixed(3)}%, ` +
+      `p=${fit.p_value.toFixed(3)}, n=${fit.n_obs} · 点击图例切换其它带宽`
+    );
+  })();
+
   return {
     title: {
-      text: 'HS300 RDD 散点(运行变量 × CAR[-1,+1])',
+      text: 'HS300 RDD 散点 · 运行变量 × CAR[-1,+1] · 多 bandwidth 拟合',
+      subtext: subtitleText,
       left: 'center',
+      subtextStyle: { fontSize: 11, color: '#5c6b77' },
     },
     tooltip: {
       trigger: 'item',
       formatter: params => {
+        if (params.seriesName === '__cutoff_marker__') return '';
+        if (params.seriesType === 'line') {
+          // Series name carries bandwidth + tau + p + n already; just show
+          // it together with the running-variable position the user hovered.
+          const x = Array.isArray(params.value) ? params.value[0] : null;
+          const y = Array.isArray(params.value) ? params.value[1] : null;
+          const lines = [`<strong>RDD 拟合</strong>`, params.seriesName];
+          if (x != null) lines.push(`running_variable: ${x.toFixed(2)}`);
+          if (y != null) lines.push(`predicted CAR[-1,+1]: ${(y * 100).toFixed(3)}%`);
+          return lines.join('<br>');
+        }
         if (!params.value || params.value.length < 2) return '';
         const x = params.value[0];
         const y = params.value[1];
-        return `<strong>${params.seriesName}</strong><br>` +
-          `running_variable: ${x.toFixed(1)}<br>` +
-          `CAR[-1,+1]: ${(y * 100).toFixed(3)}%`;
+        const data = params.data || {};
+        const lines = [
+          `<strong>${params.seriesName}</strong>`,
+          `running_variable: ${x.toFixed(2)}`,
+          `CAR[-1,+1]: ${(y * 100).toFixed(3)}%`,
+        ];
+        if (data.batch_id) lines.push(`batch: ${data.batch_id}`);
+        if (data.ticker) lines.push(`ticker: ${data.ticker}`);
+        if (data.security_name) lines.push(`证券: ${data.security_name}`);
+        return lines.join('<br>');
       },
     },
-    legend: { bottom: 0, data: payload.series.map(s => s.name) },
-    grid: { left: 60, right: 30, top: 50, bottom: 50 },
+    legend: {
+      bottom: 0,
+      type: 'scroll',
+      data: legendData,
+      selected: legendSelected,
+      textStyle: { fontSize: 11 },
+    },
+    grid: { left: 60, right: 30, top: 70, bottom: 70 },
     xAxis: {
       type: 'value',
       name: 'running_variable',

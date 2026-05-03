@@ -506,14 +506,38 @@ class TestBuildCmaGapLengthDistribution:
 def rdd_scatter_root(tmp_path: Path) -> Path:
     rdd_dir = tmp_path / "results" / "literature" / "hs300_rdd"
     rdd_dir.mkdir(parents=True)
+    # Distances 20, 50, 100 (right) and -20, -10 (left) — wider than any
+    # bandwidth in RDD_BANDWIDTH_SWEEP; the sweep section should return an
+    # empty list while the scatter still renders.
     (rdd_dir / "event_level_with_running.csv").write_text(
-        "running_variable,car_m1_p1,inclusion,cutoff\n"
-        "320,0.012,1,300\n"
-        "350,0.018,1,300\n"
-        "400,0.022,1,300\n"
-        "280,0.001,0,300\n"
-        "290,-0.003,0,300\n"
+        "running_variable,car_m1_p1,inclusion,cutoff,batch_id,candidate_ticker,security_name\n"
+        "320,0.012,1,300,csi300-2024-05,600001,标的甲\n"
+        "350,0.018,1,300,csi300-2024-05,600002,标的乙\n"
+        "400,0.022,1,300,csi300-2024-11,600003,标的丙\n"
+        "280,0.001,0,300,csi300-2024-05,600004,对照甲\n"
+        "290,-0.003,0,300,csi300-2024-11,600005,对照乙\n"
     )
+    return tmp_path
+
+
+@pytest.fixture()
+def rdd_scatter_dense_root(tmp_path: Path) -> Path:
+    """Dense fixture with distance values straddling 0 within ±0.10 so the
+    bandwidth sweep produces non-empty fits."""
+    rdd_dir = tmp_path / "results" / "literature" / "hs300_rdd"
+    rdd_dir.mkdir(parents=True)
+    rows = ["running_variable,car_m1_p1,inclusion,cutoff,distance_to_cutoff,batch_id,candidate_ticker,security_name"]
+    # 20 control rows uniformly in (-0.10, 0)
+    for i in range(20):
+        d = -0.005 - i * 0.005  # -0.005 .. -0.1
+        rv = 300 + d
+        rows.append(f"{rv:.4f},0.001,0,300,{d:.4f},csi300-2024-05,00010{i},对照{i}")
+    # 20 treated rows uniformly in (0, 0.10) with a +3% jump
+    for i in range(20):
+        d = 0.005 + i * 0.005
+        rv = 300 + d
+        rows.append(f"{rv:.4f},0.030,1,300,{d:.4f},csi300-2024-05,00020{i},处理{i}")
+    (rdd_dir / "event_level_with_running.csv").write_text("\n".join(rows) + "\n")
     return tmp_path
 
 
@@ -522,6 +546,7 @@ class TestBuildRddScatterChartData:
         result = build_rdd_scatter_chart_data(empty_root)
         assert result["series"] == []
         assert result["cutoff"] is None
+        assert result["fits"] == []
 
     def test_populated_returns_two_series(self, rdd_scatter_root: Path) -> None:
         result = build_rdd_scatter_chart_data(rdd_scatter_root)
@@ -531,9 +556,45 @@ class TestBuildRddScatterChartData:
         control = next(s for s in result["series"] if s["inclusion"] == 0)
         assert len(treated["data"]) == 3
         assert len(control["data"]) == 2
-        for x, y in treated["data"] + control["data"]:
+        for point in treated["data"] + control["data"]:
+            assert "value" in point
+            x, y = point["value"]
             assert isinstance(x, float)
             assert isinstance(y, float)
+
+    def test_scatter_points_carry_metadata(self, rdd_scatter_root: Path) -> None:
+        result = build_rdd_scatter_chart_data(rdd_scatter_root)
+        treated = next(s for s in result["series"] if s["inclusion"] == 1)
+        first_point = treated["data"][0]
+        assert first_point["batch_id"] == "csi300-2024-05"
+        assert first_point["ticker"] == "600001"
+        assert first_point["security_name"] == "标的甲"
+
+    def test_bandwidth_sweep_empty_when_distances_too_wide(self, rdd_scatter_root: Path) -> None:
+        # Default fixture has distances 10-100; no bandwidth in the sweep
+        # is wide enough to fit, so fits should be an empty list.
+        result = build_rdd_scatter_chart_data(rdd_scatter_root)
+        assert result["fits"] == []
+        assert result["default_bandwidth"] is None
+
+    def test_bandwidth_sweep_populated_with_dense_data(self, rdd_scatter_dense_root: Path) -> None:
+        result = build_rdd_scatter_chart_data(rdd_scatter_dense_root)
+        assert len(result["fits"]) > 0
+        # Default bandwidth (0.06) should be one of the produced fits
+        assert result["default_bandwidth"] == 0.06
+        bandwidths = [fit["bandwidth"] for fit in result["fits"]]
+        assert 0.06 in bandwidths
+        for fit in result["fits"]:
+            assert "tau" in fit
+            assert "p_value" in fit
+            assert "n_obs" in fit
+            assert len(fit["line_left"]) == 2  # two endpoints
+            assert len(fit["line_right"]) == 2
+            # Both line endpoints should be on opposite sides of the cutoff
+            assert fit["line_left"][0][0] < 300
+            assert fit["line_left"][1][0] == 300
+            assert fit["line_right"][0][0] == 300
+            assert fit["line_right"][1][0] > 300
 
     def test_json_serializable(self, rdd_scatter_root: Path) -> None:
         json.dumps(build_rdd_scatter_chart_data(rdd_scatter_root))
