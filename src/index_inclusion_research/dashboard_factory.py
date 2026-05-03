@@ -288,6 +288,11 @@ def _rdd_defaults_from_form(form) -> dict[str, object]:
     )
 
 
+def _split_online_search_terms(raw: str) -> tuple[str, ...]:
+    terms = [term.strip() for term in raw.replace(";", "\n").replace("；", "\n").splitlines()]
+    return tuple(term for term in terms if term)
+
+
 def _register_rdd_l3_workbench_routes(app: Flask, root: Path) -> None:
     """Register the official HS300 RDD L3 candidate import workbench."""
     from flask import render_template, request
@@ -365,10 +370,41 @@ def _register_rdd_l3_workbench_routes(app: Flask, root: Path) -> None:
         )
         return render_template("rdd_l3_workbench.html", **context)
 
+    def refresh_rdd_l3_online_collection():
+        online_collection_result = None
+        error = ""
+        try:
+            raw_notice_rows = request.form.get("notice_rows") or ""
+            notice_rows = (
+                int(raw_notice_rows)
+                if raw_notice_rows.strip()
+                else rdd_l3_workbench.hs300_rdd_online_sources.DEFAULT_NOTICE_ROWS
+            )
+            raw_max_notices = request.form.get("max_notices") or ""
+            max_notices = int(raw_max_notices) if raw_max_notices.strip() else None
+            online_collection_result = rdd_l3_workbench.refresh_online_collection(
+                root=root,
+                since=request.form.get("since") or None,
+                until=request.form.get("until") or None,
+                notice_rows=notice_rows,
+                max_notices=max_notices,
+                extra_search_terms=_split_online_search_terms(request.form.get("search_term") or ""),
+                force=True,
+            )
+        except Exception as exc:  # noqa: BLE001
+            error = f"{type(exc).__name__}: {exc}"
+        context = rdd_l3_workbench.build_rdd_l3_workbench_context(
+            root=root,
+            online_collection_result=online_collection_result,
+            error=error,
+        )
+        return render_template("rdd_l3_workbench.html", **context)
+
     show_rdd_l3_workbench.__name__ = "show_rdd_l3_workbench"
     check_rdd_l3_candidates.__name__ = "check_rdd_l3_candidates"
     import_rdd_l3_candidates.__name__ = "import_rdd_l3_candidates"
     refresh_rdd_l3_collection.__name__ = "refresh_rdd_l3_collection"
+    refresh_rdd_l3_online_collection.__name__ = "refresh_rdd_l3_online_collection"
     app.add_url_rule(
         "/rdd-l3",
         endpoint="show_rdd_l3_workbench",
@@ -391,6 +427,12 @@ def _register_rdd_l3_workbench_routes(app: Flask, root: Path) -> None:
         "/rdd-l3/collection",
         endpoint="refresh_rdd_l3_collection",
         view_func=refresh_rdd_l3_collection,
+        methods=["POST"],
+    )
+    app.add_url_rule(
+        "/rdd-l3/online-collection",
+        endpoint="refresh_rdd_l3_online_collection",
+        view_func=refresh_rdd_l3_online_collection,
         methods=["POST"],
     )
 

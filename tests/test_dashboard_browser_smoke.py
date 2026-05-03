@@ -798,6 +798,7 @@ def test_evidence_detail_and_rdd_l3_workbench_pages_render() -> None:
             assert page.locator("form[action='/rdd-l3/check']").count() == 1
             assert page.locator("form[action='/rdd-l3/import']").count() == 1
             assert page.locator("form[action='/rdd-l3/collection']").count() == 1
+            assert page.locator("form[action='/rdd-l3/online-collection']").count() == 1
             assert page.locator(".rdd-collection-status").count() >= 2
             assert page.locator(".result-card:has-text('线上采集诊断')").count() == 1
             assert page.locator(".evidence-detail-table:has-text('线上年份覆盖诊断')").count() == 1

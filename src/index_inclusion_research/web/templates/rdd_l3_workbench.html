@@ -218,6 +218,14 @@
           <time>{{ online_collection_status.generated_at }}</time>
           {% endif %}
         </div>
+        <form class="rdd-inline-form" action="{{ url_for('refresh_rdd_l3_online_collection') }}" method="post">
+          <label>起始公告日<input type="date" name="since"></label>
+          <label>结束公告日<input type="date" name="until"></label>
+          <label>每个搜索词返回<input type="number" name="notice_rows" min="1" max="300" value="80"></label>
+          <label>最多公告数<input type="number" name="max_notices" min="1" max="300" placeholder="不限制"></label>
+          <label>补充搜索词<textarea name="search_term" rows="2" placeholder="一行一个历史标题口径"></textarea></label>
+          <button type="submit">刷新线上诊断</button>
+        </form>
         <div class="evidence-summary-grid">
           <article class="evidence-summary-card">
             <div class="table-label">已解析年份</div>
@@ -244,6 +252,28 @@
         </div>
       </div>
     </section>
+
+    {% if online_collection_result %}
+    <section class="section evidence-section-compact">
+      <div class="result-card">
+        <div class="table-label">线上采集刷新结果</div>
+        <h2>{{ online_collection_result.status }} · {{ online_collection_result.candidate_rows }} 个候选行</h2>
+        <p class="evidence-source-line">
+          来源={{ online_collection_result.source_rows }} · 搜索={{ online_collection_result.search_rows }} ·
+          年份={{ online_collection_result.year_rows }} · 缺口={{ online_collection_result.gap_rows }} ·
+          来源入口={{ online_collection_result.hint_rows }}
+        </p>
+        <div class="evidence-path-grid">
+          {% for path in online_collection_result.written_paths %}
+          <article class="evidence-path-card" data-exists="{{ '1' if path.exists else '0' }}">
+            <div class="table-label">已刷新</div>
+            {% if path.href %}<a href="{{ path.href }}">{{ path.label }}</a>{% else %}<span>{{ path.label }}</span>{% endif %}
+          </article>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+    {% endif %}
 
     {% if online_collection_tables %}
     {% for table in online_collection_tables %}
