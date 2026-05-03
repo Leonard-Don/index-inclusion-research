@@ -584,30 +584,132 @@ def build_cma_gap_length_distribution_chart_data(root: Path) -> dict:
 # ── 12. RDD scatter ──────────────────────────────────────────────────
 
 
+RDD_BANDWIDTH_SWEEP: tuple[float, ...] = (0.03, 0.04, 0.05, 0.06, 0.08, 0.10, 0.15, 0.20)
+RDD_DEFAULT_BANDWIDTH: float = 0.06
+
+
+def _pick_first_column(df: pd.DataFrame, options: list[str]) -> str | None:
+    for col in options:
+        if col in df.columns:
+            return col
+    return None
+
+
+def _rdd_bandwidth_fits(df: pd.DataFrame, *, cutoff_value: float) -> list[dict]:
+    """For each candidate bandwidth, fit a local-linear RDD and emit the
+    line endpoints (left of cutoff, right of cutoff) in (running_variable,
+    car_m1_p1) space the client can plot directly.
+
+    HS300 running_variable is built from the official adjustment list order
+    via ``cutoff + (n - order + 1)/100``, so distance_to_cutoff carries
+    floating-point artifacts (e.g. ``0.0600000000000022``). To keep the
+    sweep's "bw=0.06" cell consistent with rdd_summary.csv (which uses the
+    auto-chosen bandwidth that lands on the same artifact), we widen each
+    requested bandwidth by ``bw * 1e-9`` internally; the display label
+    keeps the rounded value.
+    """
+    from index_inclusion_research.analysis.rdd import fit_local_linear_rdd
+
+    fits: list[dict] = []
+    for bw in RDD_BANDWIDTH_SWEEP:
+        result = fit_local_linear_rdd(
+            df,
+            outcome_col="car_m1_p1",
+            running_col="distance_to_cutoff",
+            treatment_col="inclusion",
+            bandwidth=bw * (1.0 + 1e-9),
+        )
+        n_obs = int(result.get("n_obs") or 0)
+        intercept = result.get("intercept")
+        running_slope = result.get("running_slope")
+        interaction_slope = result.get("interaction_slope")
+        tau = result.get("tau")
+        if (
+            n_obs < 10
+            or intercept is None
+            or running_slope is None
+            or interaction_slope is None
+            or tau is None
+            or pd.isna(intercept)
+            or pd.isna(running_slope)
+            or pd.isna(interaction_slope)
+            or pd.isna(tau)
+        ):
+            continue
+        # Effective bandwidth used (may have been widened when local sample
+        # empty). For display we keep the rounded request value; the line
+        # endpoints anchor at that label, not the float-artifact internal value.
+        effective_bw = float(bw)
+        # Left segment: treatment=0, running in [-effective_bw, 0]
+        y_left_outer = float(intercept) + float(running_slope) * (-effective_bw)
+        y_left_inner = float(intercept)
+        # Right segment: treatment=1, running in [0, +effective_bw]
+        y_right_inner = float(intercept) + float(tau)
+        y_right_outer = (
+            float(intercept) + float(tau)
+            + (float(running_slope) + float(interaction_slope)) * effective_bw
+        )
+        fits.append(
+            {
+                "bandwidth": round(float(bw), 4),
+                "effective_bandwidth": round(effective_bw, 4),
+                "tau": round(float(tau), 6),
+                "p_value": round(float(result["p_value"]), 6) if not pd.isna(result["p_value"]) else None,
+                "n_obs": n_obs,
+                "n_left": int(result.get("n_left") or 0),
+                "n_right": int(result.get("n_right") or 0),
+                "line_left": [
+                    [round(cutoff_value - effective_bw, 4), round(y_left_outer, 6)],
+                    [round(cutoff_value, 4), round(y_left_inner, 6)],
+                ],
+                "line_right": [
+                    [round(cutoff_value, 4), round(y_right_inner, 6)],
+                    [round(cutoff_value + effective_bw, 4), round(y_right_outer, 6)],
+                ],
+            }
+        )
+    return fits
+
+
 def build_rdd_scatter_chart_data(root: Path) -> dict:
-    """RDD bin scatter for HS300 inclusion at the cutoff.
+    """RDD bin scatter for HS300 inclusion at the cutoff with bandwidth sweep.
 
     Reads ``results/literature/hs300_rdd/event_level_with_running.csv`` and
     emits two scatter series — control (inclusion=0) and treated
-    (inclusion=1) — in (running_variable, car_m1_p1) space, plus the
-    cutoff value so the JS option builder can render a vertical line.
+    (inclusion=1) — in (running_variable, car_m1_p1) space, plus per-point
+    metadata (batch_id / ticker / security_name) for hover tooltips, plus a
+    bandwidth sweep of local-linear RDD fits the client renders as
+    multiple selectable fit lines.
     """
     path = root / "results" / "literature" / "hs300_rdd" / "event_level_with_running.csv"
+    empty_payload = {
+        "series": [],
+        "cutoff": None,
+        "outcome": "car_m1_p1",
+        "fits": [],
+        "default_bandwidth": RDD_DEFAULT_BANDWIDTH,
+    }
     if not path.exists():
-        return {"series": [], "cutoff": None, "outcome": "car_m1_p1"}
+        return empty_payload
 
     df = pd.read_csv(path)
     required = {"running_variable", "car_m1_p1", "inclusion"}
     if not required.issubset(df.columns):
-        return {"series": [], "cutoff": None, "outcome": "car_m1_p1"}
+        return empty_payload
 
     df = df.dropna(subset=["running_variable", "car_m1_p1"])
     if df.empty:
-        return {"series": [], "cutoff": None, "outcome": "car_m1_p1"}
+        return empty_payload
 
     cutoff_value = (
         float(df["cutoff"].iloc[0]) if "cutoff" in df.columns and pd.notna(df["cutoff"].iloc[0]) else 300.0
     )
+    if "distance_to_cutoff" not in df.columns:
+        df = df.assign(distance_to_cutoff=df["running_variable"].astype(float) - cutoff_value)
+
+    batch_col = _pick_first_column(df, ["batch_id", "batch_id_x", "batch_id_y"])
+    ticker_col = _pick_first_column(df, ["candidate_ticker", "ticker", "event_ticker"])
+    name_col = _pick_first_column(df, ["security_name", "security_name_x", "security_name_y"])
 
     series = []
     label_map = {0: "对照(inclusion=0)", 1: "处理(inclusion=1)"}
@@ -617,14 +719,21 @@ def build_rdd_scatter_chart_data(root: Path) -> dict:
             inc = int(inclusion_value)
         except (TypeError, ValueError):
             continue
-        points = []
+        points: list[dict] = []
         for _, r in group.iterrows():
-            points.append(
-                [
+            point: dict = {
+                "value": [
                     round(float(r["running_variable"]), 4),
                     round(float(r["car_m1_p1"]), 6),
-                ]
-            )
+                ],
+            }
+            if batch_col is not None and pd.notna(r.get(batch_col)):
+                point["batch_id"] = str(r[batch_col])
+            if ticker_col is not None and pd.notna(r.get(ticker_col)):
+                point["ticker"] = str(r[ticker_col])
+            if name_col is not None and pd.notna(r.get(name_col)):
+                point["security_name"] = str(r[name_col])
+            points.append(point)
         series.append(
             {
                 "name": label_map.get(inc, f"inclusion={inc}"),
@@ -635,10 +744,21 @@ def build_rdd_scatter_chart_data(root: Path) -> dict:
             }
         )
 
+    fits = _rdd_bandwidth_fits(df, cutoff_value=cutoff_value)
+    available_bandwidths = [fit["bandwidth"] for fit in fits]
+    if RDD_DEFAULT_BANDWIDTH in available_bandwidths:
+        default_bw: float | None = RDD_DEFAULT_BANDWIDTH
+    elif available_bandwidths:
+        default_bw = available_bandwidths[len(available_bandwidths) // 2]
+    else:
+        default_bw = None
+
     return {
         "series": series,
         "cutoff": cutoff_value,
         "outcome": "car_m1_p1",
+        "fits": fits,
+        "default_bandwidth": default_bw,
     }
 
 
