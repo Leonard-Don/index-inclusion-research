@@ -173,12 +173,14 @@ def test_main_passes_date_window_to_collector(monkeypatch, tmp_path: Path) -> No
             "audit_output": tmp_path / "audit.csv",
             "search_diagnostics_output": tmp_path / "search.csv",
             "year_coverage_output": tmp_path / "year.csv",
+            "manual_gap_worklist_output": tmp_path / "gaps.csv",
             "report_output": tmp_path / "report.md",
             "formal_output": None,
             "candidate_rows": 0,
             "source_rows": 0,
             "search_rows": 1,
             "year_rows": 3,
+            "gap_rows": 1,
             "candidate_batches": 0,
             "status": "no_candidates",
         }
@@ -209,6 +211,7 @@ def test_main_passes_date_window_to_collector(monkeypatch, tmp_path: Path) -> No
     assert "沪深300历史样本调整" in captured["search_terms"]
     assert captured["search_diagnostics_output"] == online_sources.DEFAULT_SEARCH_DIAGNOSTICS_OUTPUT
     assert captured["year_coverage_output"] == online_sources.DEFAULT_YEAR_COVERAGE_OUTPUT
+    assert captured["manual_gap_worklist_output"] == online_sources.DEFAULT_MANUAL_GAP_WORKLIST_OUTPUT
 
 
 def test_collect_official_sources_writes_audit_when_no_candidates(monkeypatch, tmp_path: Path) -> None:
@@ -259,6 +262,7 @@ def test_collect_official_sources_writes_audit_when_no_candidates(monkeypatch, t
         audit_output=tmp_path / "online_source_audit.csv",
         search_diagnostics_output=tmp_path / "online_search_diagnostics.csv",
         year_coverage_output=tmp_path / "online_year_coverage.csv",
+        manual_gap_worklist_output=tmp_path / "online_manual_gap_worklist.csv",
         report_output=tmp_path / "online_collection_report.md",
         attachment_dir=tmp_path / "official_attachments",
         since="2020-01-01",
@@ -275,6 +279,7 @@ def test_collect_official_sources_writes_audit_when_no_candidates(monkeypatch, t
     assert (tmp_path / "online_source_audit.csv").exists()
     assert (tmp_path / "online_search_diagnostics.csv").exists()
     assert (tmp_path / "online_year_coverage.csv").exists()
+    assert (tmp_path / "online_manual_gap_worklist.csv").exists()
     report = (tmp_path / "online_collection_report.md").read_text(encoding="utf-8")
     assert "没有解析出" in report
 
@@ -335,6 +340,7 @@ def test_collect_official_sources_audits_excel_additions_without_controls(monkey
         audit_output=tmp_path / "online_source_audit.csv",
         search_diagnostics_output=tmp_path / "online_search_diagnostics.csv",
         year_coverage_output=tmp_path / "online_year_coverage.csv",
+        manual_gap_worklist_output=tmp_path / "online_manual_gap_worklist.csv",
         report_output=tmp_path / "online_collection_report.md",
         attachment_dir=tmp_path / "official_attachments",
         force=True,
@@ -352,6 +358,11 @@ def test_collect_official_sources_audits_excel_additions_without_controls(monkey
     assert coverage.loc[0, "usable_attachment_rows"] == 0
     assert coverage.loc[0, "parsed_addition_rows"] == 1
     assert coverage.loc[0, "parsed_control_rows"] == 0
+    gaps = pd.read_csv(tmp_path / "online_manual_gap_worklist.csv")
+    assert gaps.loc[0, "priority"] == "P1"
+    assert gaps.loc[0, "gap_type"] == "parsed_additions_missing_controls"
+    assert gaps.loc[0, "addition_rows"] == 1
+    assert "reserve" in gaps.loc[0, "missing_evidence"]
 
 
 def test_collect_official_sources_audits_notice_detail_errors(monkeypatch, tmp_path: Path) -> None:
@@ -390,6 +401,7 @@ def test_collect_official_sources_audits_notice_detail_errors(monkeypatch, tmp_p
         audit_output=tmp_path / "online_source_audit.csv",
         search_diagnostics_output=tmp_path / "online_search_diagnostics.csv",
         year_coverage_output=tmp_path / "online_year_coverage.csv",
+        manual_gap_worklist_output=tmp_path / "online_manual_gap_worklist.csv",
         report_output=tmp_path / "online_collection_report.md",
         attachment_dir=tmp_path / "official_attachments",
         force=True,
@@ -425,6 +437,7 @@ def test_collect_official_sources_writes_diagnostics_and_years_when_no_notices(m
         audit_output=tmp_path / "online_source_audit.csv",
         search_diagnostics_output=tmp_path / "online_search_diagnostics.csv",
         year_coverage_output=tmp_path / "online_year_coverage.csv",
+        manual_gap_worklist_output=tmp_path / "online_manual_gap_worklist.csv",
         report_output=tmp_path / "online_collection_report.md",
         attachment_dir=tmp_path / "official_attachments",
         since="2020-01-01",
@@ -442,6 +455,9 @@ def test_collect_official_sources_writes_diagnostics_and_years_when_no_notices(m
     assert search_diagnostics.loc[0, "search_term"] == "沪深300 指数样本 调整"
     assert set(year_coverage["year"]) == {2020, 2021, 2022}
     assert set(year_coverage["status"]) == {"no_notice"}
+    gaps = pd.read_csv(tmp_path / "online_manual_gap_worklist.csv")
+    assert set(gaps["gap_type"]) == {"year_without_notice"}
+    assert set(gaps["priority"]) == {"P3"}
     report = (tmp_path / "online_collection_report.md").read_text(encoding="utf-8")
     assert "搜索诊断" in report
     assert "年份覆盖" in report

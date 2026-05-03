@@ -136,6 +136,7 @@ def test_workbench_context_uses_supplied_root_paths(tmp_path: Path) -> None:
     assert context["collection_tables"][0]["key"] == "batch_collection_checklist"
     assert context["online_collection_tables"][0]["key"] == "online_year_coverage"
     assert context["online_collection_tables"][1]["key"] == "online_source_audit"
+    assert context["online_collection_tables"][2]["key"] == "online_manual_gap_worklist"
     assert context["collection_tables"][0]["rows"] == []
     assert context["online_collection_tables"][0]["rows"] == []
     assert context["import_paths"][0]["label"] == "data/raw/hs300_rdd_candidates.csv"
@@ -215,6 +216,22 @@ def test_workbench_context_surfaces_online_collection_diagnostics(tmp_path: Path
             },
         ]
     ).to_csv(collection_dir / "online_year_coverage.csv", index=False)
+    pd.DataFrame(
+        [
+            {
+                "year": 2022,
+                "priority": "P1",
+                "gap_type": "parsed_additions_missing_controls",
+                "publish_date": "2022-11-25",
+                "title": "关于调整沪深300等指数样本的公告",
+                "attachment_name": "指数样本调整名单.xlsx",
+                "addition_rows": 1,
+                "control_rows": 0,
+                "missing_evidence": "official reserve/control list",
+                "suggested_next_step": "补官方备选名单",
+            }
+        ]
+    ).to_csv(collection_dir / "online_manual_gap_worklist.csv", index=False)
     (collection_dir / "online_collection_report.md").write_text("# report\n", encoding="utf-8")
 
     context = rdd_l3_workbench.build_rdd_l3_workbench_context(root=tmp_path)
@@ -230,4 +247,6 @@ def test_workbench_context_surfaces_online_collection_diagnostics(tmp_path: Path
     assert tables["online_year_coverage"]["total_rows"] == 2
     assert tables["online_source_audit"]["total_rows"] == 2
     assert tables["online_source_audit"]["rows"][0]["status"] == "parsed"
+    assert tables["online_manual_gap_worklist"]["total_rows"] == 1
+    assert tables["online_manual_gap_worklist"]["rows"][0]["priority"] == "P1"
     assert tables["online_search_diagnostics"]["rows"][0]["search_term"] == "沪深300"

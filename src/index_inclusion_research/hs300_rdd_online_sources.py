@@ -30,6 +30,7 @@ DEFAULT_DRAFT_OUTPUT = DEFAULT_OUTPUT_DIR / "official_candidate_draft.csv"
 DEFAULT_AUDIT_OUTPUT = DEFAULT_OUTPUT_DIR / "online_source_audit.csv"
 DEFAULT_SEARCH_DIAGNOSTICS_OUTPUT = DEFAULT_OUTPUT_DIR / "online_search_diagnostics.csv"
 DEFAULT_YEAR_COVERAGE_OUTPUT = DEFAULT_OUTPUT_DIR / "online_year_coverage.csv"
+DEFAULT_MANUAL_GAP_WORKLIST_OUTPUT = DEFAULT_OUTPUT_DIR / "online_manual_gap_worklist.csv"
 DEFAULT_REPORT_OUTPUT = DEFAULT_OUTPUT_DIR / "online_collection_report.md"
 DEFAULT_ATTACHMENT_DIR = DEFAULT_OUTPUT_DIR / "official_attachments"
 DEFAULT_FORMAL_OUTPUT = ROOT / "data" / "raw" / "hs300_rdd_candidates.csv"
@@ -80,6 +81,21 @@ YEAR_COVERAGE_COLUMNS = [
     "candidate_rows",
     "candidate_batches",
     "status",
+]
+MANUAL_GAP_WORKLIST_COLUMNS = [
+    "year",
+    "priority",
+    "gap_type",
+    "announcement_id",
+    "publish_date",
+    "title",
+    "attachment_name",
+    "attachment_url",
+    "local_path",
+    "addition_rows",
+    "control_rows",
+    "missing_evidence",
+    "suggested_next_step",
 ]
 
 SEARCH_TERMS = (
@@ -680,6 +696,13 @@ def _year_from_date(value: object) -> int | None:
         return None
 
 
+def _int_cell(value: object) -> int:
+    try:
+        return int(float(str(value or "0")))
+    except ValueError:
+        return 0
+
+
 def _requested_years(
     *,
     since: str | None,
@@ -761,6 +784,139 @@ def _build_year_coverage_frame(
     return pd.DataFrame(rows, columns=YEAR_COVERAGE_COLUMNS)
 
 
+def _gap_row(
+    *,
+    year: int | None,
+    priority: str,
+    gap_type: str,
+    source_row: dict[str, object] | None = None,
+    missing_evidence: str,
+    suggested_next_step: str,
+) -> dict[str, object]:
+    source_row = source_row or {}
+    return {
+        "year": year or "",
+        "priority": priority,
+        "gap_type": gap_type,
+        "announcement_id": source_row.get("announcement_id", ""),
+        "publish_date": source_row.get("publish_date", ""),
+        "title": source_row.get("title", ""),
+        "attachment_name": source_row.get("attachment_name", ""),
+        "attachment_url": source_row.get("attachment_url", ""),
+        "local_path": source_row.get("local_path", ""),
+        "addition_rows": _int_cell(source_row.get("addition_rows", 0)),
+        "control_rows": _int_cell(source_row.get("control_rows", 0)),
+        "missing_evidence": missing_evidence,
+        "suggested_next_step": suggested_next_step,
+    }
+
+
+def _build_manual_gap_worklist_frame(
+    *,
+    source_audit: pd.DataFrame,
+    year_coverage: pd.DataFrame,
+) -> pd.DataFrame:
+    rows: list[dict[str, object]] = []
+    attachment_ids: set[str] = set()
+    year_statuses: dict[int, str] = {}
+    if not year_coverage.empty and {"year", "status"}.issubset(year_coverage.columns):
+        for _, item in year_coverage.iterrows():
+            year = _int_cell(item.get("year", 0))
+            if year:
+                year_statuses[year] = str(item.get("status", ""))
+    if not source_audit.empty:
+        attachment_rows = source_audit.loc[
+            source_audit["source_kind"].astype(str) == "official_adjustment_backup_attachment"
+        ]
+        attachment_ids = {str(value) for value in attachment_rows["announcement_id"].dropna()}
+        for _, item in attachment_rows.iterrows():
+            source_row = item.to_dict()
+            status = str(source_row.get("status", ""))
+            year = _year_from_date(source_row.get("publish_date"))
+            year_status = year_statuses.get(year or 0, "")
+            if status == "parsed_without_l3_controls":
+                additions = _int_cell(source_row.get("addition_rows", 0))
+                priority = "P1" if additions and year_status != "candidate_found" else "P2"
+                rows.append(
+                    _gap_row(
+                        year=year,
+                        priority=priority,
+                        gap_type="parsed_additions_missing_controls",
+                        source_row=source_row,
+                        missing_evidence="official reserve/control list or boundary ranking",
+                        suggested_next_step=(
+                            "Locate the official reserve list / boundary ranking for this announcement; "
+                            "do not import the addition-only attachment into formal L3 until controls are available."
+                        ),
+                    )
+                )
+            elif status in {"skipped", "error"}:
+                if year_status == "candidate_found":
+                    continue
+                rows.append(
+                    _gap_row(
+                        year=year,
+                        priority="P2",
+                        gap_type="unparsed_attachment",
+                        source_row=source_row,
+                        missing_evidence="parseable official adjustment and reserve attachment",
+                        suggested_next_step=(
+                            "Inspect the attachment format or archive copy; add a parser only if it exposes "
+                            "both HS300 additions and reserve controls."
+                        ),
+                    )
+                )
+        notice_rows = source_audit.loc[source_audit["source_kind"].astype(str) == "official_rebalance_result_notice"]
+        for _, item in notice_rows.iterrows():
+            source_row = item.to_dict()
+            year = _year_from_date(source_row.get("publish_date"))
+            if year_statuses.get(year or 0, "") == "candidate_found":
+                continue
+            announcement_id = str(source_row.get("announcement_id", ""))
+            if announcement_id in attachment_ids:
+                continue
+            rows.append(
+                _gap_row(
+                    year=year,
+                    priority="P2",
+                    gap_type="notice_without_attachment",
+                    source_row=source_row,
+                    missing_evidence="official adjustment/reserve attachment URL",
+                    suggested_next_step=(
+                        "Find the missing official attachment through CSIndex history, CNInfo, or archive snapshots, "
+                        "then rerun the collector."
+                    ),
+                )
+            )
+    if not year_coverage.empty:
+        for _, item in year_coverage.iterrows():
+            status = str(item.get("status", ""))
+            if status != "no_notice":
+                continue
+            year = _int_cell(item.get("year", 0)) or None
+            rows.append(
+                _gap_row(
+                    year=year,
+                    priority="P3",
+                    gap_type="year_without_notice",
+                    missing_evidence="CSIndex rebalance announcement and official attachments",
+                    suggested_next_step=(
+                        "Add targeted historical search terms for this year, or look for archived CSIndex/CNInfo records."
+                    ),
+                )
+            )
+    frame = pd.DataFrame(rows, columns=MANUAL_GAP_WORKLIST_COLUMNS)
+    if frame.empty:
+        return frame
+    priority_order = {"P1": 1, "P2": 2, "P3": 3}
+    frame["_priority_order"] = frame["priority"].map(priority_order).fillna(9)
+    frame["_year_order"] = pd.to_numeric(frame["year"], errors="coerce").fillna(9999)
+    frame = frame.sort_values(["_priority_order", "_year_order", "gap_type", "announcement_id"]).drop(
+        columns=["_priority_order", "_year_order"]
+    )
+    return frame.loc[:, MANUAL_GAP_WORKLIST_COLUMNS].reset_index(drop=True)
+
+
 def _build_report(
     *,
     draft_output: Path,
@@ -768,10 +924,12 @@ def _build_report(
     audit_output: Path,
     search_diagnostics_output: Path,
     year_coverage_output: Path,
+    manual_gap_worklist_output: Path,
     candidate_frame: pd.DataFrame,
     audit_frame: pd.DataFrame,
     search_diagnostics_frame: pd.DataFrame,
     year_coverage_frame: pd.DataFrame,
+    manual_gap_worklist_frame: pd.DataFrame,
     candidate_audit: pd.DataFrame,
 ) -> str:
     summary = summarize_candidate_audit(candidate_audit)
@@ -795,6 +953,12 @@ def _build_report(
     search_raw_rows = int(search_diagnostics_frame["raw_rows"].sum()) if not search_diagnostics_frame.empty else 0
     search_matched_rows = int(search_diagnostics_frame["matched_rows"].sum()) if not search_diagnostics_frame.empty else 0
     search_date_rows = int(search_diagnostics_frame["date_filtered_matched_rows"].sum()) if not search_diagnostics_frame.empty else 0
+    gap_rows = int(len(manual_gap_worklist_frame))
+    p1_gap_rows = (
+        int((manual_gap_worklist_frame["priority"].astype(str) == "P1").sum())
+        if not manual_gap_worklist_frame.empty
+        else 0
+    )
     formal_line = (
         f"- 正式文件：`{_display_path(formal_output)}`"
         if formal_output is not None
@@ -806,6 +970,7 @@ def _build_report(
         "- 来源域名：`csindex.com.cn` 与 `oss-ch.csindex.com.cn`",
         f"- 搜索诊断：`{_display_path(search_diagnostics_output)}`",
         f"- 年份覆盖：`{_display_path(year_coverage_output)}`",
+        f"- 人工补录清单：`{_display_path(manual_gap_worklist_output)}`",
         f"- 来源审计：`{_display_path(audit_output)}`",
         f"- 候选草稿：`{_display_path(draft_output)}`",
         formal_line,
@@ -814,6 +979,7 @@ def _build_report(
         f"- 日期窗口内匹配公告数：`{search_date_rows}`",
         f"- 可用官方附件数：`{usable_sources}`",
         f"- 已解析但缺备选对照附件数：`{partial_sources}`（调入行 `{partial_addition_rows}`）",
+        f"- 补录缺口行数：`{gap_rows}`（P1 `{p1_gap_rows}`）",
         f"- 候选行数：`{len(candidate_frame)}`",
         f"- 批次数：`{summary.get('candidate_batches')}`",
         f"- 调入样本数：`{summary.get('treated_rows')}`",
@@ -885,6 +1051,7 @@ def collect_official_hs300_sources(
     audit_output: Path = DEFAULT_AUDIT_OUTPUT,
     search_diagnostics_output: Path = DEFAULT_SEARCH_DIAGNOSTICS_OUTPUT,
     year_coverage_output: Path = DEFAULT_YEAR_COVERAGE_OUTPUT,
+    manual_gap_worklist_output: Path = DEFAULT_MANUAL_GAP_WORKLIST_OUTPUT,
     report_output: Path = DEFAULT_REPORT_OUTPUT,
     attachment_dir: Path = DEFAULT_ATTACHMENT_DIR,
     formal_output: Path | None = None,
@@ -895,7 +1062,14 @@ def collect_official_hs300_sources(
     notice_rows: int = DEFAULT_NOTICE_ROWS,
     search_terms: tuple[str, ...] = SEARCH_TERMS,
 ) -> dict[str, object]:
-    for path in [draft_output, audit_output, search_diagnostics_output, year_coverage_output, report_output]:
+    for path in [
+        draft_output,
+        audit_output,
+        search_diagnostics_output,
+        year_coverage_output,
+        manual_gap_worklist_output,
+        report_output,
+    ]:
         if path.exists() and not force:
             raise FileExistsError(f"Refusing to overwrite existing file without --force: {path}")
     if formal_output is not None and formal_output.exists() and not force:
@@ -981,11 +1155,16 @@ def collect_official_hs300_sources(
         since=since,
         until=until,
     )
+    manual_gap_worklist = _build_manual_gap_worklist_frame(
+        source_audit=source_audit,
+        year_coverage=year_coverage,
+    )
 
     save_dataframe(candidate_frame, draft_output)
     save_dataframe(source_audit, audit_output)
     save_dataframe(search_diagnostics, search_diagnostics_output)
     save_dataframe(year_coverage, year_coverage_output)
+    save_dataframe(manual_gap_worklist, manual_gap_worklist_output)
     if formal_output is not None:
         save_dataframe(candidate_frame, formal_output)
     report_output.parent.mkdir(parents=True, exist_ok=True)
@@ -996,10 +1175,12 @@ def collect_official_hs300_sources(
             audit_output=audit_output,
             search_diagnostics_output=search_diagnostics_output,
             year_coverage_output=year_coverage_output,
+            manual_gap_worklist_output=manual_gap_worklist_output,
             candidate_frame=candidate_frame,
             audit_frame=source_audit,
             search_diagnostics_frame=search_diagnostics,
             year_coverage_frame=year_coverage,
+            manual_gap_worklist_frame=manual_gap_worklist,
             candidate_audit=candidate_audit,
         ),
         encoding="utf-8",
@@ -1009,12 +1190,14 @@ def collect_official_hs300_sources(
         "audit_output": audit_output,
         "search_diagnostics_output": search_diagnostics_output,
         "year_coverage_output": year_coverage_output,
+        "manual_gap_worklist_output": manual_gap_worklist_output,
         "report_output": report_output,
         "formal_output": formal_output,
         "candidate_rows": len(candidate_frame),
         "source_rows": len(source_audit),
         "search_rows": len(search_diagnostics),
         "year_rows": len(year_coverage),
+        "gap_rows": len(manual_gap_worklist),
         "candidate_batches": summarize_candidate_audit(candidate_audit).get("candidate_batches"),
         "status": "parsed" if not candidate_frame.empty else "no_candidates",
     }
@@ -1027,6 +1210,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--audit-output", type=Path, default=DEFAULT_AUDIT_OUTPUT)
     parser.add_argument("--search-diagnostics-output", type=Path, default=DEFAULT_SEARCH_DIAGNOSTICS_OUTPUT)
     parser.add_argument("--year-coverage-output", type=Path, default=DEFAULT_YEAR_COVERAGE_OUTPUT)
+    parser.add_argument("--manual-gap-worklist-output", type=Path, default=DEFAULT_MANUAL_GAP_WORKLIST_OUTPUT)
     parser.add_argument("--report-output", type=Path, default=DEFAULT_REPORT_OUTPUT)
     parser.add_argument("--attachment-dir", type=Path, default=DEFAULT_ATTACHMENT_DIR)
     parser.add_argument("--max-notices", type=int, default=None)
@@ -1052,6 +1236,7 @@ def main(argv: list[str] | None = None) -> int:
         audit_output=args.audit_output,
         search_diagnostics_output=args.search_diagnostics_output,
         year_coverage_output=args.year_coverage_output,
+        manual_gap_worklist_output=args.manual_gap_worklist_output,
         report_output=args.report_output,
         attachment_dir=args.attachment_dir,
         formal_output=formal_output,
@@ -1067,6 +1252,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Source audit: {_display_path(outputs['audit_output'])}")
     print(f"Search diagnostics: {_display_path(outputs['search_diagnostics_output'])}")
     print(f"Year coverage: {_display_path(outputs['year_coverage_output'])}")
+    print(f"Manual gap worklist: {_display_path(outputs['manual_gap_worklist_output'])}")
     print(f"Report: {_display_path(outputs['report_output'])}")
     if outputs["formal_output"] is not None:
         print(f"Formal candidates: {_display_path(outputs['formal_output'])}")
@@ -1076,6 +1262,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Source rows: {outputs['source_rows']}")
     print(f"Search diagnostic rows: {outputs['search_rows']}")
     print(f"Year coverage rows: {outputs['year_rows']}")
+    print(f"Manual gap rows: {outputs['gap_rows']}")
     print(f"Candidate batches: {outputs['candidate_batches']}")
     return 0
 
