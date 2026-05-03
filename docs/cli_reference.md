@@ -139,6 +139,18 @@ index-inclusion-prepare-passive-aum --input /path/to/raw_aum.csv \
 
 CMA 的 dashboard 集成是自包含 helper：`index_inclusion_research.analysis.cross_market_asymmetry.dashboard_section.build_cross_market_section(...)` 返回 presenter-agnostic context。
 
+## HS300 RDD L3 官方来源采集
+
+```bash
+index-inclusion-collect-hs300-rdd-l3 \
+  --since 2020-01-01 \
+  --until 2022-12-31 \
+  --notice-rows 120 \
+  --force
+```
+
+`--since` / `--until` 按中证公告发布日期过滤，适合先补 2020-2022 这类历史窗口；`--notice-rows` 控制每个搜索词最多返回的公告数量。命令只写采集草稿和审计报告，确认后再用 `index-inclusion-prepare-hs300-rdd --check-only` 验收并写入正式 L3。
+
 ## Verdicts ↔ Literature 双向链接
 
 每条 H1..H7 在 [hypotheses.py](../src/index_inclusion_research/analysis/cross_market_asymmetry/hypotheses.py) 注册时同时声明 `paper_ids`。两端都消费这个映射：

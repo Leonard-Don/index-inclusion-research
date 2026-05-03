@@ -79,6 +79,18 @@ index-inclusion-collect-hs300-rdd-l3 --force
 
 它会下载并解析中证官网“定期调整结果”公告附件中的沪深300调入名单与备选名单，生成 `official_candidate_draft.csv`、`online_source_audit.csv` 和 `online_collection_report.md`。确认草稿后写入正式 L3：
 
+如果只想先补历史窗口，比如 2020-2022 批次：
+
+```bash
+index-inclusion-collect-hs300-rdd-l3 \
+  --since 2020-01-01 \
+  --until 2022-12-31 \
+  --notice-rows 120 \
+  --force
+```
+
+`--since` / `--until` 按公告发布日期过滤，`--notice-rows` 控制每个中证搜索词返回的公告数量。
+
 ```bash
 index-inclusion-prepare-hs300-rdd \
   --input results/literature/hs300_rdd_l3_collection/official_candidate_draft.csv \

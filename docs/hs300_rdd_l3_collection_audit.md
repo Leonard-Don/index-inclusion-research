@@ -48,9 +48,14 @@ CLI 入口：`index-inclusion-prepare-hs300-rdd`（见 `docs/hs300_rdd_workflow.
 
 1. **2020-2022 批次**（PDF URL 模式应仍然稳定）：
    ```bash
-   index-inclusion-prepare-hs300-rdd --since 2020-01-01 --until 2022-12-31
+   index-inclusion-collect-hs300-rdd-l3 \
+     --since 2020-01-01 \
+     --until 2022-12-31 \
+     --notice-rows 120 \
+     --force
    ```
-   预期产出 ~6 批次。每批次跑完后 `git diff data/raw/hs300_rdd_candidates.csv` 校对一遍。
+   预期先产出 `official_candidate_draft.csv`、`online_source_audit.csv` 与 `online_collection_report.md`；
+   每批次校对通过后再用 `index-inclusion-prepare-hs300-rdd --input ... --check-only` 验收。
 
 2. **2014-2019 批次**（需要手工补完）：
    - 这部分中证站点可能已经清理了原始 PDF 附件，需要：

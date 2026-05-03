@@ -13,6 +13,8 @@ from bs4 import BeautifulSoup
 
 from index_inclusion_research import paths
 from index_inclusion_research.analysis.rdd_candidates import (
+    OPTIONAL_COLUMNS,
+    REQUIRED_COLUMNS,
     build_candidate_batch_audit,
     summarize_candidate_audit,
     validate_candidate_frame,
@@ -32,6 +34,23 @@ DEFAULT_FORMAL_OUTPUT = ROOT / "data" / "raw" / "hs300_rdd_candidates.csv"
 DEFAULT_NOTICE_ROWS = 80
 DEFAULT_TIMEOUT = 30
 CSI300_CUTOFF = 300.0
+SOURCE_AUDIT_COLUMNS = [
+    "source_kind",
+    "announcement_id",
+    "publish_date",
+    "effective_date",
+    "title",
+    "detail_url",
+    "attachment_name",
+    "attachment_url",
+    "local_path",
+    "status",
+    "usable_for_l3",
+    "addition_rows",
+    "control_rows",
+    "candidate_rows",
+    "reason",
+]
 
 SEARCH_TERMS = (
     "沪深300、中证500、中证1000",
@@ -146,6 +165,45 @@ def query_rebalance_announcements(
                 "detail_url": f"{CSINDEX_SITE}/zh-CN/about/newsDetail?id={notice_id}",
             }
     return sorted(notices.values(), key=lambda item: (str(item["publish_date"]), int(item["id"])))
+
+
+def _parse_date_bound(value: str | None, *, name: str) -> pd.Timestamp | None:
+    if not value:
+        return None
+    try:
+        return pd.Timestamp(value).normalize()
+    except ValueError as exc:
+        raise ValueError(f"{name} must be a parseable date, got {value!r}") from exc
+
+
+def _filter_notices_by_publish_date(
+    notices: list[dict[str, object]],
+    *,
+    since: str | None = None,
+    until: str | None = None,
+) -> list[dict[str, object]]:
+    since_ts = _parse_date_bound(since, name="since")
+    until_ts = _parse_date_bound(until, name="until")
+    if since_ts is not None and until_ts is not None and since_ts > until_ts:
+        raise ValueError(f"since must be <= until, got {since!r} > {until!r}")
+    if since_ts is None and until_ts is None:
+        return list(notices)
+
+    filtered: list[dict[str, object]] = []
+    for notice in notices:
+        raw_date = str(notice.get("publish_date", "") or "").strip()
+        if not raw_date:
+            continue
+        try:
+            publish_ts = pd.Timestamp(raw_date).normalize()
+        except ValueError:
+            continue
+        if since_ts is not None and publish_ts < since_ts:
+            continue
+        if until_ts is not None and publish_ts > until_ts:
+            continue
+        filtered.append(notice)
+    return filtered
 
 
 def fetch_notice_detail(session: requests.Session, notice_id: int) -> dict[str, object]:
@@ -474,7 +532,23 @@ def _build_report(
         f"- `index-inclusion-prepare-hs300-rdd --input {_display_path(draft_output)} --output data/raw/hs300_rdd_candidates.csv --force`",
         "- `index-inclusion-hs300-rdd && index-inclusion-rebuild-all`",
     ]
+    if candidate_frame.empty:
+        lines.extend(
+            [
+                "",
+                "采集状态：",
+                "- 本次窗口没有解析出同时包含沪深300调入名单与备选名单的可用官方附件。",
+            ]
+        )
+        if audit_frame.empty:
+            lines.append("- 本次窗口也没有匹配到中证官网定期调整结果公告；优先扩大 `--notice-rows` 或调整日期窗口。")
+        else:
+            lines.append("- 请查看来源审计中的 `status` 与 `reason`，再决定是否扩大 `--notice-rows`、调整日期窗口或手工补录。")
     return "\n".join(lines) + "\n"
+
+
+def _empty_candidate_frame() -> pd.DataFrame:
+    return pd.DataFrame(columns=[*REQUIRED_COLUMNS, *OPTIONAL_COLUMNS])
 
 
 def collect_official_hs300_sources(
@@ -487,6 +561,9 @@ def collect_official_hs300_sources(
     formal_output: Path | None = None,
     force: bool = False,
     max_notices: int | None = None,
+    since: str | None = None,
+    until: str | None = None,
+    notice_rows: int = DEFAULT_NOTICE_ROWS,
 ) -> dict[str, object]:
     for path in [draft_output, audit_output, report_output]:
         if path.exists() and not force:
@@ -496,7 +573,8 @@ def collect_official_hs300_sources(
 
     output_dir.mkdir(parents=True, exist_ok=True)
     session = requests.Session()
-    notices = query_rebalance_announcements(session)
+    notices = query_rebalance_announcements(session, rows=notice_rows)
+    notices = _filter_notices_by_publish_date(notices, since=since, until=until)
     if max_notices is not None:
         notices = notices[-max_notices:]
 
@@ -534,14 +612,14 @@ def collect_official_hs300_sources(
                 )
             )
 
-    if not candidate_rows:
-        raise ValueError("No official HS300 adjustment + reserve candidate rows were collected.")
-
-    candidate_frame = validate_candidate_frame(pd.DataFrame(candidate_rows)).sort_values(
-        ["announce_date", "inclusion", "running_variable", "ticker"],
-        ascending=[True, False, False, True],
-    )
-    source_audit = pd.DataFrame(source_rows)
+    if candidate_rows:
+        candidate_frame = validate_candidate_frame(pd.DataFrame(candidate_rows)).sort_values(
+            ["announce_date", "inclusion", "running_variable", "ticker"],
+            ascending=[True, False, False, True],
+        )
+    else:
+        candidate_frame = _empty_candidate_frame()
+    source_audit = pd.DataFrame(source_rows, columns=SOURCE_AUDIT_COLUMNS)
     candidate_audit = build_candidate_batch_audit(candidate_frame)
 
     save_dataframe(candidate_frame, draft_output)
@@ -568,6 +646,7 @@ def collect_official_hs300_sources(
         "candidate_rows": len(candidate_frame),
         "source_rows": len(source_audit),
         "candidate_batches": summarize_candidate_audit(candidate_audit).get("candidate_batches"),
+        "status": "parsed" if not candidate_frame.empty else "no_candidates",
     }
 
 
@@ -579,6 +658,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--report-output", type=Path, default=DEFAULT_REPORT_OUTPUT)
     parser.add_argument("--attachment-dir", type=Path, default=DEFAULT_ATTACHMENT_DIR)
     parser.add_argument("--max-notices", type=int, default=None)
+    parser.add_argument("--since", default=None, help="Only collect notices published on/after this date, e.g. 2020-01-01.")
+    parser.add_argument("--until", default=None, help="Only collect notices published on/before this date, e.g. 2022-12-31.")
+    parser.add_argument("--notice-rows", type=int, default=DEFAULT_NOTICE_ROWS, help="Rows to request from each CSIndex search term.")
     parser.add_argument("--write-formal", action="store_true", help="Write data/raw/hs300_rdd_candidates.csv.")
     parser.add_argument("--formal-output", type=Path, default=DEFAULT_FORMAL_OUTPUT)
     parser.add_argument("--force", action="store_true")
@@ -594,6 +676,9 @@ def main(argv: list[str] | None = None) -> int:
         formal_output=formal_output,
         force=args.force,
         max_notices=args.max_notices,
+        since=args.since,
+        until=args.until,
+        notice_rows=args.notice_rows,
     )
     print("HS300 official online collection completed.")
     print(f"Draft candidates: {_display_path(outputs['draft_output'])}")
@@ -601,6 +686,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Report: {_display_path(outputs['report_output'])}")
     if outputs["formal_output"] is not None:
         print(f"Formal candidates: {_display_path(outputs['formal_output'])}")
+    if outputs.get("status") == "no_candidates":
+        print("Status: no usable HS300 L3 candidate rows found; inspect the source audit/report.")
     print(f"Candidate rows: {outputs['candidate_rows']}")
     print(f"Source rows: {outputs['source_rows']}")
     print(f"Candidate batches: {outputs['candidate_batches']}")
