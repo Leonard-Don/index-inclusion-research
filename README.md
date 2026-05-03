@@ -30,7 +30,7 @@
 |---|---|---|---|---|
 | H1 | 信息泄露与预运行 | 证据不足 | bootstrap p = 0.875 (n=436) | 制度识别 |
 | H2 | 被动基金 AUM 差异 | 证据不足 | US AUM ratio = 13.48 (n=12) | 需求曲线 |
-| H3 | 散户 vs 机构结构 | 部分支持 | 双通道命中率 = 0.500 | 短期价格压力 |
+| H3 | 散户 vs 机构结构 | 支持 | 双通道命中率 = 0.75 (n=4) | 短期价格压力 |
 | H4 | 卖空约束 | 证据不足 | regression p = 0.537 (n=436) | 制度识别 |
 | H5 | 涨跌停限制 | 证据不足 | limit_coef p = 0.213 (n=936) | 制度识别 |
 | H6 | 指数权重可预测性 | 证据不足 | heavy−light spread = -0.019 (n=67) | 需求曲线 |
@@ -237,6 +237,16 @@ GitHub Actions 通过 `astral-sh/setup-uv` + `uv sync --extra dev`（按 `uv.loc
 
 平时真正需要维护的"源文件"主要是 `src/index_inclusion_research/`、`docs/`、`config/markets.yml`。
 
+## 数据与方法限制
+
+完整限制清单见 [docs/limitations.md](docs/limitations.md)。关键提醒：
+
+- `mkt_cap` / `turnover` 来自 Yahoo `sharesOutstanding` 近似，不是交易所历史口径。
+- HS300 RDD 当前 L3 仅覆盖 2023-2024 共 6 个批次，论文级因果声明需扩展到 ≥10 年（见 [docs/hs300_rdd_l3_collection_audit.md](docs/hs300_rdd_l3_collection_audit.md)）。
+- 7 条 CMA 假说为 post-hoc 拟合，未做 pre-registration；阈值 sweep 见 [docs/sensitivity_workflow.md](docs/sensitivity_workflow.md)。
+- 假说证据强度分层：`core`（H1/H5/H7）vs `supplementary`（H2/H3/H4/H6），见 `cma_hypothesis_verdicts.csv` 的 `evidence_tier` 列。
+- 事件研究除简单 t 外提供 Patell Z 与 BMP t（`results/real_event_study/patell_bmp_summary.csv`）。
+
 ## 论文写作建议
 
 论文模板见 [docs/paper_outline.md](docs/paper_outline.md)。最推荐的写法：
@@ -244,6 +254,7 @@ GitHub Actions 通过 `astral-sh/setup-uv` + `uv sync --extra dev`（按 `uv.loc
 1. 文献综述按 `反方 / 中性 / 正方` 展开
 2. 实证设计按三条研究主线展开
 3. 结果部分按 `短期冲击 → 长期保留 → 中国市场识别扩展` 展开
+4. 主表只引用 `evidence_tier=core` 的假说，supplementary 走附录
 
 ## 测试
 
