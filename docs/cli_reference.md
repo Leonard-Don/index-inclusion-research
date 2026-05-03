@@ -146,10 +146,19 @@ index-inclusion-collect-hs300-rdd-l3 \
   --since 2020-01-01 \
   --until 2022-12-31 \
   --notice-rows 120 \
+  --search-term "调整沪深300指数样本股" \
   --force
 ```
 
-`--since` / `--until` 按中证公告发布日期过滤，适合先补 2020-2022 这类历史窗口；`--notice-rows` 控制每个搜索词最多返回的公告数量。命令只写采集草稿和审计报告，确认后再用 `index-inclusion-prepare-hs300-rdd --check-only` 验收并写入正式 L3。
+`--since` / `--until` 按中证公告发布日期过滤，适合先补 2020-2022 这类历史窗口；`--notice-rows` 控制每个搜索词最多返回的公告数量；`--search-term` 可以重复传入，作为默认中证搜索词之外的历史标题补充。命令只写采集草稿、来源审计、搜索诊断、年份覆盖和采集报告，确认后再用 `index-inclusion-prepare-hs300-rdd --check-only` 验收并写入正式 L3。
+
+默认输出位于 `results/literature/hs300_rdd_l3_collection/`：
+
+- `official_candidate_draft.csv`：可验收的候选草稿
+- `online_source_audit.csv`：公告、附件、解析状态和失败原因
+- `online_search_diagnostics.csv`：每个搜索词的原始返回、标题匹配、主题匹配、日期窗口内匹配情况
+- `online_year_coverage.csv`：每个请求年份的 `candidate_found` / `notice_only` / `no_notice` 覆盖状态
+- `online_collection_report.md`：人类可读汇总和下一步命令
 
 ## Verdicts ↔ Literature 双向链接
 

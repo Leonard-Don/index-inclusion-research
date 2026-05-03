@@ -41,8 +41,10 @@
 - `parse_hs300_attachment_text(...)`：提取 inclusion / exclusion 候选名单。
 - `collect_official_hs300_sources(...)`：批量采集入口。
 - `build_candidate_rows(...)`：把解析结果落到 candidates.csv 的 schema。
+- `online_search_diagnostics.csv`：记录每个搜索词的原始返回、HS300 标题命中、历史标题模式命中、主题命中和日期窗口内命中。
+- `online_year_coverage.csv`：按年份标记 `candidate_found` / `notice_only` / `no_notice`，用于决定下一轮先调搜索词还是先找替代档案源。
 
-CLI 入口：`index-inclusion-prepare-hs300-rdd`（见 `docs/hs300_rdd_workflow.md`）。
+CLI 入口：`index-inclusion-collect-hs300-rdd-l3`（见 `docs/hs300_rdd_workflow.md`）。
 
 ## 4. 推荐执行顺序
 
@@ -52,10 +54,10 @@ CLI 入口：`index-inclusion-prepare-hs300-rdd`（见 `docs/hs300_rdd_workflow.
      --since 2020-01-01 \
      --until 2022-12-31 \
      --notice-rows 120 \
+     --search-term "调整沪深300指数样本股" \
      --force
    ```
-   预期先产出 `official_candidate_draft.csv`、`online_source_audit.csv` 与 `online_collection_report.md`；
-   每批次校对通过后再用 `index-inclusion-prepare-hs300-rdd --input ... --check-only` 验收。
+   预期先产出 `official_candidate_draft.csv`、`online_source_audit.csv`、`online_search_diagnostics.csv`、`online_year_coverage.csv` 与 `online_collection_report.md`。若 `online_year_coverage.csv` 显示 `no_notice`，优先追加历史标题 `--search-term`；若显示 `notice_only`，优先检查附件 URL、PDF 文本格式和解析规则。每批次校对通过后再用 `index-inclusion-prepare-hs300-rdd --input ... --check-only` 验收。
 
 2. **2014-2019 批次**（需要手工补完）：
    - 这部分中证站点可能已经清理了原始 PDF 附件，需要：
@@ -100,6 +102,7 @@ CLI 入口：`index-inclusion-prepare-hs300-rdd`（见 `docs/hs300_rdd_workflow.
 | 日期 | 操作 | 触达批次范围 | 维护者 |
 |---|---|---|---|
 | 2026-05-03 | 创建本文档；首次审计 L3 = 6 批次（2023-05 → 2025-11） | csi300-2023-05 .. csi300-2025-11 | leo |
+| 2026-05-03 | 为线上采集新增历史搜索词、搜索诊断和年份覆盖输出 | 2020-2022 优先诊断窗口 | leo |
 | _待填_ | _scrape 2020-2022_ | _待填_ | _待填_ |
 | _待填_ | _手工补 2014-2019_ | _待填_ | _待填_ |
 | _待填_ | _切换主表到 L3_ | _全量_ | _待填_ |
