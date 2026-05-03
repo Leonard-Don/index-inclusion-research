@@ -101,4 +101,4 @@ index-inclusion-prepare-hs300-rdd \
 
 ## 4. 浏览器 L3 工作台
 
-如果更适合在浏览器里操作，启动 dashboard 后打开 `/rdd-l3`。这个工作台和 `prepare-hs300-rdd` 共享一套预检规则：先一键刷新 L3 采集包，并直接预览批次清单 / 正式填报模板 / 边界参考；拿到官方候选名单后再上传预检字段、来源、cutoff 两侧覆盖和处理 / 对照样本，最后确认写入 `data/raw/hs300_rdd_candidates.csv` 并刷新 RDD 状态与 evidence manifest。
+如果更适合在浏览器里操作，启动 dashboard 后打开 `/rdd-l3`。这个工作台和 `prepare-hs300-rdd` 共享一套预检规则：先一键刷新 L3 采集包，并直接预览批次清单 / 正式填报模板 / 边界参考；同时读取 `online_search_diagnostics.csv` 与 `online_year_coverage.csv`，把线上搜索命中、年份覆盖和 `notice_only` 缺口展示出来。拿到官方候选名单后再上传预检字段、来源、cutoff 两侧覆盖和处理 / 对照样本，最后确认写入 `data/raw/hs300_rdd_candidates.csv` 并刷新 RDD 状态与 evidence manifest。

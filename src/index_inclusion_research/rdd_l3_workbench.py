@@ -12,6 +12,7 @@ from index_inclusion_research import (
     doctor,
     hs300_rdd,
     hs300_rdd_l3_collection,
+    hs300_rdd_online_sources,
     paths,
     prepare_hs300_rdd_candidates,
 )
@@ -291,6 +292,17 @@ def collection_paths_for_root(root: Path) -> list[Path]:
     ]
 
 
+def online_collection_paths_for_root(root: Path) -> list[Path]:
+    collection_dir = Path(root) / "results" / "literature" / "hs300_rdd_l3_collection"
+    return [
+        collection_dir / hs300_rdd_online_sources.DEFAULT_DRAFT_OUTPUT.name,
+        collection_dir / hs300_rdd_online_sources.DEFAULT_AUDIT_OUTPUT.name,
+        collection_dir / hs300_rdd_online_sources.DEFAULT_SEARCH_DIAGNOSTICS_OUTPUT.name,
+        collection_dir / hs300_rdd_online_sources.DEFAULT_YEAR_COVERAGE_OUTPUT.name,
+        collection_dir / hs300_rdd_online_sources.DEFAULT_REPORT_OUTPUT.name,
+    ]
+
+
 def build_collection_status(*, root: Path = ROOT) -> dict[str, Any]:
     root = Path(root)
     paths = collection_paths_for_root(root)
@@ -331,6 +343,52 @@ def build_collection_status(*, root: Path = ROOT) -> dict[str, Any]:
         "boundary_reference_rows": int(len(boundary)),
         "paths": [_path_payload(path, root=root) for path in paths],
         "input_path": _path_payload(root / "data" / "raw" / "hs300_rdd_candidates.reconstructed.csv", root=root),
+    }
+
+
+def _status_count(frame: pd.DataFrame, status: str) -> int:
+    if frame.empty or "status" not in frame.columns:
+        return 0
+    return int((frame["status"].astype(str) == status).sum())
+
+
+def build_online_collection_status(*, root: Path = ROOT) -> dict[str, Any]:
+    root = Path(root)
+    paths = online_collection_paths_for_root(root)
+    draft_path, audit_path, search_path, year_path, report_path = paths
+    draft = _read_csv(draft_path)
+    audit = _read_csv(audit_path)
+    search = _read_csv(search_path)
+    years = _read_csv(year_path)
+    has_diagnostics = search_path.exists() and year_path.exists()
+    candidate_years: list[str] = []
+    notice_only_years: list[str] = []
+    no_notice_years: list[str] = []
+    if not years.empty and {"year", "status"}.issubset(years.columns):
+        status_values = years["status"].astype(str)
+        year_values = years["year"].astype(str)
+        candidate_years = year_values[status_values == "candidate_found"].tolist()
+        notice_only_years = year_values[status_values == "notice_only"].tolist()
+        no_notice_years = year_values[status_values == "no_notice"].tolist()
+    return {
+        "status": "ready" if has_diagnostics else "missing",
+        "status_label": "线上诊断已就绪" if has_diagnostics else "待运行线上采集",
+        "generated_at": _mtime_label(paths),
+        "candidate_rows": int(len(draft)),
+        "source_rows": int(len(audit)),
+        "search_rows": int(len(search)),
+        "year_rows": int(len(years)),
+        "candidate_years": candidate_years,
+        "notice_only_years": notice_only_years,
+        "no_notice_years": no_notice_years,
+        "candidate_year_count": len(candidate_years),
+        "notice_only_year_count": len(notice_only_years),
+        "no_notice_year_count": len(no_notice_years),
+        "candidate_found_rows": _status_count(years, "candidate_found"),
+        "notice_only_rows": _status_count(years, "notice_only"),
+        "no_notice_rows": _status_count(years, "no_notice"),
+        "paths": [_path_payload(path, root=root) for path in paths],
+        "report_path": _path_payload(report_path, root=root),
     }
 
 
@@ -406,6 +464,52 @@ def build_collection_preview_tables(*, root: Path = ROOT) -> list[dict[str, Any]
     ]
 
 
+def build_online_collection_preview_tables(*, root: Path = ROOT) -> list[dict[str, Any]]:
+    root = Path(root)
+    collection_dir = root / "results" / "literature" / "hs300_rdd_l3_collection"
+    search_path = collection_dir / hs300_rdd_online_sources.DEFAULT_SEARCH_DIAGNOSTICS_OUTPUT.name
+    year_path = collection_dir / hs300_rdd_online_sources.DEFAULT_YEAR_COVERAGE_OUTPUT.name
+    search = _select_columns(
+        _read_csv(search_path),
+        [
+            "search_term",
+            "raw_rows",
+            "title_matched_rows",
+            "theme_matched_rows",
+            "matched_rows",
+            "date_filtered_matched_rows",
+            "matched_publish_dates",
+            "reason",
+        ],
+    )
+    years = _select_columns(
+        _read_csv(year_path),
+        [
+            "year",
+            "notice_rows",
+            "attachment_rows",
+            "usable_attachment_rows",
+            "candidate_rows",
+            "candidate_batches",
+            "status",
+        ],
+    )
+    return [
+        {
+            "key": "online_year_coverage",
+            "title": "线上年份覆盖诊断",
+            "source_path": _path_payload(year_path, root=root),
+            **_payload_table(years, limit=20),
+        },
+        {
+            "key": "online_search_diagnostics",
+            "title": "线上搜索诊断预览",
+            "source_path": _path_payload(search_path, root=root),
+            **_payload_table(search, limit=12),
+        },
+    ]
+
+
 def refresh_collection_package(
     *,
     root: Path = ROOT,
@@ -458,7 +562,9 @@ def build_rdd_l3_workbench_context(
     return {
         "status": status,
         "collection_status": build_collection_status(root=root),
+        "online_collection_status": build_online_collection_status(root=root),
         "collection_tables": build_collection_preview_tables(root=root),
+        "online_collection_tables": build_online_collection_preview_tables(root=root),
         "import_paths": [_path_payload(path, root=root) for path in import_paths],
         "preflight_result": preflight_result,
         "import_result": import_result,
