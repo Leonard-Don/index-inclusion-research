@@ -28,6 +28,8 @@ CSINDEX_SITE = "https://www.csindex.com.cn"
 DEFAULT_OUTPUT_DIR = ROOT / "results" / "literature" / "hs300_rdd_l3_collection"
 DEFAULT_DRAFT_OUTPUT = DEFAULT_OUTPUT_DIR / "official_candidate_draft.csv"
 DEFAULT_AUDIT_OUTPUT = DEFAULT_OUTPUT_DIR / "online_source_audit.csv"
+DEFAULT_SEARCH_DIAGNOSTICS_OUTPUT = DEFAULT_OUTPUT_DIR / "online_search_diagnostics.csv"
+DEFAULT_YEAR_COVERAGE_OUTPUT = DEFAULT_OUTPUT_DIR / "online_year_coverage.csv"
 DEFAULT_REPORT_OUTPUT = DEFAULT_OUTPUT_DIR / "online_collection_report.md"
 DEFAULT_ATTACHMENT_DIR = DEFAULT_OUTPUT_DIR / "official_attachments"
 DEFAULT_FORMAL_OUTPUT = ROOT / "data" / "raw" / "hs300_rdd_candidates.csv"
@@ -51,12 +53,43 @@ SOURCE_AUDIT_COLUMNS = [
     "candidate_rows",
     "reason",
 ]
+SEARCH_DIAGNOSTIC_COLUMNS = [
+    "search_term",
+    "requested_rows",
+    "api_code",
+    "status",
+    "raw_rows",
+    "hs300_title_rows",
+    "title_matched_rows",
+    "theme_matched_rows",
+    "matched_rows",
+    "matched_notice_ids",
+    "matched_publish_dates",
+    "date_filtered_matched_rows",
+    "date_filtered_notice_ids",
+    "sample_titles",
+    "reason",
+]
+YEAR_COVERAGE_COLUMNS = [
+    "year",
+    "notice_rows",
+    "attachment_rows",
+    "usable_attachment_rows",
+    "candidate_rows",
+    "candidate_batches",
+    "status",
+]
 
 SEARCH_TERMS = (
     "沪深300、中证500、中证1000",
     "沪深300等指数样本",
     "关于沪深300、中证500、中证1000等指数定期调整结果的公告",
     "关于沪深300、中证500、中证1000、中证A500等指数定期调整结果的公告",
+    "沪深300 指数样本 调整",
+    "沪深300 指数样本股 调整",
+    "调整沪深300指数样本",
+    "调整沪深300指数样本股",
+    "沪深300 定期调整",
 )
 
 
@@ -130,11 +163,28 @@ def _announcement_payload(search_input: str, *, rows: int) -> dict[str, object]:
     }
 
 
+def _is_hs300_rebalance_title(title: str) -> bool:
+    compact = re.sub(r"\s+", "", title)
+    if "沪深300" not in compact:
+        return False
+    return bool(
+        re.search(
+            r"(定期调整(?:结果)?|指数样本调整名单|样本调整名单|样本股调整|调整.*指数样本|指数样本.*调整)",
+            compact,
+        )
+    )
+
+
+def _join_values(values: list[object]) -> str:
+    return " | ".join(str(value) for value in values if str(value).strip())
+
+
 def query_rebalance_announcements(
     session: requests.Session,
     *,
     search_terms: tuple[str, ...] = SEARCH_TERMS,
     rows: int = DEFAULT_NOTICE_ROWS,
+    search_diagnostics: list[dict[str, object]] | None = None,
 ) -> list[dict[str, object]]:
     notices: dict[int, dict[str, object]] = {}
     for term in search_terms:
@@ -146,16 +196,47 @@ def query_rebalance_announcements(
         )
         response.raise_for_status()
         payload = response.json()
+        raw_rows = payload.get("data") or []
+        diagnostic = {
+            "search_term": term,
+            "requested_rows": rows,
+            "api_code": str(payload.get("code", "")),
+            "status": "ok" if str(payload.get("code")) == "200" else "api_code_not_200",
+            "raw_rows": len(raw_rows),
+            "hs300_title_rows": 0,
+            "title_matched_rows": 0,
+            "theme_matched_rows": 0,
+            "matched_rows": 0,
+            "matched_notice_ids": "",
+            "matched_publish_dates": "",
+            "date_filtered_matched_rows": 0,
+            "date_filtered_notice_ids": "",
+            "sample_titles": "",
+            "reason": "",
+        }
         if str(payload.get("code")) != "200":
+            if search_diagnostics is not None:
+                diagnostic["reason"] = "CSIndex API returned a non-200 code."
+                search_diagnostics.append(diagnostic)
             continue
-        for row in payload.get("data") or []:
+        matched_ids: list[int] = []
+        matched_dates: list[str] = []
+        matched_titles: list[str] = []
+        for row in raw_rows:
             title = _clean_text(row.get("title"))
             theme = _clean_text(row.get("theme"))
-            if "沪深300" not in title or "定期调整结果" not in title:
+            if "沪深300" in title:
+                diagnostic["hs300_title_rows"] = int(diagnostic["hs300_title_rows"]) + 1
+            if not _is_hs300_rebalance_title(title):
                 continue
+            diagnostic["title_matched_rows"] = int(diagnostic["title_matched_rows"]) + 1
             if theme and theme != "指数调样":
                 continue
+            diagnostic["theme_matched_rows"] = int(diagnostic["theme_matched_rows"]) + 1
             notice_id = int(row["id"])
+            matched_ids.append(notice_id)
+            matched_dates.append(_clean_text(row.get("publishDate")))
+            matched_titles.append(title)
             notices[notice_id] = {
                 "id": notice_id,
                 "title": title,
@@ -164,6 +245,14 @@ def query_rebalance_announcements(
                 "search_term": term,
                 "detail_url": f"{CSINDEX_SITE}/zh-CN/about/newsDetail?id={notice_id}",
             }
+        if search_diagnostics is not None:
+            diagnostic["matched_rows"] = len(matched_ids)
+            diagnostic["matched_notice_ids"] = _join_values(matched_ids)
+            diagnostic["matched_publish_dates"] = _join_values(matched_dates)
+            diagnostic["sample_titles"] = _join_values(matched_titles[:3])
+            if not matched_ids:
+                diagnostic["reason"] = "No rows matched the HS300 rebalance title/theme filters."
+            search_diagnostics.append(diagnostic)
     return sorted(notices.values(), key=lambda item: (str(item["publish_date"]), int(item["id"])))
 
 
@@ -204,6 +293,28 @@ def _filter_notices_by_publish_date(
             continue
         filtered.append(notice)
     return filtered
+
+
+def _annotate_search_diagnostics(
+    diagnostics: list[dict[str, object]],
+    filtered_notices: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    filtered_ids = {str(notice.get("id")) for notice in filtered_notices}
+    annotated: list[dict[str, object]] = []
+    for row in diagnostics:
+        current = dict(row)
+        matched_ids = [
+            item.strip()
+            for item in str(current.get("matched_notice_ids", "") or "").split("|")
+            if item.strip()
+        ]
+        kept_ids = [notice_id for notice_id in matched_ids if notice_id in filtered_ids]
+        current["date_filtered_matched_rows"] = len(kept_ids)
+        current["date_filtered_notice_ids"] = _join_values(kept_ids)
+        if matched_ids and not kept_ids and not current.get("reason"):
+            current["reason"] = "Matched notices exist but fall outside the requested date window."
+        annotated.append(current)
+    return annotated
 
 
 def fetch_notice_detail(session: requests.Session, notice_id: int) -> dict[str, object]:
@@ -490,17 +601,103 @@ def _notice_audit_row(notice: dict[str, object], *, has_detail: bool) -> dict[st
     }
 
 
+def _year_from_date(value: object) -> int | None:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        return int(pd.Timestamp(raw).year)
+    except ValueError:
+        return None
+
+
+def _requested_years(
+    *,
+    since: str | None,
+    until: str | None,
+    source_audit: pd.DataFrame,
+    candidate_frame: pd.DataFrame,
+) -> list[int]:
+    since_ts = _parse_date_bound(since, name="since")
+    until_ts = _parse_date_bound(until, name="until")
+    if since_ts is not None and until_ts is not None:
+        return list(range(int(since_ts.year), int(until_ts.year) + 1))
+
+    years: set[int] = set()
+    if not source_audit.empty and "publish_date" in source_audit:
+        years.update(source_audit["publish_date"].map(_year_from_date).dropna().astype(int))
+    if not candidate_frame.empty and "announce_date" in candidate_frame:
+        years.update(candidate_frame["announce_date"].map(_year_from_date).dropna().astype(int))
+    if since_ts is not None:
+        years = {year for year in years if year >= int(since_ts.year)}
+        years.add(int(since_ts.year))
+    if until_ts is not None:
+        years = {year for year in years if year <= int(until_ts.year)}
+        years.add(int(until_ts.year))
+    return sorted(years)
+
+
+def _build_year_coverage_frame(
+    *,
+    source_audit: pd.DataFrame,
+    candidate_frame: pd.DataFrame,
+    since: str | None,
+    until: str | None,
+) -> pd.DataFrame:
+    years = _requested_years(since=since, until=until, source_audit=source_audit, candidate_frame=candidate_frame)
+    rows: list[dict[str, object]] = []
+    for year in years:
+        if source_audit.empty:
+            source_year = pd.DataFrame(columns=SOURCE_AUDIT_COLUMNS)
+        else:
+            source_year = source_audit.loc[source_audit["publish_date"].map(_year_from_date) == year]
+        notice_rows = int((source_year["source_kind"] == "official_rebalance_result_notice").sum()) if not source_year.empty else 0
+        attachment_rows = int((source_year["source_kind"] == "official_adjustment_backup_attachment").sum()) if not source_year.empty else 0
+        usable_attachment_rows = int(source_year["usable_for_l3"].fillna(False).sum()) if not source_year.empty else 0
+        if candidate_frame.empty:
+            candidate_year = pd.DataFrame(columns=candidate_frame.columns)
+        else:
+            candidate_year = candidate_frame.loc[candidate_frame["announce_date"].map(_year_from_date) == year]
+        candidate_rows = int(len(candidate_year))
+        candidate_batches = int(candidate_year["batch_id"].nunique()) if not candidate_year.empty else 0
+        if candidate_rows:
+            status = "candidate_found"
+        elif notice_rows or attachment_rows:
+            status = "notice_only"
+        else:
+            status = "no_notice"
+        rows.append(
+            {
+                "year": year,
+                "notice_rows": notice_rows,
+                "attachment_rows": attachment_rows,
+                "usable_attachment_rows": usable_attachment_rows,
+                "candidate_rows": candidate_rows,
+                "candidate_batches": candidate_batches,
+                "status": status,
+            }
+        )
+    return pd.DataFrame(rows, columns=YEAR_COVERAGE_COLUMNS)
+
+
 def _build_report(
     *,
     draft_output: Path,
     formal_output: Path | None,
     audit_output: Path,
+    search_diagnostics_output: Path,
+    year_coverage_output: Path,
     candidate_frame: pd.DataFrame,
     audit_frame: pd.DataFrame,
+    search_diagnostics_frame: pd.DataFrame,
+    year_coverage_frame: pd.DataFrame,
     candidate_audit: pd.DataFrame,
 ) -> str:
     summary = summarize_candidate_audit(candidate_audit)
     usable_sources = int(audit_frame["usable_for_l3"].fillna(False).sum()) if not audit_frame.empty else 0
+    search_raw_rows = int(search_diagnostics_frame["raw_rows"].sum()) if not search_diagnostics_frame.empty else 0
+    search_matched_rows = int(search_diagnostics_frame["matched_rows"].sum()) if not search_diagnostics_frame.empty else 0
+    search_date_rows = int(search_diagnostics_frame["date_filtered_matched_rows"].sum()) if not search_diagnostics_frame.empty else 0
     formal_line = (
         f"- 正式文件：`{_display_path(formal_output)}`"
         if formal_output is not None
@@ -510,28 +707,48 @@ def _build_report(
         "# HS300 RDD 官方线上来源采集报告",
         "",
         "- 来源域名：`csindex.com.cn` 与 `oss-ch.csindex.com.cn`",
+        f"- 搜索诊断：`{_display_path(search_diagnostics_output)}`",
+        f"- 年份覆盖：`{_display_path(year_coverage_output)}`",
         f"- 来源审计：`{_display_path(audit_output)}`",
         f"- 候选草稿：`{_display_path(draft_output)}`",
         formal_line,
+        f"- 搜索返回原始行数：`{search_raw_rows}`",
+        f"- 标题/主题匹配公告数：`{search_matched_rows}`",
+        f"- 日期窗口内匹配公告数：`{search_date_rows}`",
         f"- 可用官方附件数：`{usable_sources}`",
         f"- 候选行数：`{len(candidate_frame)}`",
         f"- 批次数：`{summary.get('candidate_batches')}`",
         f"- 调入样本数：`{summary.get('treated_rows')}`",
         f"- 备选对照数：`{summary.get('control_rows')}`",
         f"- 覆盖 cutoff 两侧批次数：`{summary.get('crossing_batches')}`",
-        "",
-        "口径说明：",
-        "- 本采集只接受中证指数官网公告详情页及其官方附件。",
-        "- 正式调入样本来自“沪深300指数样本调整名单”的调入列。",
-        "- 对照样本来自“沪深300指数备选名单”的官方排序。",
-        "- `running_variable` 是基于官方调入顺序与备选排序映射出的边界序数变量；它不是单独发布的市值分数。",
-        "- 该文件可以替代公开重建 L2 样本进入正式 L3 文件路径，但论文正文应披露上述序数变量口径。",
-        "",
-        "验收命令：",
-        f"- `index-inclusion-prepare-hs300-rdd --input {_display_path(draft_output)} --check-only`",
-        f"- `index-inclusion-prepare-hs300-rdd --input {_display_path(draft_output)} --output data/raw/hs300_rdd_candidates.csv --force`",
-        "- `index-inclusion-hs300-rdd && index-inclusion-rebuild-all`",
     ]
+    if not year_coverage_frame.empty:
+        no_notice_years = year_coverage_frame.loc[year_coverage_frame["status"] == "no_notice", "year"].astype(str).tolist()
+        notice_only_years = year_coverage_frame.loc[year_coverage_frame["status"] == "notice_only", "year"].astype(str).tolist()
+        candidate_years = year_coverage_frame.loc[year_coverage_frame["status"] == "candidate_found", "year"].astype(str).tolist()
+        lines.extend(
+            [
+                f"- 已解析候选年份：`{_join_values(candidate_years) or '无'}`",
+                f"- 仅命中公告/附件年份：`{_join_values(notice_only_years) or '无'}`",
+                f"- 未命中公告年份：`{_join_values(no_notice_years) or '无'}`",
+            ]
+        )
+    lines.extend(
+        [
+            "",
+            "口径说明：",
+            "- 本采集只接受中证指数官网公告详情页及其官方附件。",
+            "- 正式调入样本来自“沪深300指数样本调整名单”的调入列。",
+            "- 对照样本来自“沪深300指数备选名单”的官方排序。",
+            "- `running_variable` 是基于官方调入顺序与备选排序映射出的边界序数变量；它不是单独发布的市值分数。",
+            "- 该文件可以替代公开重建 L2 样本进入正式 L3 文件路径，但论文正文应披露上述序数变量口径。",
+            "",
+            "验收命令：",
+            f"- `index-inclusion-prepare-hs300-rdd --input {_display_path(draft_output)} --check-only`",
+            f"- `index-inclusion-prepare-hs300-rdd --input {_display_path(draft_output)} --output data/raw/hs300_rdd_candidates.csv --force`",
+            "- `index-inclusion-hs300-rdd && index-inclusion-rebuild-all`",
+        ]
+    )
     if candidate_frame.empty:
         lines.extend(
             [
@@ -541,7 +758,19 @@ def _build_report(
             ]
         )
         if audit_frame.empty:
-            lines.append("- 本次窗口也没有匹配到中证官网定期调整结果公告；优先扩大 `--notice-rows` 或调整日期窗口。")
+            if search_matched_rows and not search_date_rows:
+                lines.append(
+                    "- 搜索词命中过中证官网调样公告，但没有公告落在本次日期窗口；优先查看 "
+                    "`online_search_diagnostics.csv` 的命中日期，再追加目标年份标题 `--search-term` "
+                    "或转向 archive.org / CNInfo 等档案源。"
+                )
+            elif search_raw_rows and not search_matched_rows:
+                lines.append(
+                    "- 搜索接口有返回，但没有通过 HS300 调样标题/主题过滤；优先查看 "
+                    "`online_search_diagnostics.csv` 的 sample title，再追加更贴近历史公告标题的 `--search-term`。"
+                )
+            else:
+                lines.append("- 本次窗口也没有匹配到中证官网定期调整结果公告；优先扩大 `--notice-rows` 或调整日期窗口。")
         else:
             lines.append("- 请查看来源审计中的 `status` 与 `reason`，再决定是否扩大 `--notice-rows`、调整日期窗口或手工补录。")
     return "\n".join(lines) + "\n"
@@ -556,6 +785,8 @@ def collect_official_hs300_sources(
     output_dir: Path = DEFAULT_OUTPUT_DIR,
     draft_output: Path = DEFAULT_DRAFT_OUTPUT,
     audit_output: Path = DEFAULT_AUDIT_OUTPUT,
+    search_diagnostics_output: Path = DEFAULT_SEARCH_DIAGNOSTICS_OUTPUT,
+    year_coverage_output: Path = DEFAULT_YEAR_COVERAGE_OUTPUT,
     report_output: Path = DEFAULT_REPORT_OUTPUT,
     attachment_dir: Path = DEFAULT_ATTACHMENT_DIR,
     formal_output: Path | None = None,
@@ -564,8 +795,9 @@ def collect_official_hs300_sources(
     since: str | None = None,
     until: str | None = None,
     notice_rows: int = DEFAULT_NOTICE_ROWS,
+    search_terms: tuple[str, ...] = SEARCH_TERMS,
 ) -> dict[str, object]:
-    for path in [draft_output, audit_output, report_output]:
+    for path in [draft_output, audit_output, search_diagnostics_output, year_coverage_output, report_output]:
         if path.exists() and not force:
             raise FileExistsError(f"Refusing to overwrite existing file without --force: {path}")
     if formal_output is not None and formal_output.exists() and not force:
@@ -573,15 +805,28 @@ def collect_official_hs300_sources(
 
     output_dir.mkdir(parents=True, exist_ok=True)
     session = requests.Session()
-    notices = query_rebalance_announcements(session, rows=notice_rows)
+    search_rows: list[dict[str, object]] = []
+    notices = query_rebalance_announcements(
+        session,
+        search_terms=search_terms,
+        rows=notice_rows,
+        search_diagnostics=search_rows,
+    )
     notices = _filter_notices_by_publish_date(notices, since=since, until=until)
+    search_rows = _annotate_search_diagnostics(search_rows, notices)
     if max_notices is not None:
         notices = notices[-max_notices:]
 
     source_rows: list[dict[str, object]] = []
     candidate_rows: list[dict[str, object]] = []
     for notice in notices:
-        detail = fetch_notice_detail(session, int(notice["id"]))
+        try:
+            detail = fetch_notice_detail(session, int(notice["id"]))
+        except Exception as exc:  # pragma: no cover - live source availability varies
+            row = _notice_audit_row(notice, has_detail=False)
+            row["reason"] = f"Notice detail could not be fetched: {exc}"
+            source_rows.append(row)
+            continue
         source_rows.append(_notice_audit_row(notice, has_detail=True))
         for link in _attachment_links_from_detail(detail):
             local_path: Path | None = None
@@ -620,10 +865,19 @@ def collect_official_hs300_sources(
     else:
         candidate_frame = _empty_candidate_frame()
     source_audit = pd.DataFrame(source_rows, columns=SOURCE_AUDIT_COLUMNS)
+    search_diagnostics = pd.DataFrame(search_rows, columns=SEARCH_DIAGNOSTIC_COLUMNS)
     candidate_audit = build_candidate_batch_audit(candidate_frame)
+    year_coverage = _build_year_coverage_frame(
+        source_audit=source_audit,
+        candidate_frame=candidate_frame,
+        since=since,
+        until=until,
+    )
 
     save_dataframe(candidate_frame, draft_output)
     save_dataframe(source_audit, audit_output)
+    save_dataframe(search_diagnostics, search_diagnostics_output)
+    save_dataframe(year_coverage, year_coverage_output)
     if formal_output is not None:
         save_dataframe(candidate_frame, formal_output)
     report_output.parent.mkdir(parents=True, exist_ok=True)
@@ -632,8 +886,12 @@ def collect_official_hs300_sources(
             draft_output=draft_output,
             formal_output=formal_output,
             audit_output=audit_output,
+            search_diagnostics_output=search_diagnostics_output,
+            year_coverage_output=year_coverage_output,
             candidate_frame=candidate_frame,
             audit_frame=source_audit,
+            search_diagnostics_frame=search_diagnostics,
+            year_coverage_frame=year_coverage,
             candidate_audit=candidate_audit,
         ),
         encoding="utf-8",
@@ -641,10 +899,14 @@ def collect_official_hs300_sources(
     return {
         "draft_output": draft_output,
         "audit_output": audit_output,
+        "search_diagnostics_output": search_diagnostics_output,
+        "year_coverage_output": year_coverage_output,
         "report_output": report_output,
         "formal_output": formal_output,
         "candidate_rows": len(candidate_frame),
         "source_rows": len(source_audit),
+        "search_rows": len(search_diagnostics),
+        "year_rows": len(year_coverage),
         "candidate_batches": summarize_candidate_audit(candidate_audit).get("candidate_batches"),
         "status": "parsed" if not candidate_frame.empty else "no_candidates",
     }
@@ -655,22 +917,33 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--draft-output", type=Path, default=DEFAULT_DRAFT_OUTPUT)
     parser.add_argument("--audit-output", type=Path, default=DEFAULT_AUDIT_OUTPUT)
+    parser.add_argument("--search-diagnostics-output", type=Path, default=DEFAULT_SEARCH_DIAGNOSTICS_OUTPUT)
+    parser.add_argument("--year-coverage-output", type=Path, default=DEFAULT_YEAR_COVERAGE_OUTPUT)
     parser.add_argument("--report-output", type=Path, default=DEFAULT_REPORT_OUTPUT)
     parser.add_argument("--attachment-dir", type=Path, default=DEFAULT_ATTACHMENT_DIR)
     parser.add_argument("--max-notices", type=int, default=None)
     parser.add_argument("--since", default=None, help="Only collect notices published on/after this date, e.g. 2020-01-01.")
     parser.add_argument("--until", default=None, help="Only collect notices published on/before this date, e.g. 2022-12-31.")
     parser.add_argument("--notice-rows", type=int, default=DEFAULT_NOTICE_ROWS, help="Rows to request from each CSIndex search term.")
+    parser.add_argument(
+        "--search-term",
+        action="append",
+        default=[],
+        help="Add an extra CSIndex search term; repeat the flag to add multiple terms.",
+    )
     parser.add_argument("--write-formal", action="store_true", help="Write data/raw/hs300_rdd_candidates.csv.")
     parser.add_argument("--formal-output", type=Path, default=DEFAULT_FORMAL_OUTPUT)
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args(argv)
 
     formal_output = args.formal_output if args.write_formal else None
+    search_terms = tuple(dict.fromkeys([*SEARCH_TERMS, *args.search_term]))
     outputs = collect_official_hs300_sources(
         output_dir=args.output_dir,
         draft_output=args.draft_output,
         audit_output=args.audit_output,
+        search_diagnostics_output=args.search_diagnostics_output,
+        year_coverage_output=args.year_coverage_output,
         report_output=args.report_output,
         attachment_dir=args.attachment_dir,
         formal_output=formal_output,
@@ -679,17 +952,22 @@ def main(argv: list[str] | None = None) -> int:
         since=args.since,
         until=args.until,
         notice_rows=args.notice_rows,
+        search_terms=search_terms,
     )
     print("HS300 official online collection completed.")
     print(f"Draft candidates: {_display_path(outputs['draft_output'])}")
     print(f"Source audit: {_display_path(outputs['audit_output'])}")
+    print(f"Search diagnostics: {_display_path(outputs['search_diagnostics_output'])}")
+    print(f"Year coverage: {_display_path(outputs['year_coverage_output'])}")
     print(f"Report: {_display_path(outputs['report_output'])}")
     if outputs["formal_output"] is not None:
         print(f"Formal candidates: {_display_path(outputs['formal_output'])}")
     if outputs.get("status") == "no_candidates":
-        print("Status: no usable HS300 L3 candidate rows found; inspect the source audit/report.")
+        print("Status: no usable HS300 L3 candidate rows found; inspect the source audit, search diagnostics, year coverage, and report.")
     print(f"Candidate rows: {outputs['candidate_rows']}")
     print(f"Source rows: {outputs['source_rows']}")
+    print(f"Search diagnostic rows: {outputs['search_rows']}")
+    print(f"Year coverage rows: {outputs['year_rows']}")
     print(f"Candidate batches: {outputs['candidate_batches']}")
     return 0
 

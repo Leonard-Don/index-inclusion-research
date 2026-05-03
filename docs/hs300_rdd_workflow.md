@@ -77,7 +77,7 @@ index-inclusion-plan-hs300-rdd-l3 --force
 index-inclusion-collect-hs300-rdd-l3 --force
 ```
 
-它会下载并解析中证官网“定期调整结果”公告附件中的沪深300调入名单与备选名单，生成 `official_candidate_draft.csv`、`online_source_audit.csv` 和 `online_collection_report.md`。确认草稿后写入正式 L3：
+它会下载并解析中证官网“定期调整结果”公告附件中的沪深300调入名单与备选名单，生成 `official_candidate_draft.csv`、`online_source_audit.csv`、`online_search_diagnostics.csv`、`online_year_coverage.csv` 和 `online_collection_report.md`。确认草稿后写入正式 L3：
 
 如果只想先补历史窗口，比如 2020-2022 批次：
 
@@ -86,10 +86,11 @@ index-inclusion-collect-hs300-rdd-l3 \
   --since 2020-01-01 \
   --until 2022-12-31 \
   --notice-rows 120 \
+  --search-term "调整沪深300指数样本股" \
   --force
 ```
 
-`--since` / `--until` 按公告发布日期过滤，`--notice-rows` 控制每个中证搜索词返回的公告数量。
+`--since` / `--until` 按公告发布日期过滤，`--notice-rows` 控制每个中证搜索词返回的公告数量，`--search-term` 可以重复传入，用来补历史公告标题口径。若没有解析出候选行，先看 `online_search_diagnostics.csv` 判断是搜索接口无返回、标题/主题过滤未命中，还是命中公告但落在日期窗口之外；再看 `online_year_coverage.csv` 判断缺口集中在哪些年份。
 
 ```bash
 index-inclusion-prepare-hs300-rdd \
