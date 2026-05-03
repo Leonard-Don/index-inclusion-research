@@ -32,7 +32,7 @@
 | H2 | 被动基金 AUM 差异 | 证据不足 | US AUM ratio = 13.48 (n=12) | 需求曲线 |
 | H3 | 散户 vs 机构结构 | 支持 | 双通道命中率 = 0.75 (n=4) | 短期价格压力 |
 | H4 | 卖空约束 | 证据不足 | regression p = 0.537 (n=436) | 制度识别 |
-| H5 | 涨跌停限制 | 证据不足 | limit_coef p = 0.213 (n=936) | 制度识别 |
+| H5 | 涨跌停限制 | 支持 | limit_coef p = 0.008 (n=936) | 制度识别 |
 | H6 | 指数权重可预测性 | 证据不足 | heavy−light spread = -0.019 (n=67) | 需求曲线 |
 | H7 | 行业结构差异 | 支持 | US sector spread = 5.95 (n=187) | 制度识别 |
 
@@ -107,7 +107,7 @@ make smoke   # 浏览器 smoke test，需要 Playwright + Chromium
 
 1. [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)：16 篇文献如何统一映射到当前项目。
 2. [docs/dashboard_architecture.md](docs/dashboard_architecture.md)：dashboard 主干。
-3. [docs/cli_reference.md](docs/cli_reference.md)：24 个 console scripts 的完整说明。
+3. [docs/cli_reference.md](docs/cli_reference.md)：26 个 console scripts 的完整说明。
 4. 启动界面：`index-inclusion-dashboard` → 打开 <http://localhost:5001>。
 
 ## 项目结构
@@ -123,7 +123,7 @@ src/index_inclusion_research/
   pipeline/            样本构建、匹配（含 covariate balance）
   web/templates/+static/
   literature.py / literature_catalog.py / paths.py
-tests/                 ~570 个单元测试 + 浏览器 smoke
+tests/                 ~590 个单元测试 + 浏览器 smoke
 ```
 
 `paths.py` 提供 `paths.project_root()` 与 `paths.results_dir()` 等工具，所有模块都用它读项目根。设置 `INDEX_INCLUSION_ROOT` 环境变量可以覆盖默认根（容器化或并行测试时有用）。
@@ -177,13 +177,13 @@ index-inclusion-refresh-real-evidence                # 真实数据 + evidence m
 index-inclusion-doctor --fail-on-warn                # 严格门禁（warn 也阻断）
 ```
 
-按用途分组（共 24 个 console scripts）：
+按用途分组（共 26 个 console scripts）：
 
-- 数据流水线：`build-event-sample` / `build-price-panel` / `match-controls` / `run-event-study` / `run-regressions`
+- 数据流水线：`build-event-sample` / `build-price-panel` / `match-controls` / `match-robustness` / `run-event-study` / `run-regressions`
 - 样本数据：`generate-sample-data` / `download-real-data`
 - 报表与图表：`make-figures-tables` / `generate-research-report`
 - Dashboard 与三条主线：`dashboard` / `price-pressure` / `demand-curve` / `identification`
-- HS300 RDD 工具链：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3`
+- HS300 RDD 工具链：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`
 - 跨市场不对称 + 假说证据：`cma` / `prepare-passive-aum` / `compute-h6-weight-change` / `refresh-real-evidence`
 - 总入口：`rebuild-all` / `verdict-summary` / `doctor`
 
@@ -242,7 +242,7 @@ GitHub Actions 通过 `astral-sh/setup-uv` + `uv sync --extra dev`（按 `uv.loc
 完整限制清单见 [docs/limitations.md](docs/limitations.md)。关键提醒：
 
 - `mkt_cap` / `turnover` 来自 Yahoo `sharesOutstanding` 近似，不是交易所历史口径。
-- HS300 RDD 当前 L3 仅覆盖 2023-2024 共 6 个批次，论文级因果声明需扩展到 ≥10 年（见 [docs/hs300_rdd_l3_collection_audit.md](docs/hs300_rdd_l3_collection_audit.md)）。
+- HS300 RDD 当前 L3 覆盖 2023-05 到 2025-11 共 6 个批次、159 条候选，论文级因果声明需扩展到 ≥10 年（见 [docs/hs300_rdd_l3_collection_audit.md](docs/hs300_rdd_l3_collection_audit.md)）。
 - 7 条 CMA 假说为 post-hoc 拟合，未做 pre-registration；阈值 sweep 见 [docs/sensitivity_workflow.md](docs/sensitivity_workflow.md)。
 - 假说证据强度分层：`core`（H1/H5/H7）vs `supplementary`（H2/H3/H4/H6），见 `cma_hypothesis_verdicts.csv` 的 `evidence_tier` 列。
 - 事件研究除简单 t 外提供 Patell Z 与 BMP t（`results/real_event_study/patell_bmp_summary.csv`）。

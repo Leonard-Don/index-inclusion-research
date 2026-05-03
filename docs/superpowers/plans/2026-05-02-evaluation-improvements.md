@@ -257,10 +257,10 @@ def test_build_sensitivity_table_includes_bonferroni_and_bh():
     assert "bonferroni_p" in table.columns
     assert "bh_q" in table.columns
     # Bonferroni: p_adj = min(p * N_p_gated, 1)
-    # H1 p=0.6396, H4 p=0.5366, H5 p=0.2134, N=3
-    # → bonferroni_p_H5 = min(0.2134 * 3, 1) = 0.6402
+    # H1 p=0.8748, H4 p=0.5366, H5 p=0.0082, N=3
+    # → bonferroni_p_H5 = min(0.0082 * 3, 1) = 0.0246
     row_h5 = table.loc[table["hid"] == "H5"].iloc[0]
-    assert row_h5["bonferroni_p"] == pytest.approx(0.6402, abs=1e-4)
+    assert row_h5["bonferroni_p"] == pytest.approx(0.0246, abs=1e-4)
 ```
 
 - [ ] **Step 5.2** — Implement Bonferroni and BH in `build_sensitivity_table`:

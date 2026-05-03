@@ -106,7 +106,7 @@ Contents (full markdown, no placeholders):
 
 ## 4. HS300 RDD 数据层级
 
-- **L3（官方）**：仅 2023-06 到 2025-11 共 6 个批次，160 行。详见 `docs/hs300_rdd_data_contract.md`。
+- **L3（官方）**：仅 2023-05 到 2025-11 共 6 个批次，159 行。详见 `docs/hs300_rdd_data_contract.md`。
 - **L2（公开重建）**：1887 行；从公开调整新闻反推，**不等价于中证官方历史排名**。
 - **L1（演示）**：合成数据，仅供 pipeline 测试。
 - **当前主表使用**：默认 L3；缺失时返回 `missing` 状态而非自动降级。
@@ -150,7 +150,7 @@ Insert into `README.md` after "## 研究当前结论速览" or near "## 备注":
 完整限制清单见 [docs/limitations.md](docs/limitations.md)。关键提醒：
 
 - `mkt_cap` / `turnover` 来自 Yahoo `sharesOutstanding` 近似，不是交易所历史口径。
-- HS300 RDD 当前 L3 仅覆盖 2023-2024 共 6 个批次，论文级因果声明需扩展到 ≥10 年。
+- HS300 RDD 当前 L3 覆盖 2023-05 到 2025-11 共 6 个批次、159 条候选，论文级因果声明需扩展到 ≥10 年。
 - 7 条 CMA 假说为 post-hoc 拟合，未做 pre-registration；阈值 sweep 见 `docs/sensitivity_workflow.md`。
 - 假说证据强度分层：`core`（H1/H5/H7）vs `supplementary`（H2/H3/H4/H6），见 `cma_hypothesis_verdicts.csv` 的 `evidence_tier` 列。
 ```
@@ -807,7 +807,7 @@ Create `docs/hs300_rdd_l3_collection_audit.md` with:
 
 <insert batch list from Step 8.1>
 
-总行数：~160；时间跨度：2023-06 ~ 2025-11。
+总行数：159；时间跨度：2023-05 ~ 2025-11。
 
 ## 论文目标覆盖
 
