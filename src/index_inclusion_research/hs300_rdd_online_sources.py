@@ -31,6 +31,7 @@ DEFAULT_AUDIT_OUTPUT = DEFAULT_OUTPUT_DIR / "online_source_audit.csv"
 DEFAULT_SEARCH_DIAGNOSTICS_OUTPUT = DEFAULT_OUTPUT_DIR / "online_search_diagnostics.csv"
 DEFAULT_YEAR_COVERAGE_OUTPUT = DEFAULT_OUTPUT_DIR / "online_year_coverage.csv"
 DEFAULT_MANUAL_GAP_WORKLIST_OUTPUT = DEFAULT_OUTPUT_DIR / "online_manual_gap_worklist.csv"
+DEFAULT_GAP_SOURCE_HINTS_OUTPUT = DEFAULT_OUTPUT_DIR / "online_gap_source_hints.csv"
 DEFAULT_REPORT_OUTPUT = DEFAULT_OUTPUT_DIR / "online_collection_report.md"
 DEFAULT_ATTACHMENT_DIR = DEFAULT_OUTPUT_DIR / "official_attachments"
 DEFAULT_FORMAL_OUTPUT = ROOT / "data" / "raw" / "hs300_rdd_candidates.csv"
@@ -89,6 +90,7 @@ MANUAL_GAP_WORKLIST_COLUMNS = [
     "announcement_id",
     "publish_date",
     "title",
+    "detail_url",
     "attachment_name",
     "attachment_url",
     "local_path",
@@ -96,6 +98,18 @@ MANUAL_GAP_WORKLIST_COLUMNS = [
     "control_rows",
     "missing_evidence",
     "suggested_next_step",
+]
+GAP_SOURCE_HINT_COLUMNS = [
+    "year",
+    "priority",
+    "gap_type",
+    "announcement_id",
+    "source_kind",
+    "source_label",
+    "source_url",
+    "query",
+    "expected_evidence",
+    "notes",
 ]
 
 SEARCH_TERMS = (
@@ -152,6 +166,17 @@ def _request_headers() -> dict[str, str]:
 
 def _clean_text(value: object) -> str:
     return re.sub(r"\s+", " ", str(value or "")).strip()
+
+
+def _clean_cell_text(value: object) -> str:
+    if value is None:
+        return ""
+    try:
+        if pd.isna(value):
+            return ""
+    except (TypeError, ValueError):
+        pass
+    return _clean_text(value)
 
 
 def _html_to_text(html: str) -> str:
@@ -801,6 +826,7 @@ def _gap_row(
         "announcement_id": source_row.get("announcement_id", ""),
         "publish_date": source_row.get("publish_date", ""),
         "title": source_row.get("title", ""),
+        "detail_url": source_row.get("detail_url", ""),
         "attachment_name": source_row.get("attachment_name", ""),
         "attachment_url": source_row.get("attachment_url", ""),
         "local_path": source_row.get("local_path", ""),
@@ -917,6 +943,140 @@ def _build_manual_gap_worklist_frame(
     return frame.loc[:, MANUAL_GAP_WORKLIST_COLUMNS].reset_index(drop=True)
 
 
+def _wayback_url(url: str) -> str:
+    return f"https://web.archive.org/web/*/{quote(url, safe=':/?&=%')}"
+
+
+def _search_url(query: str) -> str:
+    return f"https://www.bing.com/search?q={quote(query)}"
+
+
+def _cninfo_search_url(query: str) -> str:
+    return f"https://www.cninfo.com.cn/new/fulltextSearch?notautosubmit=&keyWord={quote(query)}"
+
+
+def _gap_base_query(row: dict[str, object]) -> str:
+    parts = [
+        _clean_cell_text(row.get("year")),
+        _clean_cell_text(row.get("title")),
+        _clean_cell_text(row.get("attachment_name")),
+        "沪深300 备选名单 reserve control",
+    ]
+    return " ".join(part for part in parts if part)
+
+
+def _build_gap_source_hints_frame(gap_worklist: pd.DataFrame) -> pd.DataFrame:
+    rows: list[dict[str, object]] = []
+    seen: set[tuple[object, str, str]] = set()
+
+    def add_hint(
+        gap: dict[str, object],
+        *,
+        source_kind: str,
+        source_label: str,
+        source_url: str,
+        query: str = "",
+    ) -> None:
+        key = (gap.get("announcement_id", ""), source_kind, source_url or query)
+        if key in seen:
+            return
+        seen.add(key)
+        rows.append(
+            {
+                "year": gap.get("year", ""),
+                "priority": gap.get("priority", ""),
+                "gap_type": gap.get("gap_type", ""),
+                "announcement_id": gap.get("announcement_id", ""),
+                "source_kind": source_kind,
+                "source_label": source_label,
+                "source_url": source_url,
+                "query": query,
+                "expected_evidence": _clean_cell_text(gap.get("missing_evidence")),
+                "notes": _clean_cell_text(gap.get("suggested_next_step")),
+            }
+        )
+
+    if gap_worklist.empty:
+        return pd.DataFrame(columns=GAP_SOURCE_HINT_COLUMNS)
+
+    for _, item in gap_worklist.iterrows():
+        gap = item.to_dict()
+        detail_url = _clean_cell_text(gap.get("detail_url"))
+        attachment_url = _clean_cell_text(gap.get("attachment_url"))
+        query = _gap_base_query(gap)
+        site_query = f"site:csindex.com.cn {query}".strip()
+        cninfo_query = f"{query} 中证指数 公告".strip()
+
+        if detail_url:
+            add_hint(
+                gap,
+                source_kind="csindex_detail",
+                source_label="中证公告详情页",
+                source_url=detail_url,
+            )
+            add_hint(
+                gap,
+                source_kind="wayback_detail",
+                source_label="Wayback 公告详情归档",
+                source_url=_wayback_url(detail_url),
+            )
+        if attachment_url:
+            add_hint(
+                gap,
+                source_kind="official_attachment",
+                source_label="中证官方附件",
+                source_url=attachment_url,
+            )
+            add_hint(
+                gap,
+                source_kind="wayback_attachment",
+                source_label="Wayback 附件归档",
+                source_url=_wayback_url(attachment_url),
+            )
+        add_hint(
+            gap,
+            source_kind="web_search_csindex",
+            source_label="网页搜索：中证站内",
+            source_url=_search_url(site_query),
+            query=site_query,
+        )
+        add_hint(
+            gap,
+            source_kind="web_search_general",
+            source_label="网页搜索：全网",
+            source_url=_search_url(query),
+            query=query,
+        )
+        add_hint(
+            gap,
+            source_kind="cninfo_fulltext_search",
+            source_label="巨潮全文搜索",
+            source_url=_cninfo_search_url(cninfo_query),
+            query=cninfo_query,
+        )
+
+    frame = pd.DataFrame(rows, columns=GAP_SOURCE_HINT_COLUMNS)
+    if frame.empty:
+        return frame
+    priority_order = {"P1": 1, "P2": 2, "P3": 3}
+    source_order = {
+        "csindex_detail": 1,
+        "official_attachment": 2,
+        "wayback_detail": 3,
+        "wayback_attachment": 4,
+        "web_search_csindex": 5,
+        "web_search_general": 6,
+        "cninfo_fulltext_search": 7,
+    }
+    frame["_priority_order"] = frame["priority"].map(priority_order).fillna(9)
+    frame["_year_order"] = pd.to_numeric(frame["year"], errors="coerce").fillna(9999)
+    frame["_source_order"] = frame["source_kind"].map(source_order).fillna(99)
+    frame = frame.sort_values(["_priority_order", "_year_order", "announcement_id", "_source_order"]).drop(
+        columns=["_priority_order", "_year_order", "_source_order"]
+    )
+    return frame.loc[:, GAP_SOURCE_HINT_COLUMNS].reset_index(drop=True)
+
+
 def _build_report(
     *,
     draft_output: Path,
@@ -925,11 +1085,13 @@ def _build_report(
     search_diagnostics_output: Path,
     year_coverage_output: Path,
     manual_gap_worklist_output: Path,
+    gap_source_hints_output: Path,
     candidate_frame: pd.DataFrame,
     audit_frame: pd.DataFrame,
     search_diagnostics_frame: pd.DataFrame,
     year_coverage_frame: pd.DataFrame,
     manual_gap_worklist_frame: pd.DataFrame,
+    gap_source_hints_frame: pd.DataFrame,
     candidate_audit: pd.DataFrame,
 ) -> str:
     summary = summarize_candidate_audit(candidate_audit)
@@ -954,6 +1116,7 @@ def _build_report(
     search_matched_rows = int(search_diagnostics_frame["matched_rows"].sum()) if not search_diagnostics_frame.empty else 0
     search_date_rows = int(search_diagnostics_frame["date_filtered_matched_rows"].sum()) if not search_diagnostics_frame.empty else 0
     gap_rows = int(len(manual_gap_worklist_frame))
+    hint_rows = int(len(gap_source_hints_frame))
     p1_gap_rows = (
         int((manual_gap_worklist_frame["priority"].astype(str) == "P1").sum())
         if not manual_gap_worklist_frame.empty
@@ -971,6 +1134,7 @@ def _build_report(
         f"- 搜索诊断：`{_display_path(search_diagnostics_output)}`",
         f"- 年份覆盖：`{_display_path(year_coverage_output)}`",
         f"- 人工补录清单：`{_display_path(manual_gap_worklist_output)}`",
+        f"- 缺口来源查找入口：`{_display_path(gap_source_hints_output)}`",
         f"- 来源审计：`{_display_path(audit_output)}`",
         f"- 候选草稿：`{_display_path(draft_output)}`",
         formal_line,
@@ -980,6 +1144,7 @@ def _build_report(
         f"- 可用官方附件数：`{usable_sources}`",
         f"- 已解析但缺备选对照附件数：`{partial_sources}`（调入行 `{partial_addition_rows}`）",
         f"- 补录缺口行数：`{gap_rows}`（P1 `{p1_gap_rows}`）",
+        f"- 缺口来源查找入口数：`{hint_rows}`",
         f"- 候选行数：`{len(candidate_frame)}`",
         f"- 批次数：`{summary.get('candidate_batches')}`",
         f"- 调入样本数：`{summary.get('treated_rows')}`",
@@ -1052,6 +1217,7 @@ def collect_official_hs300_sources(
     search_diagnostics_output: Path = DEFAULT_SEARCH_DIAGNOSTICS_OUTPUT,
     year_coverage_output: Path = DEFAULT_YEAR_COVERAGE_OUTPUT,
     manual_gap_worklist_output: Path = DEFAULT_MANUAL_GAP_WORKLIST_OUTPUT,
+    gap_source_hints_output: Path = DEFAULT_GAP_SOURCE_HINTS_OUTPUT,
     report_output: Path = DEFAULT_REPORT_OUTPUT,
     attachment_dir: Path = DEFAULT_ATTACHMENT_DIR,
     formal_output: Path | None = None,
@@ -1068,6 +1234,7 @@ def collect_official_hs300_sources(
         search_diagnostics_output,
         year_coverage_output,
         manual_gap_worklist_output,
+        gap_source_hints_output,
         report_output,
     ]:
         if path.exists() and not force:
@@ -1159,12 +1326,14 @@ def collect_official_hs300_sources(
         source_audit=source_audit,
         year_coverage=year_coverage,
     )
+    gap_source_hints = _build_gap_source_hints_frame(manual_gap_worklist)
 
     save_dataframe(candidate_frame, draft_output)
     save_dataframe(source_audit, audit_output)
     save_dataframe(search_diagnostics, search_diagnostics_output)
     save_dataframe(year_coverage, year_coverage_output)
     save_dataframe(manual_gap_worklist, manual_gap_worklist_output)
+    save_dataframe(gap_source_hints, gap_source_hints_output)
     if formal_output is not None:
         save_dataframe(candidate_frame, formal_output)
     report_output.parent.mkdir(parents=True, exist_ok=True)
@@ -1176,11 +1345,13 @@ def collect_official_hs300_sources(
             search_diagnostics_output=search_diagnostics_output,
             year_coverage_output=year_coverage_output,
             manual_gap_worklist_output=manual_gap_worklist_output,
+            gap_source_hints_output=gap_source_hints_output,
             candidate_frame=candidate_frame,
             audit_frame=source_audit,
             search_diagnostics_frame=search_diagnostics,
             year_coverage_frame=year_coverage,
             manual_gap_worklist_frame=manual_gap_worklist,
+            gap_source_hints_frame=gap_source_hints,
             candidate_audit=candidate_audit,
         ),
         encoding="utf-8",
@@ -1191,6 +1362,7 @@ def collect_official_hs300_sources(
         "search_diagnostics_output": search_diagnostics_output,
         "year_coverage_output": year_coverage_output,
         "manual_gap_worklist_output": manual_gap_worklist_output,
+        "gap_source_hints_output": gap_source_hints_output,
         "report_output": report_output,
         "formal_output": formal_output,
         "candidate_rows": len(candidate_frame),
@@ -1198,6 +1370,7 @@ def collect_official_hs300_sources(
         "search_rows": len(search_diagnostics),
         "year_rows": len(year_coverage),
         "gap_rows": len(manual_gap_worklist),
+        "hint_rows": len(gap_source_hints),
         "candidate_batches": summarize_candidate_audit(candidate_audit).get("candidate_batches"),
         "status": "parsed" if not candidate_frame.empty else "no_candidates",
     }
@@ -1211,6 +1384,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--search-diagnostics-output", type=Path, default=DEFAULT_SEARCH_DIAGNOSTICS_OUTPUT)
     parser.add_argument("--year-coverage-output", type=Path, default=DEFAULT_YEAR_COVERAGE_OUTPUT)
     parser.add_argument("--manual-gap-worklist-output", type=Path, default=DEFAULT_MANUAL_GAP_WORKLIST_OUTPUT)
+    parser.add_argument("--gap-source-hints-output", type=Path, default=DEFAULT_GAP_SOURCE_HINTS_OUTPUT)
     parser.add_argument("--report-output", type=Path, default=DEFAULT_REPORT_OUTPUT)
     parser.add_argument("--attachment-dir", type=Path, default=DEFAULT_ATTACHMENT_DIR)
     parser.add_argument("--max-notices", type=int, default=None)
@@ -1237,6 +1411,7 @@ def main(argv: list[str] | None = None) -> int:
         search_diagnostics_output=args.search_diagnostics_output,
         year_coverage_output=args.year_coverage_output,
         manual_gap_worklist_output=args.manual_gap_worklist_output,
+        gap_source_hints_output=args.gap_source_hints_output,
         report_output=args.report_output,
         attachment_dir=args.attachment_dir,
         formal_output=formal_output,
@@ -1253,6 +1428,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Search diagnostics: {_display_path(outputs['search_diagnostics_output'])}")
     print(f"Year coverage: {_display_path(outputs['year_coverage_output'])}")
     print(f"Manual gap worklist: {_display_path(outputs['manual_gap_worklist_output'])}")
+    print(f"Gap source hints: {_display_path(outputs['gap_source_hints_output'])}")
     print(f"Report: {_display_path(outputs['report_output'])}")
     if outputs["formal_output"] is not None:
         print(f"Formal candidates: {_display_path(outputs['formal_output'])}")
@@ -1263,6 +1439,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Search diagnostic rows: {outputs['search_rows']}")
     print(f"Year coverage rows: {outputs['year_rows']}")
     print(f"Manual gap rows: {outputs['gap_rows']}")
+    print(f"Gap source hint rows: {outputs['hint_rows']}")
     print(f"Candidate batches: {outputs['candidate_batches']}")
     return 0
 

@@ -77,7 +77,7 @@ index-inclusion-plan-hs300-rdd-l3 --force
 index-inclusion-collect-hs300-rdd-l3 --force
 ```
 
-它会下载并解析中证官网“定期调整结果”公告附件中的沪深300调入名单与备选名单，生成 `official_candidate_draft.csv`、`online_source_audit.csv`、`online_search_diagnostics.csv`、`online_year_coverage.csv`、`online_manual_gap_worklist.csv` 和 `online_collection_report.md`。PDF 附件若同时包含调入名单与备选名单，会进入候选草稿；Excel 附件若只有调入/调出名单，会写入来源审计并标记为缺少 reserve controls，不会被提升为正式 L3；人工补录清单会把这类缺口排成 P1/P2/P3。确认草稿后写入正式 L3：
+它会下载并解析中证官网“定期调整结果”公告附件中的沪深300调入名单与备选名单，生成 `official_candidate_draft.csv`、`online_source_audit.csv`、`online_search_diagnostics.csv`、`online_year_coverage.csv`、`online_manual_gap_worklist.csv`、`online_gap_source_hints.csv` 和 `online_collection_report.md`。PDF 附件若同时包含调入名单与备选名单，会进入候选草稿；Excel 附件若只有调入/调出名单，会写入来源审计并标记为缺少 reserve controls，不会被提升为正式 L3；人工补录清单会把这类缺口排成 P1/P2/P3，来源查找入口会给出中证详情页、附件、Wayback、网页搜索和巨潮全文搜索。确认草稿后写入正式 L3：
 
 如果只想先补历史窗口，比如 2020-2022 批次：
 
@@ -90,7 +90,7 @@ index-inclusion-collect-hs300-rdd-l3 \
   --force
 ```
 
-`--since` / `--until` 按公告发布日期过滤，`--notice-rows` 控制每个中证搜索词返回的公告数量，`--search-term` 可以重复传入，用来补历史公告标题口径。若没有解析出候选行，先看 `online_search_diagnostics.csv` 判断是搜索接口无返回、标题/主题过滤未命中，还是命中公告但落在日期窗口之外；再看 `online_year_coverage.csv` 判断缺口集中在哪些年份；最后按 `online_manual_gap_worklist.csv` 的 P1/P2/P3 顺序补官方 reserve/control 证据。
+`--since` / `--until` 按公告发布日期过滤，`--notice-rows` 控制每个中证搜索词返回的公告数量，`--search-term` 可以重复传入，用来补历史公告标题口径。若没有解析出候选行，先看 `online_search_diagnostics.csv` 判断是搜索接口无返回、标题/主题过滤未命中，还是命中公告但落在日期窗口之外；再看 `online_year_coverage.csv` 判断缺口集中在哪些年份；最后按 `online_manual_gap_worklist.csv` 的 P1/P2/P3 顺序补官方 reserve/control 证据，并用 `online_gap_source_hints.csv` 逐条打开来源查找入口。
 
 ```bash
 index-inclusion-prepare-hs300-rdd \
@@ -101,4 +101,4 @@ index-inclusion-prepare-hs300-rdd \
 
 ## 4. 浏览器 L3 工作台
 
-如果更适合在浏览器里操作，启动 dashboard 后打开 `/rdd-l3`。这个工作台和 `prepare-hs300-rdd` 共享一套预检规则：先一键刷新 L3 采集包，并直接预览批次清单 / 正式填报模板 / 边界参考；同时读取 `online_search_diagnostics.csv`、`online_year_coverage.csv`、`online_source_audit.csv` 与 `online_manual_gap_worklist.csv`，把线上搜索命中、年份覆盖、附件审计和 `notice_only` 补录缺口展示出来。拿到官方候选名单后再上传预检字段、来源、cutoff 两侧覆盖和处理 / 对照样本，最后确认写入 `data/raw/hs300_rdd_candidates.csv` 并刷新 RDD 状态与 evidence manifest。
+如果更适合在浏览器里操作，启动 dashboard 后打开 `/rdd-l3`。这个工作台和 `prepare-hs300-rdd` 共享一套预检规则：先一键刷新 L3 采集包，并直接预览批次清单 / 正式填报模板 / 边界参考；同时读取 `online_search_diagnostics.csv`、`online_year_coverage.csv`、`online_source_audit.csv`、`online_manual_gap_worklist.csv` 与 `online_gap_source_hints.csv`，把线上搜索命中、年份覆盖、附件审计、`notice_only` 补录缺口和可点击来源入口展示出来。拿到官方候选名单后再上传预检字段、来源、cutoff 两侧覆盖和处理 / 对照样本，最后确认写入 `data/raw/hs300_rdd_candidates.csv` 并刷新 RDD 状态与 evidence manifest。

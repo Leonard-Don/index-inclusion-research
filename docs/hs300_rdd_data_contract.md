@@ -61,6 +61,10 @@ index-inclusion-collect-hs300-rdd-l3 --force
 
 - `results/literature/hs300_rdd_l3_collection/official_candidate_draft.csv`
 - `results/literature/hs300_rdd_l3_collection/online_source_audit.csv`
+- `results/literature/hs300_rdd_l3_collection/online_search_diagnostics.csv`
+- `results/literature/hs300_rdd_l3_collection/online_year_coverage.csv`
+- `results/literature/hs300_rdd_l3_collection/online_manual_gap_worklist.csv`
+- `results/literature/hs300_rdd_l3_collection/online_gap_source_hints.csv`
 - `results/literature/hs300_rdd_l3_collection/online_collection_report.md`
 
 确认草稿后可以写入正式文件：
