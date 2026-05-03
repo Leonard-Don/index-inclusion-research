@@ -242,7 +242,7 @@ GitHub Actions 通过 `astral-sh/setup-uv` + `uv sync --extra dev`（按 `uv.loc
 完整限制清单见 [docs/limitations.md](docs/limitations.md)。关键提醒：
 
 - `mkt_cap` / `turnover` 来自 Yahoo `sharesOutstanding` 近似，不是交易所历史口径。
-- HS300 RDD 当前 L3 覆盖 2023-05 到 2025-11 共 6 个批次、159 条候选，论文级因果声明需扩展到 ≥10 年（见 [docs/hs300_rdd_l3_collection_audit.md](docs/hs300_rdd_l3_collection_audit.md)）。
+- HS300 RDD 当前 L3 覆盖 2020-11 到 2025-11 共 11 个批次、356 条候选，论文级因果声明需扩展到 ≥10 年（见 [docs/hs300_rdd_l3_collection_audit.md](docs/hs300_rdd_l3_collection_audit.md)）。
 - 7 条 CMA 假说当前为 post-hoc 拟合；预注册基线（PAP 草稿 + 2026-05-03 verdicts 快照）见 [docs/pre_registration.md](docs/pre_registration.md)，签字后升级为 confirmatory；阈值 sweep 见 [docs/sensitivity_workflow.md](docs/sensitivity_workflow.md)。
 - 假说证据强度分层：`core`（H1/H5/H7）vs `supplementary`（H2/H3/H4/H6），见 `cma_hypothesis_verdicts.csv` 的 `evidence_tier` 列。
 - 事件研究除简单 t 外提供 Patell Z 与 BMP t（`results/real_event_study/patell_bmp_summary.csv`）。

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import datetime
 import re
 import subprocess
 from dataclasses import dataclass
@@ -194,6 +195,31 @@ def _extract_effective_date(content_html: str) -> str:
     return f"{int(year):04d}-{int(month):02d}-{int(day):02d}"
 
 
+def _is_hs300_rebalance_title(title: str) -> bool:
+    cleaned = _clean_text(title)
+    if "沪深300" not in cleaned and "沪深 300" not in cleaned:
+        return False
+    return any(token in cleaned for token in ("调整", "调样", "定期调整"))
+
+
+def _infer_csi300_effective_date(publish_date: str, title: str) -> str:
+    """Fallback: CSI300 semi-annual rebalances take effect on the 2nd Friday of the
+    calendar month following announce_date. Stable convention 2010-2025+ across
+    every batch in data/raw/hs300_rdd_candidates.csv. Only applied when the notice
+    title looks like an HS300 rebalance announcement.
+    """
+    if not publish_date or not _is_hs300_rebalance_title(title):
+        return ""
+    try:
+        announce = pd.Timestamp(publish_date)
+    except (TypeError, ValueError):
+        return ""
+    next_month_first = (announce + pd.offsets.MonthBegin(1)).date()
+    days_to_friday = (4 - next_month_first.weekday()) % 7
+    second_friday = next_month_first + datetime.timedelta(days=days_to_friday + 7)
+    return second_friday.strftime("%Y-%m-%d")
+
+
 def _announcement_payload(search_input: str, *, rows: int) -> dict[str, object]:
     return {
         "lang": "cn",
@@ -380,6 +406,8 @@ def _attachment_links_from_detail(detail: dict[str, object]) -> list[AttachmentL
     publish_date = _clean_text(detail.get("publishDate"))
     content = str(detail.get("content") or "")
     effective_date = _extract_effective_date(content)
+    if not effective_date:
+        effective_date = _infer_csi300_effective_date(publish_date, title)
     detail_url = f"{CSINDEX_SITE}/zh-CN/about/newsDetail?id={notice_id}"
     links: list[AttachmentLink] = []
     seen: set[str] = set()
@@ -491,20 +519,77 @@ def _excel_adjustment_rows(frame: pd.DataFrame) -> tuple[list[dict[str, object]]
     return deletions, additions
 
 
+def _excel_single_role_rows(frame: pd.DataFrame, *, role: str) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    if frame.empty or frame.shape[1] < 4:
+        return rows
+    for _, row in frame.iterrows():
+        if not _is_hs300_excel_row(row):
+            continue
+        ticker = _ticker_text(row.iloc[2])
+        name = _clean_text(row.iloc[3])
+        if not re.fullmatch(r"\d{6}", ticker) or _is_missing_marker(name):
+            continue
+        rows.append({"ticker": ticker, "security_name": name, "role": role})
+    return rows
+
+
+def _excel_reserve_rows(frame: pd.DataFrame) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    if frame.empty or frame.shape[1] < 5:
+        return rows
+    for _, row in frame.iterrows():
+        if not _is_hs300_excel_row(row):
+            continue
+        rank_text = _clean_text(row.iloc[2])
+        ticker = _ticker_text(row.iloc[3])
+        name = _clean_text(row.iloc[4])
+        if not rank_text.isdigit() or not re.fullmatch(r"\d{6}", ticker) or _is_missing_marker(name):
+            continue
+        rows.append(
+            {
+                "rank": int(rank_text),
+                "ticker": ticker,
+                "security_name": name,
+                "role": "reserve",
+            }
+        )
+    return sorted(rows, key=lambda item: int(item["rank"]))
+
+
+def _normalized_sheet_name(name: object) -> str:
+    return _clean_text(name)
+
+
 def parse_hs300_excel_attachment(excel_path: Path) -> ParsedHs300Attachment:
     deletions: list[dict[str, object]] = []
     additions: list[dict[str, object]] = []
+    reserves: list[dict[str, object]] = []
     workbook = pd.ExcelFile(excel_path)
     for sheet_name in workbook.sheet_names:
         frame = pd.read_excel(workbook, sheet_name=sheet_name, header=None, dtype=object)
-        sheet_deletions, sheet_additions = _excel_adjustment_rows(frame)
-        for row in sheet_deletions:
-            row["order"] = len(deletions) + 1
-            deletions.append(row)
-        for row in sheet_additions:
-            row["order"] = len(additions) + 1
-            additions.append(row)
-    return ParsedHs300Attachment(deletions=deletions, additions=additions, reserves=[])
+        if frame.empty:
+            continue
+        normalized = _normalized_sheet_name(sheet_name)
+        if normalized == "调入":
+            for row in _excel_single_role_rows(frame, role="addition"):
+                row["order"] = len(additions) + 1
+                additions.append(row)
+        elif normalized == "调出":
+            for row in _excel_single_role_rows(frame, role="deletion"):
+                row["order"] = len(deletions) + 1
+                deletions.append(row)
+        elif normalized == "备选名单":
+            reserves.extend(_excel_reserve_rows(frame))
+        else:
+            sheet_deletions, sheet_additions = _excel_adjustment_rows(frame)
+            for row in sheet_deletions:
+                row["order"] = len(deletions) + 1
+                deletions.append(row)
+            for row in sheet_additions:
+                row["order"] = len(additions) + 1
+                additions.append(row)
+    return ParsedHs300Attachment(deletions=deletions, additions=additions, reserves=reserves)
 
 
 def _section(text: str, start_pattern: str, end_pattern: str) -> str:
@@ -1307,7 +1392,12 @@ def collect_official_hs300_sources(
             )
 
     if candidate_rows:
-        candidate_frame = validate_candidate_frame(pd.DataFrame(candidate_rows)).sort_values(
+        candidate_frame = (
+            pd.DataFrame(candidate_rows)
+            .drop_duplicates(subset=["batch_id", "ticker", "inclusion"], keep="first")
+            .reset_index(drop=True)
+        )
+        candidate_frame = validate_candidate_frame(candidate_frame).sort_values(
             ["announce_date", "inclusion", "running_variable", "ticker"],
             ascending=[True, False, False, True],
         )
