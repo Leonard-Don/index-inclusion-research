@@ -31,7 +31,7 @@
 支持 RDD 因果推断需要：
 
 - **样本规模**：≥10 年（约 20 个批次），覆盖 2014–2024。
-- **当前缺口**：约 14 个批次（2014-2022）。
+- **当前缺口**：约 9 个批次（2014-2019），全部卡在 CSIndex API 路径之外，需要外部档案介入。
 - **额外要求**：每批次的 `running_variable` 与 `cutoff` 必须可追溯到中证官方调整名单序，
   不是公开重建反推。
 
@@ -89,8 +89,10 @@ CLI 入口：`index-inclusion-collect-hs300-rdd-l3`（见 `docs/hs300_rdd_workfl
 
 ## 5. 风险与限制
 
-- **历史 PDF 链接 404**：中证 2020 年前的部分调整公告 PDF 已不可达；
-  archive.org snapshot 命中率约 60-70%。
+- **CSIndex API 在 2020 之前不发布备选名单（实证结论）**：2026-05-03 的 13 词搜索（包含 `沪深300备选 / 备选名单 / 样本备选 / 备选股票` 四个专项词）确认 CSIndex 历史档案没有任何"备选"专项公告；2015-12-28 #2882 唯一可解析的旧格式 Excel 也只有调入/调出列，无 `备选名单` sheet。要扩到 2014-2019，唯一路径是外部档案：
+  - archive.org Wayback Machine snapshot（命中率约 60-70%，但快照命中只是 web 页面，背后的附件文件和当前 CSIndex 一样不含 reserve list）
+  - CNInfo "重要事项"档案（上市公司端披露，可能包含被调入信息但通常不含完整候选排名）
+  - Wind / iFinD / CSMAR 等付费数据库（学术界通常路径，含历史 CSI300 候选排名表）
 - **schema drift**：中证早期使用的"新增 / 剔除"列表口径与 2020 之后不完全一致；
   字段映射需要逐批校对（特别是 ticker 前缀、行业分类规则）。
 - **ranking score vs adjustment list order**：即便补全 PDF，L3 仍是"官方调整名单序"
@@ -114,5 +116,7 @@ CLI 入口：`index-inclusion-collect-hs300-rdd-l3`（见 `docs/hs300_rdd_workfl
 | 2026-05-03 | 为线上采集新增历史搜索词、搜索诊断和年份覆盖输出 | 2020-2022 优先诊断窗口 | leo |
 | 2026-05-03 | 跑 collect-hs300-rdd-l3 `--since 2020-01-01 --until 2022-12-31`（3 个补充搜索词）。命中 5 个公告（2020-11、2021-05、2021-11、2022-05、2022-11）+ 6 个官方 Excel 附件，但全部为 addition-only 名单，**无 reserve/control list**。0 行进入 L3 草稿；9 行写入 manual_gap_worklist（P2，需手工 archive 检索）。结论：2020-2022 缺口是结构性 reserve-list 缺失，不是搜索词问题，需走 Wayback / CNInfo / 站内 web 搜索补 reserve 名单。 | 2020-2022 收口诊断 | claude |
 | 2026-05-03 | **结论修正**：人工 inspect Excel 附件后发现每个 2020-2022 文件都有 `调入 / 调出 / 备选名单` 三个 sheet，`备选名单` 含 `排序` 列直接给 RDD running variable。原 parser 只处理 6 列单 sheet 格式（2025+），漏读多 sheet 格式。修补 `_excel_single_role_rows` + `_excel_reserve_rows` + 按 sheet 名 dispatch；补 `_infer_csi300_effective_date` fallback（2nd Friday of next month），覆盖 2010-2025 所有批次。再跑 collector 得 5 个新批次 197 行，合并入正式 L3 → 11 批次 356 行。doctor 13/0/0；verdicts diff vs PAP 基线：0 changed；RDD `car_m1_p1` tau=0.039, p=0.048（n=120，新 L3）。 | csi300-2020-11 .. csi300-2022-11 | claude（PAP §7 已记录）|
-| _待填_ | _手工补 2014-2019_ | _待填_ | _待填_ |
-| _待填_ | _切换主表到 L3_ | _全量_ | _待填_ |
+| 2026-05-03 | **2010-2019 CSIndex 路径定论（负发现）**：跑 collector `--since 2010-01-01 --until 2019-12-31`，13 个搜索词（调整 + 备选两组）。CSIndex API 历史命中只有 2005-06、2005-12、2011-08、2013-08、2015-01、2015-12、2016-11 共 7 条，2014/2017/2018/2019 完全 `no_notice`。唯一可下载并解析的是 2015-12-28 #2882（`20151228cons.xls`），但单 sheet 6 列格式 + **无 `备选名单` sheet**，结构上不可能给 reserve list。"沪深300备选 / 备选名单 / 样本备选 / 备选股票"四个专项搜索词全 0 命中。结论：CSIndex 在 2020 之前没有把备选名单作为公开发布形式，CSIndex API 单一路径已经穷尽 → 11 批次 / 5 年 是当前可以到的上限。要继续扩到 ≥20 批次 / 10 年只能走 Wayback Machine / CNInfo / Wind / iFinD / CSMAR 等外部档案，**这是研究级数据采购任务**，不再是 collector 代码问题。 | 2010-2019 全窗口；2014/2017/2018/2019 完全无证据 | claude |
+| 2026-05-03 | **主表切换决策**：当前 L3 = 11 批次 / 5 年，仍 < ≥20 批次 / 10 年门槛。HS300 RDD 主表用法继续保持 **illustrative / preliminary**；论文正文按附录 / 方法论补充章节呈现。门槛不动；触发条件挂在外部档案（Wayback / 付费数据库）。 | §3 RDD 主表用法；§6 临时定位 | claude（PAP §3 不变）|
+| _待填_ | _Wayback / 付费数据库扩 2010-2019_ | _2010-2019 全部_ | _待填（外部依赖）_ |
+| _待填_ | _切换主表到 L3_ | _全量_ | _待填（卡 ≥20 批次门槛）_ |
