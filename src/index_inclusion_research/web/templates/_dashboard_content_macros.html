@@ -568,19 +568,26 @@
   <div class="surface track-surface-visual">
     <div class="figure-stack">
       {% if section.display_figures %}
+      {% set lead_figure = section.display_figures[0] %}
       <div class="figure-feature">
-        <div class="figure-media-shell figure-media-shell-feature">
-          <img src="{{ url_for('serve_result_file', subpath=section.display_figures[0].path) }}" alt="{{ section.display_figures[0].caption }}" {% if section.display_figures[0].width and section.display_figures[0].height %}width="{{ section.display_figures[0].width }}" height="{{ section.display_figures[0].height }}"{% endif %} loading="lazy" decoding="async">
+        {% if lead_figure.echart_id %}
+        <div class="echart-panel">
+          <div data-echart="{{ lead_figure.echart_id }}" class="echart-container echart-container-wide"></div>
         </div>
+        {% else %}
+        <div class="figure-media-shell figure-media-shell-feature">
+          <img src="{{ url_for('serve_result_file', subpath=lead_figure.path) }}" alt="{{ lead_figure.caption }}" {% if lead_figure.width and lead_figure.height %}width="{{ lead_figure.width }}" height="{{ lead_figure.height }}"{% endif %} loading="lazy" decoding="async">
+        </div>
+        {% endif %}
         <div class="figure-copy-panel figure-copy-panel-feature">
           <div class="figure-copy-block">
             <div class="figure-copy-kicker">图意</div>
-            <div class="figure-caption">{{ section.display_figures[0].caption_lead if section.display_figures[0].caption_lead else section.display_figures[0].caption }}</div>
+            <div class="figure-caption">{{ lead_figure.caption_lead if lead_figure.caption_lead else lead_figure.caption }}</div>
           </div>
-          {% if section.display_figures[0].caption_focus %}
+          {% if lead_figure.caption_focus %}
           <div class="figure-copy-block figure-focus-block">
             <div class="figure-copy-kicker">阅读重点</div>
-            <div class="figure-focus">{{ section.display_figures[0].caption_focus }}</div>
+            <div class="figure-focus">{{ lead_figure.caption_focus }}</div>
           </div>
           {% endif %}
         </div>

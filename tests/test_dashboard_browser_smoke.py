@@ -892,6 +892,100 @@ def test_sensitivity_threshold_chip_flips_verdict_card_strips() -> None:
             browser.close()
 
 
+def test_rdd_chart_renders_bandwidth_sweep() -> None:
+    """The HS300 RDD ECharts container should render with multiple bandwidth
+    fit lines (legend acts as bandwidth selector) and a subtitle reporting
+    τ/p/n at the default bandwidth."""
+
+    with (
+        _running_dashboard_server() as base_url,
+        playwright_sync_api.sync_playwright() as playwright,
+    ):
+        browser = playwright.chromium.launch()
+        try:
+            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
+            page.wait_for_load_state("networkidle")
+
+            container = page.locator('[data-echart="rdd_scatter"]')
+            assert container.count() == 1
+            container.first.scroll_into_view_if_needed()
+
+            # Wait until interactive_charts.js finishes initializing the
+            # chart (echarts.getInstanceByDom returns a non-null instance).
+            page.wait_for_function(
+                """
+                () => {
+                    if (typeof echarts === "undefined") return false;
+                    const el = document.querySelector('[data-echart="rdd_scatter"]');
+                    if (!el) return false;
+                    const inst = echarts.getInstanceByDom(el);
+                    return inst != null && !el.classList.contains("echart-loading");
+                }
+                """,
+                timeout=10_000,
+            )
+
+            chart_state = page.evaluate(
+                """
+                () => {
+                    const el = document.querySelector('[data-echart="rdd_scatter"]');
+                    const inst = echarts.getInstanceByDom(el);
+                    const opt = inst.getOption();
+                    return {
+                        title_text: opt.title?.[0]?.text || "",
+                        subtitle: opt.title?.[0]?.subtext || "",
+                        series_count: opt.series.length,
+                        series_types: opt.series.map(s => s.type),
+                        legend_data: opt.legend?.[0]?.data || [],
+                        legend_selected: opt.legend?.[0]?.selected || {},
+                    };
+                }
+                """
+            )
+
+            assert "HS300 RDD" in chart_state["title_text"]
+            # Subtitle records the default-bandwidth headline statistics.
+            assert "默认 bandwidth=0.06" in chart_state["subtitle"]
+            assert "τ=" in chart_state["subtitle"]
+            assert "p=" in chart_state["subtitle"]
+            assert "n=" in chart_state["subtitle"]
+
+            line_series_count = sum(1 for t in chart_state["series_types"] if t == "line")
+            scatter_series_count = sum(
+                1 for t in chart_state["series_types"] if t == "scatter"
+            )
+            # 2 scatter (treated/control) + ≥6 line series (≥3 bandwidth fits
+            # × 2 sides) + 1 cutoff marker line.
+            assert scatter_series_count == 2
+            assert line_series_count >= 4
+
+            # Legend should expose bandwidth-labeled entries; each looks like
+            # "bw=0.06 (τ=…%, p=…, n=…)".
+            bandwidth_labels = [
+                lbl for lbl in chart_state["legend_data"] if str(lbl).startswith("bw=")
+            ]
+            assert len(bandwidth_labels) >= 3, (
+                f"expected ≥3 bandwidth legend entries, got {bandwidth_labels}"
+            )
+
+            # Default selection: scatter series visible, only the
+            # default-bandwidth fit visible, other bandwidths off.
+            default_bw_label = next(
+                (lbl for lbl in bandwidth_labels if "bw=0.06" in str(lbl)),
+                None,
+            )
+            assert default_bw_label is not None
+            assert chart_state["legend_selected"][default_bw_label] is True
+            other_bw_labels = [lbl for lbl in bandwidth_labels if lbl != default_bw_label]
+            for lbl in other_bw_labels:
+                assert chart_state["legend_selected"][lbl] is False, (
+                    f"non-default bandwidth {lbl!r} should be hidden by default"
+                )
+        finally:
+            browser.close()
+
+
 def test_cross_market_section_hides_figures_in_brief_mode() -> None:
     """Brief mode should render the CMA section header but not show figures
     or the hypothesis map."""

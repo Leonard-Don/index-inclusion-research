@@ -111,6 +111,7 @@ def test_create_identification_figures_returns_cached_metadata_for_real_mode(tmp
             "caption": "中国样本 RDD 主图。图意：以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。阅读重点：聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
             "caption_lead": "中国样本 RDD 主图。以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。",
             "caption_focus": "聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
+            "echart_id": "rdd_scatter",
         }
     ]
 

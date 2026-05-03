@@ -749,8 +749,11 @@ function initChart(container) {
       instances.set(container, chart);
       container.classList.remove('echart-loading');
 
-      // hide the static fallback img if present
-      const fallback = container.parentElement?.querySelector('.echart-fallback');
+      // hide the static fallback img if present. .echart-fallback is a
+      // sibling of .echart-panel (the container's direct parent), so we
+      // walk up one level before searching.
+      const echartPanel = container.closest('.echart-panel');
+      const fallback = echartPanel?.parentElement?.querySelector(':scope > .echart-fallback');
       if (fallback) fallback.hidden = true;
     })
     .catch(err => {

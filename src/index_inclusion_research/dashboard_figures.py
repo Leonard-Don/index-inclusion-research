@@ -177,13 +177,13 @@ def create_identification_figures(
 
     figure_path = rdd_dir / "car_m1_p1_rdd_main.png"
     if figure_cache_is_fresh([figure_path], [event_level_path]):
-        return [
-            build_figure_entry(
-                figure_path,
-                to_relative=to_relative,
-                caption="中国样本 RDD 主图。图意：以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。阅读重点：聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
-            )
-        ]
+        cached_entry = build_figure_entry(
+            figure_path,
+            to_relative=to_relative,
+            caption="中国样本 RDD 主图。图意：以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。阅读重点：聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
+        )
+        cached_entry["echart_id"] = "rdd_scatter"
+        return [cached_entry]
     fig, ax = plt.subplots(figsize=(10.8, 6.0))
     ax.axvline(0, color="#5c6b77", linestyle="--", linewidth=1.2)
     ax.scatter(left["distance_to_cutoff"], left["car_m1_p1"], color="#d7b49e", alpha=0.24, s=28)
