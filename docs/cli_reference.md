@@ -156,9 +156,9 @@ index-inclusion-collect-hs300-rdd-l3 \
 默认输出位于 `results/literature/hs300_rdd_l3_collection/`：
 
 - `official_candidate_draft.csv`：可验收的候选草稿
-- `online_source_audit.csv`：公告、附件、解析状态和失败原因
+- `online_source_audit.csv`：公告、附件、解析状态和失败原因；Excel 调入/调出名单会被审计，但缺少备选对照时不会写入正式 L3
 - `online_search_diagnostics.csv`：每个搜索词的原始返回、标题匹配、主题匹配、日期窗口内匹配情况
-- `online_year_coverage.csv`：每个请求年份的 `candidate_found` / `notice_only` / `no_notice` 覆盖状态
+- `online_year_coverage.csv`：每个请求年份的 `candidate_found` / `notice_only` / `no_notice` 覆盖状态，并列出已解析调入/对照行数
 - `online_collection_report.md`：人类可读汇总和下一步命令
 
 ## Verdicts ↔ Literature 双向链接

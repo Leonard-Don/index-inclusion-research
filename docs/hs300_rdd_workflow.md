@@ -77,7 +77,7 @@ index-inclusion-plan-hs300-rdd-l3 --force
 index-inclusion-collect-hs300-rdd-l3 --force
 ```
 
-它会下载并解析中证官网“定期调整结果”公告附件中的沪深300调入名单与备选名单，生成 `official_candidate_draft.csv`、`online_source_audit.csv`、`online_search_diagnostics.csv`、`online_year_coverage.csv` 和 `online_collection_report.md`。确认草稿后写入正式 L3：
+它会下载并解析中证官网“定期调整结果”公告附件中的沪深300调入名单与备选名单，生成 `official_candidate_draft.csv`、`online_source_audit.csv`、`online_search_diagnostics.csv`、`online_year_coverage.csv` 和 `online_collection_report.md`。PDF 附件若同时包含调入名单与备选名单，会进入候选草稿；Excel 附件若只有调入/调出名单，会写入来源审计并标记为缺少 reserve controls，不会被提升为正式 L3。确认草稿后写入正式 L3：
 
 如果只想先补历史窗口，比如 2020-2022 批次：
 

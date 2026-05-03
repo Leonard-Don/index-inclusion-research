@@ -39,6 +39,7 @@
 - `_attachment_links_from_detail(...)`：解析公告中的附件 PDF 链接。
 - `_download_attachment(...)` + `_pdf_to_text(...)`：下载并 OCR 附件 PDF。
 - `parse_hs300_attachment_text(...)`：提取 inclusion / exclusion 候选名单。
+- `parse_hs300_excel_attachment(...)`：读取 XLS/XLSX 调入/调出名单；若缺少备选名单，只进入来源审计，不写入正式 L3 候选。
 - `collect_official_hs300_sources(...)`：批量采集入口。
 - `build_candidate_rows(...)`：把解析结果落到 candidates.csv 的 schema。
 - `online_search_diagnostics.csv`：记录每个搜索词的原始返回、HS300 标题命中、历史标题模式命中、主题命中和日期窗口内命中。
@@ -57,7 +58,7 @@ CLI 入口：`index-inclusion-collect-hs300-rdd-l3`（见 `docs/hs300_rdd_workfl
      --search-term "调整沪深300指数样本股" \
      --force
    ```
-   预期先产出 `official_candidate_draft.csv`、`online_source_audit.csv`、`online_search_diagnostics.csv`、`online_year_coverage.csv` 与 `online_collection_report.md`。若 `online_year_coverage.csv` 显示 `no_notice`，优先追加历史标题 `--search-term`；若显示 `notice_only`，优先检查附件 URL、PDF 文本格式和解析规则。每批次校对通过后再用 `index-inclusion-prepare-hs300-rdd --input ... --check-only` 验收。
+   预期先产出 `official_candidate_draft.csv`、`online_source_audit.csv`、`online_search_diagnostics.csv`、`online_year_coverage.csv` 与 `online_collection_report.md`。若 `online_year_coverage.csv` 显示 `no_notice`，优先追加历史标题 `--search-term`；若显示 `notice_only`，优先检查附件 URL、PDF/Excel 文本格式和解析规则。Excel 只含调入/调出名单时，必须继续补备选名单或其他官方边界证据，不能直接写入正式 L3。每批次校对通过后再用 `index-inclusion-prepare-hs300-rdd --input ... --check-only` 验收。
 
 2. **2014-2019 批次**（需要手工补完）：
    - 这部分中证站点可能已经清理了原始 PDF 附件，需要：
