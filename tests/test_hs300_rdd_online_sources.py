@@ -66,3 +66,125 @@ def test_build_candidate_rows_maps_official_order_around_cutoff() -> None:
 
     validated = online_sources.validate_candidate_frame(frame)
     assert _reconstructed_source_reason(Path("official_candidate_draft.csv"), validated) == ""
+
+
+def test_filter_notices_by_publish_date_window() -> None:
+    notices = [
+        {"id": 1, "publish_date": "2019-12-31"},
+        {"id": 2, "publish_date": "2020-05-29"},
+        {"id": 3, "publish_date": "2022-11-25"},
+        {"id": 4, "publish_date": "2023-05-26"},
+        {"id": 5, "publish_date": ""},
+    ]
+
+    filtered = online_sources._filter_notices_by_publish_date(
+        notices,
+        since="2020-01-01",
+        until="2022-12-31",
+    )
+
+    assert [notice["id"] for notice in filtered] == [2, 3]
+
+
+def test_main_passes_date_window_to_collector(monkeypatch, tmp_path: Path) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_collect(**kwargs):
+        captured.update(kwargs)
+        return {
+            "draft_output": tmp_path / "draft.csv",
+            "audit_output": tmp_path / "audit.csv",
+            "report_output": tmp_path / "report.md",
+            "formal_output": None,
+            "candidate_rows": 0,
+            "source_rows": 0,
+            "candidate_batches": 0,
+            "status": "no_candidates",
+        }
+
+    monkeypatch.setattr(online_sources, "collect_official_hs300_sources", fake_collect)
+
+    rc = online_sources.main(
+        [
+            "--since",
+            "2020-01-01",
+            "--until",
+            "2022-12-31",
+            "--notice-rows",
+            "120",
+            "--max-notices",
+            "6",
+            "--force",
+        ]
+    )
+
+    assert rc == 0
+    assert captured["since"] == "2020-01-01"
+    assert captured["until"] == "2022-12-31"
+    assert captured["notice_rows"] == 120
+    assert captured["max_notices"] == 6
+
+
+def test_collect_official_sources_writes_audit_when_no_candidates(monkeypatch, tmp_path: Path) -> None:
+    def fake_query(session, *, search_terms=online_sources.SEARCH_TERMS, rows=online_sources.DEFAULT_NOTICE_ROWS):
+        return [
+            {
+                "id": 100,
+                "title": "关于沪深300、中证500、中证1000等指数定期调整结果的公告",
+                "theme": "指数调样",
+                "publish_date": "2022-11-25",
+                "detail_url": "https://www.csindex.com.cn/zh-CN/about/newsDetail?id=100",
+            }
+        ]
+
+    def fake_detail(session, notice_id: int):
+        return {
+            "id": notice_id,
+            "title": "关于沪深300、中证500、中证1000等指数定期调整结果的公告",
+            "publishDate": "2022-11-25",
+            "content": "",
+            "enclosureList": [],
+        }
+
+    monkeypatch.setattr(online_sources, "query_rebalance_announcements", fake_query)
+    monkeypatch.setattr(online_sources, "fetch_notice_detail", fake_detail)
+
+    outputs = online_sources.collect_official_hs300_sources(
+        output_dir=tmp_path,
+        draft_output=tmp_path / "official_candidate_draft.csv",
+        audit_output=tmp_path / "online_source_audit.csv",
+        report_output=tmp_path / "online_collection_report.md",
+        attachment_dir=tmp_path / "official_attachments",
+        since="2020-01-01",
+        until="2022-12-31",
+        force=True,
+    )
+
+    assert outputs["status"] == "no_candidates"
+    assert outputs["candidate_rows"] == 0
+    assert outputs["source_rows"] == 1
+    assert (tmp_path / "official_candidate_draft.csv").exists()
+    assert (tmp_path / "online_source_audit.csv").exists()
+    report = (tmp_path / "online_collection_report.md").read_text(encoding="utf-8")
+    assert "没有解析出" in report
+
+
+def test_collect_official_sources_writes_header_when_no_notices(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(online_sources, "query_rebalance_announcements", lambda session, **kwargs: [])
+
+    outputs = online_sources.collect_official_hs300_sources(
+        output_dir=tmp_path,
+        draft_output=tmp_path / "official_candidate_draft.csv",
+        audit_output=tmp_path / "online_source_audit.csv",
+        report_output=tmp_path / "online_collection_report.md",
+        attachment_dir=tmp_path / "official_attachments",
+        since="2020-01-01",
+        until="2022-12-31",
+        force=True,
+    )
+
+    assert outputs["status"] == "no_candidates"
+    audit_header = (tmp_path / "online_source_audit.csv").read_text(encoding="utf-8").splitlines()[0]
+    assert "announcement_id" in audit_header
+    report = (tmp_path / "online_collection_report.md").read_text(encoding="utf-8")
+    assert "没有匹配到中证官网定期调整结果公告" in report

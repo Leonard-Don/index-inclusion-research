@@ -827,7 +827,7 @@ Create `docs/hs300_rdd_l3_collection_audit.md` with:
 
 ## 推荐执行顺序
 
-1. 跑 `index-inclusion-prepare-hs300-rdd --scrape` 把 2020-2022 的 PDF 抓全。
+1. 跑 `index-inclusion-collect-hs300-rdd-l3 --since 2020-01-01 --until 2022-12-31 --notice-rows 120 --force` 把 2020-2022 的 PDF 抓全。
 2. 用 `data/raw/hs300_rdd_candidates.template.csv` 模板手工填 2014-2019 共 ~10 个批次。
 3. 每补一个批次跑一次 `index-inclusion-doctor`，确保 schema 对齐。
 4. 等总样本 ≥10 年、≥1500 行后切到 L3 主表（移除当前 L3-fallback 警告）。
