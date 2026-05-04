@@ -84,11 +84,11 @@ def test_build_limits_section_returns_scope_and_identification_tables() -> None:
     assert "中国 RDD L" in section["summary_cards"][1]["meta"]
     assert "证据等级为" in section["summary_cards"][1]["foot"]
     assert [table["label"] for table in section["primary_tables"]] == ["样本与数据范围"]
-    assert [table["label"] for table in section["detail_tables"]] == ["识别范围说明"]
+    assert [table["label"] for table in section["detail_tables"]] == ["识别范围说明", "数据来源 · 引用清单"]
     assert section["section_view"]["head"]["section_id"] == "limits"
     assert section["section_view"]["show_suite"] is True
     assert section["section_view"]["primary"]["key"] == "demo-limits-primary-tables"
-    assert section["section_view"]["detail"]["demo_title"] == "研究边界补充表（1 张）"
+    assert section["section_view"]["detail"]["demo_title"] == "研究边界补充表（2 张）"
 
 
 def test_build_limits_section_derives_live_rdd_tier_for_summary_cards_and_scope_table() -> None:

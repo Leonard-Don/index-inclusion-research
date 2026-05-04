@@ -921,6 +921,81 @@ def test_l3_coverage_timeline_appears_in_identification_track() -> None:
             browser.close()
 
 
+def test_rdd_secondary_outcome_thumbs_render_in_identification_track() -> None:
+    """The 3 RDD secondary outcome bin scatter figures (CAR[-3,+3] /
+    turnover / volume) should surface alongside the L3 timeline as thumbs
+    so reviewers can see RDD robustness across outcomes without leaving
+    the home page."""
+
+    expected_thumbs = [
+        ("car_m3_p3_rdd_bins", "CAR[-3,+3]"),
+        ("turnover_change_rdd_bins", "换手"),
+        ("volume_change_rdd_bins", "成交量"),
+    ]
+
+    with (
+        _running_dashboard_server() as base_url,
+        playwright_sync_api.sync_playwright() as playwright,
+    ):
+        browser = playwright.chromium.launch()
+        try:
+            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
+            page.wait_for_load_state("networkidle")
+
+            section = page.locator("#identification_china_track")
+            assert section.count() == 1
+
+            for filename_stem, caption_keyword in expected_thumbs:
+                imgs = section.locator(f"img[src*='{filename_stem}']")
+                assert imgs.count() == 1, (
+                    f"expected exactly one '{filename_stem}' thumb in identification track"
+                )
+                alt = imgs.first.get_attribute("alt") or ""
+                assert "RDD 稳健性" in alt
+                assert caption_keyword in alt
+        finally:
+            browser.close()
+
+
+def test_data_sources_citation_table_renders_in_limits_section() -> None:
+    """The data_sources.csv citation table should be reachable from the
+    limits section in full mode, with project-relative paths (no absolute
+    home-directory leaks in the rendered cells)."""
+
+    with (
+        _running_dashboard_server() as base_url,
+        playwright_sync_api.sync_playwright() as playwright,
+    ):
+        browser = playwright.chromium.launch()
+        try:
+            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
+            page.wait_for_load_state("networkidle")
+
+            html = page.content()
+            assert "数据来源 · 引用清单" in html
+            assert "real_events_clean.csv" in html
+            assert "real_prices.csv" in html
+            assert "Yahoo Finance" in html
+
+            # Ensure rendered citation table cells stay project-relative;
+            # no absolute home-directory leak inside the citation table.
+            citation_label_idx = html.find("数据来源 · 引用清单")
+            assert citation_label_idx > 0
+            table_open = html.find("<table", citation_label_idx)
+            table_close = html.find("</table>", table_open)
+            assert table_open > 0 and table_close > table_open
+            citation_table_html = html[table_open:table_close]
+            assert "real_events_clean.csv" in citation_table_html
+            assert "/Users/" not in citation_table_html, (
+                "citation table rendered an absolute home-dir path; "
+                "expected project-relative (e.g. data/processed/real_events_clean.csv)"
+            )
+        finally:
+            browser.close()
+
+
 def test_pap_status_chip_renders_with_baseline_diff() -> None:
     """The PAP (pre-analysis plan) hero chip should surface the latest
     snapshot's drift status. Frozen state when current verdicts match the

@@ -183,10 +183,9 @@ def create_identification_figures(
             caption="中国样本 RDD 主图。图意：以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。阅读重点：聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
         )
         cached_entry["echart_id"] = "rdd_scatter"
-        coverage_entry = _l3_coverage_figure_entry(root, to_relative=to_relative)
-        if coverage_entry is not None:
-            return [cached_entry, coverage_entry]
-        return [cached_entry]
+        return _assemble_identification_figures(
+            root, to_relative=to_relative, lead_entry=cached_entry, rdd_dir=rdd_dir
+        )
     fig, ax = plt.subplots(figsize=(10.8, 6.0))
     ax.axvline(0, color="#5c6b77", linestyle="--", linewidth=1.2)
     ax.scatter(left["distance_to_cutoff"], left["car_m1_p1"], color="#d7b49e", alpha=0.24, s=28)
@@ -214,10 +213,81 @@ def create_identification_figures(
     )
     rdd_entry["echart_id"] = "rdd_scatter"
 
+    return _assemble_identification_figures(
+        root, to_relative=to_relative, lead_entry=rdd_entry, rdd_dir=rdd_dir
+    )
+
+
+# Outcome-name → caption + thumb label for the RDD secondary-outcome bin
+# scatter PNGs that hs300_rdd.run_analysis emits alongside the main car_m1_p1
+# figure. Surfacing them as track thumbs gives reviewers a visual robustness
+# check ("does the discontinuity also show up on wider windows / volume /
+# turnover, not just car_m1_p1?") without leaving the main page.
+_RDD_SECONDARY_OUTCOMES: tuple[tuple[str, str, str, str], ...] = (
+    (
+        "car_m3_p3_rdd_bins.png",
+        "RDD 稳健性 · CAR[-3,+3]",
+        (
+            "RDD 稳健性副图：把 outcome 换成 CAR[-3,+3] 看断点是否依然存在。"
+            "阅读重点：分箱均值在 0 附近的跳跃方向应与主图 CAR[-1,+1] 一致；"
+            "若幅度衰减说明效应集中在更短窗口。"
+        ),
+        "wide",
+    ),
+    (
+        "turnover_change_rdd_bins.png",
+        "RDD 稳健性 · 换手变化",
+        (
+            "RDD 稳健性副图：outcome=换手率变化。"
+            "阅读重点：处理组在 0 右侧应有正向集中（被动需求），"
+            "若同时出现 CAR 跳跃和换手集中，价格压力解释更稳。"
+        ),
+        "wide",
+    ),
+    (
+        "volume_change_rdd_bins.png",
+        "RDD 稳健性 · 成交量变化",
+        (
+            "RDD 稳健性副图：outcome=成交量变化。"
+            "阅读重点：和换手率副图同方向看；"
+            "成交量集中度通常是事件需求冲击的最直接信号。"
+        ),
+        "wide",
+    ),
+)
+
+
+def _assemble_identification_figures(
+    root: Path,
+    *,
+    to_relative: RelativePathBuilder,
+    lead_entry: FigureEntry,
+    rdd_dir: Path,
+) -> list[FigureEntry]:
+    """Compose the identification track's display_figures: rdd lead +
+    L3 coverage timeline + 3 RDD secondary outcome thumbs.
+
+    The track template renders display_figures[0] as the feature image
+    and display_figures[1:5] as a thumb-grid; we hand it 5 entries so the
+    grid fills with timeline + 3 robustness thumbs.
+    """
+    figures: list[FigureEntry] = [lead_entry]
     coverage_entry = _l3_coverage_figure_entry(root, to_relative=to_relative)
     if coverage_entry is not None:
-        return [rdd_entry, coverage_entry]
-    return [rdd_entry]
+        figures.append(coverage_entry)
+    for filename, label, caption, layout_class in _RDD_SECONDARY_OUTCOMES:
+        path = rdd_dir / filename
+        if not path.exists():
+            continue
+        entry = build_figure_entry(
+            path,
+            to_relative=to_relative,
+            caption=caption,
+            label=label,
+            layout_class=layout_class,
+        )
+        figures.append(entry)
+    return figures
 
 
 _L3_COVERAGE_TARGET_BATCHES = 20  # ~10-year window, see docs/hs300_rdd_l3_collection_audit.md
