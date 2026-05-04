@@ -682,6 +682,67 @@ def check_rdd_l3_sample_readiness(
     )
 
 
+def check_rdd_robustness_panel(
+    *,
+    root: Path = ROOT,
+) -> CheckResult:
+    """Verify the RDD robustness panel (main / donut / placebo / polynomial)
+    is on disk alongside rdd_summary.csv. Locks the new robustness suite
+    into the project health gate so a broken hs300_rdd run can't leave
+    rdd_summary fresh while rdd_robustness silently goes stale."""
+    name = "rdd_robustness_panel"
+    summary_path = root / "results" / "literature" / "hs300_rdd" / "rdd_summary.csv"
+    robustness_path = root / "results" / "literature" / "hs300_rdd" / "rdd_robustness.csv"
+    if not summary_path.exists():
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=f"{_relative_label(summary_path)} is missing; skipping robustness check.",
+            fix="Run `index-inclusion-hs300-rdd` to regenerate the RDD outputs.",
+        )
+    if not robustness_path.exists():
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"{_relative_label(summary_path)} exists, but "
+                f"{_relative_label(robustness_path)} is missing — "
+                "the robustness panel never ran or failed silently."
+            ),
+            fix="Run `index-inclusion-hs300-rdd` to regenerate rdd_robustness.csv alongside rdd_summary.csv.",
+        )
+    try:
+        df = pd.read_csv(robustness_path)
+    except Exception as exc:  # noqa: BLE001
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=f"Unable to read {_relative_label(robustness_path)}: {exc}",
+            fix="Inspect rdd_robustness.csv and rerun `index-inclusion-hs300-rdd` if corrupted.",
+        )
+    expected_kinds = {"main", "donut", "placebo", "polynomial"}
+    actual_kinds = set(df.get("spec_kind", pd.Series(dtype=str)).astype(str).unique())
+    missing = expected_kinds - actual_kinds
+    if missing:
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"{_relative_label(robustness_path)} is missing spec kind(s): "
+                f"{sorted(missing)}; expected all four (main / donut / placebo / polynomial)."
+            ),
+            fix="Rerun `index-inclusion-hs300-rdd` to regenerate the full robustness panel.",
+        )
+    n_rows = int(df.shape[0])
+    return CheckResult(
+        name=name,
+        status="pass",
+        message=(
+            f"RDD robustness panel covers all 4 spec kinds across {n_rows} row(s)."
+        ),
+    )
+
+
 def check_console_scripts_importable() -> CheckResult:
     """Every console_script declared in pyproject.toml resolves to a callable."""
     pyproject = ROOT / "pyproject.toml"
@@ -888,6 +949,7 @@ DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_h6_weight_change_readiness,
     check_h7_cn_sector_readiness,
     check_rdd_l3_sample_readiness,
+    check_rdd_robustness_panel,
     check_matched_sample_balance,
     check_match_robustness_grid,
     check_chart_builders_register,

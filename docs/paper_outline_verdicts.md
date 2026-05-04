@@ -84,12 +84,28 @@ _细节_: US eligible sectors=8, max=+3.90(Materials), min=-2.05(Real Estate), s
 
 **通用稳健性补强**:
 
-- HS300 RDD 当前已使用 L3 官方候选边界样本，但仅覆盖 2023-05 到 2025-11 共 6 个批次；
-  在扩展到 ≥10 年以前，RDD 结论仍应限定为初步识别证据，不可表述为完整中证官方历史 ranking score 因果结论。
+- HS300 RDD 当前已使用 L3 官方候选边界样本，覆盖 2020-11 到 2025-11 共 11 个批次；
+  在扩展到 ≥10 年（约 20 批次）以前，RDD 结论仍应限定为初步识别证据，不可表述为完整中证官方历史 ranking score 因果结论。
+- RDD 稳健性面板（main / donut / placebo / polynomial）已落到 `rdd_robustness.csv` 与首页 forest plot；
+  论文写作时建议在主表脚注同时引用稳健性结果，避免只报告显著的 main spec。
 - 跨市场比较默认按事件汇总(announce vs effective × CN vs US 4 象限),后续可叠加事件级
   bootstrap / permutation 检验，以及 sector × size 的交互检验，进一步压低单通道误判风险。
 - 长窗口(>120 日)的 retention ratio 在样本量收缩时会跳到 NA,
   当前 demand_curve 主线主要靠 `[0,+60]` / `[0,+120]` 给出方向性结论。
+
+### HS300 RDD 稳健性面板
+
+`results/literature/hs300_rdd/rdd_robustness.csv` 在 main 局部线性的基础上跑了 4 类稳健性 spec，**统一锁定到 main 自动选出的 bandwidth**（避免 placebo cutoff 的样本-窗口漂移把 spec 噪声混进 τ）：
+
+| 设定 | τ (CAR[-1,+1]) | p | n_obs | 解读 |
+|---|---|---|---|---|
+| main · 局部线性 | **+3.92%** | **0.048** | 120 | 边界显著 |
+| donut(±0.01) | +4.93% | 0.102 | 102 | 扔近邻后变化 |
+| placebo cutoff +0.05 | -1.98% | 0.184 | 130 | placebo 不显著（识别合理） |
+| placebo cutoff -0.05 | -2.44% | 0.259 | 72 | placebo 不显著（识别合理） |
+| polynomial order=2 | +0.37% | 0.921 | 120 | spec sensitivity（高阶项吸收跳跃） |
+
+**论文级表述建议**：HS300 RDD main 在公告日 CAR[-1,+1] 上的边界显著（τ=3.92%, p=0.048, n=120）；placebo cutoff 的 τ 都接近 0 支持识别合理，但 donut / polynomial 提示效应对设定敏感。**结论应当限定为初步识别证据**，论文需如实报告全套稳健性面板。
 
 ---
 
