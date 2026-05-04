@@ -52,7 +52,9 @@ def _section_specs(root: Path) -> tuple[BundleSection, ...]:
             ),
             explicit_files=(
                 "rdd_summary.csv",
+                "rdd_summary.tex",
                 "rdd_robustness.csv",
+                "rdd_robustness.tex",
                 "rdd_status.csv",
                 "mccrary_density_test.csv",
                 "candidate_batch_audit.csv",
