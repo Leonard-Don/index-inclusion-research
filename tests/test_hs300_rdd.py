@@ -263,3 +263,77 @@ def test_build_candidate_batch_audit_summarises_cutoff_coverage() -> None:
         "control_rows": 1,
         "crossing_batches": 1,
     }
+
+
+def test_render_rdd_summary_tex_emits_expected_rows() -> None:
+    summary = pd.DataFrame(
+        [
+            {
+                "outcome": "car_m1_p1",
+                "bandwidth": 0.06,
+                "n_obs": 120,
+                "n_left": 42,
+                "n_right": 78,
+                "tau": 0.0392,
+                "p_value": 0.048,
+            },
+            {
+                "outcome": "volume_change",
+                "bandwidth": 0.06,
+                "n_obs": 118,
+                "n_left": 42,
+                "n_right": 76,
+                "tau": 0.318,
+                "p_value": 0.036,
+            },
+        ]
+    )
+    tex = hs300_rdd._render_rdd_summary_tex(summary)
+    # Tabular column count matches the 7-field header (lrrrrrr).
+    assert "\\begin{tabular}{lrrrrrr}" in tex
+    # OUTCOME_LATEX_LABELS maps the symbol-friendly form
+    assert "CAR$[-1,+1]$" in tex
+    assert "成交量变化" in tex
+    # τ rendered as percent with sign
+    assert "+3.92\\%" in tex
+    assert "0.048" in tex
+
+
+def test_render_rdd_robustness_tex_orders_specs_and_includes_ci() -> None:
+    robustness = pd.DataFrame(
+        [
+            # Intentionally out of canonical order to verify sort.
+            {"spec": "polynomial order=2", "spec_kind": "polynomial", "tau": 0.004, "std_error": 0.037, "p_value": 0.92, "n_obs": 120},
+            {"spec": "main · 局部线性", "spec_kind": "main", "tau": 0.039, "std_error": 0.020, "p_value": 0.048, "n_obs": 120},
+            {"spec": "donut(±0.01)", "spec_kind": "donut", "tau": 0.049, "std_error": 0.030, "p_value": 0.102, "n_obs": 102},
+            {"spec": "placebo cutoff +0.05", "spec_kind": "placebo", "tau": -0.020, "std_error": 0.015, "p_value": 0.184, "n_obs": 130},
+        ]
+    )
+    tex = hs300_rdd._render_rdd_robustness_tex(robustness)
+    assert "\\begin{tabular}{lrrrrl}" in tex
+    # Order: main, donut, placebo, polynomial
+    main_idx = tex.find("main · 局部线性")
+    donut_idx = tex.find("donut")
+    placebo_idx = tex.find("placebo")
+    poly_idx = tex.find("polynomial")
+    assert 0 < main_idx < donut_idx < placebo_idx < poly_idx
+    # Interpretation column populated correctly
+    assert "边界显著" in tex
+    assert "placebo 不显著" in tex
+    assert "高阶项吸收跳跃" in tex
+    # 95% CI brackets render with both endpoints in [+/-X.YY\%, +/-X.YY\%] form.
+    import re
+
+    assert re.search(r"\[[+-]\d+\.\d\d\\%, [+-]\d+\.\d\d\\%\]", tex) is not None
+
+
+def test_render_rdd_summary_tex_handles_empty_frame() -> None:
+    tex = hs300_rdd._render_rdd_summary_tex(pd.DataFrame())
+    assert "\\begin{tabular}" in tex
+    assert "\\bottomrule" in tex
+
+
+def test_render_rdd_robustness_tex_handles_empty_frame() -> None:
+    tex = hs300_rdd._render_rdd_robustness_tex(pd.DataFrame())
+    assert "\\begin{tabular}" in tex
+    assert "\\bottomrule" in tex

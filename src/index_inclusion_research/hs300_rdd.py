@@ -49,6 +49,155 @@ STATUS_FILE = OUTPUT_DIR / "rdd_status.csv"
 AUDIT_FILE = OUTPUT_DIR / "candidate_batch_audit.csv"
 
 
+_OUTCOME_LATEX_LABELS = {
+    "car_m1_p1": "CAR$[-1,+1]$",
+    "car_m3_p3": "CAR$[-3,+3]$",
+    "car_m5_p5": "CAR$[-5,+5]$",
+    "turnover_change": "换手率变化",
+    "volume_change": "成交量变化",
+    "volatility_change": "波动率变化",
+}
+
+
+def _format_pct(value: object) -> str:
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return "—"
+    if v != v:  # NaN
+        return "—"
+    return f"{v * 100:+.2f}\\%"
+
+
+def _format_p(value: object) -> str:
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return "—"
+    if v != v:
+        return "—"
+    return f"{v:.3f}"
+
+
+def _format_int(value: object) -> str:
+    try:
+        v = int(float(value))
+    except (TypeError, ValueError):
+        return "—"
+    return str(v)
+
+
+def _format_bandwidth(value: object) -> str:
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return "—"
+    if v != v:
+        return "—"
+    # Bandwidth values like 0.0600000000000022 should display as 0.060.
+    return f"{v:.3f}"
+
+
+def _render_rdd_summary_tex(rdd_summary: pd.DataFrame) -> str:
+    """LaTeX `tabular` for results/literature/hs300_rdd/rdd_summary.csv.
+
+    One row per outcome; columns are outcome / bandwidth / n / τ / p.
+    Mirrors the CMA verdict tex pattern (booktabs-friendly, no document
+    preamble) so the paper can `\\input` it directly.
+    """
+    lines: list[str] = [
+        "% auto-generated HS300 RDD main summary table",
+        "\\begin{tabular}{lrrrrrr}",
+        "\\toprule",
+        "Outcome & Bandwidth & $n$ & $n_{<0}$ & $n_{\\ge 0}$ & $\\tau$ & $p$ \\\\",
+        "\\midrule",
+    ]
+    if rdd_summary is not None and not rdd_summary.empty:
+        for _, row in rdd_summary.iterrows():
+            outcome_key = str(row.get("outcome", ""))
+            outcome_label = _OUTCOME_LATEX_LABELS.get(outcome_key, outcome_key)
+            lines.append(
+                f"{outcome_label} & "
+                f"{_format_bandwidth(row.get('bandwidth'))} & "
+                f"{_format_int(row.get('n_obs'))} & "
+                f"{_format_int(row.get('n_left'))} & "
+                f"{_format_int(row.get('n_right'))} & "
+                f"{_format_pct(row.get('tau'))} & "
+                f"{_format_p(row.get('p_value'))} \\\\"
+            )
+    lines.append("\\bottomrule")
+    lines.append("\\end{tabular}")
+    return "\n".join(lines) + "\n"
+
+
+def _render_rdd_robustness_tex(rdd_robustness: pd.DataFrame) -> str:
+    """LaTeX `tabular` for results/literature/hs300_rdd/rdd_robustness.csv.
+
+    One row per spec (main / donut / placebo / polynomial). Columns:
+    spec / n / τ / 95% CI / p / interpretation. Bandwidth is locked to
+    main's choice across all rows (see ``run_rdd_robustness``) so it
+    isn't printed per-row to keep the table compact.
+    """
+    spec_kind_order = {"main": 0, "donut": 1, "placebo": 2, "polynomial": 3}
+
+    def _ci(row: pd.Series) -> str:
+        try:
+            tau = float(row.get("tau"))
+            se = float(row.get("std_error"))
+        except (TypeError, ValueError):
+            return "—"
+        if tau != tau or se != se:
+            return "—"
+        return f"[{(tau - 1.96 * se) * 100:+.2f}\\%, {(tau + 1.96 * se) * 100:+.2f}\\%]"
+
+    def _interp(row: pd.Series) -> str:
+        spec_kind = str(row.get("spec_kind", ""))
+        try:
+            p = float(row.get("p_value"))
+        except (TypeError, ValueError):
+            p = float("nan")
+        if spec_kind == "main":
+            if p == p and p < 0.05:
+                return "边界显著"
+            if p == p and p < 0.10:
+                return "边界 marginal"
+            return "未显著"
+        if spec_kind == "placebo":
+            return "placebo 不显著（识别合理）" if not (p == p and p < 0.10) else "placebo 显著（识别存疑）"
+        if spec_kind == "donut":
+            return "扔近邻后变化"
+        if spec_kind == "polynomial":
+            return "高阶项吸收跳跃" if not (p == p and p < 0.10) else "高阶项下仍显著"
+        return ""
+
+    rows: list[str] = [
+        "% auto-generated HS300 RDD robustness panel",
+        "\\begin{tabular}{lrrrrl}",
+        "\\toprule",
+        "Specification & $n$ & $\\tau$ & 95\\% CI & $p$ & 解读 \\\\",
+        "\\midrule",
+    ]
+    if rdd_robustness is not None and not rdd_robustness.empty:
+        ordered = rdd_robustness.copy()
+        ordered["_kind_rank"] = ordered.get(
+            "spec_kind",
+            pd.Series([""] * len(ordered)),
+        ).map(lambda k: spec_kind_order.get(str(k), 99))
+        ordered = ordered.sort_values(["_kind_rank", "spec"])
+        for _, row in ordered.iterrows():
+            rows.append(
+                f"{row.get('spec', '')} & "
+                f"{_format_int(row.get('n_obs'))} & "
+                f"{_format_pct(row.get('tau'))} & "
+                f"{_ci(row)} & "
+                f"{_format_p(row.get('p_value'))} & "
+                f"{_interp(row)} \\\\"
+            )
+    rows.append("\\bottomrule")
+    rows.append("\\end{tabular}")
+    return "\n".join(rows) + "\n"
+
+
 def _display_path(path: Path) -> str:
     try:
         return path.resolve().relative_to(ROOT.resolve()).as_posix()
@@ -514,6 +663,15 @@ def run_analysis(
     # directly from rdd_robustness.csv or the dashboard forest plot.
     rdd_robustness = run_rdd_robustness(event_level, outcome_col="car_m1_p1")
     save_dataframe(rdd_robustness, OUTPUT_DIR / "rdd_robustness.csv")
+
+    # Paper-ready LaTeX renders so the bundle's paper/rdd/ folder has
+    # \input-able tables alongside the CSV evidence.
+    (OUTPUT_DIR / "rdd_summary.tex").write_text(
+        _render_rdd_summary_tex(rdd_summary), encoding="utf-8"
+    )
+    (OUTPUT_DIR / "rdd_robustness.tex").write_text(
+        _render_rdd_robustness_tex(rdd_robustness), encoding="utf-8"
+    )
 
     mccrary = compute_mccrary_density_test(
         event_level, running_col="distance_to_cutoff"
