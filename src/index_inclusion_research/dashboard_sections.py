@@ -425,10 +425,21 @@ def build_limits_section(
         ]
     )
 
+    # data_sources.csv stores absolute paths from the pipeline run; rewrite
+    # to project-relative for display so the citation table doesn't leak
+    # the contributor's home directory.
+    citation_table = data_sources.copy()
+    if not citation_table.empty and "文件" in citation_table.columns:
+        root_str = str(root)
+        citation_table["文件"] = citation_table["文件"].astype(str).apply(
+            lambda p: p[len(root_str) + 1 :] if p.startswith(root_str + "/") else p
+        )
+
     tables = attach_display_tiers(
         [
             {"label": "样本与数据范围", "html": render_table(scope_table, compact=True), "layout_class": "wide"},
             {"label": "识别范围说明", "html": render_table(identification_scope, compact=True), "layout_class": "wide"},
+            {"label": "数据来源 · 引用清单", "html": render_table(citation_table, compact=True), "layout_class": "wide", "tier": "detail"},
         ]
     )
     primary_tables, detail_tables = split_items_by_tier(tables)
