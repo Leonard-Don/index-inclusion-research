@@ -84,6 +84,10 @@ def run_rebuild_all_main() -> int | None:
     return _run_package_main("index_inclusion_research.rebuild_all")
 
 
+def run_paper_bundle_main() -> int | None:
+    return _run_package_main("index_inclusion_research.paper_bundle")
+
+
 def run_verdict_summary_main() -> int | None:
     return _run_package_main("index_inclusion_research.verdict_summary")
 

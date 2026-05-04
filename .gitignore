@@ -11,6 +11,7 @@ coverage.xml
 htmlcov/
 output/
 tmp/
+paper/
 .worktrees/
 
 data/processed/*
