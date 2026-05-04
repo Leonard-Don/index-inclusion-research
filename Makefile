@@ -1,4 +1,4 @@
-.PHONY: setup sync lock test lint typecheck serve coverage clean help rebuild verdicts doctor doctor-strict
+.PHONY: setup sync lock test lint typecheck serve coverage clean help rebuild verdicts doctor doctor-strict paper
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -43,6 +43,9 @@ doctor: ## Run project health checks (paper IDs / CSVs / chart registry / script
 
 doctor-strict: ## Run project health checks with --fail-on-warn (CI-strict)
 	index-inclusion-doctor --fail-on-warn
+
+paper: ## Aggregate paper-grade artefacts into ./paper/ (tables / figures / narrative / RDD)
+	index-inclusion-paper-bundle --force
 
 clean: ## Remove generated artifacts
 	rm -rf htmlcov .coverage .pytest_cache .ruff_cache __pycache__
