@@ -226,6 +226,11 @@ class DashboardHomeContextBuilder:
     build_cross_market_section: Callable[[ModeName], dict[str, Any]] | None = None
     write_cache: AnalysisCache | None = None
 
+    def build_pap_meta(self) -> dict[str, Any]:
+        from index_inclusion_research.dashboard_loaders import load_pap_summary
+
+        return load_pap_summary(self.root)
+
     @staticmethod
     def _empty_secondary_section() -> SecondarySection:
         return {"display_summary": "", "display_tables": [], "summary_cards": []}
@@ -307,6 +312,7 @@ class DashboardHomeContextBuilder:
             "refresh_meta": self.refresh_status_payload(
                 display_mode, "overview", current_open_panels
             ),
+            "pap_meta": self.build_pap_meta(),
             "refresh_status_url": refresh_status_url,
             "current_open_panels": current_open_panels,
             "overview_metrics": build_overview_metrics(self.root, snapshot=snapshot),

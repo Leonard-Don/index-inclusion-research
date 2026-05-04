@@ -4007,6 +4007,46 @@
       height: 360px;
       min-height: 320px;
     }
+
+    /* PAP (pre-analysis plan) drift indicator — inline pill that sits
+       inside the hero refresh-status-summary-strip alongside contract /
+       health pills. Stays in-line so the hero side height doesn't grow.
+       Detail (headline + snapshot path) is exposed via title attribute
+       and hidden child spans the smoke test reads. */
+    .pap-status-pill-inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border: 1px solid rgba(24, 33, 43, 0.12);
+      background: rgba(255, 255, 255, 0.84);
+      font-size: 11px;
+      line-height: 1.2;
+    }
+    .pap-status-pill-inline[data-drift-state="frozen"] {
+      border-color: rgba(15, 92, 110, 0.36);
+      background: rgba(232, 244, 246, 0.84);
+    }
+    .pap-status-pill-inline[data-drift-state="drift"] {
+      border-color: rgba(166, 59, 40, 0.36);
+      background: rgba(249, 235, 230, 0.84);
+    }
+    .pap-status-pill-inline .pap-status-kicker {
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .pap-status-pill-inline .pap-status-state {
+      font-weight: 600;
+    }
+    .pap-status-pill-inline .pap-status-state-frozen { color: #0f5c6e; }
+    .pap-status-pill-inline .pap-status-state-drift { color: #a63b28; }
+    .pap-status-pill-inline .pap-status-state-missing { color: #5c6b77; }
+    .pap-status-pill-inline .pap-status-summary {
+      color: var(--text-strong, #18212b);
+    }
     .echart-loading::after {
       content: "加载图表…";
       position: absolute;

@@ -69,7 +69,7 @@
 {% endif %}
 {%- endmacro %}
 
-{% macro render_refresh_status_panel(refresh_meta) -%}
+{% macro render_refresh_status_panel(refresh_meta, pap_meta=none) -%}
 <div class="refresh-status hero-status" data-refresh-panel data-state="{{ refresh_meta.status }}">
   <div class="refresh-status-head">
     <div>
@@ -105,6 +105,7 @@
     <div class="refresh-status-summary-pill" data-refresh-health-summary>
       {{ refresh_meta.health_status_label or "—" }}
     </div>
+    {{ render_pap_status_pill(pap_meta) }}
   </div>
   <div class="hero-status-inline">
     <div class="hero-status-inline-item">
@@ -189,7 +190,7 @@
 </div>
 {%- endmacro %}
 
-{% macro render_hero_section(overview_summary, overview_metrics, refresh_meta) -%}
+{% macro render_hero_section(overview_summary, overview_metrics, refresh_meta, pap_meta=none) -%}
 <section class="hero" id="overview" data-waypoint data-waypoint-kind="section" data-waypoint-label="总览">
   <div class="hero-copy">
     <div class="eyebrow">研究总览</div>
@@ -204,10 +205,28 @@
   <div class="hero-side">
     <div class="hero-side-inner">
       {{ render_hero_metrics(overview_metrics) }}
-      {{ render_refresh_status_panel(refresh_meta) }}
+      {{ render_refresh_status_panel(refresh_meta, pap_meta) }}
     </div>
   </div>
 </section>
+{%- endmacro %}
+
+{% macro render_pap_status_pill(pap_meta) -%}
+{% if pap_meta and pap_meta.available %}
+<div class="refresh-status-summary-pill pap-status-pill-inline" data-pap-summary data-drift-state="{{ pap_meta.drift_state }}" title="{{ pap_meta.headline }} · 快照 {{ pap_meta.snapshot_path }}">
+  <span class="pap-status-kicker">PAP</span>
+  {% if pap_meta.drift_state == "frozen" %}
+  <span class="pap-status-state pap-status-state-frozen">基线已锁</span>
+  {% elif pap_meta.drift_state == "drift" %}
+  <span class="pap-status-state pap-status-state-drift">偏离</span>
+  {% else %}
+  <span class="pap-status-state pap-status-state-missing">缺数据</span>
+  {% endif %}
+  <span class="pap-status-summary" data-pap-summary-label>{{ pap_meta.summary_label }}</span>
+  <span class="pap-status-headline" data-pap-headline hidden>{{ pap_meta.headline }}</span>
+  <span class="pap-status-snapshot" data-pap-snapshot-path hidden>{{ pap_meta.snapshot_path }}</span>
+</div>
+{% endif %}
 {%- endmacro %}
 
 {% macro render_utility_bar(mode_tabs, mode) -%}
