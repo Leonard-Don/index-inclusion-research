@@ -41,6 +41,7 @@ BRIEF_FIGURES = (
 FULL_FIGURES = BRIEF_FIGURES + (
     "cma_heterogeneity_matrix_size.png",
     "cma_time_series_rolling.png",
+    "cma_gap_length_distribution.png",
 )
 
 
