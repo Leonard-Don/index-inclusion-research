@@ -183,6 +183,9 @@ def create_identification_figures(
             caption="中国样本 RDD 主图。图意：以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。阅读重点：聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
         )
         cached_entry["echart_id"] = "rdd_scatter"
+        coverage_entry = _l3_coverage_figure_entry(root, to_relative=to_relative)
+        if coverage_entry is not None:
+            return [cached_entry, coverage_entry]
         return [cached_entry]
     fig, ax = plt.subplots(figsize=(10.8, 6.0))
     ax.axvline(0, color="#5c6b77", linestyle="--", linewidth=1.2)
@@ -210,7 +213,123 @@ def create_identification_figures(
         caption="中国样本 RDD 主图。图意：以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。阅读重点：聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
     )
     rdd_entry["echart_id"] = "rdd_scatter"
+
+    coverage_entry = _l3_coverage_figure_entry(root, to_relative=to_relative)
+    if coverage_entry is not None:
+        return [rdd_entry, coverage_entry]
     return [rdd_entry]
+
+
+_L3_COVERAGE_TARGET_BATCHES = 20  # ~10-year window, see docs/hs300_rdd_l3_collection_audit.md
+_L3_COVERAGE_TARGET_YEARS = 10
+
+
+def _l3_coverage_figure_entry(
+    root: Path,
+    *,
+    to_relative: RelativePathBuilder,
+) -> FigureEntry | None:
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
+    plt.rcParams["axes.unicode_minus"] = False
+
+    candidates_path = root / "data" / "raw" / "hs300_rdd_candidates.csv"
+    if not candidates_path.exists():
+        return None
+
+    figure_dir = root / "results" / "literature" / "hs300_rdd" / "figures"
+    figure_dir.mkdir(parents=True, exist_ok=True)
+    figure_path = figure_dir / "l3_coverage_timeline.png"
+
+    candidates = pd.read_csv(candidates_path)
+    if candidates.empty:
+        return None
+    summary = (
+        candidates.assign(
+            n_inclusion=candidates["inclusion"].fillna(0).astype(int),
+            n_reserve=(candidates["inclusion"].fillna(0).astype(int) == 0).astype(int),
+        )
+        .groupby("batch_id", as_index=False)
+        .agg(
+            announce_date=("announce_date", "first"),
+            n_inclusion=("n_inclusion", "sum"),
+            n_reserve=("n_reserve", "sum"),
+        )
+    )
+    if summary.empty:
+        return None
+    summary["announce_date"] = pd.to_datetime(summary["announce_date"], errors="coerce")
+    summary = summary.dropna(subset=["announce_date"]).sort_values("announce_date")
+    if summary.empty:
+        return None
+
+    n_batches = int(summary.shape[0])
+    earliest = summary["announce_date"].min()
+    latest = summary["announce_date"].max()
+    span_years = max((latest - earliest).days / 365.25, 0.0)
+
+    if figure_cache_is_fresh([figure_path], [candidates_path]):
+        coverage_entry = build_figure_entry(
+            figure_path,
+            to_relative=to_relative,
+            caption=_l3_coverage_caption(n_batches, span_years),
+        )
+        coverage_entry["label"] = "L3 批次覆盖时间线"
+        return coverage_entry
+
+    fig, ax = plt.subplots(figsize=(10.8, 4.4))
+    dates = summary["announce_date"]
+    inclusions = summary["n_inclusion"].to_numpy(dtype=float)
+    reserves = summary["n_reserve"].to_numpy(dtype=float)
+    bar_width = 120  # days
+    ax.bar(dates, inclusions, width=bar_width, color="#0f5c6e", label="官方调入 (treated)")
+    ax.bar(dates, reserves, width=bar_width, bottom=inclusions, color="#d7b49e", label="备选对照 (control)")
+
+    threshold_x_start = pd.Timestamp(latest) - pd.DateOffset(years=_L3_COVERAGE_TARGET_YEARS)
+    threshold_x_end = pd.Timestamp(latest)
+    ax.axvspan(
+        threshold_x_start,
+        threshold_x_end,
+        ymin=0,
+        ymax=1,
+        color="#0f5c6e",
+        alpha=0.05,
+        zorder=0,
+        label=f"主表门槛窗口 ({_L3_COVERAGE_TARGET_YEARS} 年 · {_L3_COVERAGE_TARGET_BATCHES} 批次)",
+    )
+    annotated_progress = (
+        f"覆盖：{n_batches} / {_L3_COVERAGE_TARGET_BATCHES} 批次 "
+        f"· {span_years:.1f} / {_L3_COVERAGE_TARGET_YEARS} 年"
+    )
+    ax.set_title("HS300 RDD L3 批次覆盖时间线", fontsize=15, pad=12)
+    ax.set_xlabel(annotated_progress, fontsize=11, labelpad=8)
+    ax.set_ylabel("候选行数")
+    ax.grid(axis="y", alpha=0.22)
+    ax.legend(frameon=False, loc="upper left", fontsize=9)
+    fig.autofmt_xdate()
+    fig.tight_layout()
+    fig.savefig(figure_path, dpi=220)
+    plt.close(fig)
+
+    coverage_entry = build_figure_entry(
+        figure_path,
+        to_relative=to_relative,
+        caption=_l3_coverage_caption(n_batches, span_years),
+    )
+    coverage_entry["label"] = "L3 批次覆盖时间线"
+    return coverage_entry
+
+
+def _l3_coverage_caption(n_batches: int, span_years: float) -> str:
+    return (
+        f"L3 候选样本批次覆盖。图意：当前 {n_batches} / {_L3_COVERAGE_TARGET_BATCHES} 个批次，"
+        f"跨度 {span_years:.1f} / {_L3_COVERAGE_TARGET_YEARS} 年；阴影区域是论文级因果声明的目标窗口。"
+        "阅读重点：每个批次都要同时拥有调入与备选对照才能进入 L3 主表，2014-2019 缺口需通过外部档案补齐。"
+    )
 
 
 def _sample_design_figure_entries(target_dir: Path, to_relative: RelativePathBuilder) -> list[FigureEntry]:

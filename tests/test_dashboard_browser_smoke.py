@@ -892,6 +892,35 @@ def test_sensitivity_threshold_chip_flips_verdict_card_strips() -> None:
             browser.close()
 
 
+def test_l3_coverage_timeline_appears_in_identification_track() -> None:
+    """The L3 coverage timeline figure should surface as a thumb in the
+    identification china track once the candidates CSV exists."""
+
+    with (
+        _running_dashboard_server() as base_url,
+        playwright_sync_api.sync_playwright() as playwright,
+    ):
+        browser = playwright.chromium.launch()
+        try:
+            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
+            page.wait_for_load_state("networkidle")
+
+            section = page.locator("#identification_china_track")
+            assert section.count() == 1
+            section.first.scroll_into_view_if_needed()
+
+            timeline_imgs = section.locator("img[src*='l3_coverage_timeline']")
+            assert timeline_imgs.count() == 1, (
+                "expected exactly one L3 coverage timeline image in the identification track"
+            )
+            alt = timeline_imgs.first.get_attribute("alt") or ""
+            assert "L3 候选样本批次覆盖" in alt
+            assert "20 个批次" in alt  # threshold target rendered into caption
+        finally:
+            browser.close()
+
+
 def test_pap_status_chip_renders_with_baseline_diff() -> None:
     """The PAP (pre-analysis plan) hero chip should surface the latest
     snapshot's drift status. Frozen state when current verdicts match the
