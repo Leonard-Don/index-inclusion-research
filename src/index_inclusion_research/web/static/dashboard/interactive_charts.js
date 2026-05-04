@@ -441,6 +441,15 @@ const CHART_OPTION_BUILDERS = {
     opt.title = { text: '机制回归 turnover_mechanism 系数（× 4 象限，带 95% CI）', left: 'center' };
     return opt;
   },
+  // rdd_robustness reuses the same forest-plot option builder. Each row
+  // is a different RDD specification (main / donut / placebo / polynomial)
+  // rather than a quadrant; the bandwidth-locked τ + 95% CI lets reviewers
+  // see how the headline result moves under specification changes.
+  rdd_robustness: payload => {
+    const opt = buildMainRegressionOption(payload);
+    opt.title = { text: 'HS300 RDD 稳健性 · main / donut / placebo / polynomial（τ ± 95% CI）', left: 'center' };
+    return opt;
+  },
   event_counts: buildEventCountsOption,
   cma_mechanism_heatmap: buildCmaMechanismHeatmapOption,
   cma_gap_length_distribution: buildCmaGapLengthDistributionOption,

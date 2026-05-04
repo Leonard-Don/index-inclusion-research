@@ -921,6 +921,44 @@ def test_l3_coverage_timeline_appears_in_identification_track() -> None:
             browser.close()
 
 
+def test_rdd_robustness_forest_plot_appears_in_identification_track() -> None:
+    """The RDD robustness forest plot (main / donut / placebo / polynomial)
+    should surface as the trailing thumb in the identification track,
+    sitting alongside the L3 timeline + 3 secondary-outcome bin charts."""
+
+    with (
+        _running_dashboard_server() as base_url,
+        playwright_sync_api.sync_playwright() as playwright,
+    ):
+        browser = playwright.chromium.launch()
+        try:
+            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
+            page.wait_for_load_state("networkidle")
+
+            section = page.locator("#identification_china_track")
+            assert section.count() == 1
+            section.first.scroll_into_view_if_needed()
+
+            forest_imgs = section.locator("img[src*='rdd_robustness_forest']")
+            assert forest_imgs.count() == 1
+            alt = forest_imgs.first.get_attribute("alt") or ""
+            assert "稳健性面板" in alt
+            # Headline τ + p surfaced in caption so reviewers see at a
+            # glance whether main spec is the strongest.
+            assert "main" in alt and "局部线性" in alt
+
+            # And the underlying chart_data endpoint should expose the same
+            # 5 specs (forest plot rows) the PNG visualizes.
+            api_response = page.request.get(f"{base_url}/api/chart/rdd_robustness")
+            assert api_response.status == 200
+            payload = api_response.json()
+            spec_kinds = sorted({row["spec_kind"] for row in payload["rows"]})
+            assert spec_kinds == ["donut", "main", "placebo", "polynomial"]
+        finally:
+            browser.close()
+
+
 def test_rdd_secondary_outcome_thumbs_render_in_identification_track() -> None:
     """The 3 RDD secondary outcome bin scatter figures (CAR[-3,+3] /
     turnover / volume) should surface alongside the L3 timeline as thumbs

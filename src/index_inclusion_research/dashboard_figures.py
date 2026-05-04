@@ -265,11 +265,11 @@ def _assemble_identification_figures(
     rdd_dir: Path,
 ) -> list[FigureEntry]:
     """Compose the identification track's display_figures: rdd lead +
-    L3 coverage timeline + 3 RDD secondary outcome thumbs.
-
-    The track template renders display_figures[0] as the feature image
-    and display_figures[1:5] as a thumb-grid; we hand it 5 entries so the
-    grid fills with timeline + 3 robustness thumbs.
+    L3 coverage timeline + 3 RDD secondary outcome thumbs + robustness
+    forest. The track template renders display_figures[0] as the feature
+    image and display_figures[1:6] as a thumb-grid; we hand it up to 6
+    entries so the grid fills with timeline + secondary outcomes +
+    robustness panel.
     """
     figures: list[FigureEntry] = [lead_entry]
     coverage_entry = _l3_coverage_figure_entry(root, to_relative=to_relative)
@@ -287,7 +287,124 @@ def _assemble_identification_figures(
             layout_class=layout_class,
         )
         figures.append(entry)
+    robustness_entry = _rdd_robustness_figure_entry(root, to_relative=to_relative, rdd_dir=rdd_dir)
+    if robustness_entry is not None:
+        figures.append(robustness_entry)
     return figures
+
+
+def _rdd_robustness_figure_entry(
+    root: Path,
+    *,
+    to_relative: RelativePathBuilder,
+    rdd_dir: Path,
+) -> FigureEntry | None:
+    """Forest-plot PNG of the RDD robustness panel (main / donut / placebo /
+    polynomial). Reads results/literature/hs300_rdd/rdd_robustness.csv
+    written by run_rdd_robustness; emits a figure entry with echart_id
+    'rdd_robustness' so future thumb-grid template upgrades can swap to
+    interactive ECharts without changing the figure pipeline.
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
+    plt.rcParams["axes.unicode_minus"] = False
+
+    robust_path = root / "results" / "literature" / "hs300_rdd" / "rdd_robustness.csv"
+    if not robust_path.exists():
+        return None
+
+    df = pd.read_csv(robust_path)
+    if df.empty or "spec" not in df.columns:
+        return None
+
+    figure_path = rdd_dir / "rdd_robustness_forest.png"
+    if figure_cache_is_fresh([figure_path], [robust_path]):
+        cached = build_figure_entry(
+            figure_path,
+            to_relative=to_relative,
+            caption=_rdd_robustness_caption(df),
+            label="RDD 稳健性 · 设定面板",
+            layout_class="wide",
+        )
+        cached["echart_id"] = "rdd_robustness"
+        return cached
+
+    spec_kind_order = ["main", "donut", "placebo", "polynomial"]
+    df = df.assign(
+        _kind_rank=df["spec_kind"].map(
+            lambda k: spec_kind_order.index(k) if k in spec_kind_order else 99
+        )
+    ).sort_values(["_kind_rank", "spec"], ascending=[False, False])
+
+    color_map = {
+        "main": "#0f5c6e",
+        "donut": "#5d4f8a",
+        "placebo": "#5c6b77",
+        "polynomial": "#a63b28",
+    }
+    colors = [color_map.get(str(k), "#30424f") for k in df["spec_kind"]]
+
+    fig, ax = plt.subplots(figsize=(9.6, 4.4))
+    y = list(range(len(df)))
+    taus = df["tau"].astype(float).to_numpy()
+    ses = df["std_error"].astype(float).to_numpy()
+    ax.errorbar(
+        taus, y,
+        xerr=1.96 * ses,
+        fmt="none",
+        ecolor="#5c6b77",
+        elinewidth=1.4,
+        capsize=4,
+    )
+    ax.scatter(
+        taus, y,
+        s=70,
+        c=colors,
+        edgecolors="#18212b",
+        linewidths=0.8,
+        zorder=3,
+    )
+    ax.axvline(0, color="#9ba3ad", linestyle="--", linewidth=1.0)
+    ax.set_yticks(y)
+    ax.set_yticklabels(df["spec"].tolist(), fontsize=10)
+    ax.set_xlabel("τ (RDD 处理效应)")
+    ax.set_title("HS300 RDD 稳健性 · car_m1_p1 ± 1.96·SE", fontsize=14, pad=10)
+    ax.grid(axis="x", alpha=0.18)
+    ax.tick_params(axis="x", labelsize=9)
+    fig.tight_layout()
+    fig.savefig(figure_path, dpi=220)
+    plt.close(fig)
+
+    entry = build_figure_entry(
+        figure_path,
+        to_relative=to_relative,
+        caption=_rdd_robustness_caption(df),
+        label="RDD 稳健性 · 设定面板",
+        layout_class="wide",
+    )
+    entry["echart_id"] = "rdd_robustness"
+    return entry
+
+
+def _rdd_robustness_caption(df: pd.DataFrame) -> str:
+    main = df.loc[df["spec_kind"] == "main"].head(1)
+    if main.empty:
+        return (
+            "RDD 稳健性面板：把 main 局部线性的 τ 与 donut / placebo / polynomial "
+            "比较。阅读重点：placebo τ 应靠近 0；donut 与 polynomial 是 main 设定的偏离度。"
+        )
+    tau = float(main.iloc[0]["tau"])
+    p = float(main.iloc[0]["p_value"])
+    n = int(main.iloc[0]["n_obs"])
+    return (
+        f"RDD 稳健性面板：main 局部线性 τ={tau * 100:.2f}% (p={p:.3f}, n={n})。"
+        "阅读重点：placebo cutoff 的 τ 应靠近 0（识别合理的反向证据）；"
+        "donut 与 polynomial 偏离 main 越大，主结果对设定越敏感。"
+    )
 
 
 _L3_COVERAGE_TARGET_BATCHES = 20  # ~10-year window, see docs/hs300_rdd_l3_collection_audit.md

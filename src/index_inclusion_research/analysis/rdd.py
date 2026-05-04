@@ -92,6 +92,219 @@ def fit_local_linear_rdd(
     }
 
 
+def fit_donut_rdd(
+    frame: pd.DataFrame,
+    outcome_col: str,
+    *,
+    running_col: str = "distance_to_cutoff",
+    treatment_col: str = "inclusion",
+    bandwidth: float | None = None,
+    donut_radius: float = 0.01,
+) -> dict[str, float | int | str]:
+    """Local-linear RDD fit with a donut hole around the cutoff.
+
+    Drops observations with ``|running| < donut_radius`` to neutralize
+    manipulation suspicion (Barreca et al. 2011). Returns the same dict
+    shape as ``fit_local_linear_rdd`` plus a ``donut_radius`` field.
+    """
+    work = frame.copy()
+    if running_col in work.columns:
+        outside = work[running_col].abs() >= donut_radius
+        work = work.loc[outside]
+    result = fit_local_linear_rdd(
+        work,
+        outcome_col=outcome_col,
+        running_col=running_col,
+        treatment_col=treatment_col,
+        bandwidth=bandwidth,
+    )
+    result["donut_radius"] = float(donut_radius)
+    return result
+
+
+def fit_placebo_rdd(
+    frame: pd.DataFrame,
+    outcome_col: str,
+    *,
+    running_col: str = "distance_to_cutoff",
+    treatment_col: str = "inclusion",
+    bandwidth: float | None = None,
+    cutoff_shift: float = 0.05,
+) -> dict[str, float | int | str]:
+    """Placebo RDD: shift the cutoff to a non-existent boundary.
+
+    Creates a synthetic running variable centered at ``cutoff_shift`` (so
+    the actual cutoff is no longer at 0) and a synthetic placebo treatment
+    indicator that flips at the shifted cutoff. A placebo τ that is
+    significant suggests the original RDD picks up something other than
+    the real boundary effect; a placebo τ near 0 supports the main
+    estimate's identification.
+
+    Returns the same dict shape plus ``cutoff_shift``.
+    """
+    work = frame.copy()
+    if running_col in work.columns:
+        work[running_col] = pd.to_numeric(work[running_col], errors="coerce") - cutoff_shift
+    placebo_treatment_col = f"_placebo_treatment_{abs(cutoff_shift):.4f}"
+    work[placebo_treatment_col] = (work[running_col] >= 0).astype(int)
+    result = fit_local_linear_rdd(
+        work,
+        outcome_col=outcome_col,
+        running_col=running_col,
+        treatment_col=placebo_treatment_col,
+        bandwidth=bandwidth,
+    )
+    result["cutoff_shift"] = float(cutoff_shift)
+    return result
+
+
+def fit_polynomial_rdd(
+    frame: pd.DataFrame,
+    outcome_col: str,
+    *,
+    running_col: str = "distance_to_cutoff",
+    treatment_col: str = "inclusion",
+    bandwidth: float | None = None,
+    polynomial_order: int = 2,
+) -> dict[str, float | int | str]:
+    """Polynomial RDD: include higher-order terms of the running variable
+    on each side. ``polynomial_order=1`` is the linear local-linear baseline;
+    ``=2`` adds quadratic terms; higher orders are over-fit risks at small n.
+    """
+    if polynomial_order < 1:
+        raise ValueError("polynomial_order must be >= 1")
+    work = frame[[outcome_col, running_col, treatment_col]].replace([np.inf, -np.inf], np.nan).dropna().copy()
+    nan_result: dict[str, float | int | str] = {
+        "outcome": outcome_col,
+        "bandwidth": np.nan,
+        "polynomial_order": int(polynomial_order),
+        "n_obs": 0,
+        "n_left": 0,
+        "n_right": 0,
+        "tau": np.nan,
+        "std_error": np.nan,
+        "t_stat": np.nan,
+        "p_value": np.nan,
+        "r_squared": np.nan,
+    }
+    if work.empty:
+        return nan_result
+
+    inferred_bandwidth = (
+        choose_bandwidth(work[running_col]) if bandwidth is None else float(bandwidth)
+    )
+    local = work.loc[work[running_col].abs() <= inferred_bandwidth].copy()
+    if local.empty:
+        local = work.copy()
+        inferred_bandwidth = float(local[running_col].abs().max())
+
+    design_cols: dict[str, pd.Series] = {treatment_col: local[treatment_col]}
+    for order in range(1, polynomial_order + 1):
+        col = running_col if order == 1 else f"{running_col}_pow{order}"
+        design_cols[col] = local[running_col].pow(order)
+        design_cols[f"{treatment_col}_x_{col}"] = local[treatment_col] * local[running_col].pow(order)
+    design_frame = pd.DataFrame(design_cols, index=local.index)
+    design = sm.add_constant(design_frame, has_constant="add")
+    model = sm.OLS(local[outcome_col], design).fit(cov_type="HC1")
+    return {
+        "outcome": outcome_col,
+        "bandwidth": inferred_bandwidth,
+        "polynomial_order": int(polynomial_order),
+        "n_obs": int(model.nobs),
+        "n_left": int((local[running_col] < 0).sum()),
+        "n_right": int((local[running_col] >= 0).sum()),
+        "tau": float(model.params[treatment_col]),
+        "std_error": float(model.bse[treatment_col]),
+        "t_stat": float(model.tvalues[treatment_col]),
+        "p_value": float(model.pvalues[treatment_col]),
+        "r_squared": float(model.rsquared),
+    }
+
+
+def run_rdd_robustness(
+    frame: pd.DataFrame,
+    outcome_col: str = "car_m1_p1",
+    *,
+    running_col: str = "distance_to_cutoff",
+    treatment_col: str = "inclusion",
+    bandwidth: float | None = None,
+    donut_radius: float = 0.01,
+    placebo_shifts: tuple[float, ...] = (-0.05, 0.05),
+    polynomial_orders: tuple[int, ...] = (2,),
+) -> pd.DataFrame:
+    """Combined RDD robustness panel for one outcome.
+
+    Stacks the main local-linear fit with: donut-hole, placebo cutoffs at
+    each shift, and higher-order polynomial fits. All specs use the SAME
+    bandwidth the main fit picks (auto-chosen if ``bandwidth=None``) so
+    the placebo / donut / polynomial estimates are comparable to the main
+    estimate at the same window width — without this, an auto-bandwidth
+    that moves with each shifted-cutoff sample produces apples-to-oranges
+    τ that mislead reviewers into reading specification noise as evidence.
+
+    Output frame has one row per spec, with ``spec`` / ``spec_kind`` columns
+    plus the same numerics as ``fit_local_linear_rdd``.
+    """
+    rows: list[dict[str, float | int | str]] = []
+
+    main = fit_local_linear_rdd(
+        frame,
+        outcome_col=outcome_col,
+        running_col=running_col,
+        treatment_col=treatment_col,
+        bandwidth=bandwidth,
+    )
+    main["spec"] = "main · 局部线性"
+    main["spec_kind"] = "main"
+    rows.append(main)
+
+    # Lock all subsequent specs to the bandwidth the main fit landed on.
+    locked_bandwidth = (
+        float(main["bandwidth"]) if not pd.isna(main["bandwidth"]) else bandwidth
+    )
+
+    donut = fit_donut_rdd(
+        frame,
+        outcome_col=outcome_col,
+        running_col=running_col,
+        treatment_col=treatment_col,
+        bandwidth=locked_bandwidth,
+        donut_radius=donut_radius,
+    )
+    donut["spec"] = f"donut(±{donut_radius:g})"
+    donut["spec_kind"] = "donut"
+    rows.append(donut)
+
+    for shift in placebo_shifts:
+        placebo = fit_placebo_rdd(
+            frame,
+            outcome_col=outcome_col,
+            running_col=running_col,
+            treatment_col=treatment_col,
+            bandwidth=locked_bandwidth,
+            cutoff_shift=shift,
+        )
+        sign = "+" if shift > 0 else ""
+        placebo["spec"] = f"placebo cutoff {sign}{shift:g}"
+        placebo["spec_kind"] = "placebo"
+        rows.append(placebo)
+
+    for order in polynomial_orders:
+        poly = fit_polynomial_rdd(
+            frame,
+            outcome_col=outcome_col,
+            running_col=running_col,
+            treatment_col=treatment_col,
+            bandwidth=locked_bandwidth,
+            polynomial_order=order,
+        )
+        poly["spec"] = f"polynomial order={order}"
+        poly["spec_kind"] = "polynomial"
+        rows.append(poly)
+
+    return pd.DataFrame(rows)
+
+
 def run_rdd_suite(
     frame: pd.DataFrame,
     outcome_cols: list[str],
