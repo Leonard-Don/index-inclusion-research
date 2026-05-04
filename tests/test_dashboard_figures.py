@@ -116,6 +116,69 @@ def test_create_identification_figures_returns_cached_metadata_for_real_mode(tmp
     ]
 
 
+def test_create_identification_figures_includes_l3_coverage_when_candidates_exist(
+    tmp_path: Path,
+) -> None:
+    source = _write(
+        tmp_path / "results" / "literature" / "hs300_rdd" / "event_level_with_running.csv",
+        "event_phase,distance_to_cutoff,car_m1_p1\nannounce,-0.1,0.01\nannounce,0.1,0.02\n",
+    )
+    target = _write(
+        tmp_path / "results" / "literature" / "hs300_rdd" / "figures" / "car_m1_p1_rdd_main.png",
+        b"png",
+    )
+    candidates = _write(
+        tmp_path / "data" / "raw" / "hs300_rdd_candidates.csv",
+        "batch_id,announce_date,inclusion\n"
+        "csi300-2024-05,2024-05-31,1\n"
+        "csi300-2024-05,2024-05-31,1\n"
+        "csi300-2024-05,2024-05-31,0\n"
+        "csi300-2024-11,2024-11-29,1\n"
+        "csi300-2024-11,2024-11-29,0\n",
+    )
+    now = time.time()
+    _set_mtime(source, now - 50)
+    _set_mtime(target, now - 10)
+    _set_mtime(candidates, now - 50)
+
+    figures = dashboard_figures.create_identification_figures(
+        tmp_path,
+        load_rdd_status=lambda: {"mode": "real"},
+        to_relative=lambda path: path.relative_to(tmp_path).as_posix(),
+    )
+
+    assert len(figures) == 2
+    rdd_main, l3_coverage = figures
+    assert rdd_main["echart_id"] == "rdd_scatter"
+    assert l3_coverage["path"] == "results/literature/hs300_rdd/figures/l3_coverage_timeline.png"
+    assert l3_coverage.get("label") == "L3 批次覆盖时间线"
+    assert "2 / 20 个批次" in l3_coverage["caption"]
+
+
+def test_create_identification_figures_skips_l3_coverage_when_candidates_missing(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "results" / "literature" / "hs300_rdd" / "event_level_with_running.csv",
+        "event_phase,distance_to_cutoff,car_m1_p1\nannounce,-0.1,0.01\nannounce,0.1,0.02\n",
+    )
+    target = _write(
+        tmp_path / "results" / "literature" / "hs300_rdd" / "figures" / "car_m1_p1_rdd_main.png",
+        b"png",
+    )
+    now = time.time()
+    _set_mtime(target, now - 5)
+
+    figures = dashboard_figures.create_identification_figures(
+        tmp_path,
+        load_rdd_status=lambda: {"mode": "real"},
+        to_relative=lambda path: path.relative_to(tmp_path).as_posix(),
+    )
+
+    assert len(figures) == 1
+    assert figures[0]["echart_id"] == "rdd_scatter"
+
+
 def test_create_identification_figures_returns_cached_metadata_for_reconstructed_mode(tmp_path: Path) -> None:
     source = _write(
         tmp_path / "results" / "literature" / "hs300_rdd" / "event_level_with_running.csv",
