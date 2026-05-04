@@ -116,6 +116,7 @@ class TestChartRegistry:
             "cma_mechanism_heatmap",
             "cma_gap_length_distribution",
             "rdd_scatter",
+            "rdd_robustness",
         }
 
     def test_build_chart_data_returns_none_for_unknown(self, empty_root: Path) -> None:

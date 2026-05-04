@@ -10,6 +10,7 @@ import pandas as pd
 from index_inclusion_research.analysis import (
     compute_event_level_metrics,
     plot_rdd_bins,
+    run_rdd_robustness,
     run_rdd_suite,
 )
 from index_inclusion_research.analysis.rdd import compute_mccrary_density_test
@@ -507,6 +508,13 @@ def run_analysis(
     rdd_summary = run_rdd_suite(event_level, outcome_cols=outcome_cols)
     save_dataframe(rdd_summary, OUTPUT_DIR / "rdd_summary.csv")
 
+    # Robustness panel for the headline outcome (car_m1_p1): donut hole +
+    # placebo cutoffs ±0.05 + quadratic polynomial. Reviewers asking
+    # "does the result survive different specifications" can read it
+    # directly from rdd_robustness.csv or the dashboard forest plot.
+    rdd_robustness = run_rdd_robustness(event_level, outcome_col="car_m1_p1")
+    save_dataframe(rdd_robustness, OUTPUT_DIR / "rdd_robustness.csv")
+
     mccrary = compute_mccrary_density_test(
         event_level, running_col="distance_to_cutoff"
     )
@@ -541,6 +549,7 @@ def run_analysis(
         "tables": {
             "候选样本批次审计": candidate_audit,
             "RDD 汇总": rdd_summary,
+            "RDD 稳健性": rdd_robustness,
             "事件层数据": event_level,
         },
         "figures": figures,

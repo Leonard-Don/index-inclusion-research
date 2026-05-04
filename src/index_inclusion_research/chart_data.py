@@ -408,6 +408,62 @@ def build_main_regression_chart_data(root: Path) -> dict:
     return {"rows": rows}
 
 
+def build_rdd_robustness_chart_data(root: Path) -> dict:
+    """Forest-plot payload for the RDD robustness panel.
+
+    Reads ``results/literature/hs300_rdd/rdd_robustness.csv`` produced by
+    ``run_rdd_robustness`` and emits one row per spec (main, donut,
+    placebo±, polynomial) with τ + ±1.96·SE CI bounds + p-value, ordered
+    main-first then by spec_kind. Suitable for an ECharts forest plot
+    sharing the same option builder as main_regression.
+    """
+    path = root / "results" / "literature" / "hs300_rdd" / "rdd_robustness.csv"
+    if not path.exists():
+        return {"rows": []}
+
+    df = pd.read_csv(path)
+    if df.empty or "spec" not in df.columns or "tau" not in df.columns:
+        return {"rows": []}
+
+    color_map = {
+        "main": "#0f5c6e",
+        "donut": "#5d4f8a",
+        "placebo": "#5c6b77",
+        "polynomial": "#a63b28",
+    }
+    spec_order = ["main", "donut", "placebo", "polynomial"]
+    rows: list[dict] = []
+    for _, r in df.iterrows():
+        tau = float(r["tau"]) if pd.notna(r["tau"]) else float("nan")
+        se = float(r["std_error"]) if pd.notna(r["std_error"]) else float("nan")
+        p_value = float(r["p_value"]) if pd.notna(r["p_value"]) else float("nan")
+        if pd.isna(tau) or pd.isna(se):
+            continue
+        spec_kind = str(r.get("spec_kind", ""))
+        # Key names mirror _treatment_forest_rows so the JS option builder
+        # for main_regression can be reused without changes.
+        rows.append(
+            {
+                "label": str(r["spec"]),
+                "spec_kind": spec_kind,
+                "coef": round(tau, 6),
+                "ci_lo": round(tau - 1.96 * se, 6),
+                "ci_hi": round(tau + 1.96 * se, 6),
+                "se": round(se, 6),
+                "p_value": (
+                    round(p_value, 6) if not pd.isna(p_value) else None
+                ),
+                "stars": _significance_stars(p_value) if not pd.isna(p_value) else "",
+                "n_obs": (
+                    int(r["n_obs"]) if pd.notna(r["n_obs"]) else 0
+                ),
+                "color": color_map.get(spec_kind, "#30424f"),
+            }
+        )
+    rows.sort(key=lambda r: (spec_order.index(r["spec_kind"]) if r["spec_kind"] in spec_order else 99, r["label"]))
+    return {"rows": rows}
+
+
 def build_mechanism_regression_chart_data(root: Path) -> dict:
     """Forest-plot payload for the turnover-mechanism regression treatment coef.
 
@@ -772,6 +828,7 @@ CHART_BUILDERS: dict[str, callable] = {
     "heterogeneity_size": build_heterogeneity_size_chart_data,
     "time_series_rolling": build_time_series_rolling_chart_data,
     "main_regression": build_main_regression_chart_data,
+    "rdd_robustness": build_rdd_robustness_chart_data,
     "mechanism_regression": build_mechanism_regression_chart_data,
     "event_counts": build_event_counts_chart_data,
     "cma_mechanism_heatmap": build_cma_mechanism_heatmap_chart_data,

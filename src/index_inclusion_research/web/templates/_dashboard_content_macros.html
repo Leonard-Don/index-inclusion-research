@@ -617,7 +617,7 @@
   <div class="surface track-surface-thumbs">
     <div class="surface-pad surface-pad-thumbs">
       <div class="thumb-grid thumb-grid-track">
-        {% for figure in section.display_figures[1:5] %}
+        {% for figure in section.display_figures[1:6] %}
         <div class="thumb" title="{{ figure.caption }}">
           <div class="thumb-media">
             <img src="{{ url_for('serve_result_file', subpath=figure.path) }}" alt="{{ figure.caption }}" {% if figure.width and figure.height %}width="{{ figure.width }}" height="{{ figure.height }}"{% endif %} loading="lazy" decoding="async">
