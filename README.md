@@ -167,21 +167,24 @@ tests/                 ~590 个单元测试 + 浏览器 smoke
 make rebuild        # 10 步全流水线刷新
 make verdicts       # 终端速览 7 条假说裁决
 make doctor         # 项目健康检查
+make paper          # 论文 / 汇报产出聚合到 ./paper/（tables / figures / RDD / narrative）
 make sync           # 用 uv.lock 装锁定依赖
 
 index-inclusion-dashboard                            # 启 dashboard
 index-inclusion-cma --threshold 0.05                 # 重新生成 verdict
 index-inclusion-verdict-summary --sensitivity        # 阈值 sweep + Bonferroni/BH
-index-inclusion-verdict-summary --compare-with ...   # verdict 时点 diff（详见 docs/verdict_iteration.md）
+index-inclusion-verdict-summary --vs-pap             # 当前 vs 最新 PAP 快照 diff
+index-inclusion-verdict-summary --compare-with ...   # 任意时点 diff（详见 docs/verdict_iteration.md）
+index-inclusion-paper-bundle --force                 # 论文产出聚合（同 make paper）
 index-inclusion-refresh-real-evidence                # 真实数据 + evidence manifest 一次刷
 index-inclusion-doctor --fail-on-warn                # 严格门禁（warn 也阻断）
 ```
 
-按用途分组（共 26 个 console scripts）：
+按用途分组（共 27 个 console scripts）：
 
 - 数据流水线：`build-event-sample` / `build-price-panel` / `match-controls` / `match-robustness` / `run-event-study` / `run-regressions`
 - 样本数据：`generate-sample-data` / `download-real-data`
-- 报表与图表：`make-figures-tables` / `generate-research-report`
+- 报表与图表：`make-figures-tables` / `generate-research-report` / `paper-bundle`
 - Dashboard 与三条主线：`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - HS300 RDD 工具链：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`
 - 跨市场不对称 + 假说证据：`cma` / `prepare-passive-aum` / `compute-h6-weight-change` / `refresh-real-evidence`
@@ -243,9 +246,10 @@ GitHub Actions 通过 `astral-sh/setup-uv` + `uv sync --extra dev`（按 `uv.loc
 
 - `mkt_cap` / `turnover` 来自 Yahoo `sharesOutstanding` 近似，不是交易所历史口径。
 - HS300 RDD 当前 L3 覆盖 2020-11 到 2025-11 共 11 个批次、356 条候选，论文级因果声明需扩展到 ≥10 年（见 [docs/hs300_rdd_l3_collection_audit.md](docs/hs300_rdd_l3_collection_audit.md)）。
-- 7 条 CMA 假说当前为 post-hoc 拟合；预注册基线（PAP 草稿 + 2026-05-03 verdicts 快照）见 [docs/pre_registration.md](docs/pre_registration.md)，签字后升级为 confirmatory；阈值 sweep 见 [docs/sensitivity_workflow.md](docs/sensitivity_workflow.md)。
+- 7 条 CMA 假说当前为 post-hoc 拟合；预注册基线（PAP + 2026-05-03 verdicts 快照）见 [docs/pre_registration.md](docs/pre_registration.md)；当前 vs 基线的偏离用 `index-inclusion-verdict-summary --vs-pap` 一行查看，dashboard hero 上 PAP 状态 pill 也会标 `基线已锁` / `偏离`。
 - 假说证据强度分层：`core`（H1/H5/H7）vs `supplementary`（H2/H3/H4/H6），见 `cma_hypothesis_verdicts.csv` 的 `evidence_tier` 列。
 - 事件研究除简单 t 外提供 Patell Z 与 BMP t（`results/real_event_study/patell_bmp_summary.csv`）。
+- HS300 RDD 主结果 (`car_m1_p1` τ=3.92%, p=0.048, n=120) 同时跑了完整稳健性面板（main / donut / placebo±0.05 / polynomial），见 `results/literature/hs300_rdd/rdd_robustness.csv` 与首页 forest plot；论文应当报告全套面板而非只引用显著的 main spec。
 
 ## 论文写作建议
 

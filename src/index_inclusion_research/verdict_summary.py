@@ -22,6 +22,7 @@ import pandas as pd
 from index_inclusion_research import paths
 
 ROOT = paths.project_root()
+_PAP_SNAPSHOTS_DIR = ROOT / "snapshots"
 DEFAULT_VERDICTS = ROOT / "results" / "real_tables" / "cma_hypothesis_verdicts.csv"
 DEFAULT_TRACK_SUMMARY = ROOT / "results" / "real_tables" / "cma_track_verdict_summary.csv"
 
@@ -528,6 +529,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--vs-pap",
+        action="store_true",
+        help=(
+            "Shortcut for --compare-with against the most recent "
+            "snapshots/pre-registration-*.csv (PAP baseline). Mutually "
+            "exclusive with --compare-with."
+        ),
+    )
+    parser.add_argument(
         "--format",
         choices=("text", "json"),
         default="text",
@@ -635,13 +645,33 @@ def main(argv: Sequence[str] | None = None) -> int:
         save_verdict_snapshot(verdicts, output_path=snapshot_path)
         print(f"[verdict-summary] saved snapshot to {snapshot_path}")
 
-    diff_rows: list[dict[str, object]] | None = None
+    if args.vs_pap and args.compare_with:
+        print(
+            "[verdict-summary] --vs-pap and --compare-with are mutually exclusive; pick one."
+        )
+        return 1
+
+    compare_path: Path | None = None
     if args.compare_with:
-        previous_path = Path(args.compare_with)
-        previous = _read_csv(previous_path)
+        compare_path = Path(args.compare_with)
+    elif args.vs_pap:
+        snapshots = sorted(_PAP_SNAPSHOTS_DIR.glob("pre-registration-*.csv"))
+        if not snapshots:
+            print(
+                "[verdict-summary] --vs-pap: no snapshots/pre-registration-*.csv found. "
+                "Run `index-inclusion-verdict-summary --snapshot snapshots/pre-registration-YYYY-MM-DD.csv` "
+                "first to freeze a PAP baseline."
+            )
+            return 1
+        compare_path = snapshots[-1]
+        print(f"[verdict-summary] --vs-pap → comparing against {compare_path}")
+
+    diff_rows: list[dict[str, object]] | None = None
+    if compare_path is not None:
+        previous = _read_csv(compare_path)
         if previous is None:
             print(
-                f"[verdict-summary] --compare-with snapshot not found / unreadable: {previous_path}"
+                f"[verdict-summary] snapshot not found / unreadable: {compare_path}"
             )
             return 1
         diff_rows = compute_verdict_diff(verdicts, previous)

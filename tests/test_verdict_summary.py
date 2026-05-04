@@ -217,6 +217,81 @@ def test_main_snapshot_writes_file(tmp_path: Path, capsys) -> None:
     assert "saved snapshot" in captured
 
 
+def test_main_vs_pap_resolves_to_latest_snapshot(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    """`--vs-pap` should pick the lexically-latest pre-registration snapshot."""
+    snapshots_dir = tmp_path / "snapshots"
+    snapshots_dir.mkdir()
+    older = snapshots_dir / "pre-registration-2026-01-01.csv"
+    newer = snapshots_dir / "pre-registration-2026-05-03.csv"
+    fixture = _verdicts_fixture()
+    fixture.to_csv(older, index=False)
+    altered = fixture.copy()
+    altered.loc[altered["hid"] == "H1", "verdict"] = "支持"
+    altered.to_csv(newer, index=False)
+
+    verdicts_path = tmp_path / "v.csv"
+    fixture.to_csv(verdicts_path, index=False)
+
+    import index_inclusion_research.verdict_summary as vs
+
+    monkeypatch.setattr(vs, "_PAP_SNAPSHOTS_DIR", snapshots_dir)
+
+    rc = main([
+        "--verdicts", str(verdicts_path),
+        "--track-summary", str(tmp_path / "missing.csv"),
+        "--vs-pap",
+        "--no-color",
+    ])
+    assert rc == 0
+    captured = capsys.readouterr().out
+    assert "pre-registration-2026-05-03.csv" in captured
+    assert "VERDICT DIFF" in captured
+    # H1 differs (current "证据不足" vs newer snapshot's "支持") so changed=1
+    assert "changed: 1" in captured
+
+
+def test_main_vs_pap_errors_when_no_snapshots(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    snapshots_dir = tmp_path / "snapshots"
+    snapshots_dir.mkdir()  # empty dir
+    verdicts_path = tmp_path / "v.csv"
+    _verdicts_fixture().to_csv(verdicts_path, index=False)
+
+    import index_inclusion_research.verdict_summary as vs
+
+    monkeypatch.setattr(vs, "_PAP_SNAPSHOTS_DIR", snapshots_dir)
+
+    rc = main([
+        "--verdicts", str(verdicts_path),
+        "--track-summary", str(tmp_path / "missing.csv"),
+        "--vs-pap",
+        "--no-color",
+    ])
+    assert rc == 1
+    captured = capsys.readouterr().out
+    assert "no snapshots" in captured.lower() or "未找到" in captured or "no snapshots/pre-registration" in captured
+
+
+def test_main_vs_pap_conflicts_with_compare_with(
+    tmp_path: Path, capsys
+) -> None:
+    verdicts_path = tmp_path / "v.csv"
+    _verdicts_fixture().to_csv(verdicts_path, index=False)
+    rc = main([
+        "--verdicts", str(verdicts_path),
+        "--track-summary", str(tmp_path / "missing.csv"),
+        "--vs-pap",
+        "--compare-with", str(tmp_path / "ignored.csv"),
+        "--no-color",
+    ])
+    assert rc == 1
+    captured = capsys.readouterr().out
+    assert "mutually exclusive" in captured.lower()
+
+
 def test_main_compare_with_renders_diff(tmp_path: Path, capsys) -> None:
     verdicts_path = tmp_path / "v.csv"
     snap_path = tmp_path / "s.csv"
