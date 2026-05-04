@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, cast
@@ -261,6 +262,99 @@ def load_results_manifest(
     manifest_path: Path | None = None,
 ) -> dict[str, Any]:
     return load_shared_results_manifest(manifest_path or results_manifest_path(root))
+
+
+_PAP_SNAPSHOT_NAME = re.compile(r"^pre-registration-(\d{4}-\d{2}-\d{2})\.csv$")
+
+
+def load_pap_summary(
+    root: Path,
+    *,
+    snapshots_dir: Path | None = None,
+    current_verdicts_path: Path | None = None,
+) -> dict[str, Any]:
+    """Diff the current verdicts CSV against the most recent PAP snapshot.
+
+    The dashboard surfaces this as a hero status chip — see the PAP chip in
+    render_refresh_status_panel — to make 'frozen baseline vs current run'
+    visible at a glance. Returns ``{"available": False}`` when no snapshot
+    is on disk.
+    """
+    snap_dir = snapshots_dir or (root / "snapshots")
+    if not snap_dir.exists() or not snap_dir.is_dir():
+        return {"available": False}
+    candidates = sorted(snap_dir.glob("pre-registration-*.csv"))
+    if not candidates:
+        return {"available": False}
+    snapshot_path = candidates[-1]
+    match = _PAP_SNAPSHOT_NAME.match(snapshot_path.name)
+    baseline_date = match.group(1) if match else ""
+    rel_snapshot_path = _display_path(root, snapshot_path)
+
+    current_path = current_verdicts_path or (
+        root / "results" / "real_tables" / "cma_hypothesis_verdicts.csv"
+    )
+    if not current_path.exists():
+        return {
+            "available": True,
+            "baseline_date": baseline_date,
+            "snapshot_path": rel_snapshot_path,
+            "drift_state": "missing",
+            "summary_label": "当前 verdicts 缺失",
+            "headline": (
+                f"PAP 冻结 · {baseline_date} · 当前 verdicts 缺失"
+                if baseline_date
+                else "PAP 冻结 · 当前 verdicts 缺失"
+            ),
+            "changed": 0,
+            "added": 0,
+            "removed": 0,
+            "unchanged": 0,
+        }
+
+    from index_inclusion_research.verdict_summary import compute_verdict_diff
+
+    try:
+        current = pd.read_csv(current_path)
+        previous = pd.read_csv(snapshot_path)
+    except Exception as exc:  # pragma: no cover - filesystem availability varies
+        logger.warning("Failed to read PAP snapshot/current verdicts: %s", exc)
+        return {"available": False}
+
+    diff = compute_verdict_diff(current, previous)
+    counts = {"changed": 0, "added": 0, "removed": 0, "unchanged": 0}
+    for row in diff:
+        kind = str(row.get("kind", ""))
+        if kind in counts:
+            counts[kind] += 1
+
+    drift_total = counts["changed"] + counts["added"] + counts["removed"]
+    drift_state = "frozen" if drift_total == 0 else "drift"
+    if drift_total == 0:
+        summary_label = f"{counts['unchanged']} 假说一致"
+    else:
+        parts = [f"{counts['changed']} changed"]
+        if counts["added"]:
+            parts.append(f"{counts['added']} added")
+        if counts["removed"]:
+            parts.append(f"{counts['removed']} removed")
+        summary_label = " · ".join(parts)
+
+    headline_pieces = ["PAP 冻结"]
+    if baseline_date:
+        headline_pieces.append(baseline_date)
+    headline_pieces.append(f"当前 vs 基线: {summary_label}")
+    headline = " · ".join(headline_pieces)
+
+    return {
+        "available": True,
+        "baseline_date": baseline_date,
+        "snapshot_path": rel_snapshot_path,
+        "drift_state": drift_state,
+        "summary_label": summary_label,
+        "headline": headline,
+        **counts,
+    }
 
 
 def build_rdd_contract_check(

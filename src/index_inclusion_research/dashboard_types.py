@@ -455,12 +455,26 @@ class RobustnessSection(DashboardSection, total=False):
     pass
 
 
+class PapMeta(TypedDict, total=False):
+    available: bool
+    baseline_date: str
+    snapshot_path: str
+    drift_state: str  # "frozen" | "drift" | "missing"
+    summary_label: str
+    headline: str
+    changed: int
+    added: int
+    removed: int
+    unchanged: int
+
+
 class HomeContext(TypedDict):
     mode: ModeName
     nav_sections: list[NavSection]
     mode_tabs: list[ModeTab]
     snapshot_meta: SnapshotMeta
     refresh_meta: RefreshStatusPayload
+    pap_meta: PapMeta
     refresh_status_url: str
     current_open_panels: str | None
     overview_metrics: list[OverviewMetric]

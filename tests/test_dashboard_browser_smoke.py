@@ -892,6 +892,42 @@ def test_sensitivity_threshold_chip_flips_verdict_card_strips() -> None:
             browser.close()
 
 
+def test_pap_status_chip_renders_with_baseline_diff() -> None:
+    """The PAP (pre-analysis plan) hero chip should surface the latest
+    snapshot's drift status. Frozen state when current verdicts match the
+    snapshot exactly; drift state when they differ."""
+
+    with (
+        _running_dashboard_server() as base_url,
+        playwright_sync_api.sync_playwright() as playwright,
+    ):
+        browser = playwright.chromium.launch()
+        try:
+            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
+            page.wait_for_load_state("networkidle")
+
+            chip = page.locator("[data-pap-summary]")
+            assert chip.count() == 1
+            chip.first.scroll_into_view_if_needed()
+
+            drift_state = chip.first.get_attribute("data-drift-state")
+            assert drift_state in {"frozen", "drift", "missing"}
+
+            headline = page.locator("[data-pap-headline]").inner_text().strip()
+            assert headline.startswith("PAP 冻结")
+            assert "当前 vs 基线" in headline
+
+            snapshot_path = page.locator("[data-pap-snapshot-path]").inner_text().strip()
+            assert snapshot_path.startswith("snapshots/pre-registration-")
+            assert snapshot_path.endswith(".csv")
+
+            summary_label = page.locator("[data-pap-summary-label]").inner_text().strip()
+            assert summary_label  # non-empty
+        finally:
+            browser.close()
+
+
 def test_rdd_chart_renders_bandwidth_sweep() -> None:
     """The HS300 RDD ECharts container should render with multiple bandwidth
     fit lines (legend acts as bandwidth selector) and a subtitle reporting

@@ -471,3 +471,87 @@ def test_load_identification_china_saved_result_keeps_rdd_outputs_when_status_re
         ("断点回归：表格", "hs300_rdd"),
     ]
     assert result["figure_paths"][-1]["caption"] == "断点回归:car_m1_p1_rdd_main.png"
+
+
+def test_load_pap_summary_returns_unavailable_without_snapshots(tmp_path: Path) -> None:
+    result = dashboard_loaders.load_pap_summary(tmp_path)
+    assert result == {"available": False}
+
+
+def test_load_pap_summary_diffs_against_latest_snapshot(tmp_path: Path) -> None:
+    snapshots_dir = tmp_path / "snapshots"
+    snapshots_dir.mkdir()
+    older = snapshots_dir / "pre-registration-2026-01-01.csv"
+    newer = snapshots_dir / "pre-registration-2026-05-03.csv"
+
+    baseline_csv = (
+        "hid,name_cn,verdict,confidence,key_label,key_value,n_obs\n"
+        "H1,信息泄露,证据不足,中,bootstrap p,0.875,436\n"
+        "H5,涨跌停限制,支持,高,limit_coef p,0.008,936\n"
+    )
+    older.write_text(
+        "hid,name_cn,verdict,confidence,key_label,key_value,n_obs\n"
+        "H1,信息泄露,支持,高,bootstrap p,0.012,436\n"
+        "H5,涨跌停限制,支持,高,limit_coef p,0.008,936\n",
+        encoding="utf-8",
+    )
+    newer.write_text(baseline_csv, encoding="utf-8")
+
+    current_path = tmp_path / "results" / "real_tables" / "cma_hypothesis_verdicts.csv"
+    current_path.parent.mkdir(parents=True)
+    current_path.write_text(baseline_csv, encoding="utf-8")  # frozen state
+
+    result = dashboard_loaders.load_pap_summary(tmp_path)
+
+    assert result["available"] is True
+    assert result["baseline_date"] == "2026-05-03"  # picks the latest snapshot
+    assert result["snapshot_path"] == "snapshots/pre-registration-2026-05-03.csv"
+    assert result["drift_state"] == "frozen"
+    assert result["changed"] == 0
+    assert result["added"] == 0
+    assert result["removed"] == 0
+    assert result["unchanged"] == 2
+    assert "PAP 冻结" in result["headline"]
+    assert "2026-05-03" in result["headline"]
+
+
+def test_load_pap_summary_flags_drift_when_verdicts_change(tmp_path: Path) -> None:
+    snapshots_dir = tmp_path / "snapshots"
+    snapshots_dir.mkdir()
+    snapshot = snapshots_dir / "pre-registration-2026-05-03.csv"
+    snapshot.write_text(
+        "hid,name_cn,verdict,confidence,key_label,key_value,n_obs\n"
+        "H1,信息泄露,证据不足,中,bootstrap p,0.875,436\n",
+        encoding="utf-8",
+    )
+
+    current_path = tmp_path / "results" / "real_tables" / "cma_hypothesis_verdicts.csv"
+    current_path.parent.mkdir(parents=True)
+    current_path.write_text(
+        "hid,name_cn,verdict,confidence,key_label,key_value,n_obs\n"
+        "H1,信息泄露,支持,高,bootstrap p,0.012,436\n",
+        encoding="utf-8",
+    )
+
+    result = dashboard_loaders.load_pap_summary(tmp_path)
+
+    assert result["drift_state"] == "drift"
+    assert result["changed"] == 1
+    assert "1 changed" in result["summary_label"]
+
+
+def test_load_pap_summary_handles_missing_current_verdicts(tmp_path: Path) -> None:
+    snapshots_dir = tmp_path / "snapshots"
+    snapshots_dir.mkdir()
+    (snapshots_dir / "pre-registration-2026-05-03.csv").write_text(
+        "hid,name_cn,verdict,confidence,key_label,key_value,n_obs\n"
+        "H1,信息泄露,证据不足,中,bootstrap p,0.875,436\n",
+        encoding="utf-8",
+    )
+
+    result = dashboard_loaders.load_pap_summary(tmp_path)
+
+    assert result["available"] is True
+    assert result["drift_state"] == "missing"
+    assert result["baseline_date"] == "2026-05-03"
+    assert "缺失" in result["summary_label"]

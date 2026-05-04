@@ -10,8 +10,9 @@
 {% macro render_kpi_card(metric) -%}{{ shared.render_kpi_card(metric) }}{%- endmacro %}
 {% macro render_hero_metrics(metrics) -%}{{ overview.render_hero_metrics(metrics) }}{%- endmacro %}
 {% macro render_refresh_form(action, anchor, button_label, scope_key, running_label) -%}{{ shared.render_refresh_form(action, anchor, button_label, scope_key, running_label) }}{%- endmacro %}
-{% macro render_refresh_status_panel(refresh_meta) -%}{{ overview.render_refresh_status_panel(refresh_meta) }}{%- endmacro %}
-{% macro render_hero_section(overview_summary, overview_metrics, refresh_meta) -%}{{ overview.render_hero_section(overview_summary, overview_metrics, refresh_meta) }}{%- endmacro %}
+{% macro render_refresh_status_panel(refresh_meta, pap_meta=none) -%}{{ overview.render_refresh_status_panel(refresh_meta, pap_meta) }}{%- endmacro %}
+{% macro render_pap_status_pill(pap_meta) -%}{{ overview.render_pap_status_pill(pap_meta) }}{%- endmacro %}
+{% macro render_hero_section(overview_summary, overview_metrics, refresh_meta, pap_meta=none) -%}{{ overview.render_hero_section(overview_summary, overview_metrics, refresh_meta, pap_meta) }}{%- endmacro %}
 {% macro render_utility_bar(mode_tabs, mode) -%}{{ overview.render_utility_bar(mode_tabs, mode) }}{%- endmacro %}
 {% macro render_core_findings_section(abstract_lead, abstract_points, highlights) -%}{{ overview.render_core_findings_section(abstract_lead, abstract_points, highlights) }}{%- endmacro %}
 {% macro render_overview_context(track_sections, overview_notes) -%}{{ overview.render_overview_context(track_sections, overview_notes) }}{%- endmacro %}
