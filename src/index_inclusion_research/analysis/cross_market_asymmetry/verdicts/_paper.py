@@ -24,6 +24,12 @@ from pathlib import Path
 
 import pandas as pd
 
+from index_inclusion_research import paths as project_paths
+
+_DEFAULT_RDD_ROBUSTNESS_PATH: Path = (
+    project_paths.project_root() / "results" / "literature" / "hs300_rdd" / "rdd_robustness.csv"
+)
+
 _MAIN_FINDING_QUADRANTS: tuple[tuple[str, str], ...] = (
     ("CN", "announce"),
     ("CN", "effective"),
@@ -255,8 +261,10 @@ def _limitations_block(verdicts: pd.DataFrame) -> list[str]:
         [
             "**通用稳健性补强**:",
             "",
-            "- HS300 RDD 当前已使用 L3 官方候选边界样本，但仅覆盖 2023-05 到 2025-11 共 6 个批次；",
-            "  在扩展到 ≥10 年以前，RDD 结论仍应限定为初步识别证据，不可表述为完整中证官方历史 ranking score 因果结论。",
+            "- HS300 RDD 当前已使用 L3 官方候选边界样本，覆盖 2020-11 到 2025-11 共 11 个批次；",
+            "  在扩展到 ≥10 年（约 20 批次）以前，RDD 结论仍应限定为初步识别证据，不可表述为完整中证官方历史 ranking score 因果结论。",
+            "- RDD 稳健性面板（main / donut / placebo / polynomial）已落到 `rdd_robustness.csv` 与首页 forest plot；",
+            "  论文写作时建议在主表脚注同时引用稳健性结果，避免只报告显著的 main spec。",
             "- 跨市场比较默认按事件汇总(announce vs effective × CN vs US 4 象限),后续可叠加事件级",
             "  bootstrap / permutation 检验，以及 sector × size 的交互检验，进一步压低单通道误判风险。",
             "- 长窗口(>120 日)的 retention ratio 在样本量收缩时会跳到 NA,",
@@ -264,6 +272,80 @@ def _limitations_block(verdicts: pd.DataFrame) -> list[str]:
             "",
         ]
     )
+    return lines
+
+
+def _rdd_robustness_block(robustness_path: Path) -> list[str]:
+    """Optional RDD robustness subsection rendered from rdd_robustness.csv.
+
+    Skipped silently when the CSV is missing or empty — keeps the verdict
+    section renderable in pre-RDD-rerun states without forcing the doctor
+    sync check to flag false positives.
+    """
+    if not robustness_path.exists():
+        return []
+    try:
+        df = pd.read_csv(robustness_path)
+    except Exception:  # noqa: BLE001 - never break paper rendering on bad CSV
+        return []
+    if df.empty or "spec" not in df.columns:
+        return []
+
+    spec_kind_order = ["main", "donut", "placebo", "polynomial"]
+    df = df.assign(
+        _kind_rank=df["spec_kind"].map(
+            lambda k: spec_kind_order.index(str(k)) if str(k) in spec_kind_order else 99
+        )
+    ).sort_values(["_kind_rank", "spec"])
+
+    def _interpret(spec_kind: str, tau: float, p: float) -> str:
+        if spec_kind == "main":
+            if p < 0.05:
+                return "边界显著"
+            if p < 0.10:
+                return "边界 marginal"
+            return "未显著"
+        if spec_kind == "donut":
+            return "扔近邻后变化" if abs(tau) > 0 else ""
+        if spec_kind == "placebo":
+            return "placebo 不显著（识别合理）" if p >= 0.10 else "placebo 显著（识别存疑）"
+        if spec_kind == "polynomial":
+            return "spec sensitivity（高阶项吸收跳跃）" if p >= 0.10 else "高阶项下仍显著"
+        return ""
+
+    lines: list[str] = ["### HS300 RDD 稳健性面板", ""]
+    lines.append(
+        "`results/literature/hs300_rdd/rdd_robustness.csv` 在 main 局部线性的基础上跑了 4 类稳健性 spec，"
+        "**统一锁定到 main 自动选出的 bandwidth**（避免 placebo cutoff 的样本-窗口漂移把 spec 噪声混进 τ）："
+    )
+    lines.append("")
+    lines.append("| 设定 | τ (CAR[-1,+1]) | p | n_obs | 解读 |")
+    lines.append("|---|---|---|---|---|")
+    for _, r in df.iterrows():
+        spec_kind = str(r.get("spec_kind", ""))
+        tau = float(r["tau"]) if pd.notna(r["tau"]) else float("nan")
+        p_val = float(r["p_value"]) if pd.notna(r["p_value"]) else float("nan")
+        n_obs = int(r["n_obs"]) if pd.notna(r["n_obs"]) else 0
+        tau_text = f"{tau * 100:+.2f}%" if not pd.isna(tau) else "—"
+        p_text = f"{p_val:.3f}" if not pd.isna(p_val) else "—"
+        if spec_kind == "main":
+            tau_text = f"**{tau_text}**"
+            p_text = f"**{p_text}**"
+        lines.append(
+            f"| {r['spec']} | {tau_text} | {p_text} | {n_obs} | {_interpret(spec_kind, tau, p_val)} |"
+        )
+    lines.append("")
+    main = df.loc[df["spec_kind"] == "main"].head(1)
+    if not main.empty:
+        m_tau = float(main.iloc[0]["tau"])
+        m_p = float(main.iloc[0]["p_value"])
+        m_n = int(main.iloc[0]["n_obs"])
+        lines.append(
+            f"**论文级表述建议**：HS300 RDD main 在公告日 CAR[-1,+1] 上的边界显著（τ={m_tau * 100:.2f}%, p={m_p:.3f}, n={m_n}）；"
+            "placebo cutoff 的 τ 都接近 0 支持识别合理，但 donut / polynomial 提示效应对设定敏感。"
+            "**结论应当限定为初步识别证据**，论文需如实报告全套稳健性面板。"
+        )
+        lines.append("")
     return lines
 
 
@@ -367,6 +449,9 @@ def render_paper_verdict_section(
         lines.append("")
     if sample_lines:
         lines.extend(_limitations_block(verdicts))
+    rdd_robustness_lines = _rdd_robustness_block(_DEFAULT_RDD_ROBUSTNESS_PATH)
+    if rdd_robustness_lines:
+        lines.extend(rdd_robustness_lines)
     lines.extend(_engineering_appendix_block())
     return "\n".join(lines).rstrip() + "\n"
 

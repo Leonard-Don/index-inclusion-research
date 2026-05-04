@@ -335,7 +335,7 @@ def _build_rdd_coverage(root: Path) -> dict[str, str]:
     )
 
 
-def _build_verdict_coverage(tables_dir: Path) -> dict[str, str]:
+def _build_verdict_coverage(tables_dir: Path, *, root: Path = ROOT) -> dict[str, str]:
     path = tables_dir / "cma_hypothesis_verdicts.csv"
     verdicts = _read_csv(path)
     if verdicts.empty or "verdict" not in verdicts.columns:
@@ -344,7 +344,7 @@ def _build_verdict_coverage(tables_dir: Path) -> dict[str, str]:
             "CMA verdicts",
             "missing",
             "0 rows",
-            f"missing or invalid: {path}",
+            f"missing or invalid: {_relative_label(path, root=root)}",
         )
     order = ["支持", "部分支持", "证据不足", "待补数据"]
     counts = verdicts["verdict"].astype(str).value_counts().to_dict()
@@ -355,7 +355,7 @@ def _build_verdict_coverage(tables_dir: Path) -> dict[str, str]:
         "CMA verdicts",
         "pass" if pending == 0 and len(verdicts) >= 7 else "warn",
         value,
-        f"{len(verdicts)} H-row verdicts under {tables_dir}",
+        f"{len(verdicts)} H-row verdicts under {_relative_label(tables_dir, root=root)}",
     )
 
 
@@ -429,7 +429,7 @@ def build_evidence_manifest(
         _build_h6_coverage(root, tables_dir),
         _build_h7_coverage(root),
         _build_rdd_coverage(root),
-        _build_verdict_coverage(tables_dir),
+        _build_verdict_coverage(tables_dir, root=root),
         _build_match_robustness_coverage(root),
         _coverage_row(
             "doctor",

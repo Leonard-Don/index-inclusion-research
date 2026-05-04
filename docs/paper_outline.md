@@ -113,6 +113,27 @@ CAR_i = \alpha + \beta Inclusion_i + \gamma_1 Size_i + \gamma_2 PreReturn_i + \v
 
 机制回归结果表明，指数纳入与成交量、换手率变化之间呈现显著正相关关系，说明指数纳入带来了明显的交易活跃度提升。若公告阶段系数更显著，可支持信息效应；若生效阶段更显著，则更支持被动资金需求冲击机制。波动率变化结果则有助于判断指数纳入是否伴随短期交易拥挤。
 
+### 4.4 中国市场 RDD 识别扩展（HS300）
+
+对应文件：
+
+- `data/raw/hs300_rdd_candidates.csv`（L3 官方候选边界样本：2020-11 到 2025-11，11 批次 / 356 行）
+- `results/literature/hs300_rdd/rdd_summary.csv`（main 局部线性 RDD，4 个 outcome）
+- `results/literature/hs300_rdd/rdd_robustness.csv`（main / donut / placebo / polynomial）
+- `results/literature/hs300_rdd/figures/car_m1_p1_rdd_main.png` 与 `rdd_robustness_forest.png`
+
+写法模板：
+
+为了在制度识别层面补强结论，我们利用沪深 300 指数样本调整名单的官方排序，
+在 cutoff=300 处构造断点回归（local-linear RDD，bandwidth 自动为 0.06）。
+头条估计为公告日 CAR[-1,+1] 在断点右侧（被纳入）相对左侧的跳跃 τ=3.92%
+(p=0.048, n=120)，与事件研究的方向一致；同时跑了 4 项稳健性检验：donut hole
+(±0.01) 把样本缩到 102 行后落到 marginal (p=0.10)，placebo cutoff
+±0.05 的 τ 都接近 0 (p=0.18 / 0.26)，二次多项式则吸收了断点跳跃 (τ=0.4%, p=0.92)。
+我们如实报告全套面板：main 边界显著、placebo 行为正确、但断点结果对设定敏感，
+论文应将 RDD 识别结果定位为**初步识别证据**，与事件研究 / 匹配回归一同呈现，
+不单独作主表结论。
+
 ## 五、结论
 
 结论段可以直接按这个结构写：

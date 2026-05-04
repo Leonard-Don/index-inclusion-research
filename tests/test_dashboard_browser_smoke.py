@@ -996,6 +996,42 @@ def test_rdd_secondary_outcome_thumbs_render_in_identification_track() -> None:
             browser.close()
 
 
+def test_no_absolute_home_directory_path_leaks_in_dashboard_html() -> None:
+    """End-to-end guard against pipeline scripts that write absolute paths
+    into evidence-card text or dashboard tables. We saw this from the
+    CMA evidence card's '... under {tables_dir}' string and from the
+    data_sources.csv pipeline. Both are now relative; this smoke test
+    catches future regressions that re-introduce contributor-home leaks
+    into the dashboard HTML."""
+
+    with (
+        _running_dashboard_server() as base_url,
+        playwright_sync_api.sync_playwright() as playwright,
+    ):
+        browser = playwright.chromium.launch()
+        try:
+            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
+            page.wait_for_load_state("networkidle")
+
+            html = page.content()
+            assert "/Users/leonardodon/" not in html, (
+                "dashboard HTML leaks an absolute home-directory path; "
+                "rewrite the pipeline writer to use a project-relative form."
+            )
+            # Defensive: also check the evidence cards specifically since
+            # that's where the most recent regression was caught.
+            evidence_cards = page.locator(".cma-evidence-card")
+            assert evidence_cards.count() >= 1
+            for i in range(evidence_cards.count()):
+                card_text = evidence_cards.nth(i).inner_text()
+                assert "/Users/" not in card_text, (
+                    f"evidence card #{i} leaks absolute path: {card_text!r}"
+                )
+        finally:
+            browser.close()
+
+
 def test_data_sources_citation_table_renders_in_limits_section() -> None:
     """The data_sources.csv citation table should be reachable from the
     limits section in full mode, with project-relative paths (no absolute
