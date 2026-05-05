@@ -620,7 +620,16 @@
         {% for figure in section.display_figures[1:6] %}
         <div class="thumb" title="{{ figure.caption }}">
           <div class="thumb-media">
+            {% if figure.echart_id %}
+            <div class="echart-panel thumb-echart-panel">
+              <div data-echart="{{ figure.echart_id }}" class="echart-container thumb-echart-container"></div>
+            </div>
+            <div class="echart-fallback">
+            {% endif %}
             <img src="{{ url_for('serve_result_file', subpath=figure.path) }}" alt="{{ figure.caption }}" {% if figure.width and figure.height %}width="{{ figure.width }}" height="{{ figure.height }}"{% endif %} loading="lazy" decoding="async">
+            {% if figure.echart_id %}
+            </div>
+            {% endif %}
           </div>
           <div class="thumb-copy">
             <div class="thumb-kicker">补充图 {{ loop.index }}</div>

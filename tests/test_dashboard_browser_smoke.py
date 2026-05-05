@@ -12,6 +12,8 @@ from urllib.parse import urlsplit
 
 import pytest
 
+from index_inclusion_research.chart_data import CHART_BUILDERS
+
 pytestmark = pytest.mark.browser_smoke
 
 if os.environ.get("RUN_BROWSER_SMOKE") != "1":
@@ -980,6 +982,22 @@ def test_rdd_robustness_forest_plot_appears_in_identification_track() -> None:
             # glance whether main spec is the strongest.
             assert "main" in alt and "局部线性" in alt
 
+            interactive_forest = section.locator('[data-echart="rdd_robustness"]')
+            assert interactive_forest.count() == 1
+            interactive_forest.scroll_into_view_if_needed()
+            page.wait_for_function(
+                """
+                () => {
+                    if (typeof echarts === "undefined") return false;
+                    const el = document.querySelector('[data-echart="rdd_robustness"]');
+                    if (!el) return false;
+                    const inst = echarts.getInstanceByDom(el);
+                    return inst != null && !el.classList.contains("echart-loading");
+                }
+                """,
+                timeout=10_000,
+            )
+
             # And the underlying chart_data endpoint should expose the same
             # 5 specs (forest plot rows) the PNG visualizes.
             api_response = page.request.get(f"{base_url}/api/chart/rdd_robustness")
@@ -987,6 +1005,31 @@ def test_rdd_robustness_forest_plot_appears_in_identification_track() -> None:
             payload = api_response.json()
             spec_kinds = sorted({row["spec_kind"] for row in payload["rows"]})
             assert spec_kinds == ["donut", "main", "placebo", "polynomial"]
+        finally:
+            browser.close()
+
+
+def test_full_dashboard_mounts_every_chart_api_builder() -> None:
+    """Every backend chart-data builder should have a frontend mount point
+    in full mode, otherwise the API exists without a visible dashboard
+    consumer."""
+
+    with (
+        _running_dashboard_server() as base_url,
+        playwright_sync_api.sync_playwright() as playwright,
+    ):
+        browser = _launch_chromium(playwright)
+        try:
+            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
+            page.wait_for_load_state("networkidle")
+
+            frontend_chart_ids = set(
+                page.locator("[data-echart]").evaluate_all(
+                    "nodes => nodes.map(node => node.dataset.echart)"
+                )
+            )
+            assert set(CHART_BUILDERS) <= frontend_chart_ids
         finally:
             browser.close()
 

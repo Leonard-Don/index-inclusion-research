@@ -2507,6 +2507,14 @@
       padding: 14px 14px 0;
       background: rgba(255,255,255,0.46);
     }
+    .thumb-echart-panel {
+      margin: 0;
+    }
+    .thumb-echart-container {
+      height: 260px;
+      min-height: 220px;
+      border-radius: 16px;
+    }
     .thumb img {
       width: 100%;
       display: block;
@@ -4101,6 +4109,10 @@
       }
       .echart-container-wide {
         height: 360px;
+      }
+      .thumb-echart-container {
+        height: 260px;
+        min-height: 220px;
       }
     }
 
