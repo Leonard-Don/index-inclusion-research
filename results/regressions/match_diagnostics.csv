@@ -1,0 +1,7 @@
+event_id,status,selected_controls,sector_relaxed
+CN-csi300-cn01-20240203-20240212-01,matched,3,True
+CN-csi300-cn02-20240309-20240318-01,matched,3,True
+CN-csi300-cn03-20240420-20240429-01,matched,3,True
+US-sp500-us01-20240210-20240220-01,matched,3,True
+US-sp500-us02-20240316-20240325-01,matched,3,True
+US-sp500-us03-20240406-20240415-01,matched,3,True

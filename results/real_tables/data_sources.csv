@@ -1,0 +1,7 @@
+数据集,文件,来源,市场范围,起始日期,结束日期,行数,股票数,事件数,备注
+事件样本,/Users/leonardodon/index-inclusion-research/data/processed/real_events_clean.csv,中证指数官网调整公告附件；Wikipedia 标普500变更表（含 S&P Dow Jones 引用日期）,中国 A 股 + 美国,2010-02-26,2025-12-22,893,745,893,A 股样本为沪深300调入/调出事件，美股样本为 S&P 500 加入/剔除事件。
+日频价格,/Users/leonardodon/index-inclusion-research/data/raw/real_prices.csv,Yahoo Finance（经 yfinance 抓取）,中国 A 股 + 美国,2009-01-02,2026-01-14,3333965,785,,包含事件股票与匹配对照组候选股票的日度价格、成交量、换手率与市值近似值。
+基准收益,/Users/leonardodon/index-inclusion-research/data/raw/real_benchmarks.csv,Yahoo Finance（经 yfinance 抓取）,中国 A 股 + 美国,2009-01-05,2026-01-14,5460,,,美国使用 S&P 500 指数收益，中国使用沪深300指数收益。
+证券元数据,/Users/leonardodon/index-inclusion-research/data/raw/real_metadata.csv,Yahoo Finance（sharesOutstanding / sector 近似口径）,中国 A 股 + 美国,,,785,785,,用于构造市值与换手率近似值，更适合课程论文与机制分析。
+事件窗口面板,/Users/leonardodon/index-inclusion-research/data/processed/real_event_panel.csv,由真实事件样本、日频价格与基准收益拼接生成,中国 A 股 + 美国,2010-01-28,2026-01-14,69674,703,850,用于事件研究、长窗口保留分析与平均路径图。
+匹配回归面板,/Users/leonardodon/index-inclusion-research/data/processed/real_matched_event_panel.csv,由匹配后的真实事件样本、对照组与基准收益拼接生成,中国 A 股 + 美国,2010-01-28,2026-01-14,210788,780,850,用于匹配对照组回归、机制回归与匹配诊断。

@@ -1,0 +1,7 @@
+spec_id,reference_date_column,control_ratio,n_treated,n_control,balance_rows,max_abs_smd,over_threshold_covariates,worst_market,worst_covariate,worst_smd,passes_threshold,is_default
+announce_1to1,announce_date,1,574,574,6,0.1984441910387018,0,CN,pre_event_volatility,0.1984441910387018,True,False
+announce_1to2,announce_date,2,574,1148,6,0.15672748219875604,0,CN,mkt_cap_log,-0.15672748219875604,True,False
+announce_1to3,announce_date,3,574,1722,6,0.1768456617410789,0,CN,mkt_cap_log,-0.1768456617410789,True,True
+effective_1to1,effective_date,1,574,574,6,0.4221368005551442,1,CN,pre_event_volatility,0.4221368005551442,False,False
+effective_1to2,effective_date,2,574,1148,6,0.27572013281482555,1,CN,pre_event_volatility,0.27572013281482555,False,False
+effective_1to3,effective_date,3,574,1722,6,0.2661518570901678,1,CN,pre_event_volatility,0.2661518570901678,False,False

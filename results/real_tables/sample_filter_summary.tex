@@ -1,0 +1,9 @@
+\begin{tabular}{lrrrrrrl}
+\toprule
+sample_filter & n_treated_events & n_short_event_phase_windows & n_long_event_phase_windows & n_regression_comparisons & n_regression_rows & share_of_baseline & note \\
+\midrule
+baseline & 850 & 1700 & 1700 & 850 & 5144 & 1.0000 & 基准样本，不做重叠过滤或极值处理。 \\
+winsorized_1pct & 850 & 1700 & 1700 & 850 & 5144 & 1.0000 & 仅对事件级 CAR 做 1% / 99% winsorize，不改变样本量。 \\
+nonoverlap_120d & 838 & 1676 & 1676 & 838 & 5090 & 0.9859 & 剔除同一 ticker、同一事件阶段下 ±120 日历日内重叠的事件窗口。 \\
+\bottomrule
+\end{tabular}

@@ -1,0 +1,18 @@
+\begin{tabular}{lllllrrrrlrrrl}
+\toprule
+market & event_phase & specification & dependent_variable & parameter & coefficient & std_error & t_stat & p_value & estimation & n_obs & r_squared & adj_r_squared & covariance \\
+\midrule
+CN & announce & main_car & car_m1_p1 & treatment_group & 0.0079 & 0.0025 & 3.2077 & 0.0014 & baseline_ols & 936 & 0.0796 & 0.0766 & OLS \\
+CN & effective & main_car & car_m1_p1 & treatment_group & -0.0014 & 0.0027 & -0.5034 & 0.6148 & baseline_ols & 936 & 0.0869 & 0.0839 & OLS \\
+US & announce & main_car & car_m1_p1 & treatment_group & 0.0105 & 0.0030 & 3.4802 & 0.0005 & baseline_ols & 1366 & 0.0402 & 0.0381 & OLS \\
+US & effective & main_car & car_m1_p1 & treatment_group & -0.0002 & 0.0025 & -0.0750 & 0.9402 & baseline_ols & 1368 & 0.0026 & 0.0004 & OLS \\
+CN & announce & main_car & car_m1_p1 & treatment_group & 0.0079 & 0.0027 & 2.9622 & 0.0031 & hc3 & 936 & 0.0796 & 0.0766 & HC3 \\
+CN & effective & main_car & car_m1_p1 & treatment_group & -0.0014 & 0.0032 & -0.4242 & 0.6714 & hc3 & 936 & 0.0869 & 0.0839 & HC3 \\
+US & announce & main_car & car_m1_p1 & treatment_group & 0.0105 & 0.0040 & 2.5974 & 0.0094 & hc3 & 1366 & 0.0402 & 0.0381 & HC3 \\
+US & effective & main_car & car_m1_p1 & treatment_group & -0.0002 & 0.0031 & -0.0614 & 0.9510 & hc3 & 1368 & 0.0026 & 0.0004 & HC3 \\
+CN & announce & main_car & car_m1_p1 & treatment_group & 0.0079 & 0.0027 & 2.9622 & 0.0031 & nonoverlap_120d & 936 & 0.0796 & 0.0766 & HC3 \\
+CN & effective & main_car & car_m1_p1 & treatment_group & -0.0014 & 0.0032 & -0.4242 & 0.6714 & nonoverlap_120d & 936 & 0.0869 & 0.0839 & HC3 \\
+US & announce & main_car & car_m1_p1 & treatment_group & 0.0102 & 0.0041 & 2.4627 & 0.0138 & nonoverlap_120d & 1344 & 0.0396 & 0.0374 & HC3 \\
+US & effective & main_car & car_m1_p1 & treatment_group & 0.0008 & 0.0031 & 0.2438 & 0.8074 & nonoverlap_120d & 1345 & 0.0028 & 0.0006 & HC3 \\
+\bottomrule
+\end{tabular}
