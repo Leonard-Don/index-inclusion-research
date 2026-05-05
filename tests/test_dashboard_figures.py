@@ -41,6 +41,19 @@ def test_figure_cache_is_fresh_reflects_source_and_target_mtimes(tmp_path: Path)
     assert dashboard_figures.figure_cache_is_fresh([target], [source]) is False
 
 
+def test_figure_cache_trusts_existing_targets_in_browser_smoke(
+    tmp_path: Path, monkeypatch
+) -> None:
+    source = _write(tmp_path / "source.csv", "x\n1\n")
+    target = _write(tmp_path / "target.png", b"png")
+    now = time.time()
+    _set_mtime(source, now)
+    _set_mtime(target, now - 50)
+    monkeypatch.setenv("DASHBOARD_ECHARTS_TEST_STUB", "1")
+
+    assert dashboard_figures.figure_cache_is_fresh([target], [source]) is True
+
+
 def test_significance_stars_uses_expected_thresholds() -> None:
     assert dashboard_figures.significance_stars(0.009) == "***"
     assert dashboard_figures.significance_stars(0.03) == "**"
