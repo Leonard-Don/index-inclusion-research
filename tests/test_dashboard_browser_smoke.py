@@ -120,23 +120,22 @@ def _launch_chromium(playwright):
         return playwright.chromium.launch(executable_path=str(fallback))
 
 
-def _route_echarts_cdn_to_test_stub(route) -> None:
-    url = route.request.url
-    if "cdn.jsdelivr.net" in url and "echarts" in url:
-        route.fulfill(
-            status=200,
-            content_type="application/javascript",
-            body=_ECHARTS_TEST_STUB,
-        )
-        return
-    route.continue_()
+def _fulfill_echarts_test_stub(route) -> None:
+    route.fulfill(
+        status=200,
+        content_type="application/javascript",
+        body=_ECHARTS_TEST_STUB,
+    )
 
 
 def _new_dashboard_page(browser, *, viewport: dict[str, int]) -> playwright_sync_api.Page:
     page = browser.new_page(viewport=viewport)
     navigation_timeout = 90_000 if os.environ.get("CI") else 45_000
     page.set_default_navigation_timeout(navigation_timeout)
-    page.route("**/*", _route_echarts_cdn_to_test_stub)
+    page.route(
+        "https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js",
+        _fulfill_echarts_test_stub,
+    )
     return page
 
 
