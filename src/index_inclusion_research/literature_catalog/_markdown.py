@@ -46,7 +46,7 @@ def build_project_track_markdown(project_module: str) -> str:
     camp_text = "、".join(
         f"{camp} {count} 篇"
         for camp, count in sorted(
-            camp_counts.items(), key=lambda item: CAMP_LABELS[item[0]]["order"]
+            camp_counts.items(), key=lambda item: int(str(CAMP_LABELS[str(item[0])]["order"]))
         )
     )
     lines = [

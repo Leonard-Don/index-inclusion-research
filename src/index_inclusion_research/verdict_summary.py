@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import argparse
 import math
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 import pandas as pd
@@ -51,7 +51,7 @@ def _format_value(value: object) -> str:
     if value is None:
         return "—"
     try:
-        v = float(value)
+        v = float(str(value))
     except (TypeError, ValueError):
         return str(value) if value else "—"
     if math.isnan(v):
@@ -61,7 +61,7 @@ def _format_value(value: object) -> str:
 
 def _format_n(n_obs: object) -> str:
     try:
-        n = int(n_obs)
+        n = int(float(str(n_obs)))
     except (TypeError, ValueError):
         return "—"
     return str(n) if n > 0 else "—"
@@ -169,7 +169,7 @@ def save_verdict_snapshot(verdicts: pd.DataFrame, *, output_path: Path) -> Path:
 
 def _coerce_float(value: object) -> float:
     try:
-        v = float(value)
+        v = float(str(value))
     except (TypeError, ValueError):
         return float("nan")
     return v
@@ -177,7 +177,7 @@ def _coerce_float(value: object) -> float:
 
 def _coerce_int(value: object) -> int:
     try:
-        return int(value)
+        return int(float(str(value)))
     except (TypeError, ValueError):
         return 0
 
@@ -284,7 +284,13 @@ def render_verdict_diff(
             hid = str(row["hid"])
             name = str(row.get("name_cn", ""))
             lines.append(f"  {hid} · {name}")
-            for field, beats in row["changes"].items():  # type: ignore[index]
+            changes = row.get("changes", {})
+            if not isinstance(changes, Mapping):
+                continue
+            for field, beats_raw in changes.items():
+                if not isinstance(beats_raw, Mapping):
+                    continue
+                beats = beats_raw
                 before = beats["before"]
                 after = beats["after"]
                 if field == "verdict":
@@ -308,7 +314,8 @@ def render_verdict_diff(
     if added:
         lines.append("新增:")
         for row in added:
-            cur = row.get("current", {})  # type: ignore[assignment]
+            current = row.get("current", {})
+            cur = current if isinstance(current, Mapping) else {}
             lines.append(
                 f"  + {row['hid']} {cur.get('name_cn', '')} → {cur.get('verdict', '')}"
             )
@@ -317,7 +324,8 @@ def render_verdict_diff(
     if removed:
         lines.append("移除:")
         for row in removed:
-            prev = row.get("previous", {})  # type: ignore[assignment]
+            previous = row.get("previous", {})
+            prev = previous if isinstance(previous, Mapping) else {}
             lines.append(
                 f"  - {row['hid']} {prev.get('name_cn', '')} (was {prev.get('verdict', '')})"
             )
@@ -594,13 +602,14 @@ def render_summary_json(
         return out
 
     payload: dict[str, object] = {}
-    payload["verdicts"] = (
+    verdict_records = (
         [_row_to_jsonable(row) for _, row in verdicts.iterrows()]
         if not verdicts.empty
         else []
     )
+    payload["verdicts"] = verdict_records
     aggregate: dict[str, int] = {tier: 0 for tier in VERDICT_TIER_ORDER}
-    for row in payload["verdicts"]:
+    for row in verdict_records:
         tier = str(row.get("verdict", ""))
         aggregate[tier] = aggregate.get(tier, 0) + 1
     payload["aggregate"] = aggregate

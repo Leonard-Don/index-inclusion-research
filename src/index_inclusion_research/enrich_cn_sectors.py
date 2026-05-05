@@ -263,10 +263,12 @@ def main(argv: list[str] | None = None) -> int:
         limit=args.limit,
         sleep_seconds=args.sleep_seconds,
     )
+    failed_tickers = summary.get("failed_tickers", [])
+    failed_count = len(failed_tickers) if isinstance(failed_tickers, list) else 0
     print(
         "[enrich-cn-sectors] "
         f"fetched={summary['fetched_sectors']} "
-        f"failed={len(summary['failed_tickers'])} "
+        f"failed={failed_count} "
         f"events_filled={summary['events_filled']} "
         f"metadata_filled={summary['metadata_filled']}"
     )

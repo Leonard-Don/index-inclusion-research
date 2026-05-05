@@ -6,6 +6,7 @@ import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TypedDict
 from urllib.parse import quote
 
 import pandas as pd
@@ -124,6 +125,25 @@ SEARCH_TERMS = (
     "调整沪深300指数样本股",
     "沪深300 定期调整",
 )
+
+
+class OfficialHs300SourcesOutputs(TypedDict):
+    draft_output: Path
+    audit_output: Path
+    search_diagnostics_output: Path
+    year_coverage_output: Path
+    manual_gap_worklist_output: Path
+    gap_source_hints_output: Path
+    report_output: Path
+    formal_output: Path | None
+    candidate_rows: int
+    source_rows: int
+    search_rows: int
+    year_rows: int
+    gap_rows: int
+    hint_rows: int
+    candidate_batches: int | None
+    status: str
 
 
 @dataclass(frozen=True)
@@ -1312,7 +1332,7 @@ def collect_official_hs300_sources(
     until: str | None = None,
     notice_rows: int = DEFAULT_NOTICE_ROWS,
     search_terms: tuple[str, ...] = SEARCH_TERMS,
-) -> dict[str, object]:
+) -> OfficialHs300SourcesOutputs:
     for path in [
         draft_output,
         audit_output,

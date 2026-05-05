@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import shlex
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from index_inclusion_research import paths
@@ -45,6 +46,16 @@ RECONSTRUCTED_SOURCE_TOKENS = (
 
 def _sheet_argument(value: str) -> str | int:
     return int(value) if value.isdigit() else value
+
+
+def _object_mapping(value: object) -> Mapping[object, object]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def _object_list(value: object) -> list[object]:
+    if isinstance(value, Sequence) and not isinstance(value, str | bytes):
+        return list(value)
+    return []
 
 
 def _relative_or_absolute(path: Path) -> str:
@@ -225,6 +236,12 @@ def _build_summary_text(
     defaults_applied = metadata.get("defaults_applied", [])
     derived_fields = metadata.get("derived_fields", [])
     unused_columns = metadata.get("unused_columns", [])
+    mapped_columns_map = _object_mapping(mapped_columns)
+    default_fields = _object_list(defaults_applied)
+    derived_field_list = _object_list(derived_fields)
+    unused_column_list = _object_list(unused_columns)
+    preflight_checks = _object_list(preflight_report.get("checks", []))
+    next_commands = _object_list(preflight_report.get("next_commands", []))
     lines = [
         "# HS300 RDD 候选样本导入摘要",
         "",
@@ -241,27 +258,28 @@ def _build_summary_text(
         "",
         "列映射：",
     ]
-    if mapped_columns:
-        for canonical, source in sorted(mapped_columns.items()):
+    if mapped_columns_map:
+        for canonical, source in sorted(mapped_columns_map.items()):
             lines.append(f"- `{source}` -> `{canonical}`")
     else:
         lines.append("- 输入文件已经使用标准列名。")
 
     lines.extend(["", "默认补入字段："])
-    lines.extend([f"- `{column}`" for column in defaults_applied] if defaults_applied else ["- 无"])
+    lines.extend([f"- `{column}`" for column in default_fields] if default_fields else ["- 无"])
     lines.extend(["", "自动推导字段："])
-    lines.extend([f"- `{column}`" for column in derived_fields] if derived_fields else ["- 无"])
+    lines.extend([f"- `{column}`" for column in derived_field_list] if derived_field_list else ["- 无"])
     lines.extend(["", "未使用原始列："])
-    lines.extend([f"- `{column}`" for column in unused_columns] if unused_columns else ["- 无"])
+    lines.extend([f"- `{column}`" for column in unused_column_list] if unused_column_list else ["- 无"])
     lines.extend(["", "## L3 导入预检", ""])
     lines.append(f"- 总体结论：`{preflight_report['status_label']}`")
     lines.extend(["", "预检项目："])
-    for check in preflight_report["checks"]:
+    for check_raw in preflight_checks:
+        check = _object_mapping(check_raw)
         lines.append(f"- `{check['status_label']}` {check['label']}：{check['copy']}")
         if check["next_step"]:
             lines.append(f"  下一步：{check['next_step']}")
     lines.extend(["", "下一步命令："])
-    for command in preflight_report["next_commands"]:
+    for command in next_commands:
         lines.append(f"- `{command}`")
     return "\n".join(lines) + "\n"
 
@@ -359,31 +377,37 @@ def main(argv: list[str] | None = None) -> int:
         f"{audit_summary.get('crossing_batches')} cutoff-crossing batches"
     )
     print(f"L3 preflight: {preflight_report['status_label']}")
-    for check in preflight_report["checks"]:
+    for check_raw in _object_list(preflight_report.get("checks", [])):
+        check = _object_mapping(check_raw)
         if check["status"] != "pass":
             print(f"  - {check['status_label']} {check['label']}: {check['copy']}")
             if check["next_step"]:
                 print(f"    next: {check['next_step']}")
-    if preflight_report["next_commands"]:
+    next_commands = _object_list(preflight_report.get("next_commands", []))
+    if next_commands:
         print("Next commands:")
-        for command in preflight_report["next_commands"]:
+        for command in next_commands:
             print(f"  - {command}")
     mapped_columns = metadata.get("mapped_columns", {})
-    if mapped_columns:
+    mapped_columns_map = _object_mapping(mapped_columns)
+    if mapped_columns_map:
         print("Mapped columns:")
-        for canonical, source in sorted(mapped_columns.items()):
+        for canonical, source in sorted(mapped_columns_map.items()):
             print(f"  - {source} -> {canonical}")
-    if metadata.get("defaults_applied"):
+    default_fields = _object_list(metadata.get("defaults_applied", []))
+    if default_fields:
         print("Defaults applied:")
-        for column in metadata["defaults_applied"]:
+        for column in default_fields:
             print(f"  - {column}")
-    if metadata.get("derived_fields"):
+    derived_fields = _object_list(metadata.get("derived_fields", []))
+    if derived_fields:
         print("Derived fields:")
-        for column in metadata["derived_fields"]:
+        for column in derived_fields:
             print(f"  - {column}")
-    if metadata.get("unused_columns"):
+    unused_columns = _object_list(metadata.get("unused_columns", []))
+    if unused_columns:
         print("Unused input columns:")
-        for column in metadata["unused_columns"]:
+        for column in unused_columns:
             print(f"  - {column}")
 
     if args.check_only:

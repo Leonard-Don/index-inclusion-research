@@ -354,10 +354,9 @@ class RddContractCheck(TypedDict):
     manifest: dict[str, Any]
 
 
-class DashboardSection(TypedDict, total=False):
+class DashboardSectionDisplay(TypedDict, total=False):
     summary: str
     display_summary: str
-    summary_cards: list[SummaryCard]
     figures: list[FigureEntry]
     detail_figures: list[FigureEntry]
     display_figures: list[FigureEntry]
@@ -367,6 +366,10 @@ class DashboardSection(TypedDict, total=False):
     detail_tables: list[DisplayTable]
     artifact_tables: list[DisplayTable]
     section_view: DesignSectionView | TableSuiteSectionView
+
+
+class DashboardSection(DashboardSectionDisplay, total=False):
+    summary_cards: list[SummaryCard]
 
 
 class SectionHeadView(TypedDict):
@@ -437,7 +440,7 @@ class TrackSectionView(TypedDict):
     support_demo_toggle_label: str
 
 
-class TrackDisplaySection(TrackResult, DashboardSection, total=False):
+class TrackDisplaySection(TrackResult, DashboardSectionDisplay, total=False):
     anchor: str
     notes: list[TrackNote]
     display_support_papers: list[SupportPaperRecord]
@@ -448,7 +451,7 @@ class TrackDisplaySection(TrackResult, DashboardSection, total=False):
     track_view: TrackSectionView
 
 
-class SecondarySection(BaseResult, DashboardSection, total=False):
+class SecondarySection(BaseResult, DashboardSectionDisplay, total=False):
     pass
 
 

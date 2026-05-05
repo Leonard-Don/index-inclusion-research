@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
 import matplotlib
@@ -55,8 +55,12 @@ INCLUSION_STYLES = {
 def _lighten(color: str, factor: float = 0.45) -> tuple[float, float, float]:
     import matplotlib.colors as mcolors
 
-    base = mcolors.to_rgb(color)
-    return tuple(channel + (1 - channel) * factor for channel in base)
+    red, green, blue = mcolors.to_rgb(color)
+    return (
+        red + (1 - red) * factor,
+        green + (1 - green) * factor,
+        blue + (1 - blue) * factor,
+    )
 
 
 def _ensure_directory(path: str | Path) -> Path:
@@ -83,7 +87,7 @@ def _date_range_from_frame(frame: pd.DataFrame, date_columns: list[str]) -> tupl
 def _safe_int(value: object) -> object:
     if value is None or pd.isna(value):
         return pd.NA
-    return int(value)
+    return int(float(str(value)))
 
 
 def _display_value(value: object) -> str:
@@ -522,7 +526,7 @@ def build_time_series_event_study_summary(event_level: pd.DataFrame) -> pd.DataF
     value_columns = [column for column in ["car_m1_p1", "car_m3_p3", "car_m5_p5", "car_p0_p20", "car_p0_p120"] if column in work.columns]
     if not value_columns:
         return pd.DataFrame()
-    aggregations: dict[str, tuple[str, str]] = {"n_events": ("event_id", "nunique")}
+    aggregations: dict[str, tuple[str, str | Callable[[pd.Series], float]]] = {"n_events": ("event_id", "nunique")}
     for column in value_columns:
         aggregations[f"mean_{column}"] = (column, "mean")
         aggregations[f"std_{column}"] = (column, lambda series: series.std(ddof=1))

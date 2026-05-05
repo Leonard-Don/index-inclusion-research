@@ -110,9 +110,11 @@ def compute_did_summary(
         pre_group = group.loc[pre_mask]
         post_group = group.loc[post_mask]
         for metric_name, (column, aggregator) in metric_specs.items():
-            row[f"pre_{metric_name}"] = aggregator(pre_group[column]) if not pre_group.empty else np.nan
-            row[f"post_{metric_name}"] = aggregator(post_group[column]) if not post_group.empty else np.nan
-            row[f"diff_{metric_name}"] = row[f"post_{metric_name}"] - row[f"pre_{metric_name}"]
+            pre_value = float(aggregator(pre_group[column])) if not pre_group.empty else np.nan
+            post_value = float(aggregator(post_group[column])) if not post_group.empty else np.nan
+            row[f"pre_{metric_name}"] = pre_value
+            row[f"post_{metric_name}"] = post_value
+            row[f"diff_{metric_name}"] = post_value - pre_value
         event_rows.append(row)
 
     event_level = pd.DataFrame(event_rows)

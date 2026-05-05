@@ -188,7 +188,7 @@ class LiteraturePaper:
 
     @property
     def camp_order(self) -> int:
-        return int(CAMP_LABELS[self.camp]["order"])
+        return int(str(CAMP_LABELS[self.camp]["order"]))
 
 
 PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (

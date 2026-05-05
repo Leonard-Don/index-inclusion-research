@@ -285,15 +285,15 @@ def build_project_track_frame(project_module: str) -> pd.DataFrame:
     return grouped.drop(columns=["camp_order", "year_order"]).reset_index(drop=True)
 
 
-def build_project_track_support_records(project_module: str) -> list[dict[str, str]]:
-    records: list[dict[str, str]] = []
+def build_project_track_support_records(project_module: str) -> list[dict[str, object]]:
+    records: list[dict[str, object]] = []
     for paper in PAPER_LIBRARY:
         if paper.project_module != project_module:
             continue
         records.append(
             {
                 "citation": _paper_citation(paper),
-                "camp": CAMP_LABELS[paper.camp]["title"],
+                "camp": str(CAMP_LABELS[paper.camp]["title"]),
                 "year_label": paper.year_label,
                 "year_order": _year_sort_value(paper.year_label),
                 "stance": paper.stance,
@@ -320,7 +320,7 @@ def build_project_track_support_records(project_module: str) -> list[dict[str, s
                 for config in CAMP_LABELS.values()
                 if config["title"] == row["camp"]
             ),
-            int(row["year_order"]),
+            int(str(row["year_order"])),
             str(row["citation"]),
         )
     )

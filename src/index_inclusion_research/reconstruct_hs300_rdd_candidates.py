@@ -118,7 +118,7 @@ def _fetch_missing_proxy_market_caps(
 
     for ticker in tickers:
         shares = cache.get(ticker)
-        if shares in (None, 0):
+        if shares is None or shares == 0:
             continue
         shares_map[ticker] = shares
 

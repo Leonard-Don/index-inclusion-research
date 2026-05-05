@@ -41,9 +41,10 @@ def _parse_reference_dates(soup: BeautifulSoup) -> dict[str, str | None]:
         r"November|December)\s+\d{1,2},\s+\d{4}"
     )
     for li in soup.select("ol.references li"):
-        ref_id = li.get("id")
-        if not ref_id:
+        ref_id_raw = li.get("id")
+        if not isinstance(ref_id_raw, str) or not ref_id_raw:
             continue
+        ref_id = ref_id_raw
         text = " ".join(li.get_text(" ", strip=True).split())
         match = re.search(month_pattern, text)
         if match:
@@ -97,7 +98,11 @@ def build_us_events(start_year: int = 2010, end_year: int = 2025) -> tuple[pd.Da
             continue
         if not (start_year <= effective_date.year <= end_year):
             continue
-        ref_ids = [a.get("href").lstrip("#") for a in tr.select('sup.reference a[href^="#cite_note"]')]
+        ref_ids = [
+            href.lstrip("#")
+            for a in tr.select('sup.reference a[href^="#cite_note"]')
+            if isinstance((href := a.get("href")), str)
+        ]
         announce_candidates = [reference_dates.get(ref_id) for ref_id in ref_ids if reference_dates.get(ref_id)]
         announce_date = (
             pd.to_datetime(announce_candidates[0], errors="coerce")
