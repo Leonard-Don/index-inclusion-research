@@ -63,4 +63,4 @@ jobs:
       - name: Run dashboard browser smoke test
         env:
           RUN_BROWSER_SMOKE: "1"
-        run: uv run pytest -q -m browser_smoke tests/test_dashboard_browser_smoke.py
+        run: uv run pytest -vv -x --tb=short -m browser_smoke tests/test_dashboard_browser_smoke.py
