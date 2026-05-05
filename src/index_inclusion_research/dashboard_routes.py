@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from io import BytesIO
 from pathlib import Path
 
 from flask import abort, jsonify, redirect, render_template, send_file
@@ -319,10 +320,56 @@ def render_paper_brief(
     return render_template("paper.html", current=current, evolution_view=normalized_view)
 
 
+def _safe_pdf_filename(paper_id: str) -> str:
+    stem = "".join(char if char.isalnum() or char in {"-", "_", "."} else "_" for char in paper_id)
+    return f"{stem or 'paper'}.pdf"
+
+
+def _missing_pdf_placeholder_bytes(paper_id: str) -> bytes:
+    safe_id = _safe_pdf_filename(paper_id).removesuffix(".pdf")
+    stream = (
+        "BT /F1 14 Tf 72 720 Td "
+        "(PDF attachment unavailable in this checkout.) Tj "
+        "0 -24 Td "
+        f"(paper_id: {safe_id}) Tj ET"
+    )
+    objects = [
+        "<< /Type /Catalog /Pages 2 0 R >>",
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+        "/Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        f"<< /Length {len(stream.encode('ascii'))} >>\nstream\n{stream}\nendstream",
+    ]
+    chunks = [b"%PDF-1.4\n"]
+    offsets: list[int] = []
+    for index, obj in enumerate(objects, start=1):
+        offsets.append(sum(len(chunk) for chunk in chunks))
+        chunks.append(f"{index} 0 obj\n{obj}\nendobj\n".encode("ascii"))
+    xref_offset = sum(len(chunk) for chunk in chunks)
+    xref_rows = ["0000000000 65535 f "] + [f"{offset:010d} 00000 n " for offset in offsets]
+    chunks.append(
+        (
+            f"xref\n0 {len(objects) + 1}\n"
+            + "\n".join(xref_rows)
+            + "\n"
+            f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\n"
+            f"startxref\n{xref_offset}\n%%EOF\n"
+        ).encode("ascii")
+    )
+    return b"".join(chunks)
+
+
 def serve_library_pdf(paper_id: str, *, get_literature_paper: LiteraturePaperLookup) -> RouteResponse:
     paper = get_literature_paper(paper_id)
-    if paper is None or not paper.exists:
+    if paper is None:
         abort(404)
+    if not paper.exists:
+        return send_file(
+            BytesIO(_missing_pdf_placeholder_bytes(paper_id)),
+            mimetype="application/pdf",
+            download_name=_safe_pdf_filename(paper_id),
+        )
     return send_file(paper.pdf_path)
 
 

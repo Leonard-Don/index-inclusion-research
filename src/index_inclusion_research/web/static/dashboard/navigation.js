@@ -117,6 +117,20 @@ export function createNavigationController(ctx, surface) {
     waypointScrollFrame = window.requestAnimationFrame(syncWaypointFromScroll);
   }
 
+  function stabilizeInitialHash() {
+    const initialHash = window.location.hash;
+    const target = initialHash ? document.querySelector(initialHash) : null;
+    if (!initialHash || !target) {
+      return;
+    }
+    setPendingHash(initialHash);
+    liveHash = initialHash;
+    window.requestAnimationFrame(() => {
+      target.scrollIntoView({ block: "start" });
+      scheduleWaypointSync();
+    });
+  }
+
   function syncTopbarState() {
     const activeModeLink =
       ctx.modeLinks.find((link) => link.classList.contains("active")) ||
@@ -262,6 +276,7 @@ export function createNavigationController(ctx, surface) {
 
       updateReadingProgress();
       syncTopbarState();
+      stabilizeInitialHash();
       scheduleWaypointSync();
 
       window.addEventListener("hashchange", () => {

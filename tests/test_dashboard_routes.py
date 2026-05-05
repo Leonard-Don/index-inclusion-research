@@ -7,6 +7,7 @@ from flask import Flask, request
 
 from index_inclusion_research import dashboard_routes
 from index_inclusion_research.dashboard_types import RefreshStatusPayload
+from index_inclusion_research.literature_catalog import LiteraturePaper
 
 
 def _refresh_payload(mode: str, anchor: str, open_panels: str | None) -> RefreshStatusPayload:
@@ -242,3 +243,34 @@ def test_serve_result_file_returns_file_content(tmp_path: Path) -> None:
     assert response.status_code == 200
     response.direct_passthrough = False
     assert response.get_data(as_text=True) == "hello"
+
+
+def test_serve_library_pdf_returns_placeholder_for_known_missing_attachment(tmp_path: Path) -> None:
+    app = Flask(__name__)
+    paper = LiteraturePaper(
+        paper_id="missing-paper",
+        stance="baseline",
+        camp="baseline",
+        title="Missing paper",
+        authors="Researcher",
+        year_label="2026",
+        market_focus="US",
+        method_focus="Event study",
+        project_module="短期价格压力",
+        relevance_note="demo",
+        core_logic="demo",
+        one_line_role="demo",
+        practical_use="demo",
+        pdf_path=tmp_path / "missing.pdf",
+    )
+
+    with app.test_request_context("/paper/missing-paper/pdf"):
+        response = dashboard_routes.serve_library_pdf(
+            "missing-paper",
+            get_literature_paper=lambda paper_id: paper if paper_id == paper.paper_id else None,
+        )
+
+    assert response.status_code == 200
+    assert response.mimetype == "application/pdf"
+    response.direct_passthrough = False
+    assert response.get_data().startswith(b"%PDF-1.4")
