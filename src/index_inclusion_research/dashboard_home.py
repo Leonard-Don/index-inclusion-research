@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -49,6 +50,7 @@ def dashboard_asset_version(root: Path) -> str:
         static_dir / "dashboard.js",
         static_dir / "dashboard" / "interactive_charts.js",
         static_dir / "dashboard" / "echarts_theme.js",
+        static_dir / "dashboard" / "echarts_test_stub.js",
     ]
     mtimes: list[float] = []
     for path in asset_paths:
@@ -331,6 +333,8 @@ class DashboardHomeContextBuilder:
             ),
             "pap_meta": self.build_pap_meta(),
             "asset_version": dashboard_asset_version(self.root),
+            "use_echarts_test_stub": os.environ.get("DASHBOARD_ECHARTS_TEST_STUB")
+            == "1",
             "refresh_status_url": refresh_status_url,
             "current_open_panels": current_open_panels,
             "overview_metrics": build_overview_metrics(self.root, snapshot=snapshot),

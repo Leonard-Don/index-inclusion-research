@@ -6,7 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>指数纳入研究展板</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}?v={{ asset_version }}">
+  {% if use_echarts_test_stub %}
+  <script src="{{ url_for('static', filename='dashboard/echarts_test_stub.js') }}?v={{ asset_version }}"></script>
+  {% else %}
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  {% endif %}
 </head>
 <body data-refresh-status-url="{{ refresh_status_url }}" data-table-density="cozy">
   <a class="skip-link" href="#main-content">跳到主内容</a>
