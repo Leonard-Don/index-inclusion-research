@@ -240,8 +240,8 @@ def test_home_dashboard_demo_mode_collapses_secondary_material_and_marks_lazy_me
     response = client.get("/?mode=demo")
     assert response.status_code == 200
     html = response.get_data(as_text=True)
-    assert 'href="/static/dashboard.css"' in html
-    assert 'src="/static/dashboard.js"' in html
+    assert 'href="/static/dashboard.css?v=' in html
+    assert 'src="/static/dashboard.js?v=' in html
     assert 'type="module"' in html
     assert 'data-refresh-status-url="/refresh/status"' in html
     assert "data-refresh-form" in html
