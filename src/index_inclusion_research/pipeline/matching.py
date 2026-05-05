@@ -8,6 +8,15 @@ import pandas as pd
 from .panel import map_to_trading_date
 
 
+def _float_cell(value: object, default: float = float("nan")) -> float:
+    if value is None or pd.isna(value):
+        return default
+    try:
+        return float(str(value))
+    except ValueError:
+        return default
+
+
 def _compute_security_snapshot(
     prices: pd.DataFrame,
     market: str,
@@ -56,16 +65,23 @@ def _distance_score(
 ) -> float:
     target_cap = target.get("mkt_cap")
     candidate_cap = candidate.get("mkt_cap")
-    if pd.isna(target_cap) or pd.isna(candidate_cap) or target_cap <= 0 or candidate_cap <= 0:
+    target_cap_value = _float_cell(target_cap)
+    candidate_cap_value = _float_cell(candidate_cap)
+    if (
+        math.isnan(target_cap_value)
+        or math.isnan(candidate_cap_value)
+        or target_cap_value <= 0
+        or candidate_cap_value <= 0
+    ):
         return math.inf
-    target_log_cap = np.log(target_cap)
-    candidate_log_cap = np.log(candidate_cap)
+    target_log_cap = float(np.log(target_cap_value))
+    candidate_log_cap = float(np.log(candidate_cap_value))
     size_distance = abs(target_log_cap - candidate_log_cap)
     if candidate_log_cap > target_log_cap:
         size_distance *= larger_mkt_cap_penalty
-    return_distance = abs(float(target["pre_event_return"]) - float(candidate["pre_event_return"]))
-    target_volatility = float(target["pre_event_volatility"])
-    candidate_volatility = float(candidate["pre_event_volatility"])
+    return_distance = abs(_float_cell(target.get("pre_event_return"), 0.0) - _float_cell(candidate.get("pre_event_return"), 0.0))
+    target_volatility = _float_cell(target.get("pre_event_volatility"), 0.0)
+    candidate_volatility = _float_cell(candidate.get("pre_event_volatility"), 0.0)
     vol_distance = abs(target_volatility - candidate_volatility)
     if candidate_volatility < target_volatility:
         vol_distance *= lower_volatility_penalty
@@ -265,11 +281,12 @@ def _balance_snapshot(
     if snap is None:
         return None
     cap = snap.get("mkt_cap")
-    cap_log = float(np.log(cap)) if cap is not None and not pd.isna(cap) and cap > 0 else float("nan")
+    cap_value = _float_cell(cap)
+    cap_log = float(np.log(cap_value)) if not math.isnan(cap_value) and cap_value > 0 else float("nan")
     return {
         "mkt_cap_log": cap_log,
-        "pre_event_return": float(snap.get("pre_event_return", float("nan"))),
-        "pre_event_volatility": float(snap.get("pre_event_volatility", float("nan"))),
+        "pre_event_return": _float_cell(snap.get("pre_event_return")),
+        "pre_event_volatility": _float_cell(snap.get("pre_event_volatility")),
         "sector": snap.get("sector"),
     }
 

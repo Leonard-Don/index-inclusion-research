@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 
-from index_inclusion_research.dashboard_types import RddStatus
+from index_inclusion_research.dashboard_types import RddStatus, RddStatusMode
 from index_inclusion_research.rdd_evidence import (
     rdd_coverage_note,
     rdd_evidence_tier,
@@ -38,6 +38,13 @@ def _optional_text(value) -> str:
     return str(value)
 
 
+def _rdd_status_mode(value: object) -> RddStatusMode:
+    mode = str(value or "missing")
+    if mode in {"real", "reconstructed", "demo", "missing"}:
+        return cast(RddStatusMode, mode)
+    return "missing"
+
+
 def load_rdd_status(
     root: Path,
     *,
@@ -50,7 +57,7 @@ def load_rdd_status(
         status_frame = read_csv_if_exists_fn(status_path)
         if not status_frame.empty:
             row = status_frame.iloc[0]
-            mode = str(row.get("status", "missing"))
+            mode = _rdd_status_mode(row.get("status", "missing"))
             evidence_status = str(row.get("evidence_status", "待补正式样本"))
             evidence_tier = ("" if pd.isna(row.get("evidence_tier")) else str(row.get("evidence_tier"))) or rdd_evidence_tier(mode)
             if evidence_tier == "—":

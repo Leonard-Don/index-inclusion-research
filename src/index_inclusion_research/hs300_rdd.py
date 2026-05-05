@@ -61,7 +61,7 @@ _OUTCOME_LATEX_LABELS = {
 
 def _format_pct(value: object) -> str:
     try:
-        v = float(value)
+        v = float(str(value))
     except (TypeError, ValueError):
         return "—"
     if v != v:  # NaN
@@ -71,7 +71,7 @@ def _format_pct(value: object) -> str:
 
 def _format_p(value: object) -> str:
     try:
-        v = float(value)
+        v = float(str(value))
     except (TypeError, ValueError):
         return "—"
     if v != v:
@@ -81,7 +81,7 @@ def _format_p(value: object) -> str:
 
 def _format_int(value: object) -> str:
     try:
-        v = int(float(value))
+        v = int(float(str(value)))
     except (TypeError, ValueError):
         return "—"
     return str(v)
@@ -89,7 +89,7 @@ def _format_int(value: object) -> str:
 
 def _format_bandwidth(value: object) -> str:
     try:
-        v = float(value)
+        v = float(str(value))
     except (TypeError, ValueError):
         return "—"
     if v != v:

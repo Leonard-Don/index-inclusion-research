@@ -29,6 +29,18 @@ from pathlib import Path
 import pandas as pd
 
 
+def _optional_float(value: object, default: float = float("nan")) -> float:
+    if value is None or pd.isna(value):
+        return default
+    return float(str(value))
+
+
+def _optional_int(value: object, default: int = 0) -> int:
+    if value is None or pd.isna(value):
+        return default
+    return int(float(str(value)))
+
+
 @dataclass(frozen=True)
 class StructuralHypothesis:
     hid: str
@@ -223,11 +235,8 @@ def compute_paper_verdict_citations(
                 "verdict": str(live.get("verdict", "")),
                 "confidence": str(live.get("confidence", "")),
                 "key_label": str(live.get("key_label", "") or ""),
-                "key_value": float(live["key_value"])
-                if live.get("key_value") is not None
-                and not pd.isna(live.get("key_value"))
-                else float("nan"),
-                "n_obs": int(live.get("n_obs", 0) or 0),
+                "key_value": _optional_float(live.get("key_value")),
+                "n_obs": _optional_int(live.get("n_obs")),
             }
         )
     return out

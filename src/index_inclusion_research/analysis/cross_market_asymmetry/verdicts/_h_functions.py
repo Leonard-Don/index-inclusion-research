@@ -29,6 +29,27 @@ _H6_WEIGHT_QUANTILES = (0.0, 0.25, 0.50, 0.75, 1.0)
 _H7_MIN_EVENTS_PER_SECTOR = 10
 
 
+def _float_value(value: object, default: float = float("nan")) -> float:
+    if value is None or pd.isna(value):
+        return default
+    return float(str(value))
+
+
+def _float_or_none(value: object) -> float | None:
+    if value is None or pd.isna(value):
+        return None
+    try:
+        return float(str(value))
+    except ValueError:
+        return None
+
+
+def _int_value(value: object, default: int = 0) -> int:
+    if value is None or pd.isna(value):
+        return default
+    return int(float(str(value)))
+
+
 # ── H1 信息泄露与预运行 ──────────────────────────────────────────────
 
 
@@ -50,7 +71,7 @@ def _h1(
             "重跑 CMA M2 空窗期分析，生成 cma_gap_summary.csv。",
         )
     boot_p = _bootstrap_p(bootstrap)
-    if boot_p is not None:
+    if boot_p is not None and bootstrap is not None:
         return _h1_from_bootstrap(
             hypothesis,
             cn_mean=cn_mean,
@@ -91,9 +112,8 @@ def _bootstrap_p(bootstrap: Mapping[str, object] | None) -> float | None:
     raw = bootstrap.get("boot_p_value")
     if raw is None:
         return None
-    try:
-        value = float(raw)  # type: ignore[arg-type]
-    except (TypeError, ValueError):
+    value = _float_or_none(raw)
+    if value is None:
         return None
     if value != value:  # NaN guard
         return None
@@ -110,9 +130,9 @@ def _h1_from_bootstrap(
     significance_level: float = SIGNIFICANCE_LEVEL,
 ) -> dict[str, object]:
     diff_raw = bootstrap.get("diff_mean", cn_mean - us_mean)
-    diff = float(diff_raw) if diff_raw is not None else cn_mean - us_mean
-    ci_low = float(bootstrap.get("boot_ci_low", float("nan")))  # type: ignore[arg-type]
-    ci_high = float(bootstrap.get("boot_ci_high", float("nan")))  # type: ignore[arg-type]
+    diff = _float_value(diff_raw, cn_mean - us_mean)
+    ci_low = _float_value(bootstrap.get("boot_ci_low"))
+    ci_high = _float_value(bootstrap.get("boot_ci_high"))
     strict = significance_level / 2
     if diff > 0 and boot_p < strict:
         verdict = "支持"
@@ -140,7 +160,7 @@ def _h1_from_bootstrap(
         f"diff={_fmt_pct(diff)}, bootstrap p={boot_p:.3f}, "
         f"CI95=[{_fmt_pct(ci_low)}, {_fmt_pct(ci_high)}]"
     )
-    n_total = int(bootstrap.get("n_cn", 0) or 0) + int(bootstrap.get("n_us", 0) or 0)  # type: ignore[arg-type]
+    n_total = _int_value(bootstrap.get("n_cn")) + _int_value(bootstrap.get("n_us"))
     return _make_verdict(
         hypothesis,
         verdict=verdict,
@@ -402,7 +422,7 @@ def _h4(
             "重跑 CMA M2 空窗期分析，保留 gap_drift 指标。",
         )
     reg_p = _regression_p(regression)
-    if reg_p is not None:
+    if reg_p is not None and regression is not None:
         return _h4_from_regression(
             hypothesis,
             cn_mean=cn_mean,
@@ -442,9 +462,8 @@ def _regression_p(regression: Mapping[str, object] | None) -> float | None:
     raw = regression.get("cn_p_value")
     if raw is None:
         return None
-    try:
-        value = float(raw)  # type: ignore[arg-type]
-    except (TypeError, ValueError):
+    value = _float_or_none(raw)
+    if value is None:
         return None
     if value != value:
         return None
@@ -460,8 +479,8 @@ def _h4_from_regression(
     reg_p: float,
     significance_level: float = SIGNIFICANCE_LEVEL,
 ) -> dict[str, object]:
-    cn_coef = float(regression.get("cn_coef", 0.0))  # type: ignore[arg-type]
-    n_obs = int(regression.get("n_obs", 0))  # type: ignore[arg-type]
+    cn_coef = _float_value(regression.get("cn_coef"), 0.0)
+    n_obs = _int_value(regression.get("n_obs"))
     strict = significance_level / 2
     if cn_coef > 0 and reg_p < strict:
         verdict = "支持"
@@ -513,7 +532,7 @@ def _h5(
     significance_level: float = SIGNIFICANCE_LEVEL,
 ) -> dict[str, object]:
     limit_p = _limit_p(limit_regression)
-    if limit_p is not None:
+    if limit_p is not None and limit_regression is not None:
         return _h5_from_regression(
             hypothesis,
             regression=limit_regression,
@@ -580,9 +599,8 @@ def _limit_p(regression: Mapping[str, object] | None) -> float | None:
     raw = regression.get("limit_p_value")
     if raw is None:
         return None
-    try:
-        value = float(raw)  # type: ignore[arg-type]
-    except (TypeError, ValueError):
+    value = _float_or_none(raw)
+    if value is None:
         return None
     if value != value:
         return None
@@ -596,9 +614,9 @@ def _h5_from_regression(
     limit_p: float,
     significance_level: float = SIGNIFICANCE_LEVEL,
 ) -> dict[str, object]:
-    coef = float(regression.get("limit_coef", 0.0))  # type: ignore[arg-type]
-    n_obs = int(regression.get("n_obs", 0))  # type: ignore[arg-type]
-    r2 = float(regression.get("r_squared", 0.0))  # type: ignore[arg-type]
+    coef = _float_value(regression.get("limit_coef"), 0.0)
+    n_obs = _int_value(regression.get("n_obs"))
+    r2 = _float_value(regression.get("r_squared"), 0.0)
     strict = significance_level / 2
     if coef > 0 and limit_p < strict:
         verdict = "支持"

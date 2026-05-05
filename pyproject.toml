@@ -99,6 +99,10 @@ module = [
   "scipy.*",
   "bs4.*",
   "playwright.*",
+  "requests",
+  "requests.*",
+  "yaml",
+  "yaml.*",
 ]
 ignore_missing_imports = true
 

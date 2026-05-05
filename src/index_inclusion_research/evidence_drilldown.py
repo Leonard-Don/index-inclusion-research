@@ -34,6 +34,19 @@ def _read_csv(path: Path) -> pd.DataFrame:
         return pd.DataFrame()
 
 
+def _float_metric(value: object, default: float = 0.0) -> float:
+    if value is None or pd.isna(value):
+        return default
+    try:
+        return float(str(value))
+    except ValueError:
+        return default
+
+
+def _int_metric(value: object, default: int = 0) -> int:
+    return int(_float_metric(value, float(default)))
+
+
 def _clean_value(value: Any) -> Any:
     if isinstance(value, list | tuple):
         return [_clean_value(item) for item in value]
@@ -222,8 +235,8 @@ def _detail_h7(detail: dict[str, Any], *, root: Path) -> None:
     detail["summary_cards"].append(
         {
             "label": "CN sector coverage",
-            "value": f"{int(coverage['known'])}/{int(coverage['total'])}",
-            "detail": f"{float(coverage['rate']):.1%}",
+            "value": f"{_int_metric(coverage['known'])}/{_int_metric(coverage['total'])}",
+            "detail": f"{_float_metric(coverage['rate']):.1%}",
         }
     )
     detail["tables"].append(

@@ -110,6 +110,24 @@ def _is_missing_text(value: object) -> bool:
     return text in {"", "nan", "none", "<na>", "unknown"}
 
 
+def _float_metric(value: object, default: float = 0.0) -> float:
+    if value is None or pd.isna(value):
+        return default
+    try:
+        return float(str(value))
+    except ValueError:
+        return default
+
+
+def _int_metric(value: object, default: int = 0) -> int:
+    if value is None or pd.isna(value):
+        return default
+    try:
+        return int(float(str(value)))
+    except ValueError:
+        return default
+
+
 def compute_cn_sector_coverage(root: Path = ROOT) -> dict[str, object]:
     frames: list[pd.DataFrame] = []
     for rel in ("data/raw/real_events.csv", "data/raw/real_metadata.csv"):
@@ -156,9 +174,9 @@ def build_refresh_steps(
     pre_records: list[dict[str, object]] = []
     steps: list[PipelineStep] = []
     coverage = compute_cn_sector_coverage(root)
-    rate = float(coverage["rate"])
+    rate = _float_metric(coverage["rate"])
     detail = (
-        f"CN sector coverage {int(coverage['known'])}/{int(coverage['total'])} "
+        f"CN sector coverage {_int_metric(coverage['known'])}/{_int_metric(coverage['total'])} "
         f"({rate:.1%})"
     )
     if skip_sector_enrich:
@@ -288,9 +306,9 @@ def _build_h6_coverage(root: Path, tables_dir: Path) -> dict[str, str]:
 
 def _build_h7_coverage(root: Path) -> dict[str, str]:
     coverage = compute_cn_sector_coverage(root)
-    total = int(coverage["total"])
-    known = int(coverage["known"])
-    rate = float(coverage["rate"])
+    total = _int_metric(coverage["total"])
+    known = _int_metric(coverage["known"])
+    rate = _float_metric(coverage["rate"])
     missing = coverage.get("missing_tickers", [])
     missing_preview = ", ".join(list(missing)[:5]) if isinstance(missing, list) else ""
     return _coverage_row(
@@ -626,7 +644,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 f"  - {row.get('label', row.get('item'))}: "
                 f"{row.get('status')} · {row.get('value')}"
             )
-    return int(result["exit_code"])
+    return _int_metric(result["exit_code"])
 
 
 if __name__ == "__main__":

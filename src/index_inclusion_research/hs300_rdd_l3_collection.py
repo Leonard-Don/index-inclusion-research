@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from typing import TypedDict
 
 import pandas as pd
 
@@ -30,6 +31,16 @@ ACCEPTANCE_COMMAND = "index-inclusion-prepare-hs300-rdd --input /path/to/raw_can
 WRITE_COMMAND = "index-inclusion-prepare-hs300-rdd --input /path/to/raw_candidates.xlsx --output data/raw/hs300_rdd_candidates.csv --force"
 REFRESH_COMMAND = "index-inclusion-hs300-rdd && index-inclusion-make-figures-tables && index-inclusion-generate-research-report && index-inclusion-cma"
 DEFAULT_BOUNDARY_WINDOW = 15
+
+
+class CollectionPackageOutputs(TypedDict):
+    checklist_path: Path
+    template_path: Path
+    boundary_reference_path: Path
+    summary_path: Path
+    candidate_batches: int
+    candidate_rows: int
+    boundary_reference_rows: int
 
 
 def _relative_or_absolute(path: Path) -> str:
@@ -203,7 +214,7 @@ def write_collection_package(
     output_dir: Path,
     force: bool,
     boundary_window: int = DEFAULT_BOUNDARY_WINDOW,
-) -> dict[str, Path | int]:
+) -> CollectionPackageOutputs:
     checklist_path = output_dir / DEFAULT_CHECKLIST_NAME
     template_path = output_dir / DEFAULT_TEMPLATE_NAME
     boundary_reference_path = output_dir / DEFAULT_BOUNDARY_REFERENCE_NAME

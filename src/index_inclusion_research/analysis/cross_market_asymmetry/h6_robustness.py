@@ -412,7 +412,7 @@ def _lookup_row(frame: pd.DataFrame, test: str) -> pd.Series | None:
 
 def _as_float(value: object) -> float:
     try:
-        number = float(value)
+        number = float(str(value))
     except (TypeError, ValueError):
         return float("nan")
     return number
@@ -582,10 +582,9 @@ def build_h6_weight_explanation(
     confidence = ""
     evidence_summary = ""
     if h6_verdict is not None:
-        getter = h6_verdict.get  # type: ignore[assignment]
-        verdict_label = str(getter("verdict", "") or "")
-        confidence = str(getter("confidence", "") or "")
-        evidence_summary = str(getter("evidence_summary", "") or "")
+        verdict_label = str(h6_verdict.get("verdict", "") or "")
+        confidence = str(h6_verdict.get("confidence", "") or "")
+        evidence_summary = str(h6_verdict.get("evidence_summary", "") or "")
     final_status: Status = "pass" if verdict_label in {"支持", "部分支持"} else "warn"
     if not verdict_label:
         final_status = "missing"
