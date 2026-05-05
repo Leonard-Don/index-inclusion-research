@@ -43,7 +43,7 @@ class DashboardShell:
     project_module_display: dict[str, str]
     details_query_param: str
     details_panel_keys: frozenset[str]
-    runtime: DashboardRuntimeLike
+    runtime: DashboardRuntime
     refresh_coordinator: DashboardRefreshCoordinator
     app: Flask
 

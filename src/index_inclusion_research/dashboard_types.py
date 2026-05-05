@@ -243,6 +243,7 @@ class PaperNavCard(TypedDict, total=False):
     copy: str
     href: str
     is_current: bool
+    action_label: str
 
 
 class EvolutionNavGroup(TypedDict):
@@ -267,6 +268,7 @@ class PaperCatalogRecord(TypedDict, total=False):
     deep_contribution: str
     practical_use: str
     one_line_role: str
+    year_order: int
 
 
 PaperBriefRecord: TypeAlias = PaperCatalogRecord
@@ -496,6 +498,7 @@ class HomeContext(TypedDict):
     supplement_section: SecondarySection
     robustness_section: RobustnessSection
     limits_section: DashboardSection
+    cma_section: dict[str, Any] | None
 
 
 class AnalysisRunner(Protocol):
@@ -517,7 +520,6 @@ AnalysisCache: TypeAlias = MutableMapping[str, CacheEntry]
 
 RouteResponse: TypeAlias = ResponseReturnValue
 TableRenderer: TypeAlias = Callable[..., str]
-SnapshotMetaBuilder: TypeAlias = Callable[[], SnapshotMeta]
 SnapshotSourcesBuilder: TypeAlias = Callable[[], list[Path]]
 RddContractCheckBuilder: TypeAlias = Callable[[], RddContractCheck]
 ResultHealthBuilder: TypeAlias = Callable[[], ResultHealth]
@@ -540,7 +542,6 @@ LabelTranslator: TypeAlias = Callable[[str], str]
 TextCleaner: TypeAlias = Callable[[str], str]
 SingleCsvLoader: TypeAlias = Callable[[Path, str], pd.DataFrame | None]
 SavedTablesLoader: TypeAlias = Callable[[Path], list[RenderedTable]]
-FigureCaptionBuilder: TypeAlias = Callable[[Path, str | None, str | None], str]
 FigureEntriesBuilder: TypeAlias = Callable[[], list[FigureEntry]]
 DisplayTableTiersAttacher: TypeAlias = Callable[[list[DisplayTable]], list[DisplayTable]]
 DisplayTableTierSplitter: TypeAlias = Callable[[list[DisplayTable]], tuple[list[DisplayTable], list[DisplayTable]]]
@@ -572,6 +573,19 @@ TrackTablesBuilder: TypeAlias = Callable[[], list[RenderedTable]]
 SavedTrackResultLoader: TypeAlias = Callable[[str, AnalysisDefinition], TrackResult | None]
 RddStatusLoader: TypeAlias = Callable[[], RddStatus]
 RddContractCheckLoader: TypeAlias = Callable[[], RddContractCheck]
+
+
+class SnapshotMetaBuilder(Protocol):
+    def __call__(self, snapshot_files: list[Path] | None = None) -> SnapshotMeta: ...
+
+
+class FigureCaptionBuilder(Protocol):
+    def __call__(
+        self,
+        path: Path,
+        custom_caption: str | None = None,
+        prefix: str | None = None,
+    ) -> str: ...
 
 
 class RefreshRunner(Protocol):

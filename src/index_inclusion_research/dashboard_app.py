@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import time
+from typing import cast
 
 from flask import request, url_for
 
 from index_inclusion_research.dashboard_bootstrap import bootstrap_dashboard_paths
 from index_inclusion_research.dashboard_factory import build_dashboard_application
+from index_inclusion_research.dashboard_types import RequestProxyLike
 
 PATHS = bootstrap_dashboard_paths(__file__)
 ROOT = PATHS.root
@@ -29,7 +31,7 @@ dashboard_application = build_dashboard_application(
     run_price_pressure_track=run_price_pressure_track,
     run_demand_curve_track=run_demand_curve_track,
     run_identification_china_track=run_identification_china_track,
-    request_proxy=request,
+    request_proxy=cast(RequestProxyLike, request),
     url_builder=url_for,
     time_module=time,
     get_literature_paper=get_literature_paper,

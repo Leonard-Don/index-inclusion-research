@@ -4,6 +4,7 @@ import argparse
 import datetime
 import re
 import subprocess
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TypedDict
@@ -200,6 +201,15 @@ def _clean_cell_text(value: object) -> str:
     return _clean_text(value)
 
 
+def _safe_int(value: object, default: int = 0) -> int:
+    if value is None or pd.isna(value):
+        return default
+    try:
+        return int(float(str(value)))
+    except ValueError:
+        return default
+
+
 def _html_to_text(html: str) -> str:
     soup = BeautifulSoup(html or "", "html.parser")
     return _clean_text(soup.get_text(" "))
@@ -216,10 +226,15 @@ def _extract_effective_date(content_html: str) -> str:
 
 
 def _is_hs300_rebalance_title(title: str) -> bool:
-    cleaned = _clean_text(title)
-    if "沪深300" not in cleaned and "沪深 300" not in cleaned:
+    compact = re.sub(r"\s+", "", title)
+    if "沪深300" not in compact:
         return False
-    return any(token in cleaned for token in ("调整", "调样", "定期调整"))
+    return bool(
+        re.search(
+            r"(定期调整(?:结果)?|指数样本调整名单|样本调整名单|样本股调整|调整.*指数样本|指数样本.*调整)",
+            compact,
+        )
+    )
 
 
 def _infer_csi300_effective_date(publish_date: str, title: str) -> str:
@@ -252,19 +267,7 @@ def _announcement_payload(search_input: str, *, rows: int) -> dict[str, object]:
     }
 
 
-def _is_hs300_rebalance_title(title: str) -> bool:
-    compact = re.sub(r"\s+", "", title)
-    if "沪深300" not in compact:
-        return False
-    return bool(
-        re.search(
-            r"(定期调整(?:结果)?|指数样本调整名单|样本调整名单|样本股调整|调整.*指数样本|指数样本.*调整)",
-            compact,
-        )
-    )
-
-
-def _join_values(values: list[object]) -> str:
+def _join_values(values: Sequence[object]) -> str:
     return " | ".join(str(value) for value in values if str(value).strip())
 
 
@@ -285,7 +288,8 @@ def query_rebalance_announcements(
         )
         response.raise_for_status()
         payload = response.json()
-        raw_rows = payload.get("data") or []
+        raw_data = payload.get("data")
+        raw_rows = raw_data if isinstance(raw_data, list) else []
         diagnostic = {
             "search_term": term,
             "requested_rows": rows,
@@ -311,18 +315,23 @@ def query_rebalance_announcements(
         matched_ids: list[int] = []
         matched_dates: list[str] = []
         matched_titles: list[str] = []
-        for row in raw_rows:
+        for raw_row in raw_rows:
+            if not isinstance(raw_row, Mapping):
+                continue
+            row = raw_row
             title = _clean_text(row.get("title"))
             theme = _clean_text(row.get("theme"))
             if "沪深300" in title:
-                diagnostic["hs300_title_rows"] = int(diagnostic["hs300_title_rows"]) + 1
+                diagnostic["hs300_title_rows"] = _safe_int(diagnostic["hs300_title_rows"]) + 1
             if not _is_hs300_rebalance_title(title):
                 continue
-            diagnostic["title_matched_rows"] = int(diagnostic["title_matched_rows"]) + 1
+            diagnostic["title_matched_rows"] = _safe_int(diagnostic["title_matched_rows"]) + 1
             if theme and theme != "指数调样":
                 continue
-            diagnostic["theme_matched_rows"] = int(diagnostic["theme_matched_rows"]) + 1
-            notice_id = int(row["id"])
+            diagnostic["theme_matched_rows"] = _safe_int(diagnostic["theme_matched_rows"]) + 1
+            notice_id = _safe_int(row.get("id"))
+            if not notice_id:
+                continue
             matched_ids.append(notice_id)
             matched_dates.append(_clean_text(row.get("publishDate")))
             matched_titles.append(title)
@@ -342,7 +351,7 @@ def query_rebalance_announcements(
             if not matched_ids:
                 diagnostic["reason"] = "No rows matched the HS300 rebalance title/theme filters."
             search_diagnostics.append(diagnostic)
-    return sorted(notices.values(), key=lambda item: (str(item["publish_date"]), int(item["id"])))
+    return sorted(notices.values(), key=lambda item: (str(item["publish_date"]), _safe_int(item.get("id"))))
 
 
 def _parse_date_bound(value: str | None, *, name: str) -> pd.Timestamp | None:
@@ -415,13 +424,14 @@ def fetch_notice_detail(session: requests.Session, notice_id: int) -> dict[str, 
     )
     response.raise_for_status()
     payload = response.json()
-    if str(payload.get("code")) != "200" or not payload.get("data"):
+    data = payload.get("data")
+    if str(payload.get("code")) != "200" or not isinstance(data, Mapping):
         raise ValueError(f"CSIndex notice detail unavailable for id={notice_id}")
-    return payload["data"]
+    return dict(data)
 
 
 def _attachment_links_from_detail(detail: dict[str, object]) -> list[AttachmentLink]:
-    notice_id = int(detail["id"])
+    notice_id = _safe_int(detail.get("id"))
     title = _clean_text(detail.get("title"))
     publish_date = _clean_text(detail.get("publishDate"))
     content = str(detail.get("content") or "")
@@ -432,7 +442,12 @@ def _attachment_links_from_detail(detail: dict[str, object]) -> list[AttachmentL
     links: list[AttachmentLink] = []
     seen: set[str] = set()
 
-    for item in detail.get("enclosureList") or []:
+    enclosure_list = detail.get("enclosureList")
+    enclosures = enclosure_list if isinstance(enclosure_list, list) else []
+    for raw_item in enclosures:
+        if not isinstance(raw_item, Mapping):
+            continue
+        item = raw_item
         file_url = _clean_text(item.get("fileUrl"))
         if not file_url or file_url in seen:
             continue
@@ -574,7 +589,7 @@ def _excel_reserve_rows(frame: pd.DataFrame) -> list[dict[str, object]]:
                 "role": "reserve",
             }
         )
-    return sorted(rows, key=lambda item: int(item["rank"]))
+    return sorted(rows, key=lambda item: _safe_int(item.get("rank")))
 
 
 def _normalized_sheet_name(name: object) -> str:
@@ -690,7 +705,7 @@ def _parse_ranked_rows(section_text: str) -> list[dict[str, object]]:
                 idx = name_end
             else:
                 idx += 1
-    return sorted(rows, key=lambda item: int(item["rank"]))
+    return sorted(rows, key=lambda item: _safe_int(item.get("rank")))
 
 
 def parse_hs300_attachment_text(text: str) -> ParsedHs300Attachment:
@@ -719,10 +734,10 @@ def build_candidate_rows(link: AttachmentLink, parsed: ParsedHs300Attachment) ->
         raise ValueError(f"Missing effective date for CSIndex notice {link.notice_id}")
     batch_id = _batch_id(link.publish_date)
     rows: list[dict[str, object]] = []
-    additions = sorted(parsed.additions, key=lambda item: int(item["order"]))
+    additions = sorted(parsed.additions, key=lambda item: _safe_int(item.get("order")))
     n_additions = len(additions)
     for item in additions:
-        order = int(item["order"])
+        order = _safe_int(item.get("order"))
         rows.append(
             {
                 "batch_id": batch_id,
@@ -742,8 +757,8 @@ def build_candidate_rows(link: AttachmentLink, parsed: ParsedHs300Attachment) ->
                 "sector": "",
             }
         )
-    for item in sorted(parsed.reserves, key=lambda row: int(row["rank"])):
-        rank = int(item["rank"])
+    for item in sorted(parsed.reserves, key=lambda row: _safe_int(row.get("rank"))):
+        rank = _safe_int(item.get("rank"))
         rows.append(
             {
                 "batch_id": batch_id,
@@ -963,14 +978,14 @@ def _build_manual_gap_worklist_frame(
         for _, item in attachment_rows.iterrows():
             source_row = item.to_dict()
             status = str(source_row.get("status", ""))
-            year = _year_from_date(source_row.get("publish_date"))
-            year_status = year_statuses.get(year or 0, "")
+            publish_year = _year_from_date(source_row.get("publish_date"))
+            year_status = year_statuses.get(publish_year or 0, "")
             if status == "parsed_without_l3_controls":
                 additions = _int_cell(source_row.get("addition_rows", 0))
                 priority = "P1" if additions and year_status != "candidate_found" else "P2"
                 rows.append(
                     _gap_row(
-                        year=year,
+                        year=publish_year,
                         priority=priority,
                         gap_type="parsed_additions_missing_controls",
                         source_row=source_row,
@@ -986,7 +1001,7 @@ def _build_manual_gap_worklist_frame(
                     continue
                 rows.append(
                     _gap_row(
-                        year=year,
+                        year=publish_year,
                         priority="P2",
                         gap_type="unparsed_attachment",
                         source_row=source_row,
@@ -1000,15 +1015,15 @@ def _build_manual_gap_worklist_frame(
         notice_rows = source_audit.loc[source_audit["source_kind"].astype(str) == "official_rebalance_result_notice"]
         for _, item in notice_rows.iterrows():
             source_row = item.to_dict()
-            year = _year_from_date(source_row.get("publish_date"))
-            if year_statuses.get(year or 0, "") == "candidate_found":
+            publish_year = _year_from_date(source_row.get("publish_date"))
+            if year_statuses.get(publish_year or 0, "") == "candidate_found":
                 continue
             announcement_id = str(source_row.get("announcement_id", ""))
             if announcement_id in attachment_ids:
                 continue
             rows.append(
                 _gap_row(
-                    year=year,
+                    year=publish_year,
                     priority="P2",
                     gap_type="notice_without_attachment",
                     source_row=source_row,
@@ -1024,10 +1039,10 @@ def _build_manual_gap_worklist_frame(
             status = str(item.get("status", ""))
             if status != "no_notice":
                 continue
-            year = _int_cell(item.get("year", 0)) or None
+            missing_year = _int_cell(item.get("year", 0)) or None
             rows.append(
                 _gap_row(
-                    year=year,
+                    year=missing_year,
                     priority="P3",
                     gap_type="year_without_notice",
                     missing_evidence="CSIndex rebalance announcement and official attachments",
@@ -1365,7 +1380,7 @@ def collect_official_hs300_sources(
     candidate_rows: list[dict[str, object]] = []
     for notice in notices:
         try:
-            detail = fetch_notice_detail(session, int(notice["id"]))
+            detail = fetch_notice_detail(session, _safe_int(notice.get("id")))
         except Exception as exc:  # pragma: no cover - live source availability varies
             row = _notice_audit_row(notice, has_detail=False)
             row["reason"] = f"Notice detail could not be fetched: {exc}"

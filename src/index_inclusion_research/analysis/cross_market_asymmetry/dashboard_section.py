@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Literal
 
@@ -70,6 +71,13 @@ def _frame_to_payload(frame: pd.DataFrame) -> dict[str, object]:
     }
 
 
+def _nested_verdict(row: Mapping[str, object], key: str) -> str:
+    payload = row.get(key)
+    if not isinstance(payload, Mapping):
+        return ""
+    return str(payload.get("verdict", ""))
+
+
 def build_cross_market_section(
     *,
     tables_dir: Path,
@@ -126,6 +134,7 @@ def build_cross_market_section(
             time_series_rolling=time_series_rolling,
         )
 
+    figure_names: tuple[str, ...]
     if mode == "brief":
         figure_names = ()
     elif mode == "demo":
@@ -212,12 +221,12 @@ def _build_evidence_coverage_payload(
     if manifest_path.exists():
         try:
             payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-            rows = payload.get("coverage", [])
-            if isinstance(rows, list) and rows:
+            payload_rows = payload.get("coverage", [])
+            if isinstance(payload_rows, list) and payload_rows:
                 return {
                     "available": True,
                     "generated_at": str(payload.get("generated_at", "")),
-                    "rows": rows,
+                    "rows": payload_rows,
                 }
         except (OSError, ValueError, TypeError):
             pass
@@ -290,9 +299,14 @@ def _build_verdict_diff_payload(
         hid = str(row["hid"])
         name = str(row.get("name_cn", "") or "")
         diff_chunks: list[str] = []
-        for field, beats in row["changes"].items():  # type: ignore[index]
-            before = beats["before"]
-            after = beats["after"]
+        changes = row.get("changes")
+        if not isinstance(changes, Mapping):
+            continue
+        for field, beats in changes.items():
+            if not isinstance(beats, Mapping):
+                continue
+            before = beats.get("before")
+            after = beats.get("after")
             if field == "key_value":
                 bef = "—" if isinstance(before, float) and (before != before) else f"{before:.3f}"
                 aft = "—" if isinstance(after, float) and (after != after) else f"{after:.3f}"
@@ -310,13 +324,11 @@ def _build_verdict_diff_payload(
         "unchanged_count": len(unchanged),
         "changed_rows": changed_summaries,
         "added_rows": [
-            {"hid": str(r["hid"]),
-             "verdict": str((r.get("current") or {}).get("verdict", ""))}
+            {"hid": str(r["hid"]), "verdict": _nested_verdict(r, "current")}
             for r in added
         ],
         "removed_rows": [
-            {"hid": str(r["hid"]),
-             "verdict": str((r.get("previous") or {}).get("verdict", ""))}
+            {"hid": str(r["hid"]), "verdict": _nested_verdict(r, "previous")}
             for r in removed
         ],
     }

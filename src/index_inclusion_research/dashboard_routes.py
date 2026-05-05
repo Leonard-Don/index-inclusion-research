@@ -21,6 +21,7 @@ from index_inclusion_research.dashboard_types import (
     PaperDetailLoader,
     QueueRefreshJob,
     RefreshRedirectUrlBuilder,
+    RefreshStatusPayload,
     RefreshStatusPayloadBuilder,
     RefreshStatusUrlBuilder,
     RequestProxyLike,
@@ -190,8 +191,8 @@ class DashboardRunAnalysisHandler:
         )
 
 
-def _with_busy_refresh_state(payload: dict) -> dict:
-    busy_payload = dict(payload)
+def _with_busy_refresh_state(payload: RefreshStatusPayload) -> RefreshStatusPayload:
+    busy_payload = payload.copy()
     busy_payload["accepted"] = False
     scope_label = str(busy_payload.get("scope_label", "当前任务") or "当前任务")
     busy_payload["message"] = f'“{scope_label}”已在后台刷新中，本次请求未重复排队，页面将继续跟踪当前任务。'

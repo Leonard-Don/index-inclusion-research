@@ -10,7 +10,9 @@ transformation.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any, cast
 
 import pandas as pd
 
@@ -31,6 +33,15 @@ def _significance_stars(p_value: float) -> str:
     if p_value < 0.10:
         return "*"
     return ""
+
+
+def _float_or_none(value: object) -> float | None:
+    if value is None or pd.isna(value):
+        return None
+    try:
+        return float(cast(Any, value))
+    except (TypeError, ValueError):
+        return None
 
 
 # ── 1. CMA AR / CAR path chart ──────────────────────────────────────
@@ -579,14 +590,15 @@ def build_cma_mechanism_heatmap_chart_data(root: Path) -> dict:
             p_val = pivot_p.loc[row, col] if row in pivot_p.index and col in pivot_p.columns else None
             if t_val is None or pd.isna(t_val):
                 continue
+            p_float = _float_or_none(p_val)
             data.append([j, i, round(float(t_val), 3)])
             annotations.append(
                 {
                     "col": j,
                     "row": i,
                     "t": round(float(t_val), 3),
-                    "p_value": round(float(p_val), 4) if pd.notna(p_val) else None,
-                    "stars": _significance_stars(float(p_val)) if pd.notna(p_val) else "",
+                    "p_value": round(p_float, 4) if p_float is not None else None,
+                    "stars": _significance_stars(p_float) if p_float is not None else "",
                 }
             )
 
@@ -738,7 +750,7 @@ def build_rdd_scatter_chart_data(root: Path) -> dict:
     multiple selectable fit lines.
     """
     path = root / "results" / "literature" / "hs300_rdd" / "event_level_with_running.csv"
-    empty_payload = {
+    empty_payload: dict[str, Any] = {
         "series": [],
         "cutoff": None,
         "outcome": "car_m1_p1",
@@ -820,7 +832,7 @@ def build_rdd_scatter_chart_data(root: Path) -> dict:
 
 # ── Registry ─────────────────────────────────────────────────────────
 
-CHART_BUILDERS: dict[str, callable] = {
+CHART_BUILDERS: dict[str, Callable[[Path], dict[str, Any]]] = {
     "car_path": build_car_path_chart_data,
     "price_pressure": build_price_pressure_chart_data,
     "car_heatmap": build_car_heatmap_chart_data,

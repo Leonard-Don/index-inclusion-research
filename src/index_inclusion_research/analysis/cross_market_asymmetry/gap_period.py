@@ -19,6 +19,7 @@ _METRIC_COLUMNS: tuple[str, ...] = (
     "effective_jump",
     "post_effective_reversal",
 )
+GapBootstrapResult = dict[str, float | int | str]
 
 
 def _window_sum(
@@ -171,7 +172,7 @@ def compute_pre_runup_bootstrap_test(
     n_boot: int = 5000,
     seed: int = 0,
     block_by: str | None = None,
-) -> dict[str, float]:
+) -> GapBootstrapResult:
     """Bootstrap test for H0: mean(CN pre_announce_runup) == mean(US pre_announce_runup).
 
     With ``block_by=None`` (default) each event is resampled independently — iid
@@ -198,7 +199,7 @@ def compute_pre_runup_bootstrap_test(
 
     n_cn = int(cn_values.size)
     n_us = int(us_values.size)
-    base = {
+    base: GapBootstrapResult = {
         "cn_mean": float(cn_values.mean()) if n_cn else float("nan"),
         "us_mean": float(us_values.mean()) if n_us else float("nan"),
         "diff_mean": float("nan"),
@@ -259,7 +260,7 @@ def compute_pre_runup_bootstrap_test(
 
 
 def export_pre_runup_bootstrap_table(
-    result: dict[str, float],
+    result: GapBootstrapResult,
     *,
     output_dir: Path,
 ) -> Path:

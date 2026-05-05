@@ -19,7 +19,6 @@ from index_inclusion_research.dashboard_types import (
     FigureEntry,
     LabelTranslator,
     RawAnalysisResult,
-    RawFigureEntry,
     RddContractCheck,
     RddStatus,
     RddStatusLoader,
@@ -105,6 +104,12 @@ def build_figure_caption(
     return caption
 
 
+def _result_text(value: object, default: str = "") -> str:
+    if value is None:
+        return default
+    return str(value)
+
+
 def normalize_result(
     raw: RawAnalysisResult,
     *,
@@ -129,13 +134,14 @@ def normalize_result(
         if isinstance(item, Path):
             figure_paths.append(build_figure_entry(item, to_relative=to_relative, caption=build_figure_caption(item)))
         elif isinstance(item, dict) and isinstance(item.get("path"), Path):
-            figure_item = cast(RawFigureEntry, item)
+            figure_item = item
+            figure_path = figure_item["path"]
             figure_paths.append(
                 build_figure_entry(
-                    figure_item["path"],
+                    figure_path,
                     to_relative=to_relative,
                     caption=build_figure_caption(
-                        figure_item["path"],
+                        figure_path,
                         custom_caption=figure_item.get("caption"),
                         prefix=figure_item.get("prefix"),
                     ),
@@ -143,14 +149,14 @@ def normalize_result(
             )
     output_dir = raw.get("output_dir")
     return {
-        "id": raw.get("id"),
-        "title": raw.get("title"),
-        "description": raw.get("description", ""),
-        "subtitle": raw.get("subtitle", ""),
+        "id": _result_text(raw.get("id")),
+        "title": _result_text(raw.get("title")),
+        "description": _result_text(raw.get("description")),
+        "subtitle": _result_text(raw.get("subtitle")),
         "summary_text": summary_text,
         "rendered_tables": tables,
         "figure_paths": figure_paths,
-        "output_dir": to_relative(output_dir) if isinstance(output_dir, Path) else output_dir,
+        "output_dir": to_relative(output_dir) if isinstance(output_dir, Path) else _result_text(output_dir),
     }
 
 
@@ -508,8 +514,8 @@ def load_saved_track_result(
     build_figure_caption: FigureCaptionBuilder,
 ) -> TrackResult | None:
     if analysis_id == "identification_china_track":
-        current = load_identification_china_saved_result()
-        return attach_project_track_context(current, config)
+        saved_current = load_identification_china_saved_result()
+        return attach_project_track_context(saved_current, config)
     output_dir = saved_output_dir_for_analysis(root, analysis_id)
     if output_dir is None:
         return None
