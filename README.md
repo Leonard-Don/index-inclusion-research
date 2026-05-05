@@ -96,8 +96,7 @@ index-inclusion-dashboard
 ### 4. 常用验证
 
 ```bash
-make lint
-make test
+make quality
 make smoke   # 浏览器 smoke test，需要 Playwright + Chromium
 ```
 
@@ -123,7 +122,7 @@ src/index_inclusion_research/
   pipeline/            样本构建、匹配（含 covariate balance）
   web/templates/+static/
   literature.py / literature_catalog.py / paths.py
-tests/                 ~590 个单元测试 + 浏览器 smoke
+tests/                 638+ 个单元测试 + 浏览器 smoke
 ```
 
 `paths.py` 提供 `paths.project_root()` 与 `paths.results_dir()` 等工具，所有模块都用它读项目根。设置 `INDEX_INCLUSION_ROOT` 环境变量可以覆盖默认根（容器化或并行测试时有用）。
@@ -203,8 +202,11 @@ make sync
 日常回归：
 
 ```bash
+make quality       # lint + typecheck + test + doctor-strict
 make lint
+make typecheck
 make test
+make doctor-strict
 ```
 
 浏览器 smoke test 默认不在本地 `pytest` 自动跑：
@@ -215,7 +217,7 @@ make smoke
 
 GitHub Actions 通过 `astral-sh/setup-uv` + `uv sync --extra dev`（按 `uv.lock`）安装依赖，分两步：
 
-- `ruff` lint + 单元测试 + `index-inclusion-doctor --format json`
+- `ruff` lint + `mypy` typecheck + coverage gate + `index-inclusion-doctor --format json --fail-on-warn`
 - 安装 Chromium 后跑 dashboard 浏览器 smoke test
 
 如果你准备改 dashboard 主干，先看 [docs/dashboard_architecture.md](docs/dashboard_architecture.md)。
@@ -263,6 +265,7 @@ GitHub Actions 通过 `astral-sh/setup-uv` + `uv sync --extra dev`（按 `uv.loc
 ## 测试
 
 ```bash
+make quality
 make test
 ```
 
