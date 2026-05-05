@@ -52,7 +52,7 @@ doctor-strict: ## Run project health checks with --fail-on-warn (CI-strict)
 	index-inclusion-doctor --fail-on-warn
 
 paper: ## Aggregate paper-grade artefacts into ./paper/ (tables / figures / narrative / RDD)
-	index-inclusion-paper-bundle --force
+	python3 -m index_inclusion_research.paper_bundle --force
 
 clean: ## Remove generated artifacts
 	rm -rf htmlcov .coverage .pytest_cache .ruff_cache __pycache__

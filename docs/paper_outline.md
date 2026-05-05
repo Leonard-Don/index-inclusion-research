@@ -1,5 +1,9 @@
 # 论文写作模板：为什么股票被纳入指数后会上涨？
 
+> 当前写作总入口见 [docs/research_delivery_package.md](research_delivery_package.md)。
+> 本模板保留论文正文结构和段落写法；正式主表 / 附录划分、答辩口径和交付前验证以该交付包为准。
+> 下方 P1/P2/P3 是论文研究命题，不等同于 CMA 的 H1-H7 机制裁决。
+
 ## 题目示例
 
 **股票被纳入指数后为何上涨？基于中美市场指数纳入事件的比较研究**
@@ -24,19 +28,19 @@
 
 指数成分调整会迫使跟踪指数的被动资金在生效日前后买入新纳入股票。若市场对这部分额外需求无法立即完全吸收，股价会因短期需求上升而上涨。
 
-**假说 H1**：股票在指数纳入生效日前后会出现显著正向超额收益。
+**命题 P1**：股票在指数纳入公告日或生效日前后会出现显著正向超额收益。
 
 ### 2.2 流动性与关注度提升
 
 股票被纳入指数后通常会获得更多机构关注、分析师覆盖和投资者交易，进而提升成交活跃度与市场流动性。流动性改善会降低交易摩擦，提升资产价格。
 
-**假说 H2**：指数纳入后，股票的成交量和换手率显著上升，且流动性改善与股价上涨正相关。
+**命题 P2**：指数纳入后，股票的成交量和换手率显著上升，且流动性改善与股价上涨正相关。
 
 ### 2.3 信息背书效应
 
 投资者可能将纳入重要指数解读为公司基本面、代表性或市场地位获得认可，从而在公告阶段就提前反应。
 
-**假说 H3**：若公告日附近的超额收益显著强于生效日，则指数纳入包含较强的信息效应。
+**命题 P3**：若公告日附近的超额收益显著强于生效日，则指数纳入包含较强的信息效应。
 
 ## 三、研究设计
 
@@ -144,8 +148,9 @@ CAR_i = \alpha + \beta Inclusion_i + \gamma_1 Size_i + \gamma_2 PreReturn_i + \v
 
 建议顺序：
 
-1. 把你的真实 `events.csv`、`prices.csv`、`benchmarks.csv` 换进去。
-2. 跑完整条脚本，先看 `event_study_summary.csv` 和 `*_car_path.png`。
-3. 判断公告日还是生效日效应更强。
-4. 再看 `regression_coefficients.csv` 中 `inclusion` 对 `turnover_change`、`volume_change`、`volatility_change` 的系数。
-5. 最后按上面的写作模板把结果改写成论文语言。
+1. 先看 [docs/research_delivery_package.md](research_delivery_package.md)，确认正文 / 附录边界。
+2. 跑 `make rebuild && make paper && make doctor-strict`。
+3. 打开 `paper/bundle_summary.md`，确认当前结果快照。
+4. 看 `event_study_summary.csv` 和 `*_car_path.png`，判断公告日还是生效日效应更强。
+5. 再看 `cma_hypothesis_verdicts.csv` 的 `evidence_tier=core` 行，写正文机制表。
+6. 最后按上面的写作模板把结果改写成论文语言，supplementary 假说与 HS300 RDD 只进附录。
