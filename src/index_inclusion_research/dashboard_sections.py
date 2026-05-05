@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -29,6 +30,158 @@ from index_inclusion_research.dashboard_view_models import (
 )
 from index_inclusion_research.rdd_evidence import rdd_evidence_tier_from_status
 from index_inclusion_research.results_snapshot import ResultsSnapshot
+
+ARTIFACT_INDEX_SUFFIXES = {".csv", ".json", ".md", ".pdf", ".png", ".tex", ".xlsx"}
+
+
+DISPLAYED_ARTIFACT_PATHS = {
+    "results/real_figures/sample_event_timeline.png",
+    "results/real_figures/sample_car_heatmap.png",
+    "results/real_figures/main_regression_coefficients.png",
+    "results/real_figures/mechanism_regression_coefficients.png",
+    "results/real_figures/match_diagnostics_overview.png",
+    "results/real_figures/price_pressure_time_series.png",
+    "results/real_figures/cma_ar_path_comparison.png",
+    "results/real_figures/cma_gap_decomposition.png",
+    "results/real_figures/cma_mechanism_heatmap.png",
+    "results/real_figures/cma_heterogeneity_matrix_size.png",
+    "results/real_figures/cma_time_series_rolling.png",
+    "results/real_figures/cma_gap_length_distribution.png",
+    "results/literature/harris_gurel/figures/cn_announce_car_path.png",
+    "results/literature/harris_gurel/figures/cn_effective_car_path.png",
+    "results/literature/harris_gurel/figures/us_announce_car_path.png",
+    "results/literature/harris_gurel/figures/us_effective_car_path.png",
+    "results/literature/shleifer/figures/cn_announce_car_path.png",
+    "results/literature/shleifer/figures/cn_effective_car_path.png",
+    "results/literature/shleifer/figures/us_announce_car_path.png",
+    "results/literature/shleifer/figures/us_effective_car_path.png",
+    "results/literature/hs300_rdd/figures/car_m1_p1_rdd_main.png",
+    "results/literature/hs300_rdd/figures/l3_coverage_timeline.png",
+    "results/literature/hs300_rdd/figures/car_m3_p3_rdd_bins.png",
+    "results/literature/hs300_rdd/figures/turnover_change_rdd_bins.png",
+    "results/literature/hs300_rdd/figures/volume_change_rdd_bins.png",
+    "results/literature/hs300_rdd/figures/rdd_robustness_forest.png",
+    "results/real_tables/sample_scope.csv",
+    "results/real_tables/data_sources.csv",
+    "results/real_tables/event_counts_by_year.csv",
+    "results/real_tables/event_study_summary.csv",
+    "results/real_tables/time_series_event_study_summary.csv",
+    "results/real_tables/long_window_event_study_summary.csv",
+    "results/real_tables/retention_summary.csv",
+    "results/real_tables/asymmetry_summary.csv",
+    "results/real_tables/sample_filter_summary.csv",
+    "results/real_tables/robustness_event_study_summary.csv",
+    "results/real_tables/robustness_regression_summary.csv",
+    "results/real_tables/robustness_retention_summary.csv",
+    "results/real_tables/identification_scope.csv",
+    "results/real_tables/results_manifest.csv",
+    "results/real_tables/research_summary.md",
+    "results/real_tables/cma_window_summary.csv",
+    "results/real_tables/cma_gap_summary.csv",
+    "results/real_tables/cma_hypothesis_map.csv",
+    "results/real_tables/cma_hypothesis_verdicts.csv",
+    "results/real_tables/cma_mechanism_panel.csv",
+    "results/real_tables/cma_h6_weight_explanation.csv",
+    "results/real_tables/cma_h6_weight_robustness.csv",
+    "results/real_tables/cma_heterogeneity_size.csv",
+    "results/real_tables/cma_heterogeneity_liquidity.csv",
+    "results/real_tables/cma_heterogeneity_sector.csv",
+    "results/real_tables/cma_heterogeneity_gap_bucket.csv",
+    "results/real_tables/cma_time_series_rolling.csv",
+    "results/real_tables/cma_time_series_break.csv",
+    "results/real_tables/cma_ar_path.csv",
+    "results/real_tables/cma_car_path.csv",
+    "results/real_tables/evidence_refresh_manifest.json",
+    "results/real_regressions/match_diagnostics.csv",
+    "results/real_regressions/regression_coefficients.csv",
+    "results/literature/harris_gurel/mechanism_summary.csv",
+    "results/literature/hs300_style/did_summary.csv",
+    "results/literature/hs300_rdd/rdd_summary.csv",
+    "results/literature/hs300_rdd/rdd_status.csv",
+    "results/literature/hs300_rdd/rdd_robustness.csv",
+}
+
+
+def _format_artifact_size(size_bytes: int) -> str:
+    if size_bytes >= 1024 * 1024:
+        return f"{size_bytes / (1024 * 1024):.1f} MB"
+    if size_bytes >= 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    return f"{size_bytes} B"
+
+
+def _artifact_group(relative_path: str) -> str:
+    if relative_path.startswith("results/real_tables/"):
+        return "真实结果表"
+    if relative_path.startswith("results/real_figures/"):
+        return "真实结果图"
+    if relative_path.startswith("results/real_regressions/"):
+        return "真实回归产物"
+    if relative_path.startswith("results/literature/hs300_rdd_l3_collection/"):
+        return "RDD L3 采集工作台"
+    if relative_path.startswith("results/literature/"):
+        return "文献/识别复现"
+    if relative_path.startswith("results/"):
+        return "结果产物"
+    if relative_path.startswith("data/raw/"):
+        return "原始输入"
+    if relative_path.startswith("data/processed/"):
+        return "处理中间层"
+    if relative_path.startswith("snapshots/"):
+        return "冻结快照"
+    return "项目文件"
+
+
+def _artifact_frontend_status(relative_path: str) -> str:
+    if relative_path in DISPLAYED_ARTIFACT_PATHS:
+        return "已在主页面呈现"
+    if relative_path.startswith("results/literature/hs300_rdd_l3_collection/"):
+        return "工作台/审计入口"
+    if relative_path.startswith("data/"):
+        return "输入/中间数据，索引保留"
+    if "event_level" in relative_path or "regression_dataset" in relative_path:
+        return "明细样本，索引保留"
+    if relative_path.endswith(".tex"):
+        return "论文导出版，索引保留"
+    return "后端产物，索引保留"
+
+
+def _artifact_index_paths(root: Path) -> list[Path]:
+    roots = [
+        root / "results",
+        root / "data" / "raw",
+        root / "data" / "processed",
+        root / "snapshots",
+    ]
+    paths: list[Path] = []
+    for artifact_root in roots:
+        if not artifact_root.exists():
+            continue
+        for path in artifact_root.rglob("*"):
+            if path.is_file() and path.suffix.lower() in ARTIFACT_INDEX_SUFFIXES:
+                paths.append(path)
+    return sorted(paths, key=lambda path: str(path.relative_to(root)))
+
+
+def build_artifact_index_table(root: Path) -> pd.DataFrame:
+    rows: list[dict[str, str]] = []
+    for path in _artifact_index_paths(root):
+        relative_path = str(path.relative_to(root))
+        stat = path.stat()
+        rows.append(
+            {
+                "路径": relative_path,
+                "分组": _artifact_group(relative_path),
+                "类型": path.suffix.lower().lstrip(".").upper(),
+                "前端状态": _artifact_frontend_status(relative_path),
+                "大小": _format_artifact_size(stat.st_size),
+                "更新时间": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M"),
+            }
+        )
+    return pd.DataFrame(
+        rows,
+        columns=["路径", "分组", "类型", "前端状态", "大小", "更新时间"],
+    )
 
 
 def build_sample_design_cards(
@@ -443,6 +596,17 @@ def build_limits_section(
         ]
     )
     primary_tables, detail_tables = split_items_by_tier(tables)
+    artifact_index = build_artifact_index_table(root)
+    artifact_tables: list[DisplayTable] = []
+    if not artifact_index.empty:
+        artifact_tables = [
+            {
+                "label": f"原始输出全集（{len(artifact_index)} 项）",
+                "html": render_table(artifact_index, compact=True),
+                "layout_class": "wide",
+                "tier": "detail",
+            }
+        ]
 
     return {
         "summary": "明确研究边界的目的，不是削弱结果，而是让结论与样本期、识别设计、数据来源保持一致，从而提升整套展示的可信度。",
@@ -450,6 +614,7 @@ def build_limits_section(
         "tables": tables,
         "primary_tables": primary_tables,
         "detail_tables": detail_tables,
+        "artifact_tables": artifact_tables,
         "section_view": build_table_suite_section_view(
             head=build_section_head_view(
                 section_id="limits",

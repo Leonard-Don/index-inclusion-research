@@ -61,6 +61,17 @@
 
 {% macro render_limits_section(mode, limits_section) -%}
 {{ render_table_suite_section(mode, limits_section) }}
+{% if mode == "full" and limits_section.artifact_tables %}
+{{ render_collapsible_table_group(
+  "limits-artifact-index",
+  "原始输出全集",
+  "列出后端结果、输入与维护产物的相对路径、类型、更新时间和前端状态；用于审计与自查，不进入主叙事。",
+  limits_section.artifact_tables,
+  "library-panels",
+  "Artifact Index",
+  "展开索引"
+) }}
+{% endif %}
 {%- endmacro %}
 
 {% macro render_cma_generic_table(payload, label) -%}

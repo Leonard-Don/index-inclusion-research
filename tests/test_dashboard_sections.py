@@ -85,10 +85,36 @@ def test_build_limits_section_returns_scope_and_identification_tables() -> None:
     assert "证据等级为" in section["summary_cards"][1]["foot"]
     assert [table["label"] for table in section["primary_tables"]] == ["样本与数据范围"]
     assert [table["label"] for table in section["detail_tables"]] == ["识别范围说明", "数据来源 · 引用清单"]
+    assert section["artifact_tables"][0]["label"].startswith("原始输出全集")
     assert section["section_view"]["head"]["section_id"] == "limits"
     assert section["section_view"]["show_suite"] is True
     assert section["section_view"]["primary"]["key"] == "demo-limits-primary-tables"
     assert section["section_view"]["detail"]["demo_title"] == "研究边界补充表（2 张）"
+
+
+def test_build_limits_section_adds_project_relative_artifact_index() -> None:
+    captured_tables: list[pd.DataFrame] = []
+
+    def _capture_table(frame: pd.DataFrame, compact: bool = False) -> str:
+        captured_tables.append(frame.copy())
+        return f"<table rows={len(frame)} compact={compact}></table>"
+
+    section = dashboard_sections.build_limits_section(
+        ROOT,
+        apply_live_rdd_status_to_identification_scope=lambda frame: frame,
+        render_table=_capture_table,
+        attach_display_tiers=dashboard_presenters.attach_display_tiers,
+        split_items_by_tier=dashboard_presenters.split_items_by_tier,
+        format_share=lambda value: f"{value:.1%}",
+    )
+
+    assert len(section["artifact_tables"]) == 1
+    artifact_index = captured_tables[-1]
+    assert list(artifact_index.columns) == ["路径", "分组", "类型", "前端状态", "大小", "更新时间"]
+    assert "/Users/" not in "\n".join(artifact_index["路径"].astype(str).tolist())
+    assert "results/real_event_study/event_level_metrics.csv" in set(artifact_index["路径"])
+    assert "data/raw/hs300_rdd_candidates.csv" in set(artifact_index["路径"])
+    assert "索引保留" in " ".join(artifact_index["前端状态"].astype(str).unique())
 
 
 def test_build_limits_section_derives_live_rdd_tier_for_summary_cards_and_scope_table() -> None:

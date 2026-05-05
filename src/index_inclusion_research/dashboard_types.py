@@ -365,6 +365,7 @@ class DashboardSection(TypedDict, total=False):
     display_tables: list[DisplayTable]
     primary_tables: list[DisplayTable]
     detail_tables: list[DisplayTable]
+    artifact_tables: list[DisplayTable]
     section_view: DesignSectionView | TableSuiteSectionView
 
 

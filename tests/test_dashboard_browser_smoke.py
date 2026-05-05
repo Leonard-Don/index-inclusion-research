@@ -1124,6 +1124,10 @@ def test_data_sources_citation_table_renders_in_limits_section() -> None:
 
             html = page.content()
             assert "数据来源 · 引用清单" in html
+            assert "原始输出全集" in html
+            assert "results/real_event_study/event_level_metrics.csv" in html
+            assert "data/raw/hs300_rdd_candidates.csv" in html
+            assert "索引保留" in html
             assert "real_events_clean.csv" in html
             assert "real_prices.csv" in html
             assert "Yahoo Finance" in html
