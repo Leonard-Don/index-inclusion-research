@@ -181,6 +181,8 @@ refresh 仍然是本地研究面板导向的实现：
 这条线现在最关键的回归护栏是：
 
 - `python3 -m pytest -q tests/test_dashboard_frontend_js.py`
+- `make typecheck`
+- `make doctor-strict`
 - `pytest -q`
 - `RUN_BROWSER_SMOKE=1 pytest -q tests/test_dashboard_browser_smoke.py`
 

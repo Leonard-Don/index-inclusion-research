@@ -23,17 +23,16 @@ jobs:
         run: uv sync --extra dev
 
       - name: Run Ruff
-        run: uv run ruff check .
+        run: uv run make lint
 
-      - name: Run mypy (advisory)
-        continue-on-error: true
-        run: uv run mypy src/index_inclusion_research
+      - name: Run mypy
+        run: uv run make typecheck
 
       - name: Run pytest with coverage gate
         run: uv run pytest -q --cov=index_inclusion_research --cov-report=term-missing --cov-report=xml:coverage.xml --cov-fail-under=70
 
-      - name: Run project doctor
-        run: uv run index-inclusion-doctor --format json
+      - name: Run strict project doctor
+        run: uv run index-inclusion-doctor --format json --fail-on-warn
 
       - name: Coverage summary
         if: always()

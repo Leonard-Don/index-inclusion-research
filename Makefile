@@ -1,4 +1,4 @@
-.PHONY: setup sync lock test lint typecheck serve coverage clean help rebuild verdicts doctor doctor-strict paper
+.PHONY: setup sync lock test lint typecheck quality serve coverage clean help rebuild verdicts doctor doctor-strict paper
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -16,11 +16,13 @@ lock: ## Refresh uv.lock from pyproject.toml
 lint: ## Run ruff linter
 	python3 -m ruff check .
 
-typecheck: ## Run mypy on the package source (advisory; not enforced)
+typecheck: ## Run mypy on the package source
 	python3 -m mypy src/index_inclusion_research
 
 test: ## Run unit tests (excludes browser smoke)
 	pytest -q
+
+quality: lint typecheck test doctor-strict ## Run the local pre-commit quality gate
 
 coverage: ## Run tests with coverage report
 	pytest -q --cov=index_inclusion_research --cov-report=term-missing --cov-report=html:htmlcov
