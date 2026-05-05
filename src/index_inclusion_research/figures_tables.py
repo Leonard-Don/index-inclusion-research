@@ -48,6 +48,14 @@ def _read_csv_if_exists(path: str | Path, parse_dates: list[str] | None = None) 
     return pd.read_csv(csv_path, parse_dates=parse_dates, low_memory=False)
 
 
+def _project_relative_label(path: str | Path) -> str:
+    resolved = Path(path).resolve()
+    try:
+        return resolved.relative_to(ROOT.resolve()).as_posix()
+    except ValueError:
+        return str(path)
+
+
 def _profile_paths(profile: str, *, root: Path = ROOT) -> dict[str, str]:
     if profile == "real":
         return {
@@ -222,12 +230,12 @@ def main(argv: list[str] | None = None) -> None:
         )
         if not data_sources.empty:
             file_map = {
-                "事件样本": args.events,
-                "日频价格": args.prices,
-                "基准收益": args.benchmarks,
-                "证券元数据": args.metadata,
-                "事件窗口面板": args.panel,
-                "匹配回归面板": args.matched_panel,
+                "事件样本": _project_relative_label(args.events),
+                "日频价格": _project_relative_label(args.prices),
+                "基准收益": _project_relative_label(args.benchmarks),
+                "证券元数据": _project_relative_label(args.metadata),
+                "事件窗口面板": _project_relative_label(args.panel),
+                "匹配回归面板": _project_relative_label(args.matched_panel),
             }
             data_sources.insert(1, "文件", data_sources["数据集"].map(file_map).fillna(""))
             save_dataframe(data_sources, Path(args.tables_dir) / "data_sources.csv")

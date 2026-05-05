@@ -1,7 +1,7 @@
 {
   "generated_at": "2026-05-04T14:27:40+00:00",
-  "root": "/Users/leonardodon/index-inclusion-research",
-  "tables_dir": "/Users/leonardodon/index-inclusion-research/results/real_tables",
+  "root": ".",
+  "tables_dir": "results/real_tables",
   "steps": [
     {
       "slug": "enrich-cn-sectors",

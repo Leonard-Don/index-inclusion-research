@@ -33,7 +33,7 @@
 
 ## 前置检查（每个 Task 开始前）
 
-- 当前工作目录：`/Users/leonardodon/index-inclusion-research`
+- 当前工作目录：`.`
 - 依赖已安装：`python3 -m pip install -e ".[dev]"`（若未装）
 - 工具可用：`pytest`、`ruff`、Python 3.11+
 - 每个 Task 末尾必须：`pytest -q` 全过 + `ruff check .` 通过

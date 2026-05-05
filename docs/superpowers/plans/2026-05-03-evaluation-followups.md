@@ -38,7 +38,7 @@
 - [ ] **Step 1.1 — Read CSV ground truth and find README mismatch**
 
 ```bash
-grep -n "H3\|双通道命中率" /Users/leonardodon/index-inclusion-research/README.md
+grep -n "H3\|双通道命中率" README.md
 ```
 
 Current README claims `部分支持`, `双通道命中率 = 0.500`. Current CSV (`results/real_tables/cma_hypothesis_verdicts.csv`) shows `支持`, `0.75`. Update README.
@@ -708,7 +708,7 @@ git commit -m "feat: add McCrary-style density discontinuity test for HS300 RDD"
 - [ ] **Step 7.1 — Locate verdict assembly**
 
 ```bash
-grep -rn "cma_hypothesis_verdicts" /Users/leonardodon/index-inclusion-research/src/ | head
+grep -rn "cma_hypothesis_verdicts" src/ | head
 ```
 
 The verdicts CSV is built in `src/index_inclusion_research/analysis/cross_market_asymmetry/verdicts/_h_functions.py` or related orchestrator. Find the function that produces the rows.
