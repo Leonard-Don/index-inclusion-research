@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+from pandas.api.types import is_object_dtype, is_string_dtype
 
 from index_inclusion_research import dashboard_loaders
 
@@ -217,7 +218,7 @@ def render_table(frame: pd.DataFrame, compact: bool = False) -> str:
             display[column] = display[column].map({1: "处理组", 0: "对照组"}).fillna(display[column])
         if display[column].dtype == bool:
             display[column] = display[column].map({True: "是", False: "否"})
-        if display[column].dtype == object:
+        if is_object_dtype(display[column]) or is_string_dtype(display[column]):
             display[column] = display[column].map(lambda value: VALUE_LABELS.get(value, value))
     return display.to_html(
         index=False,
