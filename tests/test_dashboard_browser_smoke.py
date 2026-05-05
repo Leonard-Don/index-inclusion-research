@@ -26,6 +26,65 @@ playwright_sync_api = pytest.importorskip("playwright.sync_api")
 
 ROOT = Path(__file__).resolve().parents[1]
 
+_ECHARTS_TEST_STUB = """
+(() => {
+  const instances = new WeakMap();
+
+  function asArray(value) {
+    if (value == null || Array.isArray(value)) return value;
+    return [value];
+  }
+
+  function normalizeOption(option) {
+    const normalized = { ...(option || {}) };
+    for (const key of ['title', 'legend', 'grid', 'xAxis', 'yAxis', 'tooltip']) {
+      if (key in normalized) normalized[key] = asArray(normalized[key]);
+    }
+    normalized.series = Array.isArray(normalized.series)
+      ? normalized.series
+      : (normalized.series ? [normalized.series] : []);
+    return normalized;
+  }
+
+  class Chart {
+    constructor(dom) {
+      this.dom = dom;
+      this.option = {};
+    }
+    setOption(option) {
+      this.option = normalizeOption(option);
+    }
+    getOption() {
+      return this.option;
+    }
+    resize() {}
+    dispose() {
+      instances.delete(this.dom);
+    }
+    on() {}
+    off() {}
+    showLoading() {}
+    hideLoading() {}
+  }
+
+  window.echarts = {
+    init(dom) {
+      const chart = new Chart(dom);
+      instances.set(dom, chart);
+      return chart;
+    },
+    getInstanceByDom(dom) {
+      return instances.get(dom) || null;
+    },
+    registerTheme() {},
+    dispose(dom) {
+      const chart = instances.get(dom);
+      if (chart) chart.dispose();
+    },
+  };
+})();
+"""
+
 
 def _cached_chromium_executable() -> Path | None:
     cache_roots = [
@@ -63,6 +122,14 @@ def _new_dashboard_page(browser, *, viewport: dict[str, int]) -> playwright_sync
     page = browser.new_page(viewport=viewport)
     navigation_timeout = 90_000 if os.environ.get("CI") else 45_000
     page.set_default_navigation_timeout(navigation_timeout)
+    page.route(
+        "**/echarts@5/dist/echarts.min.js",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/javascript",
+            body=_ECHARTS_TEST_STUB,
+        ),
+    )
     return page
 
 
