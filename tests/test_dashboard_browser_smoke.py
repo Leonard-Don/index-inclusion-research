@@ -59,6 +59,13 @@ def _launch_chromium(playwright):
         return playwright.chromium.launch(executable_path=str(fallback))
 
 
+def _new_dashboard_page(browser, *, viewport: dict[str, int]) -> playwright_sync_api.Page:
+    page = browser.new_page(viewport=viewport)
+    navigation_timeout = 90_000 if os.environ.get("CI") else 45_000
+    page.set_default_navigation_timeout(navigation_timeout)
+    return page
+
+
 def _find_free_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", 0))
@@ -141,7 +148,7 @@ def _running_dashboard_server() -> str:
         stderr=subprocess.STDOUT,
         text=True,
     )
-    base_url = f"http://localhost:{port}"
+    base_url = f"http://127.0.0.1:{port}"
     try:
         _wait_for_dashboard(f"{base_url}/favicon.ico", proc)
         yield base_url
@@ -164,7 +171,7 @@ def test_dashboard_browser_smoke() -> None:
         playwright_sync_api.sync_playwright() as playwright,
     ):
         browser = _launch_chromium(playwright)
-        page = browser.new_page(viewport={"width": 1440, "height": 960})
+        page = _new_dashboard_page(browser, viewport={"width": 1440, "height": 960})
         page.on(
             "console",
             lambda msg: (
@@ -670,7 +677,7 @@ def test_dashboard_browser_smoke() -> None:
             >= 1
         )
 
-        mobile_page = browser.new_page(viewport={"width": 390, "height": 844})
+        mobile_page = _new_dashboard_page(browser, viewport={"width": 390, "height": 844})
         mobile_page.goto(f"{base_url}/?mode=demo", wait_until="domcontentloaded")
         mobile_page.wait_for_load_state("networkidle")
         mobile_menu_toggle = mobile_page.locator(
@@ -729,7 +736,7 @@ def test_cross_market_section_renders_in_full_mode() -> None:
     ):
         browser = _launch_chromium(playwright)
         try:
-            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page = _new_dashboard_page(browser, viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
             page.wait_for_load_state("networkidle")
 
@@ -807,7 +814,7 @@ def test_evidence_detail_and_rdd_l3_workbench_pages_render() -> None:
     ):
         browser = _launch_chromium(playwright)
         try:
-            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page = _new_dashboard_page(browser, viewport={"width": 1440, "height": 960})
 
             response = page.goto(
                 f"{base_url}/api/evidence/H6_weight_change",
@@ -860,7 +867,7 @@ def test_sensitivity_threshold_chip_flips_verdict_card_strips() -> None:
     ):
         browser = _launch_chromium(playwright)
         try:
-            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page = _new_dashboard_page(browser, viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
             page.wait_for_load_state("networkidle")
 
@@ -936,7 +943,7 @@ def test_l3_coverage_timeline_appears_in_identification_track() -> None:
     ):
         browser = _launch_chromium(playwright)
         try:
-            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page = _new_dashboard_page(browser, viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
             page.wait_for_load_state("networkidle")
 
@@ -966,7 +973,7 @@ def test_rdd_robustness_forest_plot_appears_in_identification_track() -> None:
     ):
         browser = _launch_chromium(playwright)
         try:
-            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page = _new_dashboard_page(browser, viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
             page.wait_for_load_state("networkidle")
 
@@ -1020,7 +1027,7 @@ def test_full_dashboard_mounts_every_chart_api_builder() -> None:
     ):
         browser = _launch_chromium(playwright)
         try:
-            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page = _new_dashboard_page(browser, viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
             page.wait_for_load_state("networkidle")
 
@@ -1052,7 +1059,7 @@ def test_rdd_secondary_outcome_thumbs_render_in_identification_track() -> None:
     ):
         browser = _launch_chromium(playwright)
         try:
-            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page = _new_dashboard_page(browser, viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
             page.wait_for_load_state("networkidle")
 
@@ -1085,7 +1092,7 @@ def test_no_absolute_home_directory_path_leaks_in_dashboard_html() -> None:
     ):
         browser = _launch_chromium(playwright)
         try:
-            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page = _new_dashboard_page(browser, viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
             page.wait_for_load_state("networkidle")
 
@@ -1118,7 +1125,7 @@ def test_data_sources_citation_table_renders_in_limits_section() -> None:
     ):
         browser = _launch_chromium(playwright)
         try:
-            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page = _new_dashboard_page(browser, viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
             page.wait_for_load_state("networkidle")
 
@@ -1160,7 +1167,7 @@ def test_pap_status_chip_renders_with_baseline_diff() -> None:
     ):
         browser = _launch_chromium(playwright)
         try:
-            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page = _new_dashboard_page(browser, viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
             page.wait_for_load_state("networkidle")
 
@@ -1196,7 +1203,7 @@ def test_rdd_chart_renders_bandwidth_sweep() -> None:
     ):
         browser = _launch_chromium(playwright)
         try:
-            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page = _new_dashboard_page(browser, viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
             page.wait_for_load_state("networkidle")
 
@@ -1298,7 +1305,7 @@ def test_regression_forest_plots_use_coefficient_axis_extent() -> None:
     ):
         browser = _launch_chromium(playwright)
         try:
-            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page = _new_dashboard_page(browser, viewport={"width": 1440, "height": 960})
             page.goto(
                 f"{base_url}/?mode=full&open=demo-design-detail-figures#design",
                 wait_until="domcontentloaded",
@@ -1352,7 +1359,7 @@ def test_cross_market_section_hides_figures_in_brief_mode() -> None:
     ):
         browser = _launch_chromium(playwright)
         try:
-            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page = _new_dashboard_page(browser, viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=brief", wait_until="domcontentloaded")
             page.wait_for_load_state("networkidle")
 
