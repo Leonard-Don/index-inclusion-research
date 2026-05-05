@@ -42,6 +42,23 @@ from index_inclusion_research.rdd_evidence import (
 from index_inclusion_research.results_snapshot import ResultsSnapshot, require_first_row
 
 
+def dashboard_asset_version(root: Path) -> str:
+    static_dir = root / "src" / "index_inclusion_research" / "web" / "static"
+    asset_paths = [
+        static_dir / "dashboard.css",
+        static_dir / "dashboard.js",
+        static_dir / "dashboard" / "interactive_charts.js",
+        static_dir / "dashboard" / "echarts_theme.js",
+    ]
+    mtimes: list[float] = []
+    for path in asset_paths:
+        try:
+            mtimes.append(path.stat().st_mtime)
+        except OSError:
+            continue
+    return str(int(max(mtimes))) if mtimes else "dev"
+
+
 def _overview_rdd_metric(rdd_status: RddStatus) -> OverviewMetric:
     meta = rdd_provenance_summary(rdd_status)
     if rdd_status["mode"] == "real":
@@ -313,6 +330,7 @@ class DashboardHomeContextBuilder:
                 display_mode, "overview", current_open_panels
             ),
             "pap_meta": self.build_pap_meta(),
+            "asset_version": dashboard_asset_version(self.root),
             "refresh_status_url": refresh_status_url,
             "current_open_panels": current_open_panels,
             "overview_metrics": build_overview_metrics(self.root, snapshot=snapshot),
