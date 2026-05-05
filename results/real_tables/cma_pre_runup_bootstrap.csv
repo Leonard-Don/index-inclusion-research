@@ -1,0 +1,2 @@
+cn_mean,us_mean,diff_mean,boot_p_value,boot_ci_low,boot_ci_high,n_cn,n_us,n_boot,cluster_method,n_cn_clusters,n_us_clusters
+0.030905284356766274,0.02593416361676519,0.004971120740001084,0.8748,-0.032508183776092894,0.047041624306280595,118,318,5000,announce_date,8,238

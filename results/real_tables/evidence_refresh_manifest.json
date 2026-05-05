@@ -1,0 +1,249 @@
+{
+  "generated_at": "2026-05-04T14:27:40+00:00",
+  "root": "/Users/leonardodon/index-inclusion-research",
+  "tables_dir": "/Users/leonardodon/index-inclusion-research/results/real_tables",
+  "steps": [
+    {
+      "slug": "enrich-cn-sectors",
+      "status": "skipped",
+      "detail": "CN sector coverage 268/271 (98.9%)"
+    },
+    {
+      "slug": "build-event-sample",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 0.055
+    },
+    {
+      "slug": "build-price-panel",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 18.66
+    },
+    {
+      "slug": "match-controls",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 57.743
+    },
+    {
+      "slug": "match-robustness",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 34.76
+    },
+    {
+      "slug": "build-matched-panel",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 44.513
+    },
+    {
+      "slug": "run-event-study",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 2.706
+    },
+    {
+      "slug": "run-regressions",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 5.188
+    },
+    {
+      "slug": "hs300-rdd",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 5.805
+    },
+    {
+      "slug": "compute-h6-weight-change",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 2.137
+    },
+    {
+      "slug": "cma",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 8.138
+    },
+    {
+      "slug": "make-figures-tables",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 22.195
+    },
+    {
+      "slug": "generate-research-report",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 0.006
+    }
+  ],
+  "coverage": [
+    {
+      "item": "H2_passive_aum",
+      "label": "H2 passive AUM",
+      "status": "pass",
+      "value": "US 16 rows",
+      "detail": "data/raw/passive_aum.csv years 2010-2025"
+    },
+    {
+      "item": "H6_weight_change",
+      "label": "H6 weight_change",
+      "status": "pass",
+      "value": "CN rows=736; matched=67",
+      "detail": "weight rows CN=736; matched events=67; unique tickers=67"
+    },
+    {
+      "item": "H7_cn_sector",
+      "label": "H7 CN sector",
+      "status": "pass",
+      "value": "268/271 (98.9%)",
+      "detail": "missing tickers: 000413, 002411, 600705"
+    },
+    {
+      "item": "RDD_L3_boundary",
+      "label": "HS300 RDD L3",
+      "status": "pass",
+      "value": "formal rows=356",
+      "detail": "data/raw/hs300_rdd_candidates.csv"
+    },
+    {
+      "item": "CMA_verdicts",
+      "label": "CMA verdicts",
+      "status": "pass",
+      "value": "支持=3; 部分支持=0; 证据不足=4; 待补数据=0",
+      "detail": "7 H-row verdicts under results/real_tables"
+    },
+    {
+      "item": "Match_robustness",
+      "label": "Match robustness",
+      "status": "pass",
+      "value": "best=announce_1to2; over=0; max|SMD|=0.157",
+      "detail": "specs=6; default=announce_1to3 over=0"
+    },
+    {
+      "item": "doctor",
+      "label": "doctor",
+      "status": "pass",
+      "value": "14 pass / 0 warn / 0 fail",
+      "detail": "14 checks total"
+    }
+  ],
+  "doctor": {
+    "summary": {
+      "pass": 14,
+      "warn": 0,
+      "fail": 0,
+      "total": 14
+    },
+    "checks": [
+      {
+        "name": "hypothesis_paper_ids_resolve",
+        "status": "pass",
+        "message": "All 21 paper references across 7 hypotheses resolve.",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "verdicts_csv_health",
+        "status": "pass",
+        "message": "verdicts CSV at results/real_tables/cma_hypothesis_verdicts.csv carries all 7 expected hids.",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "results_directory_populated",
+        "status": "pass",
+        "message": "All 12 canonical CMA outputs are present.",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "paper_verdict_section_synced",
+        "status": "pass",
+        "message": "docs/paper_outline_verdicts.md matches the current CMA verdict CSV.",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "p_gated_verdict_sensitivity",
+        "status": "pass",
+        "message": "3 p-gated hypotheses; 1 significant at strict (0.05), 1 at default (0.1); none sit in the [0.05, 0.1) boundary.",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "pending_data_verdicts",
+        "status": "pass",
+        "message": "No hypotheses are currently marked as 待补数据.",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "h6_weight_change_readiness",
+        "status": "pass",
+        "message": "H6 has 736 CN weight_change row(s) available.",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "h7_cn_sector_readiness",
+        "status": "pass",
+        "message": "H7 has 35 CN sector bucket(s) available.",
+        "fix": "",
+        "details": [
+          "专用设备制造业: n=7",
+          "互联网和相关服务: n=1",
+          "农副食品加工业: n=1",
+          "化学原料和化学制品制造业: n=6",
+          "化学纤维制造业: n=2"
+        ]
+      },
+      {
+        "name": "rdd_l3_sample_readiness",
+        "status": "pass",
+        "message": "Formal HS300 RDD L3 sample is active (356 candidate rows across 11 batches).",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "rdd_robustness_panel",
+        "status": "pass",
+        "message": "RDD robustness panel covers all 4 spec kinds across 5 row(s).",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "matched_sample_balance",
+        "status": "pass",
+        "message": "all covariates pass |SMD|<0.25 (max=0.177).",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "match_robustness_grid",
+        "status": "pass",
+        "message": "6 local robustness spec(s) available; best=announce_1to2 (over=0, max|SMD|=0.157).",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "chart_builders_register",
+        "status": "pass",
+        "message": "chart_data registry exposes 13 builders (≥ 12).",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "console_scripts_importable",
+        "status": "pass",
+        "message": "All 26 console_script entry points resolve to callables.",
+        "fix": "",
+        "details": []
+      }
+    ]
+  }
+}

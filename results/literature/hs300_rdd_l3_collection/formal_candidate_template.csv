@@ -1,0 +1,13 @@
+batch_id,market,index_name,ticker,security_name,announce_date,effective_date,running_variable,cutoff,inclusion,event_type,source,source_url,note,sector,collection_role,collection_instruction
+2022-05-27,CN,CSI300,,,2022-05-27,2022-06-10,,,1,inclusion_rdd,,,正式调入候选,,正式调入候选,每个批次至少保留 cutoff 左右两侧候选；source/source_url 应指向正式来源。
+2022-05-27,CN,CSI300,,,2022-05-27,2022-06-10,,,0,inclusion_rdd,,,正式对照候选,,正式对照候选,每个批次至少保留 cutoff 左右两侧候选；source/source_url 应指向正式来源。
+2023-11-24,CN,CSI300,,,2023-11-24,2023-12-08,,,1,inclusion_rdd,,,正式调入候选,,正式调入候选,每个批次至少保留 cutoff 左右两侧候选；source/source_url 应指向正式来源。
+2023-11-24,CN,CSI300,,,2023-11-24,2023-12-08,,,0,inclusion_rdd,,,正式对照候选,,正式对照候选,每个批次至少保留 cutoff 左右两侧候选；source/source_url 应指向正式来源。
+2024-05-31,CN,CSI300,,,2024-05-31,2024-06-14,,,1,inclusion_rdd,,,正式调入候选,,正式调入候选,每个批次至少保留 cutoff 左右两侧候选；source/source_url 应指向正式来源。
+2024-05-31,CN,CSI300,,,2024-05-31,2024-06-14,,,0,inclusion_rdd,,,正式对照候选,,正式对照候选,每个批次至少保留 cutoff 左右两侧候选；source/source_url 应指向正式来源。
+2024-11-29,CN,CSI300,,,2024-11-29,2024-12-13,,,1,inclusion_rdd,,,正式调入候选,,正式调入候选,每个批次至少保留 cutoff 左右两侧候选；source/source_url 应指向正式来源。
+2024-11-29,CN,CSI300,,,2024-11-29,2024-12-13,,,0,inclusion_rdd,,,正式对照候选,,正式对照候选,每个批次至少保留 cutoff 左右两侧候选；source/source_url 应指向正式来源。
+2025-05-30,CN,CSI300,,,2025-05-30,2025-06-13,,,1,inclusion_rdd,,,正式调入候选,,正式调入候选,每个批次至少保留 cutoff 左右两侧候选；source/source_url 应指向正式来源。
+2025-05-30,CN,CSI300,,,2025-05-30,2025-06-13,,,0,inclusion_rdd,,,正式对照候选,,正式对照候选,每个批次至少保留 cutoff 左右两侧候选；source/source_url 应指向正式来源。
+2025-11-28,CN,CSI300,,,2025-11-28,2025-12-12,,,1,inclusion_rdd,,,正式调入候选,,正式调入候选,每个批次至少保留 cutoff 左右两侧候选；source/source_url 应指向正式来源。
+2025-11-28,CN,CSI300,,,2025-11-28,2025-12-12,,,0,inclusion_rdd,,,正式对照候选,,正式对照候选,每个批次至少保留 cutoff 左右两侧候选；source/source_url 应指向正式来源。

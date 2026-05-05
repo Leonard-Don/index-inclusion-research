@@ -1,0 +1,30 @@
+\begin{tabular}{llrrllrrrrrll}
+\toprule
+market & event_phase & inclusion & n_events & short_window_slug & long_window_slug & short_mean_car & long_mean_car & car_reversal & retention_ratio & retention_ratio_valid & retention_note & sample_filter \\
+\midrule
+CN & announce & 0 & 121 & p0_p20 & p0_p120 & -0.0045 & 0.0825 & -0.0871 & NaN & False & 短窗口基数过小，不适合解释保留率。 & baseline \\
+CN & announce & 1 & 118 & p0_p20 & p0_p120 & 0.0182 & 0.0155 & 0.0027 & 0.8504 & True & 短窗口基数充足，可用于解释长期保留率。 & baseline \\
+CN & effective & 0 & 121 & p0_p20 & p0_p120 & 0.0087 & 0.0906 & -0.0819 & 10.3722 & True & 短窗口基数充足，可用于解释长期保留率。 & baseline \\
+CN & effective & 1 & 118 & p0_p20 & p0_p120 & -0.0136 & -0.0018 & -0.0118 & 0.1327 & True & 短窗口基数充足，可用于解释长期保留率。 & baseline \\
+US & announce & 0 & 293 & p0_p20 & p0_p120 & 0.0033 & 0.0215 & -0.0182 & NaN & False & 短窗口基数过小，不适合解释保留率。 & baseline \\
+US & announce & 1 & 318 & p0_p20 & p0_p120 & 0.0021 & 0.0159 & -0.0138 & NaN & False & 短窗口基数过小，不适合解释保留率。 & baseline \\
+US & effective & 0 & 293 & p0_p20 & p0_p120 & 0.0057 & 0.0208 & -0.0151 & 3.6601 & True & 短窗口基数充足，可用于解释长期保留率。 & baseline \\
+US & effective & 1 & 318 & p0_p20 & p0_p120 & -0.0074 & 0.0033 & -0.0107 & -0.4465 & True & 短窗口基数充足，可用于解释长期保留率。 & baseline \\
+CN & announce & 0 & 121 & p0_p20 & p0_p120 & -0.0047 & 0.0829 & -0.0876 & NaN & False & 短窗口基数过小，不适合解释保留率。 & winsorized_1pct \\
+CN & announce & 1 & 118 & p0_p20 & p0_p120 & 0.0186 & 0.0145 & 0.0040 & 0.7819 & True & 短窗口基数充足，可用于解释长期保留率。 & winsorized_1pct \\
+CN & effective & 0 & 121 & p0_p20 & p0_p120 & 0.0091 & 0.0900 & -0.0809 & 9.9071 & True & 短窗口基数充足，可用于解释长期保留率。 & winsorized_1pct \\
+CN & effective & 1 & 118 & p0_p20 & p0_p120 & -0.0136 & -0.0025 & -0.0111 & 0.1856 & True & 短窗口基数充足，可用于解释长期保留率。 & winsorized_1pct \\
+US & announce & 0 & 293 & p0_p20 & p0_p120 & 0.0029 & 0.0201 & -0.0172 & NaN & False & 短窗口基数过小，不适合解释保留率。 & winsorized_1pct \\
+US & announce & 1 & 318 & p0_p20 & p0_p120 & 0.0015 & 0.0150 & -0.0134 & NaN & False & 短窗口基数过小，不适合解释保留率。 & winsorized_1pct \\
+US & effective & 0 & 293 & p0_p20 & p0_p120 & 0.0026 & 0.0201 & -0.0175 & NaN & False & 短窗口基数过小，不适合解释保留率。 & winsorized_1pct \\
+US & effective & 1 & 318 & p0_p20 & p0_p120 & -0.0075 & 0.0043 & -0.0118 & -0.5682 & True & 短窗口基数充足，可用于解释长期保留率。 & winsorized_1pct \\
+CN & announce & 0 & 121 & p0_p20 & p0_p120 & -0.0045 & 0.0825 & -0.0871 & NaN & False & 短窗口基数过小，不适合解释保留率。 & nonoverlap_120d \\
+CN & announce & 1 & 118 & p0_p20 & p0_p120 & 0.0182 & 0.0155 & 0.0027 & 0.8504 & True & 短窗口基数充足，可用于解释长期保留率。 & nonoverlap_120d \\
+CN & effective & 0 & 121 & p0_p20 & p0_p120 & 0.0087 & 0.0906 & -0.0819 & 10.3722 & True & 短窗口基数充足，可用于解释长期保留率。 & nonoverlap_120d \\
+CN & effective & 1 & 118 & p0_p20 & p0_p120 & -0.0136 & -0.0018 & -0.0118 & 0.1327 & True & 短窗口基数充足，可用于解释长期保留率。 & nonoverlap_120d \\
+US & announce & 0 & 287 & p0_p20 & p0_p120 & 0.0039 & 0.0225 & -0.0186 & NaN & False & 短窗口基数过小，不适合解释保留率。 & nonoverlap_120d \\
+US & announce & 1 & 312 & p0_p20 & p0_p120 & 0.0030 & 0.0181 & -0.0150 & NaN & False & 短窗口基数过小，不适合解释保留率。 & nonoverlap_120d \\
+US & effective & 0 & 287 & p0_p20 & p0_p120 & 0.0059 & 0.0216 & -0.0158 & 3.6917 & True & 短窗口基数充足，可用于解释长期保留率。 & nonoverlap_120d \\
+US & effective & 1 & 312 & p0_p20 & p0_p120 & -0.0074 & 0.0048 & -0.0123 & -0.6509 & True & 短窗口基数充足，可用于解释长期保留率。 & nonoverlap_120d \\
+\bottomrule
+\end{tabular}

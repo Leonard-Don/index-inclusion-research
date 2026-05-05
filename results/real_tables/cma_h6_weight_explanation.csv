@@ -1,0 +1,9 @@
+topic,status,headline,detail,metric,value
+sample_coverage,pass,67 个 CN 事件同时匹配 weight_proxy 与 announce_jump,matched events=67; unique tickers=67,matched_events,67
+direction,warn,权重越高未显示更强公告日跳涨,有效规格中负向 5 个、正向 0 个、零值 0 个；方向与“大权重调入带来更强 announce jump”的 H6 直觉不一致。,negative_vs_positive,5/0
+quartile,pass,"Q4-Q1 公告日跳涨差: 系数 -2.79%, p=0.0305",Q4 mean=+0.944%; Q1 mean=+3.735%,coefficient,-0.027902507397274488
+ols_hc3,pass,"标准化权重 OLS-HC3: 系数 -0.0061, p=0.0014",HC3 OLS on standardized weight_proxy; r2=0.033,coefficient,-0.006078270224634214
+sector_fe,pass,"加入行业固定效应: 系数 -0.0436, p=1.0000",HC3 OLS on standardized weight_proxy; r2=0.443；行业固定效应后的 p 接近 1，说明该规格更像高杠杆/吸收变异诊断，不应单独当作强证据。,coefficient,-0.043576227111143645
+median_quantreg,pass,"中位数分位数回归: 系数 -0.0057, p=0.3120",median QuantReg on standardized weight_proxy,coefficient,-0.005665481537092168
+permutation,pass,"Q4-Q1 跳涨差 · permutation 检验: 系数 -0.0279, p=0.0266",two-sided permutation (B=5000); |observed spread|=2.790%; extreme=132/5000,coefficient,-0.027902507397274488
+final_read,warn,当前 H6 裁决: 证据不足,"CN 重权重 announce_jump 并不明显高于轻权重 (+1.29% vs +3.20%,spread=-1.90%),H6 不被支持。",confidence,中

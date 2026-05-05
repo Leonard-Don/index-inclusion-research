@@ -1,0 +1,7 @@
+test,status,coefficient,p_value,n_obs,detail
+coverage,pass,,,67,matched events=67; unique tickers=67
+quartile_spread,pass,-0.027902507397274488,0.030465364461785247,67,Q4 mean=+0.944%; Q1 mean=+3.735%
+ols_weight,pass,-0.006078270224634214,0.0014022106023061855,67,HC3 OLS on standardized weight_proxy; r2=0.033
+sector_fe_weight,pass,-0.043576227111143645,1.0,67,HC3 OLS on standardized weight_proxy; r2=0.443
+median_quantreg_weight,pass,-0.005665481537092168,0.31204108635547817,67,median QuantReg on standardized weight_proxy
+permutation_quartile_spread,pass,-0.027902507397274488,0.02659468106378724,67,two-sided permutation (B=5000); |observed spread|=2.790%; extreme=132/5000

@@ -1,0 +1,4 @@
+year,notice_rows,attachment_rows,usable_attachment_rows,parsed_addition_rows,parsed_control_rows,candidate_rows,candidate_batches,status
+2020,1,2,1,26,15,41,1,candidate_found
+2021,2,4,3,78,45,83,2,candidate_found
+2022,3,2,2,43,30,73,2,candidate_found

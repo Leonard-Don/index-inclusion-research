@@ -1,0 +1,7 @@
+batch_id,market,index_name,announce_date,effective_date,n_candidates,n_included,n_excluded,n_left_of_cutoff,n_right_of_cutoff,min_running_variable,max_running_variable,closest_left_distance,closest_right_distance,n_unique_cutoffs,n_unique_announce_dates,n_unique_effective_dates,duplicate_ticker_rows,has_cutoff_crossing,has_treated_and_control
+2022-05-27,CN,CSI300,2022-05-27,2022-06-10,327,300,27,26,301,274.0,600.0,-1.0,0.0,1,1,1,0,True,True
+2023-11-24,CN,CSI300,2023-11-24,2023-12-08,314,300,14,13,301,287.0,600.0,-1.0,0.0,1,1,1,0,True,True
+2024-05-31,CN,CSI300,2024-05-31,2024-06-14,312,300,12,11,301,289.0,600.0,-1.0,0.0,1,1,1,0,True,True
+2024-11-29,CN,CSI300,2024-11-29,2024-12-13,316,300,16,15,301,285.0,600.0,-1.0,0.0,1,1,1,0,True,True
+2025-05-30,CN,CSI300,2025-05-30,2025-06-13,307,300,7,6,301,294.0,600.0,-1.0,0.0,1,1,1,0,True,True
+2025-11-28,CN,CSI300,2025-11-28,2025-12-12,311,300,11,10,301,290.0,600.0,-1.0,0.0,1,1,1,0,True,True

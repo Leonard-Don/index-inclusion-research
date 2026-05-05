@@ -1,0 +1,8 @@
+item,label,status,value,detail
+H2_passive_aum,H2 passive AUM,pass,US 16 rows,data/raw/passive_aum.csv years 2010-2025
+H6_weight_change,H6 weight_change,pass,CN rows=736; matched=67,weight rows CN=736; matched events=67; unique tickers=67
+H7_cn_sector,H7 CN sector,pass,268/271 (98.9%),"missing tickers: 000413, 002411, 600705"
+RDD_L3_boundary,HS300 RDD L3,pass,formal rows=356,data/raw/hs300_rdd_candidates.csv
+CMA_verdicts,CMA verdicts,pass,支持=3; 部分支持=0; 证据不足=4; 待补数据=0,7 H-row verdicts under results/real_tables
+Match_robustness,Match robustness,pass,best=announce_1to2; over=0; max|SMD|=0.157,specs=6; default=announce_1to3 over=0
+doctor,doctor,pass,14 pass / 0 warn / 0 fail,14 checks total
