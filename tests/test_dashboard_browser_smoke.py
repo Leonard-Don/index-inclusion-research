@@ -25,6 +25,38 @@ playwright_sync_api = pytest.importorskip("playwright.sync_api")
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _cached_chromium_executable() -> Path | None:
+    cache_roots = [
+        Path.home() / "Library" / "Caches" / "ms-playwright",
+        Path.home() / ".cache" / "ms-playwright",
+    ]
+    if os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
+        cache_roots.insert(0, Path(os.environ["PLAYWRIGHT_BROWSERS_PATH"]))
+    patterns = [
+        "chromium_headless_shell-*/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+        "chromium_headless_shell-*/chrome-headless-shell-linux/chrome-headless-shell",
+        "chromium-*/chrome-mac/Chromium.app/Contents/MacOS/Chromium",
+        "chromium-*/chrome-linux/chrome",
+    ]
+    candidates: list[Path] = []
+    for cache_root in cache_roots:
+        for pattern in patterns:
+            candidates.extend(path for path in cache_root.glob(pattern) if path.is_file())
+    return sorted(candidates, reverse=True)[0] if candidates else None
+
+
+def _launch_chromium(playwright):
+    try:
+        return playwright.chromium.launch()
+    except Exception as exc:
+        if "Executable doesn't exist" not in str(exc):
+            raise
+        fallback = _cached_chromium_executable()
+        if fallback is None:
+            raise
+        return playwright.chromium.launch(executable_path=str(fallback))
+
+
 def _find_free_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", 0))
@@ -129,7 +161,7 @@ def test_dashboard_browser_smoke() -> None:
         _running_dashboard_server() as base_url,
         playwright_sync_api.sync_playwright() as playwright,
     ):
-        browser = playwright.chromium.launch()
+        browser = _launch_chromium(playwright)
         page = browser.new_page(viewport={"width": 1440, "height": 960})
         page.on(
             "console",
@@ -693,7 +725,7 @@ def test_cross_market_section_renders_in_full_mode() -> None:
         _running_dashboard_server() as base_url,
         playwright_sync_api.sync_playwright() as playwright,
     ):
-        browser = playwright.chromium.launch()
+        browser = _launch_chromium(playwright)
         try:
             page = browser.new_page(viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
@@ -771,7 +803,7 @@ def test_evidence_detail_and_rdd_l3_workbench_pages_render() -> None:
         _running_dashboard_server() as base_url,
         playwright_sync_api.sync_playwright() as playwright,
     ):
-        browser = playwright.chromium.launch()
+        browser = _launch_chromium(playwright)
         try:
             page = browser.new_page(viewport={"width": 1440, "height": 960})
 
@@ -824,7 +856,7 @@ def test_sensitivity_threshold_chip_flips_verdict_card_strips() -> None:
         _running_dashboard_server() as base_url,
         playwright_sync_api.sync_playwright() as playwright,
     ):
-        browser = playwright.chromium.launch()
+        browser = _launch_chromium(playwright)
         try:
             page = browser.new_page(viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
@@ -900,7 +932,7 @@ def test_l3_coverage_timeline_appears_in_identification_track() -> None:
         _running_dashboard_server() as base_url,
         playwright_sync_api.sync_playwright() as playwright,
     ):
-        browser = playwright.chromium.launch()
+        browser = _launch_chromium(playwright)
         try:
             page = browser.new_page(viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
@@ -930,7 +962,7 @@ def test_rdd_robustness_forest_plot_appears_in_identification_track() -> None:
         _running_dashboard_server() as base_url,
         playwright_sync_api.sync_playwright() as playwright,
     ):
-        browser = playwright.chromium.launch()
+        browser = _launch_chromium(playwright)
         try:
             page = browser.new_page(viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
@@ -975,7 +1007,7 @@ def test_rdd_secondary_outcome_thumbs_render_in_identification_track() -> None:
         _running_dashboard_server() as base_url,
         playwright_sync_api.sync_playwright() as playwright,
     ):
-        browser = playwright.chromium.launch()
+        browser = _launch_chromium(playwright)
         try:
             page = browser.new_page(viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
@@ -1008,7 +1040,7 @@ def test_no_absolute_home_directory_path_leaks_in_dashboard_html() -> None:
         _running_dashboard_server() as base_url,
         playwright_sync_api.sync_playwright() as playwright,
     ):
-        browser = playwright.chromium.launch()
+        browser = _launch_chromium(playwright)
         try:
             page = browser.new_page(viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
@@ -1041,7 +1073,7 @@ def test_data_sources_citation_table_renders_in_limits_section() -> None:
         _running_dashboard_server() as base_url,
         playwright_sync_api.sync_playwright() as playwright,
     ):
-        browser = playwright.chromium.launch()
+        browser = _launch_chromium(playwright)
         try:
             page = browser.new_page(viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
@@ -1079,7 +1111,7 @@ def test_pap_status_chip_renders_with_baseline_diff() -> None:
         _running_dashboard_server() as base_url,
         playwright_sync_api.sync_playwright() as playwright,
     ):
-        browser = playwright.chromium.launch()
+        browser = _launch_chromium(playwright)
         try:
             page = browser.new_page(viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
@@ -1115,7 +1147,7 @@ def test_rdd_chart_renders_bandwidth_sweep() -> None:
         _running_dashboard_server() as base_url,
         playwright_sync_api.sync_playwright() as playwright,
     ):
-        browser = playwright.chromium.launch()
+        browser = _launch_chromium(playwright)
         try:
             page = browser.new_page(viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
@@ -1153,6 +1185,8 @@ def test_rdd_chart_renders_bandwidth_sweep() -> None:
                         series_types: opt.series.map(s => s.type),
                         legend_data: opt.legend?.[0]?.data || [],
                         legend_selected: opt.legend?.[0]?.selected || {},
+                        x_axis_min: opt.xAxis?.[0]?.min,
+                        x_axis_max: opt.xAxis?.[0]?.max,
                     };
                 }
                 """
@@ -1164,6 +1198,8 @@ def test_rdd_chart_renders_bandwidth_sweep() -> None:
             assert "τ=" in chart_state["subtitle"]
             assert "p=" in chart_state["subtitle"]
             assert "n=" in chart_state["subtitle"]
+            assert float(chart_state["x_axis_min"]) > 299.0
+            assert float(chart_state["x_axis_max"]) < 301.0
 
             line_series_count = sum(1 for t in chart_state["series_types"] if t == "line")
             scatter_series_count = sum(
@@ -1200,6 +1236,65 @@ def test_rdd_chart_renders_bandwidth_sweep() -> None:
             browser.close()
 
 
+def test_regression_forest_plots_use_coefficient_axis_extent() -> None:
+    """Forest plots should scale to the coefficient/CI data, not the
+    custom-series row indexes used to draw CI bars."""
+
+    chart_thresholds = {
+        "main_regression": 0.05,
+        "mechanism_regression": 0.08,
+    }
+
+    with (
+        _running_dashboard_server() as base_url,
+        playwright_sync_api.sync_playwright() as playwright,
+    ):
+        browser = _launch_chromium(playwright)
+        try:
+            page = browser.new_page(viewport={"width": 1440, "height": 960})
+            page.goto(
+                f"{base_url}/?mode=full&open=demo-design-detail-figures#design",
+                wait_until="domcontentloaded",
+            )
+            page.wait_for_load_state("networkidle")
+
+            for chart_id, max_abs_extent in chart_thresholds.items():
+                container = page.locator(f'[data-echart="{chart_id}"]')
+                assert container.count() == 1
+                container.first.scroll_into_view_if_needed()
+                page.wait_for_function(
+                    """
+                    (chartId) => {
+                        if (typeof echarts === "undefined") return false;
+                        const el = document.querySelector(`[data-echart="${chartId}"]`);
+                        if (!el) return false;
+                        const inst = echarts.getInstanceByDom(el);
+                        return inst != null && !el.classList.contains("echart-loading");
+                    }
+                    """,
+                    arg=chart_id,
+                    timeout=10_000,
+                )
+
+                chart_state = page.evaluate(
+                    """
+                    (chartId) => {
+                        const el = document.querySelector(`[data-echart="${chartId}"]`);
+                        const opt = echarts.getInstanceByDom(el).getOption();
+                        return {
+                            x_axis_min: opt.xAxis?.[0]?.min,
+                            x_axis_max: opt.xAxis?.[0]?.max,
+                        };
+                    }
+                    """,
+                    arg=chart_id,
+                )
+                assert abs(float(chart_state["x_axis_min"])) < max_abs_extent
+                assert abs(float(chart_state["x_axis_max"])) < max_abs_extent
+        finally:
+            browser.close()
+
+
 def test_cross_market_section_hides_figures_in_brief_mode() -> None:
     """Brief mode should render the CMA section header but not show figures
     or the hypothesis map."""
@@ -1208,7 +1303,7 @@ def test_cross_market_section_hides_figures_in_brief_mode() -> None:
         _running_dashboard_server() as base_url,
         playwright_sync_api.sync_playwright() as playwright,
     ):
-        browser = playwright.chromium.launch()
+        browser = _launch_chromium(playwright)
         try:
             page = browser.new_page(viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=brief", wait_until="domcontentloaded")

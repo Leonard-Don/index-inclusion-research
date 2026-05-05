@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>指数纳入研究展板</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}?v={{ asset_version }}">
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 </head>
 <body data-refresh-status-url="{{ refresh_status_url }}" data-table-density="cozy">
@@ -38,9 +38,9 @@
     {{ ui.render_cta_strip(cta_copy, mode) }}
   </main>
   {{ ui.render_waypoint_navigation(nav_sections, track_sections) }}
-  <script type="module" src="{{ url_for('static', filename='dashboard.js') }}"></script>
+  <script type="module" src="{{ url_for('static', filename='dashboard.js') }}?v={{ asset_version }}"></script>
   <script type="module">
-    import { createInteractiveChartsController } from "{{ url_for('static', filename='dashboard/interactive_charts.js') }}";
+    import { createInteractiveChartsController } from "{{ url_for('static', filename='dashboard/interactive_charts.js') }}?v={{ asset_version }}";
     const charts = createInteractiveChartsController();
     charts.initialize();
   </script>

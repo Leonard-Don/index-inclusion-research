@@ -10,6 +10,51 @@ import { DASHBOARD_THEME } from './echarts_theme.js';
 
 // ── chart builders ──────────────────────────────────────────────────
 
+function asFiniteNumber(value) {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : null;
+}
+
+function finiteNumbers(values) {
+  return values
+    .map(asFiniteNumber)
+    .filter(value => value != null);
+}
+
+function symmetricAxisBounds(values, fallbackAbs = 0.01, padRatio = 0.18) {
+  const nums = finiteNumbers(values);
+  const maxAbs = Math.max(
+    fallbackAbs,
+    ...nums.map(value => Math.abs(value))
+  );
+  const padded = maxAbs * (1 + padRatio);
+  return { min: -padded, max: padded };
+}
+
+function paddedAxisBounds(values, fallbackMin = 0, fallbackMax = 1, padRatio = 0.08) {
+  const nums = finiteNumbers(values);
+  let min = nums.length ? Math.min(...nums) : fallbackMin;
+  let max = nums.length ? Math.max(...nums) : fallbackMax;
+
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
+    min = 0;
+    max = 1;
+  }
+  if (min === max) {
+    const fallbackSpan = Math.max(Math.abs(min) * 0.01, 1);
+    min -= fallbackSpan / 2;
+    max += fallbackSpan / 2;
+  }
+
+  const padding = (max - min) * padRatio;
+  return { min: min - padding, max: max + padding };
+}
+
+function pointX(point) {
+  const value = Array.isArray(point) ? point : point?.value;
+  return Array.isArray(value) ? value[0] : null;
+}
+
 function buildCarPathOption(payload) {
   const arSeries = payload.series.filter(s => s.metric === 'AR');
   const carSeries = payload.series.filter(s => s.metric === 'CAR');
@@ -335,6 +380,7 @@ function buildTimeSeriesRollingOption(payload) {
 function buildMainRegressionOption(payload) {
   const rows = payload.rows || [];
   const labels = rows.map(r => r.label);
+  const xBounds = symmetricAxisBounds(rows.flatMap(r => [r.coef, r.ci_lo, r.ci_hi]));
   // point series — coefficient
   const pointData = rows.map((r, i) => ({
     value: [r.coef, i],
@@ -367,6 +413,7 @@ function buildMainRegressionOption(payload) {
         ],
       };
     },
+    encode: { x: [1, 2], y: 0 },
     data: rows.map((r, i) => [i, r.ci_lo, r.ci_hi]),
     silent: true,
     z: -1,
@@ -391,6 +438,9 @@ function buildMainRegressionOption(payload) {
       name: 'treatment_group 系数',
       nameLocation: 'center',
       nameGap: 28,
+      scale: true,
+      min: xBounds.min,
+      max: xBounds.max,
       axisLabel: { formatter: v => (v * 100).toFixed(1) + '%' },
       splitLine: { lineStyle: { type: 'dashed' } },
     },
@@ -460,6 +510,19 @@ const CHART_OPTION_BUILDERS = {
 function buildRddScatterOption(payload) {
   const fits = Array.isArray(payload.fits) ? payload.fits : [];
   const defaultBw = payload.default_bandwidth;
+  const cutoff = asFiniteNumber(payload.cutoff);
+  const scatterXValues = (payload.series || []).flatMap(s => (s.data || []).map(pointX));
+  const fitXValues = fits.flatMap(f => [
+    ...(f.line_left || []).map(pointX),
+    ...(f.line_right || []).map(pointX),
+  ]);
+  const bandwidthValues = finiteNumbers(fits.flatMap(f => [f.effective_bandwidth, f.bandwidth]));
+  const fallbackRadius = Math.max(0.08, (Math.max(0, ...bandwidthValues) || 0) * 1.35);
+  const rddXBounds = paddedAxisBounds(
+    [...scatterXValues, ...fitXValues, cutoff],
+    cutoff != null ? cutoff - fallbackRadius : undefined,
+    cutoff != null ? cutoff + fallbackRadius : undefined
+  );
   const fitColor = bw => {
     // Highlight the default bandwidth; fade the others so the plot
     // stays readable when multiple bandwidths are toggled on.
@@ -596,6 +659,10 @@ function buildRddScatterOption(payload) {
       name: 'running_variable',
       nameLocation: 'center',
       nameGap: 28,
+      scale: true,
+      min: rddXBounds.min,
+      max: rddXBounds.max,
+      axisLabel: { formatter: v => Number(v).toFixed(2) },
       splitLine: { lineStyle: { type: 'dashed' } },
     },
     yAxis: {
