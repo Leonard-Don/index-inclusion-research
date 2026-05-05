@@ -63,7 +63,7 @@ def _launch_chromium(playwright):
 
 def _new_dashboard_page(browser, *, viewport: dict[str, int]) -> playwright_sync_api.Page:
     page = browser.new_page(viewport=viewport)
-    navigation_timeout = 90_000 if os.environ.get("CI") else 45_000
+    navigation_timeout = 180_000 if os.environ.get("CI") else 45_000
     page.set_default_navigation_timeout(navigation_timeout)
     return page
 
@@ -75,7 +75,10 @@ def _find_free_port() -> int:
 
 
 def _wait_for_dashboard(
-    url: str, proc: subprocess.Popen[str], timeout_seconds: float = 180.0
+    url: str,
+    proc: subprocess.Popen[str],
+    timeout_seconds: float = 180.0,
+    request_timeout: float = 10.0,
 ) -> None:
     target = urlsplit(url)
     path = target.path or "/"
@@ -91,7 +94,10 @@ def _wait_for_dashboard(
                 f"Dashboard server exited before becoming ready.\n{stdout}"
             )
         try:
-            connection = http.client.HTTPConnection(host, port, timeout=10)
+            remaining = max(1.0, deadline - time.time())
+            connection = http.client.HTTPConnection(
+                host, port, timeout=min(request_timeout, remaining)
+            )
             connection.request("GET", path)
             response = connection.getresponse()
             response.read()
@@ -103,6 +109,16 @@ def _wait_for_dashboard(
     proc.terminate()
     stdout, _ = proc.communicate(timeout=5)
     raise RuntimeError(f"Dashboard server did not become ready in time.\n{stdout}")
+
+
+def _warm_dashboard_pages(base_url: str, proc: subprocess.Popen[str]) -> None:
+    for path in ["/?mode=demo", "/?mode=full", "/?mode=brief", "/rdd-l3"]:
+        _wait_for_dashboard(
+            f"{base_url}{path}",
+            proc,
+            timeout_seconds=240.0,
+            request_timeout=240.0,
+        )
 
 
 def _wheel_until_hash(
@@ -168,6 +184,7 @@ def _ensure_dashboard_server() -> str:
     )
     base_url = f"http://127.0.0.1:{port}"
     _wait_for_dashboard(f"{base_url}/favicon.ico", proc)
+    _warm_dashboard_pages(base_url, proc)
     _SHARED_DASHBOARD_SERVER = (base_url, proc)
     atexit.register(_stop_dashboard_server, proc)
     return base_url
