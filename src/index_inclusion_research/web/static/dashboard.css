@@ -4059,6 +4059,18 @@
       letter-spacing: 0.04em;
       pointer-events: none;
     }
+    .echart-retrying::after {
+      content: "图表连接中断，正在重试…";
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 14px;
+      letter-spacing: 0.04em;
+      pointer-events: none;
+    }
     .echart-empty::after {
       content: "暂无图表数据";
       position: absolute;
@@ -4070,7 +4082,7 @@
       font-size: 14px;
     }
     .echart-error::after {
-      content: "图表加载失败，使用静态图";
+      content: "图表暂时不可用，服务恢复后会自动重试";
       position: absolute;
       inset: 0;
       display: flex;
