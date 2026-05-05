@@ -77,12 +77,21 @@ def test_compute_h6_weight_robustness_emits_core_specs() -> None:
     table = compute_h6_weight_robustness(pd.DataFrame(rows), pd.DataFrame(gap_rows))
     by_test = table.set_index("test")
 
-    assert {"coverage", "quartile_spread", "ols_weight", "sector_fe_weight"}.issubset(
-        by_test.index
-    )
+    assert {
+        "coverage",
+        "quartile_spread",
+        "ols_weight",
+        "sector_fe_weight",
+        "permutation_quartile_spread",
+    }.issubset(by_test.index)
     assert by_test.loc["quartile_spread", "coefficient"] > 0
     assert by_test.loc["ols_weight", "status"] == "pass"
     assert by_test.loc["sector_fe_weight", "status"] == "pass"
+    # Permutation should agree with the parametric Welch test on this
+    # synthetic monotone fixture: large positive spread + small p.
+    assert by_test.loc["permutation_quartile_spread", "status"] == "pass"
+    assert by_test.loc["permutation_quartile_spread", "coefficient"] > 0
+    assert by_test.loc["permutation_quartile_spread", "p_value"] < 0.05
 
 
 def test_compute_h6_weight_robustness_handles_missing_inputs() -> None:
@@ -155,3 +164,70 @@ def test_export_h6_weight_explanation_writes_csv(tmp_path) -> None:
 
     assert out.name == "cma_h6_weight_explanation.csv"
     assert pd.read_csv(out).iloc[0]["topic"] == "sample_coverage"
+
+
+def test_permutation_quartile_spread_returns_high_p_when_no_signal() -> None:
+    """Random weight_proxy with constant announce_jump → permutation p ≈ 1."""
+    import numpy as np
+    rng = np.random.default_rng(0)
+    n = 60
+    rows = []
+    gap_rows = []
+    for i in range(n):
+        rows.append(
+            {
+                "market": "CN",
+                "ticker": f"{i:06d}",
+                "announce_date": "2020-01-01",
+                "weight_proxy": float(rng.uniform()),
+            }
+        )
+        gap_rows.append(
+            {
+                "market": "CN",
+                "ticker": f"{i:06d}",
+                "announce_date": "2020-01-01",
+                "announce_jump": 0.01,  # constant outcome → no real signal
+                "sector": "Tech",
+            }
+        )
+    table = compute_h6_weight_robustness(pd.DataFrame(rows), pd.DataFrame(gap_rows))
+    perm = table.loc[table["test"] == "permutation_quartile_spread"].iloc[0]
+    # With no signal, observed spread is 0 and every permuted spread is also 0,
+    # so p = (B+1)/(B+1) = 1.0
+    assert float(perm["coefficient"]) == 0.0
+    assert float(perm["p_value"]) >= 0.99
+
+
+def test_permutation_quartile_spread_recovers_real_negative_signal() -> None:
+    """Heavy-weight stocks have systematically lower announce_jump →
+    permutation should detect a significant negative spread (the real
+    HS300 H6 finding pattern)."""
+    n_per_q = 15
+    rows = []
+    gap_rows = []
+    for q, jump in enumerate([0.04, 0.03, 0.02, 0.005]):
+        for j in range(n_per_q):
+            ticker = f"{q:02d}{j:04d}"
+            rows.append(
+                {
+                    "market": "CN",
+                    "ticker": ticker,
+                    "announce_date": "2020-01-01",
+                    "weight_proxy": float(q + 1) + j * 1e-3,
+                }
+            )
+            gap_rows.append(
+                {
+                    "market": "CN",
+                    "ticker": ticker,
+                    "announce_date": "2020-01-01",
+                    "announce_jump": jump,
+                    "sector": "Tech",
+                }
+            )
+    table = compute_h6_weight_robustness(pd.DataFrame(rows), pd.DataFrame(gap_rows))
+    perm = table.loc[table["test"] == "permutation_quartile_spread"].iloc[0]
+    # Q4 (highest weight) has jump=0.005, Q1 (lowest) has 0.04 → spread strongly negative.
+    assert float(perm["coefficient"]) < -0.02
+    assert float(perm["p_value"]) < 0.05

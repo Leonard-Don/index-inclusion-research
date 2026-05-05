@@ -73,7 +73,7 @@ _细节_: CN limit_coef=0.1549, p=0.008, R²=0.011, n=936
 ### H6 · 指数权重可预测性 —— 证据不足(可信度:中)
 **heavy−light spread = -0.019**, n = 67
 CN 重权重 announce_jump 并不明显高于轻权重 (+1.29% vs +3.20%,spread=-1.90%),H6 不被支持。
-_细节_: matched=67, median weight=0.0039, heavy announce_jump=+1.29%, light=+3.20%, spread=-1.90%; robustness: ols_weight coef=-0.0061, p=0.001; sector_fe_weight coef=-0.0436, p=1.000; median_quantreg_weight coef=-0.0057, p=0.312
+_细节_: matched=67, median weight=0.0039, heavy announce_jump=+1.29%, light=+3.20%, spread=-1.90%; robustness: ols_weight coef=-0.0061, p=0.001; sector_fe_weight coef=-0.0436, p=1.000; median_quantreg_weight coef=-0.0057, p=0.312; permutation_quartile_spread coef=-0.0279, p=0.027
 
 ### H7 · 行业结构差异 —— 支持(可信度:中)
 **US sector spread = 5.954**, n = 187

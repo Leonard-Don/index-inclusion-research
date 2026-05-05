@@ -832,14 +832,19 @@ def _h6_robustness_snapshot(frame: pd.DataFrame | None) -> str:
         return ""
     focus = frame.loc[
         frame["test"].astype(str).isin(
-            ["ols_weight", "sector_fe_weight", "median_quantreg_weight"]
+            [
+                "ols_weight",
+                "sector_fe_weight",
+                "median_quantreg_weight",
+                "permutation_quartile_spread",
+            ]
         )
         & (frame["status"].astype(str) == "pass")
     ].copy()
     if focus.empty:
         return ""
     chunks: list[str] = []
-    for _, row in focus.head(3).iterrows():
+    for _, row in focus.head(4).iterrows():
         coef = _num(row, "coefficient")
         p_value = _num(row, "p_value")
         chunks.append(
