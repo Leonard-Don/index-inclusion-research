@@ -496,9 +496,7 @@ def _build_paper_info_frames(
             {"项目": "研究主线", "内容": display_project_module},
             {
                 "项目": "原文入口",
-                "内容": f'<a href="/paper/{paper_id}/pdf" target="_blank">查看原文 PDF</a>'
-                if paper.exists
-                else "PDF 不存在",
+                "内容": f'<a href="/paper/{paper_id}/pdf" target="_blank">查看原文 PDF</a>',
             },
         ]
     )
@@ -873,17 +871,13 @@ def load_paper_detail_result(
         "evolution_nav_views": evolution_nav_views,
         "verdict_citations": verdict_citations,
         "figure_paths": [],
-        "primary_actions": (
-            [
-                {
-                    "label": "查看原文 PDF",
-                    "href": f"/paper/{paper_id}/pdf",
-                    "target": "_blank",
-                }
-            ]
-            if paper.exists
-            else []
-        ),
+        "primary_actions": [
+            {
+                "label": "查看原文 PDF",
+                "href": f"/paper/{paper_id}/pdf",
+                "target": "_blank",
+            }
+        ],
         "output_dir": "",
     }
 
