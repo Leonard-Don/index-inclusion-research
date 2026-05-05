@@ -224,6 +224,88 @@ def _fit_quantile(joined: pd.DataFrame) -> dict[str, object]:
     )
 
 
+def _permutation_quartile_spread(
+    joined: pd.DataFrame,
+    *,
+    n_permutations: int = 5_000,
+    seed: int = 42,
+) -> dict[str, object]:
+    """Two-sided permutation test on the heavy-vs-light quartile spread.
+
+    Shuffles the assignment of announce_jump values across events many
+    times to generate a null distribution for the (Q4 mean − Q1 mean)
+    spread, then reports the two-sided p-value (fraction of permuted
+    spreads whose absolute value ≥ observed). At n=67 this is the
+    distribution-free complement to the OLS / quantile / sector-FE specs:
+    if the OLS p=0.001 in the wrong direction is real signal, permutation
+    should agree; if it's small-sample / outlier-driven noise, permutation
+    will land near 0.5 and the H6 'evidence insufficient' verdict gains
+    a non-parametric backbone.
+    """
+    n_obs = int(len(joined))
+    if n_obs < 8 or joined["weight_proxy"].nunique(dropna=True) < 4:
+        return _result_row(
+            "permutation_quartile_spread",
+            status="warn",
+            n_obs=n_obs,
+            detail="not enough weight variation for quartile permutation",
+        )
+    work = joined.copy()
+    try:
+        work["weight_quartile"] = pd.qcut(
+            work["weight_proxy"],
+            q=4,
+            labels=["Q1", "Q2", "Q3", "Q4"],
+            duplicates="drop",
+        )
+    except ValueError as exc:
+        return _result_row(
+            "permutation_quartile_spread",
+            status="warn",
+            n_obs=n_obs,
+            detail=f"qcut failed: {exc}",
+        )
+    low_mask = work["weight_quartile"] == "Q1"
+    high_mask = work["weight_quartile"] == "Q4"
+    low = work.loc[low_mask, "announce_jump"].dropna().to_numpy()
+    high = work.loc[high_mask, "announce_jump"].dropna().to_numpy()
+    if low.size == 0 or high.size == 0:
+        return _result_row(
+            "permutation_quartile_spread",
+            status="warn",
+            n_obs=n_obs,
+            detail="Q1 or Q4 is empty after qcut",
+        )
+    pooled = np.concatenate([low, high])
+    n_low, n_high = low.size, high.size
+    observed_spread = float(high.mean() - low.mean())
+
+    rng = np.random.default_rng(seed)
+    extreme_count = 0
+    for _ in range(n_permutations):
+        rng.shuffle(pooled)
+        sample_low = pooled[:n_low]
+        sample_high = pooled[n_low : n_low + n_high]
+        spread = float(sample_high.mean() - sample_low.mean())
+        if abs(spread) >= abs(observed_spread):
+            extreme_count += 1
+    # +1 in numerator and denominator avoids reporting p=0 from a finite
+    # permutation budget; standard convention for Monte Carlo p-values.
+    p_value = (extreme_count + 1) / (n_permutations + 1)
+    return _result_row(
+        "permutation_quartile_spread",
+        status="pass",
+        coefficient=observed_spread,
+        p_value=float(p_value),
+        n_obs=n_obs,
+        detail=(
+            f"two-sided permutation (B={n_permutations}); "
+            f"|observed spread|={abs(observed_spread):.3%}; "
+            f"extreme={extreme_count}/{n_permutations}"
+        ),
+    )
+
+
 def _quartile_spread(joined: pd.DataFrame) -> dict[str, object]:
     n_obs = int(len(joined))
     if n_obs < 8 or joined["weight_proxy"].nunique(dropna=True) < 4:
@@ -302,6 +384,7 @@ def compute_h6_weight_robustness(
         _fit_ols(joined, with_sector_fe=False),
         _fit_ols(joined, with_sector_fe=True),
         _fit_quantile(joined),
+        _permutation_quartile_spread(joined),
     ]
     return pd.DataFrame(rows, columns=ROBUSTNESS_COLUMNS)
 
@@ -450,6 +533,10 @@ def build_h6_weight_explanation(
         "ols_weight": ("ols_hc3", "标准化权重 OLS-HC3"),
         "sector_fe_weight": ("sector_fe", "加入行业固定效应"),
         "median_quantreg_weight": ("median_quantreg", "中位数分位数回归"),
+        "permutation_quartile_spread": (
+            "permutation",
+            "Q4-Q1 跳涨差 · permutation 检验",
+        ),
     }
     for test, (topic, label) in specs.items():
         row = _lookup_row(table, test)
