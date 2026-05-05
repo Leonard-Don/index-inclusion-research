@@ -1,4 +1,4 @@
-.PHONY: setup sync lock test lint typecheck quality serve coverage clean help rebuild verdicts doctor doctor-strict paper
+.PHONY: setup sync lock test lint typecheck quality coverage-gate ci serve coverage clean help rebuild verdicts doctor doctor-strict paper
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -26,6 +26,11 @@ quality: lint typecheck test doctor-strict ## Run the local pre-commit quality g
 
 coverage: ## Run tests with coverage report
 	pytest -q --cov=index_inclusion_research --cov-report=term-missing --cov-report=html:htmlcov
+
+coverage-gate: ## Run tests with the CI coverage threshold
+	pytest -q --cov=index_inclusion_research --cov-report=term-missing --cov-report=xml:coverage.xml --cov-fail-under=70
+
+ci: lint typecheck coverage-gate doctor-strict ## Run the CI-equivalent non-browser quality gate
 
 smoke: ## Run dashboard browser smoke tests (requires Playwright + Chromium)
 	python3 -m playwright install chromium

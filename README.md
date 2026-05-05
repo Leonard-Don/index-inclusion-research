@@ -97,6 +97,7 @@ index-inclusion-dashboard
 
 ```bash
 make quality
+make ci      # CI 等价非浏览器门禁，包含 coverage gate
 make smoke   # 浏览器 smoke test，需要 Playwright + Chromium
 ```
 
@@ -203,9 +204,11 @@ make sync
 
 ```bash
 make quality       # lint + typecheck + test + doctor-strict
+make ci            # lint + typecheck + coverage-gate + doctor-strict
 make lint
 make typecheck
 make test
+make coverage-gate
 make doctor-strict
 ```
 
@@ -217,7 +220,7 @@ make smoke
 
 GitHub Actions 通过 `astral-sh/setup-uv` + `uv sync --extra dev`（按 `uv.lock`）安装依赖，分两步：
 
-- `ruff` lint + `mypy` typecheck + coverage gate + `index-inclusion-doctor --format json --fail-on-warn`
+- `make lint` + `make typecheck` + `make coverage-gate` + `index-inclusion-doctor --format json --fail-on-warn`
 - 安装 Chromium 后跑 dashboard 浏览器 smoke test
 
 如果你准备改 dashboard 主干，先看 [docs/dashboard_architecture.md](docs/dashboard_architecture.md)。
@@ -266,6 +269,7 @@ GitHub Actions 通过 `astral-sh/setup-uv` + `uv sync --extra dev`（按 `uv.loc
 
 ```bash
 make quality
+make ci
 make test
 ```
 
