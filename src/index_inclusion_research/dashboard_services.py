@@ -12,6 +12,7 @@ from index_inclusion_research.dashboard_types import (
     ModeTab,
     PaperDetailResult,
     RefreshRunner,
+    RefreshStatus,
     RefreshStatusPayload,
     RequestProxyLike,
     TimeModuleLike,
@@ -48,14 +49,19 @@ class DashboardServices:
             url_builder=self.home_url_builder,
         )
 
-    def refresh_poll_after_ms(self, status: str, started_ts: float) -> int:
+    def refresh_poll_after_ms(self, status: RefreshStatus, started_ts: float) -> int:
         return self.refresh_coordinator.refresh_poll_after_ms(
             status,
             started_ts,
             now_ts=self.time_module.time(),
         )
 
-    def refresh_duration_seconds(self, started_ts: float, finished_ts: float, status: str) -> int | None:
+    def refresh_duration_seconds(
+        self,
+        started_ts: float,
+        finished_ts: float,
+        status: RefreshStatus,
+    ) -> int | None:
         return self.refresh_coordinator.refresh_duration_seconds(
             started_ts,
             finished_ts,
@@ -125,28 +131,19 @@ class DashboardServices:
         return self.refresh_coordinator.wants_async_refresh(self.request_proxy.headers)
 
     def mode_tabs_for_mode(self, mode: ModeName, open_panels: str | None = None) -> list[ModeTab]:
+        def url_for_tab(tab_mode: ModeName, anchor: str | None = None) -> str:
+            open_panel_kwargs = (
+                {self.details_query_param: self.normalize_open_panels(open_panels)}
+                if open_panels is not None
+                else {}
+            )
+            if anchor is None:
+                return self.home_url_builder(mode=tab_mode, **open_panel_kwargs)
+            return self.home_url_builder(mode=tab_mode, _anchor=anchor, **open_panel_kwargs)
+
         return self.runtime.mode_tabs_for_mode(
             mode,
-            lambda tab_mode, anchor=None: (
-                self.home_url_builder(
-                    mode=tab_mode,
-                    **(
-                        {self.details_query_param: self.normalize_open_panels(open_panels)}
-                        if open_panels is not None
-                        else {}
-                    ),
-                )
-                if anchor is None
-                else self.home_url_builder(
-                    mode=tab_mode,
-                    _anchor=anchor,
-                    **(
-                        {self.details_query_param: self.normalize_open_panels(open_panels)}
-                        if open_panels is not None
-                        else {}
-                    ),
-                )
-            ),
+            url_for_tab,
         )
 
     def run_and_cache_all(self) -> None:

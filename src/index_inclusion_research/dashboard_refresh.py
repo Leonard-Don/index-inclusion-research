@@ -134,7 +134,11 @@ def _rdd_l3_candidate_health(
     collection_checklist_label = _path_label(root, collection_checklist_path, to_relative)
     collection_template_label = _path_label(root, collection_template_path, to_relative)
     collection_boundary_label = _path_label(root, collection_boundary_path, to_relative)
-    live_status = contract_check["live_status"] if contract_check else {}
+    live_status: Mapping[str, object]
+    if contract_check is None:
+        live_status = {}
+    else:
+        live_status = contract_check["live_status"]
     mode = str(live_status.get("mode", "") or "")
     source_kind = str(live_status.get("source_kind", "") or "")
     rows = live_status.get("candidate_rows")
@@ -447,8 +451,11 @@ def refresh_timestamp(now: datetime | None = None) -> str:
 
 
 def resolve_dashboard_mode(raw_mode: str | None) -> ModeName:
-    mode = raw_mode or "demo"
-    return mode if mode in {"brief", "demo", "full"} else "demo"
+    if raw_mode == "brief":
+        return "brief"
+    if raw_mode == "full":
+        return "full"
+    return "demo"
 
 
 def normalize_open_panels(raw: str | None, *, allowed_keys: frozenset[str] | set[str]) -> str:
@@ -470,7 +477,7 @@ def normalize_anchor_for_mode(
     anchor: str | None,
     *,
     nav_sections: list[NavSection],
-    track_anchors: set[str],
+    track_anchors: set[str] | frozenset[str],
 ) -> str:
     raw = (anchor or "").strip().lstrip("#")
     allowed = {item["anchor"] for item in nav_sections} | track_anchors

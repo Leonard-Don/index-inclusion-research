@@ -255,6 +255,13 @@ def _priority_index(value: str, priorities: list[str]) -> int:
         return len(priorities)
 
 
+def _safe_int(value: object, default: int = 0) -> int:
+    try:
+        return int(float(str(value)))
+    except (TypeError, ValueError):
+        return default
+
+
 def _same_track_camp_priorities(current_camp: str) -> list[str]:
     priorities = {
         "创世之战": [
@@ -369,7 +376,7 @@ def _candidate_sort_key(
     return (
         module_rank,
         _priority_index(str(record.get("camp", "")), camp_priorities),
-        int(record.get("year_order", 0)),
+        _safe_int(record.get("year_order", 0)),
     )
 
 
@@ -654,7 +661,7 @@ def _build_paper_recommended_cards(
     next_row: PaperCatalogRecord | None,
     catalog_full: pd.DataFrame,
     project_module_display_map: Mapping[str, str],
-) -> list[dict[str, object]]:
+) -> list[PaperNavCard]:
     excluded_ids = {
         paper_id,
         str(prev_row.get("paper_id", "")) if prev_row is not None else "",
@@ -666,7 +673,7 @@ def _build_paper_recommended_cards(
         candidates=candidate_records,
         excluded_ids={item for item in excluded_ids if item},
     )
-    return [
+    cards: list[PaperNavCard] = [
         {
             "kicker": _recommended_card_kicker(
                 current_project_module=paper.project_module,
@@ -693,6 +700,7 @@ def _build_paper_recommended_cards(
         }
         for rec in recommended
     ]
+    return cards
 
 
 def _build_paper_evolution_nav(
@@ -700,8 +708,8 @@ def _build_paper_evolution_nav(
     catalog_full: pd.DataFrame,
     paper_id: str,
     project_module_display_map: Mapping[str, str],
-) -> tuple[list[dict[str, object]], list[EvolutionNavView]]:
-    evolution_nav_cards: list[dict[str, object]] = [
+) -> tuple[list[PaperNavCard], list[EvolutionNavView]]:
+    evolution_nav_cards: list[PaperNavCard] = [
         {
             "kicker": f"{idx + 1:02d} · {row['stance']}",
             "title": paper_brief_title(_catalog_record(row)),

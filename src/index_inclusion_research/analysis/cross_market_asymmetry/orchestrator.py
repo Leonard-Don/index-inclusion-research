@@ -216,24 +216,26 @@ def run_cma_pipeline(
         h6_weight_robustness,
         output_dir=tables_dir,
     )
-    build_kwargs: dict[str, object] = {
-        "gap_summary": gap_summary,
-        "mechanism_panel": mech_table,
-        "heterogeneity_size": het_tables.get("size", pd.DataFrame()),
-        "time_series_rolling": rolling,
-        "aum_frame": aum_frame,
-        "pre_runup_bootstrap": pre_runup_bootstrap,
-        "gap_drift_regression": gap_drift_regression,
-        "channel_concentration": channel_concentration,
-        "heterogeneity_sector": het_tables.get("sector", pd.DataFrame()),
-        "weight_change": weight_change_frame,
-        "gap_event_level": gap,
-        "h6_weight_robustness": h6_weight_robustness,
-        "limit_regression": limit_regression,
-    }
-    if significance_level is not None:
-        build_kwargs["significance_level"] = significance_level
-    hypothesis_verdicts = verdicts.build_hypothesis_verdicts(**build_kwargs)
+    hypothesis_verdicts = verdicts.build_hypothesis_verdicts(
+        gap_summary=gap_summary,
+        mechanism_panel=mech_table,
+        heterogeneity_size=het_tables.get("size", pd.DataFrame()),
+        time_series_rolling=rolling,
+        aum_frame=aum_frame,
+        pre_runup_bootstrap=pre_runup_bootstrap,
+        gap_drift_regression=gap_drift_regression,
+        channel_concentration=channel_concentration,
+        heterogeneity_sector=het_tables.get("sector", pd.DataFrame()),
+        weight_change=weight_change_frame,
+        gap_event_level=gap,
+        h6_weight_robustness=h6_weight_robustness,
+        limit_regression=limit_regression,
+        significance_level=(
+            significance_level
+            if significance_level is not None
+            else verdicts.SIGNIFICANCE_LEVEL
+        ),
+    )
     h6_verdict = None
     if not hypothesis_verdicts.empty and "hid" in hypothesis_verdicts.columns:
         h6_rows = hypothesis_verdicts.loc[

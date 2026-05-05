@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
+from typing import cast
 
 import pandas as pd
 
@@ -34,6 +35,7 @@ from index_inclusion_research.dashboard_types import (
     SecondarySection,
     SnapshotMeta,
     SupplementResult,
+    SupportPaperRecord,
     TrackDisplaySection,
     TrackResult,
 )
@@ -187,7 +189,10 @@ class DashboardTrackRuntime:
             current["summary_text"] = track_summary
         support_table = ("支撑文献", self.render_table(build_project_track_frame(project_module), compact=True))
         current["rendered_tables"] = [support_table, *current.get("rendered_tables", [])]
-        current["support_papers"] = build_project_track_support_records(project_module)
+        current["support_papers"] = cast(
+            list[SupportPaperRecord],
+            build_project_track_support_records(project_module),
+        )
         return current
 
     def load_saved_tables(self, output_dir: Path) -> list[RenderedTable]:

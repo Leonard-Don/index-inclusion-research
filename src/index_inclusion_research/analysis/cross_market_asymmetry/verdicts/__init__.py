@@ -22,6 +22,7 @@ file. Internal modules (``_core``, ``_h_functions``, ``_exports``,
 from __future__ import annotations
 
 from ._exports import (
+    SIGNIFICANCE_LEVEL,
     build_hypothesis_verdicts,
     export_hypothesis_verdicts,
     export_hypothesis_verdicts_tex,
@@ -34,4 +35,5 @@ __all__ = [
     "export_hypothesis_verdicts_tex",
     "export_paper_verdict_section",
     "render_paper_verdict_section",
+    "SIGNIFICANCE_LEVEL",
 ]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from index_inclusion_research import (
@@ -91,7 +92,9 @@ class DashboardPageSectionsRuntime:
             figures_dir=figures_dir,
             mode=mode,
         )
-        figures = section.get("figures", {}) or {}
+        figures = section.get("figures", {})
+        if not isinstance(figures, Mapping):
+            figures = {}
         relative_figures = {
             name: self.track.safe_relative(Path(abs_path))
             for name, abs_path in figures.items()

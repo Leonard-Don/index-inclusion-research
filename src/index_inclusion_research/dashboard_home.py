@@ -4,7 +4,7 @@ import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from index_inclusion_research import dashboard_loaders
 from index_inclusion_research.dashboard_types import (
@@ -23,6 +23,7 @@ from index_inclusion_research.dashboard_types import (
     OverviewMetric,
     OverviewNotesBuilder,
     OverviewSummaryBuilder,
+    PapMeta,
     RddStatus,
     RefreshStatusPayloadBuilder,
     RobustnessSection,
@@ -105,11 +106,7 @@ def build_overview_metrics(
     current_snapshot = snapshot or ResultsSnapshot(root)
     event_counts = current_snapshot.csv("results", "real_tables", "event_counts.csv")
     total_events = int(event_counts["n_events"].sum())
-    current_rdd_status = (
-        dict(rdd_status)
-        if rdd_status is not None
-        else dashboard_loaders.load_rdd_status(root)
-    )
+    current_rdd_status = rdd_status if rdd_status is not None else dashboard_loaders.load_rdd_status(root)
     return [
         {"value": "16", "label": "篇核心文献，构成理论基础"},
         {"value": "3", "label": "条研究主线，对应主要实证模块"},
@@ -128,11 +125,7 @@ def build_highlights(
     current_snapshot = snapshot or ResultsSnapshot(root)
     summary = current_snapshot.csv("results", "real_tables", "event_study_summary.csv")
     asymmetry = current_snapshot.csv("results", "real_tables", "asymmetry_summary.csv")
-    current_rdd_status = (
-        dict(rdd_status)
-        if rdd_status is not None
-        else dashboard_loaders.load_rdd_status(root)
-    )
+    current_rdd_status = rdd_status if rdd_status is not None else dashboard_loaders.load_rdd_status(root)
     us_announce = require_first_row(
         summary.loc[
             (summary["market"] == "US")
@@ -245,10 +238,10 @@ class DashboardHomeContextBuilder:
     build_cross_market_section: Callable[[ModeName], dict[str, Any]] | None = None
     write_cache: AnalysisCache | None = None
 
-    def build_pap_meta(self) -> dict[str, Any]:
+    def build_pap_meta(self) -> PapMeta:
         from index_inclusion_research.dashboard_loaders import load_pap_summary
 
-        return load_pap_summary(self.root)
+        return cast(PapMeta, load_pap_summary(self.root))
 
     @staticmethod
     def _empty_secondary_section() -> SecondarySection:
@@ -261,8 +254,9 @@ class DashboardHomeContextBuilder:
     def _build_track_sections(self, *, demo_mode: bool) -> list[TrackDisplaySection]:
         track_sections: list[TrackDisplaySection] = []
         for analysis_id in self.analyses:
-            section: TrackDisplaySection = dict(
-                self.load_or_build_track_section(analysis_id)
+            section = cast(
+                TrackDisplaySection,
+                self.load_or_build_track_section(analysis_id).copy(),
             )
             section["anchor"] = analysis_id
             section["notes"] = self.build_track_notes(analysis_id)
@@ -278,7 +272,8 @@ class DashboardHomeContextBuilder:
         preparer: SecondarySectionPreparer,
         demo_mode: bool,
     ) -> SecondarySection:
-        section = self.run_cache.get(cache_key) or loader()
+        cached = self.run_cache.get(cache_key)
+        section = cast(SecondarySection, cached) if cached is not None else loader()
         section = preparer(section, demo_mode)
         self.run_cache[cache_key] = section
         if self.write_cache is not None and self.write_cache is not self.run_cache:

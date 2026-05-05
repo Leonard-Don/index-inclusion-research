@@ -422,7 +422,7 @@ def build_robustness_section(
     short_min = us_short["mean_car"].min() if not us_short.empty else pd.NA
     short_max = us_short["mean_car"].max() if not us_short.empty else pd.NA
 
-    summary_cards = [
+    summary_cards: list[SummaryCard] = [
         {
             "kicker": "路径不确定性",
             "title": "平均路径图已加入 95% 置信带",
@@ -552,7 +552,7 @@ def build_limits_section(
     matched_rate = (diagnostics["status"] == "matched").mean()
     sector_relaxed_rate = diagnostics["sector_relaxed"].where(diagnostics["sector_relaxed"].notna(), False).astype(bool).mean()
 
-    summary_cards = [
+    summary_cards: list[SummaryCard] = [
         {
             "kicker": "样本期",
             "title": "结果覆盖美股 2010 至 2025 年与 A 股 2020 至 2025 年批次",

@@ -30,7 +30,7 @@ from index_inclusion_research.dashboard_view_models import (
 
 
 def nav_sections_for_mode(mode: ModeName) -> list[NavSection]:
-    items = [
+    items: list[NavSection] = [
         {"anchor": "overview", "label": "总览"},
         {"anchor": "design", "label": "样本与设计"},
         {"anchor": "tracks", "label": "主线结果"},
@@ -153,7 +153,7 @@ def decorate_display_tables(tables: list[RenderedTable]) -> list[DisplayTable]:
 def attach_display_tiers(items: list[DisplayTable]) -> list[DisplayTable]:
     enriched: list[DisplayTable] = []
     for item in items:
-        row: DisplayTable = dict(item)
+        row = item.copy()
         row.setdefault("tier", table_tier_for_label(str(row.get("label", ""))))
         enriched.append(row)
     return enriched
@@ -225,7 +225,7 @@ def _update_identification_notes(
     signal_value = str(status_panel.get("signal_value", ""))
     updated: list[TrackNote] = []
     for note in notes:
-        row = dict(note)
+        row = note.copy()
         if row.get("name") == "阅读顺序":
             if tone in {"official", "reconstructed"}:
                 row["copy"] = (
@@ -280,7 +280,7 @@ def prepare_track_display(
         ),
     }
 
-    display: TrackDisplaySection = dict(section)
+    display = section.copy()
     display["display_summary"] = curated_summary.get(analysis_id, fallback_summary)
     if demo_mode and "详细稳健性结果见完整材料。" not in str(
         display["display_summary"]
@@ -327,7 +327,7 @@ def prepare_framework_display(
     *,
     summary_cards: list[SummaryCard],
 ) -> SecondarySection:
-    display: SecondarySection = dict(section)
+    display = section.copy()
     display["display_summary"] = (
         "这一页把 16 篇文献整理成一条可直接讲述的研究链：经典对决、正方深化的机制补强、效应被重估、价格发现与 RDD 转向，以及中国市场作为独立制度场景。"
     )
@@ -375,7 +375,7 @@ def prepare_supplement_display(
     *,
     summary_cards: list[SummaryCard],
 ) -> SecondarySection:
-    display: SecondarySection = dict(section)
+    display = section.copy()
     display["display_summary"] = (
         "这部分把事件研究背后的交易逻辑整理成更便于讨论的解释框架，重点说明资金何时进场、冲击为何形成，以及价格与流动性如何调整。"
     )

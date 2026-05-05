@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 
 from index_inclusion_research import dashboard_metrics, dashboard_presenters
 from index_inclusion_research.dashboard_types import (
@@ -74,7 +75,8 @@ def load_or_build_track_section(
     normalize_result: TrackResultNormalizer,
     attach_project_track_context: TrackContextAttacher,
 ) -> TrackResult:
-    current = run_cache.get(analysis_id)
+    cached = run_cache.get(analysis_id)
+    current = cast(TrackResult, cached) if cached is not None else None
     config = analyses[analysis_id]
     if current is None:
         current = load_saved_track_result(analysis_id, config)
