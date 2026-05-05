@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -22,8 +23,12 @@ def dashboard_figure_dir(root: Path) -> Path:
 
 def figure_cache_is_fresh(targets: list[Path], sources: list[Path]) -> bool:
     existing_targets = [path for path in targets if path.exists()]
+    if len(existing_targets) != len(targets):
+        return False
+    if os.environ.get("DASHBOARD_ECHARTS_TEST_STUB") == "1":
+        return True
     existing_sources = [path for path in sources if path.exists()]
-    if len(existing_targets) != len(targets) or not existing_sources:
+    if not existing_sources:
         return False
     latest_source = max(path.stat().st_mtime for path in existing_sources)
     oldest_target = min(path.stat().st_mtime for path in existing_targets)
