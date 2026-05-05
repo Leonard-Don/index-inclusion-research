@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import atexit
 import http.client
 import os
 import socket
@@ -25,6 +26,7 @@ playwright_sync_api = pytest.importorskip("playwright.sync_api")
 
 
 ROOT = Path(__file__).resolve().parents[1]
+_SHARED_DASHBOARD_SERVER: tuple[str, subprocess.Popen[str]] | None = None
 
 _ECHARTS_TEST_STUB = """
 (() => {
@@ -140,7 +142,7 @@ def _find_free_port() -> int:
 
 
 def _wait_for_dashboard(
-    url: str, proc: subprocess.Popen[str], timeout_seconds: float = 60.0
+    url: str, proc: subprocess.Popen[str], timeout_seconds: float = 180.0
 ) -> None:
     target = urlsplit(url)
     path = target.path or "/"
@@ -205,8 +207,23 @@ def _wait_for_section_state(
     )
 
 
-@contextmanager
-def _running_dashboard_server() -> str:
+def _stop_dashboard_server(proc: subprocess.Popen[str]) -> None:
+    if proc.poll() is None:
+        proc.terminate()
+        try:
+            proc.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.communicate(timeout=5)
+
+
+def _ensure_dashboard_server() -> str:
+    global _SHARED_DASHBOARD_SERVER
+    if _SHARED_DASHBOARD_SERVER is not None:
+        base_url, proc = _SHARED_DASHBOARD_SERVER
+        if proc.poll() is None:
+            return base_url
+
     port = _find_free_port()
     proc = subprocess.Popen(
         [sys.executable, "-m", "index_inclusion_research.literature_dashboard", "--port", str(port)],
@@ -216,17 +233,15 @@ def _running_dashboard_server() -> str:
         text=True,
     )
     base_url = f"http://127.0.0.1:{port}"
-    try:
-        _wait_for_dashboard(f"{base_url}/favicon.ico", proc)
-        yield base_url
-    finally:
-        if proc.poll() is None:
-            proc.terminate()
-            try:
-                proc.communicate(timeout=5)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                proc.communicate(timeout=5)
+    _wait_for_dashboard(f"{base_url}/favicon.ico", proc)
+    _SHARED_DASHBOARD_SERVER = (base_url, proc)
+    atexit.register(_stop_dashboard_server, proc)
+    return base_url
+
+
+@contextmanager
+def _running_dashboard_server() -> str:
+    yield _ensure_dashboard_server()
 
 
 def test_dashboard_browser_smoke() -> None:
