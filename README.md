@@ -45,9 +45,10 @@
 第一次点进这个仓库，建议按这 4 步看：
 
 1. 看下面的"界面预览"，知道项目最终交付长什么样。
-2. 看"快速开始"，在本地拉起 dashboard。
-3. 看 [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)，理解 16 篇文献如何映射到当前项目。
-4. 如果要继续维护 dashboard 主干，再看 [docs/dashboard_architecture.md](docs/dashboard_architecture.md)。
+2. 看 [docs/research_delivery_package.md](docs/research_delivery_package.md)，理解当前论文 / 答辩主线、正文证据和附录边界。
+3. 看"快速开始"，在本地拉起 dashboard。
+4. 看 [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)，理解 16 篇文献如何映射到当前项目。
+5. 如果要继续维护 dashboard 主干，再看 [docs/dashboard_architecture.md](docs/dashboard_architecture.md)。
 
 ## 界面预览
 
@@ -106,9 +107,10 @@ make smoke   # 浏览器 smoke test，需要 Playwright + Chromium
 如果你已经准备继续维护或扩展这个项目：
 
 1. [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)：16 篇文献如何统一映射到当前项目。
-2. [docs/dashboard_architecture.md](docs/dashboard_architecture.md)：dashboard 主干。
-3. [docs/cli_reference.md](docs/cli_reference.md)：26 个 console scripts 的完整说明。
-4. 启动界面：`index-inclusion-dashboard` → 打开 <http://localhost:5001>。
+2. [docs/research_delivery_package.md](docs/research_delivery_package.md)：论文 / 答辩交付边界。
+3. [docs/dashboard_architecture.md](docs/dashboard_architecture.md)：dashboard 主干。
+4. [docs/cli_reference.md](docs/cli_reference.md)：27 个 console scripts 的完整说明。
+5. 启动界面：`index-inclusion-dashboard` → 打开 <http://localhost:5001>。
 
 ## 项目结构
 
@@ -231,6 +233,7 @@ GitHub Actions 通过 `astral-sh/setup-uv` + `uv sync --extra dev`（按 `uv.loc
 
 - [README.md](README.md)
 - [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)
+- [docs/research_delivery_package.md](docs/research_delivery_package.md)
 - [docs/dashboard_architecture.md](docs/dashboard_architecture.md)
 - [docs/cli_reference.md](docs/cli_reference.md)
 - [src/index_inclusion_research/literature_dashboard.py](src/index_inclusion_research/literature_dashboard.py)

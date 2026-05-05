@@ -75,6 +75,7 @@ def _section_specs(root: Path) -> tuple[BundleSection, ...]:
             explicit_files=(
                 "paper_outline.md",
                 "paper_outline_verdicts.md",
+                "research_delivery_package.md",
                 "pre_registration.md",
                 "limitations.md",
                 "verdict_iteration.md",
