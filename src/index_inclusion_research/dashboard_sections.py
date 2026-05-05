@@ -34,6 +34,18 @@ from index_inclusion_research.results_snapshot import ResultsSnapshot
 ARTIFACT_INDEX_SUFFIXES = {".csv", ".json", ".md", ".pdf", ".png", ".tex", ".xlsx"}
 
 
+def _project_relative_display_path(value: object, *, root: Path) -> str:
+    label = str(value)
+    root_label = root.resolve().as_posix()
+    normalized = label.replace("\\", "/")
+    if normalized.startswith(f"{root_label}/"):
+        return normalized[len(root_label) + 1 :]
+    marker = "/index-inclusion-research/"
+    if marker in normalized:
+        return normalized.split(marker, maxsplit=1)[1]
+    return label
+
+
 DISPLAYED_ARTIFACT_PATHS = {
     "results/real_figures/sample_event_timeline.png",
     "results/real_figures/sample_car_heatmap.png",
@@ -583,9 +595,8 @@ def build_limits_section(
     # the contributor's home directory.
     citation_table = data_sources.copy()
     if not citation_table.empty and "文件" in citation_table.columns:
-        root_str = str(root)
         citation_table["文件"] = citation_table["文件"].astype(str).apply(
-            lambda p: p[len(root_str) + 1 :] if p.startswith(root_str + "/") else p
+            lambda value: _project_relative_display_path(value, root=root)
         )
 
     tables = attach_display_tiers(

@@ -8,7 +8,7 @@
   - [Wikipedia S&P 500 components](https://en.wikipedia.org/wiki/List_of_S%26P_500_companies)
   - 其中 `effective_date` 来自成分变更表，`announce_date` 优先取该表脚注对应的 S&P Dow Jones 引用日期
 - A 股指数纳入事件：
-- 基于 [data/raw/cn_csi300_changes.csv](/Users/leonardodon/index-inclusion-research/data/raw/cn_csi300_changes.csv) 整理的沪深300调样批次，目前覆盖 `2020-06-01` 到 `2025-11-28`
+- 基于 [data/raw/cn_csi300_changes.csv](data/raw/cn_csi300_changes.csv) 整理的沪深300调样批次，目前覆盖 `2020-06-01` 到 `2025-11-28`
   - 当前真实事件文件会把这些 CN 批次与美股指数变更合并成 `data/raw/real_events.csv`
 - 日频价格与基准指数：
   - Yahoo Finance，经 `yfinance` 抓取

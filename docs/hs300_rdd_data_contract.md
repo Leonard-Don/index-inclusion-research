@@ -1,7 +1,7 @@
 # HS300 RDD 正式数据契约
 
 `index-inclusion-hs300-rdd` 现在默认走“正式候选样本文件”模式。  
-当 [data/raw/hs300_rdd_candidates.csv](/Users/leonardodon/index-inclusion-research/data/raw/hs300_rdd_candidates.csv) 存在且通过校验时，`RDD` 会进入 `L3` 正式边界样本；当 [data/raw/hs300_rdd_candidates.reconstructed.csv](/Users/leonardodon/index-inclusion-research/data/raw/hs300_rdd_candidates.reconstructed.csv) 存在且通过校验时，`RDD` 会进入 `L2` 公开重建样本。
+当 [data/raw/hs300_rdd_candidates.csv](data/raw/hs300_rdd_candidates.csv) 存在且通过校验时，`RDD` 会进入 `L3` 正式边界样本；当 [data/raw/hs300_rdd_candidates.reconstructed.csv](data/raw/hs300_rdd_candidates.reconstructed.csv) 存在且通过校验时，`RDD` 会进入 `L2` 公开重建样本。
 
 如果文件缺失或不合法：
 - 命令默认写出 `missing` 状态
@@ -180,7 +180,7 @@ index-inclusion-make-figures-tables && index-inclusion-generate-research-report 
 
 ## 正式输出
 
-当真实文件通过校验时，会在 [results/literature/hs300_rdd](/Users/leonardodon/index-inclusion-research/results/literature/hs300_rdd) 下生成：
+当真实文件通过校验时，会在 [results/literature/hs300_rdd](results/literature/hs300_rdd) 下生成：
 
 - `rdd_status.csv`
 - `summary.md`
