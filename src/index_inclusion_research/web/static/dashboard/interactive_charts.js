@@ -731,14 +731,64 @@ function buildEventCountsOption(payload) {
 // ── controller ──────────────────────────────────────────────────────
 
 const instances = new Map();
+const retryTimers = new Map();
+const RETRY_DELAYS_MS = [800, 2000, 5000];
 
-function initChart(container) {
+function setChartState(container, state) {
+  container.classList.remove('echart-loading', 'echart-empty', 'echart-error', 'echart-retrying');
+  if (state) {
+    container.classList.add(state);
+  }
+}
+
+function chartPayloadHasContent(payload) {
+  return !!(payload && (payload.series || payload.data || payload.rows));
+}
+
+function clearRetryTimer(container) {
+  const timer = retryTimers.get(container);
+  if (timer) {
+    window.clearTimeout(timer);
+    retryTimers.delete(container);
+  }
+}
+
+function scheduleRetry(container, attempt) {
+  clearRetryTimer(container);
+  setChartState(container, 'echart-retrying');
+  container.dataset.echartRetryPending = 'true';
+  const delay = RETRY_DELAYS_MS[Math.min(attempt, RETRY_DELAYS_MS.length - 1)];
+  const timer = window.setTimeout(() => {
+    retryTimers.delete(container);
+    initChart(container, attempt + 1);
+  }, delay);
+  retryTimers.set(container, timer);
+}
+
+function renderChart(container, optionBuilder, payload) {
+  const chart = echarts.init(container, 'dashboard');
+  chart.setOption(optionBuilder(payload));
+  instances.set(container, chart);
+  clearRetryTimer(container);
+  setChartState(container, '');
+  delete container.dataset.echartRetryPending;
+
+  // hide the static fallback img if present. .echart-fallback is a
+  // sibling of .echart-panel (the container's direct parent), so we
+  // walk up one level before searching.
+  const echartPanel = container.closest('.echart-panel');
+  const fallback = echartPanel?.parentElement?.querySelector(':scope > .echart-fallback');
+  if (fallback) fallback.hidden = true;
+}
+
+function initChart(container, attempt = 0) {
   const chartId = container.dataset.echart;
   const optionBuilder = CHART_OPTION_BUILDERS[chartId];
   if (!optionBuilder) return;
+  if (instances.has(container)) return;
 
   const apiUrl = `/api/chart/${chartId}`;
-  container.classList.add('echart-loading');
+  setChartState(container, 'echart-loading');
 
   fetch(apiUrl)
     .then(r => {
@@ -747,29 +797,30 @@ function initChart(container) {
     })
     .then(payload => {
       // empty / unrenderable payload — keep the static fallback img
-      const hasContent = !!(payload.series || payload.data || payload.rows);
-      if (payload.error || !hasContent) {
-        container.classList.remove('echart-loading');
-        container.classList.add('echart-empty');
+      if (payload.error || !chartPayloadHasContent(payload)) {
+        clearRetryTimer(container);
+        setChartState(container, 'echart-empty');
+        delete container.dataset.echartRetryPending;
         return;
       }
-      const chart = echarts.init(container, 'dashboard');
-      chart.setOption(optionBuilder(payload));
-      instances.set(container, chart);
-      container.classList.remove('echart-loading');
-
-      // hide the static fallback img if present. .echart-fallback is a
-      // sibling of .echart-panel (the container's direct parent), so we
-      // walk up one level before searching.
-      const echartPanel = container.closest('.echart-panel');
-      const fallback = echartPanel?.parentElement?.querySelector(':scope > .echart-fallback');
-      if (fallback) fallback.hidden = true;
+      renderChart(container, optionBuilder, payload);
     })
     .catch(err => {
+      if (attempt < RETRY_DELAYS_MS.length) {
+        scheduleRetry(container, attempt);
+        return;
+      }
       console.warn(`[interactive_charts] Failed to load ${chartId}:`, err);
-      container.classList.remove('echart-loading');
-      container.classList.add('echart-error');
+      clearRetryTimer(container);
+      setChartState(container, 'echart-error');
+      container.dataset.echartRetryPending = 'true';
     });
+}
+
+function retryPendingCharts() {
+  if (typeof echarts === 'undefined') return;
+  const containers = document.querySelectorAll('[data-echart][data-echart-retry-pending="true"]');
+  containers.forEach(container => initChart(container));
 }
 
 function handleResize() {
@@ -780,6 +831,9 @@ function handleResize() {
 
 export function createInteractiveChartsController() {
   let resizeHandler = null;
+  let onlineHandler = null;
+  let focusHandler = null;
+  let visibilityHandler = null;
 
   function initialize() {
     // do nothing if ECharts is not loaded
@@ -807,12 +861,33 @@ export function createInteractiveChartsController() {
 
     resizeHandler = handleResize;
     window.addEventListener('resize', resizeHandler);
+    onlineHandler = retryPendingCharts;
+    focusHandler = retryPendingCharts;
+    visibilityHandler = () => {
+      if (!document.hidden) retryPendingCharts();
+    };
+    window.addEventListener('online', onlineHandler);
+    window.addEventListener('focus', focusHandler);
+    document.addEventListener('visibilitychange', visibilityHandler);
   }
 
   function dispose() {
     if (resizeHandler) {
       window.removeEventListener('resize', resizeHandler);
     }
+    if (onlineHandler) {
+      window.removeEventListener('online', onlineHandler);
+    }
+    if (focusHandler) {
+      window.removeEventListener('focus', focusHandler);
+    }
+    if (visibilityHandler) {
+      document.removeEventListener('visibilitychange', visibilityHandler);
+    }
+    for (const timer of retryTimers.values()) {
+      window.clearTimeout(timer);
+    }
+    retryTimers.clear();
     for (const chart of instances.values()) {
       chart.dispose();
     }
