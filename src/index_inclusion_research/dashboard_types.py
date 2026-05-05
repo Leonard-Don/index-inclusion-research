@@ -477,6 +477,7 @@ class HomeContext(TypedDict):
     refresh_meta: RefreshStatusPayload
     pap_meta: PapMeta
     asset_version: str
+    use_echarts_test_stub: bool
     refresh_status_url: str
     current_open_panels: str | None
     overview_metrics: list[OverviewMetric]
