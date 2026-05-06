@@ -165,8 +165,8 @@ def build_highlights(
     if current_rdd_status["mode"] == "real":
         method_headline = "中国 RDD 已进入正式边界样本口径。"
         method_copy = (
-            "当前首页里的识别层已经不是纯方法框架。正式候选样本通过校验后，"
-            "RDD 可以和事件研究、匹配回归并列进入主结论，作为更强识别证据。"
+            "正式候选样本通过校验后，RDD 可以作为边界识别证据，"
+            "和事件研究、匹配回归一起进入主结论体系。"
         )
     elif current_rdd_status["mode"] == "reconstructed":
         method_headline = "中国 RDD 已进入公开数据版证据链。"

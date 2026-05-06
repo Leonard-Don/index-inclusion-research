@@ -1,5 +1,35 @@
 {% import "_dashboard_shared_macros.html" as shared with context %}
 
+{% macro cma_display_text(text) -%}
+{{ (text or '')
+  | replace('US AUM ratio', 'US AUM 倍数')
+  | replace('matched events=', '匹配事件=')
+  | replace('matched=', '匹配事件=')
+  | replace('unique tickers=', '股票数=')
+  | replace('median weight=', '权重中位数=')
+  | replace('heavy announce_jump=', '重权重公告跳涨=')
+  | replace('light=', '轻权重=')
+  | replace('announce_jump', '公告日跳涨')
+  | replace('weight_proxy', '权重代理')
+  | replace('spread=', '差值=')
+  | replace('robustness:', '稳健性：')
+  | replace('ols_weight coef=', 'OLS 权重系数=')
+  | replace('sector_fe_weight coef=', '行业固定效应权重系数=')
+  | replace('qreg_weight coef=', '分位数回归权重系数=')
+  | replace(' vs ', ' 对比 ')
+  | replace('best=', '最佳规格=')
+  | replace('over=', '超阈值=')
+  | replace('pending=', '待补数据=')
+  | replace('verdict-diff', '裁决差异')
+  | replace('verdicts CSV', '裁决 CSV')
+  | replace('current verdicts', '当前裁决')
+  | replace('verdicts', '裁决')
+  | replace('verdict rows', '裁决行')
+  | replace('verdict row', '裁决行')
+  | replace('verdict', '裁决')
+}}
+{%- endmacro %}
+
 {% macro render_design_section(mode, design_section) -%}
 {% set view = design_section.section_view %}
 <section class="section" id="{{ view.head.section_id }}" data-waypoint data-waypoint-kind="section" data-waypoint-label="{{ view.head.waypoint_label }}">
@@ -68,7 +98,7 @@
   "列出后端结果、输入与维护产物的相对路径、类型、更新时间和前端状态；用于审计与自查，不进入主叙事。",
   limits_section.artifact_tables,
   "library-panels",
-  "Artifact Index",
+  "产物索引",
   "展开索引"
 ) }}
 {% endif %}
@@ -88,11 +118,12 @@
     <table>
       <thead>
         <tr>
-          {% for col in payload.columns %}<th>{{ col }}</th>{% endfor %}
+          {% for col in payload.columns %}<th>{{ payload.column_labels.get(col, col) if payload.column_labels else col }}</th>{% endfor %}
         </tr>
       </thead>
       <tbody>
-        {% for row in payload.rows %}
+        {% set display_rows = payload.display_rows if payload.display_rows else payload.rows %}
+        {% for row in display_rows %}
         <tr>
           {% for col in payload.columns %}
           {% set value = row[col] %}
@@ -132,7 +163,7 @@
   <div class="cma-evidence-grid">
     {% for row in payload.rows %}
     <a class="cma-evidence-card" data-status="{{ row.status }}" href="{{ url_for('show_evidence_detail', item=row.item) }}">
-      <span class="cma-evidence-status">{{ row.status }}</span>
+      <span class="cma-evidence-status">{{ row.status_label or row.status }}</span>
       <h3>{{ row.label or row.item }}</h3>
       <strong>{{ row.value }}</strong>
       {% if row.detail %}<p>{{ row.detail }}</p>{% endif %}
@@ -148,7 +179,7 @@
 {% if payload and payload.rows %}
 {% set verdict_tiers_present = payload.rows | map(attribute='verdict') | list | unique | list %}
 {% set evidence_tiers_present = payload.rows | map(attribute='evidence_tier') | list | unique | list %}
-<nav class="cma-verdict-filter" data-active="all" aria-label="按裁决 tier 筛选 verdict 卡片">
+  <nav class="cma-verdict-filter" data-active="all" aria-label="按裁决结果筛选假说卡片">
   <span class="cma-verdict-filter-label">筛选</span>
   <button type="button" class="cma-verdict-filter-chip is-active" data-filter="all">全部</button>
   {% for tier in ['支持', '部分支持', '证据不足', '待补数据'] %}
@@ -157,7 +188,7 @@
     {% endif %}
   {% endfor %}
 </nav>
-<nav class="cma-verdict-filter cma-evidence-tier-filter" data-active="all" aria-label="按正文或附录证据层级筛选 verdict 卡片">
+  <nav class="cma-verdict-filter cma-evidence-tier-filter" data-active="all" aria-label="按正文或附录证据层级筛选假说卡片">
   <span class="cma-verdict-filter-label">证据层级</span>
   <button type="button" class="cma-verdict-filter-chip is-active" data-filter-tier="all">全部层级</button>
   {% if 'core' in evidence_tiers_present %}
@@ -172,7 +203,7 @@
   {% for t in ['0.01', '0.05', '0.10', '0.15', '0.20'] %}
   <button type="button" class="cma-sensitivity-threshold-chip{% if t == '0.10' %} is-active{% endif %}" data-threshold="{{ t }}">{{ t }}</button>
   {% endfor %}
-  <span class="cma-sensitivity-threshold-hint">仅影响 H1 / H4 / H5(由单一 p 决定 verdict)</span>
+  <span class="cma-sensitivity-threshold-hint">仅影响 H1 / H4 / H5（由单一 p 值决定裁决）</span>
 </nav>
 <div class="cma-verdict-grid" data-sensitivity-threshold="0.10">
   {% for verdict in payload.rows %}
@@ -196,15 +227,22 @@
     </div>
     <p class="cma-verdict-tier-note" data-evidence-tier="{{ evidence_tier }}">
       {% if evidence_tier == 'core' %}
-      正文主表层级：样本与口径可进入主文，结论仍按当前 verdict 读取。
+      正文主表层级：样本与口径可进入主文，结论仍按当前裁决读取。
       {% else %}
       附录层级：样本或代理变量仍有限，适合做机制提示，不宜写成主因果结论。
       {% endif %}
     </p>
-    <p class="cma-verdict-summary">{{ verdict.evidence_summary }}</p>
+    <p class="cma-verdict-summary">{{ cma_display_text(verdict.evidence_summary) }}</p>
     {% if verdict.key_label %}
+    {% set key_label_text = {
+      'US AUM ratio': 'US AUM 倍数',
+      'bootstrap p': 'bootstrap p 值',
+      'regression p': '回归 p 值',
+      'limit_coef p': '涨跌停系数 p 值',
+      'heavy−light spread': '重权重−轻权重差'
+    }.get(verdict.key_label, verdict.key_label) %}
     <div class="cma-verdict-keymetric" data-key="{{ verdict.key_label }}">
-      <span class="cma-verdict-keylabel">{{ verdict.key_label }}</span>
+      <span class="cma-verdict-keylabel">{{ key_label_text }}</span>
       <span class="cma-verdict-keyvalue">
         {%- if verdict.key_value is number and verdict.key_value == verdict.key_value -%}
           {{ '%.3f'|format(verdict.key_value) }}
@@ -221,7 +259,7 @@
       <span class="cma-verdict-sensitivity-icon">{% if not p_is_num %}·{% elif p_sig_at_default %}✓{% else %}—{% endif %}</span>
       <span class="cma-verdict-sensitivity-text">
         {%- if not p_is_num -%}
-          头条指标不是 p，不在 sweep 范围
+          头条指标不是 p 值，不参与阈值切换
         {%- elif p_sig_at_default -%}
           在 p&lt;0.10 下显著(p={{ '%.3f'|format(verdict.p_value) }})
         {%- else -%}
@@ -229,7 +267,7 @@
         {%- endif -%}
       </span>
     </div>
-    <p class="cma-verdict-metric">{{ verdict.metric_snapshot }}</p>
+    <p class="cma-verdict-metric">{{ cma_display_text(verdict.metric_snapshot) }}</p>
     {% if verdict.paper_ids and verdict.paper_count and verdict.paper_count > 0 %}
     <div class="cma-verdict-papers">
       <span class="cma-verdict-papers-label">支持文献 ({{ verdict.paper_count }})</span>
@@ -239,7 +277,7 @@
     </div>
     {% endif %}
     {% if mode == 'full' and verdict.next_step %}
-    <p class="cma-verdict-next">{{ verdict.next_step }}</p>
+    <p class="cma-verdict-next">{{ cma_display_text(verdict.next_step) }}</p>
     {% endif %}
   </article>
   {% endfor %}
@@ -277,8 +315,8 @@
         <tbody>
           {% for row in cma_section.quadrant_table.rows %}
           <tr>
-            <td>{{ row.market }}</td>
-            <td>{{ row.event_phase }}</td>
+            <td>{{ {'CN': '中国 A股', 'US': '美国'}.get(row.market, row.market) }}</td>
+            <td>{{ {'announce': '公告日', 'effective': '生效日'}.get(row.event_phase, row.event_phase) }}</td>
             <td>{{ '%.4f'|format(row.car_mean) if row.car_mean is not none else '—' }}</td>
             <td>{{ '%.2f'|format(row.car_t) if row.car_t is not none else '—' }}</td>
             <td>{{ row.n_events }}</td>
@@ -319,7 +357,7 @@
         {% if diff.removed_count %}<span class="cma-verdict-diff-meta">-{{ diff.removed_count }} 移除</span>{% endif %}
         <span class="cma-verdict-diff-meta">{{ diff.unchanged_count }} 不变</span>
       {% else %}
-        <strong>所有 verdict 不变</strong>
+        <strong>所有裁决不变</strong>
         <span class="cma-verdict-diff-meta">{{ diff.unchanged_count }} 项保持</span>
       {% endif %}
     </div>

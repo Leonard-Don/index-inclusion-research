@@ -7,7 +7,7 @@ from typing import Literal
 
 import pandas as pd
 
-from index_inclusion_research import verdict_summary
+from index_inclusion_research import dashboard_formatting, verdict_summary
 
 from . import hypotheses as cma_hypotheses
 from . import verdicts as cma_verdicts
@@ -65,10 +65,24 @@ def _safe_read(path: Path) -> pd.DataFrame:
 
 
 def _frame_to_payload(frame: pd.DataFrame) -> dict[str, object]:
-    return {
+    rows = frame.to_dict(orient="records")
+    payload: dict[str, object] = {
         "columns": list(frame.columns),
-        "rows": frame.to_dict(orient="records"),
+        "rows": rows,
     }
+    if frame.columns.size:
+        payload["column_labels"] = {
+            column: dashboard_formatting.display_column_label(column) for column in frame.columns
+        }
+    if rows:
+        payload["display_rows"] = [
+            {
+                column: dashboard_formatting.display_value_label(value)
+                for column, value in row.items()
+            }
+            for row in rows
+        ]
+    return payload
 
 
 def _nested_verdict(row: Mapping[str, object], key: str) -> str:
@@ -243,10 +257,11 @@ def _build_evidence_coverage_payload(
             rows.append(
                 {
                     "item": "H6_weight_change",
-                    "label": "H6 weight_change",
+                    "label": "H6 权重变化",
                     "status": str(row.get("status", "warn")),
-                    "value": f"matched={int(row.get('n_obs', 0) or 0)}",
-                    "detail": str(row.get("detail", "")),
+                    "status_label": dashboard_formatting.display_status_label(row.get("status", "warn")),
+                    "value": f"匹配 {int(row.get('n_obs', 0) or 0)} 个事件",
+                    "detail": str(row.get("detail", "")).replace("matched events=", "匹配事件="),
                 }
             )
     if not hypothesis_verdicts.empty and "verdict" in hypothesis_verdicts.columns:
@@ -254,10 +269,11 @@ def _build_evidence_coverage_payload(
         rows.append(
             {
                 "item": "CMA_verdicts",
-                "label": "CMA verdicts",
+                "label": "CMA 假说裁决",
                 "status": "pass" if pending == 0 else "warn",
-                "value": f"pending={pending}",
-                "detail": "current H1-H7 generated verdict rows",
+                "status_label": dashboard_formatting.display_status_label("pass" if pending == 0 else "warn"),
+                "value": f"待补数据 {pending}",
+                "detail": "当前 H1-H7 已生成裁决行",
             }
         )
     return {"available": bool(rows), "rows": rows}

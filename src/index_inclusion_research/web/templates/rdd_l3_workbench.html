@@ -36,7 +36,7 @@
         <article class="result-card evidence-summary-card">
           <div class="table-label">批次</div>
           <strong>{{ status.candidate_batches or '—' }}</strong>
-          <p>treated={{ status.treated_rows or '—' }} · control={{ status.control_rows or '—' }}</p>
+          <p>处理组={{ status.treated_rows or '—' }} · 对照组={{ status.control_rows or '—' }}</p>
         </article>
       </div>
     </section>
@@ -52,7 +52,7 @@
         <form class="result-card rdd-upload-form" action="{{ url_for('check_rdd_l3_candidates') }}" method="post" enctype="multipart/form-data">
           <div class="table-label">预检候选文件</div>
           <label>候选名单文件<input type="file" name="candidate_file" accept=".csv,.tsv,.xlsx,.xls" required></label>
-          <label>Excel sheet<input type="text" name="sheet" placeholder="0 或 sheet 名"></label>
+          <label>Excel 工作表<input type="text" name="sheet" placeholder="0 或工作表名"></label>
           <label>批次 ID<input type="text" name="batch_id" placeholder="缺省时自动识别"></label>
           <label>公告日<input type="date" name="announce_date"></label>
           <label>生效日<input type="date" name="effective_date"></label>
@@ -64,7 +64,7 @@
         <form class="result-card rdd-upload-form" action="{{ url_for('import_rdd_l3_candidates') }}" method="post" enctype="multipart/form-data">
           <div class="table-label">正式写入 L3</div>
           <label>官方候选名单文件<input type="file" name="candidate_file" accept=".csv,.tsv,.xlsx,.xls" required></label>
-          <label>Excel sheet<input type="text" name="sheet" placeholder="0 或 sheet 名"></label>
+          <label>Excel 工作表<input type="text" name="sheet" placeholder="0 或工作表名"></label>
           <label>批次 ID<input type="text" name="batch_id"></label>
           <label>公告日<input type="date" name="announce_date"></label>
           <label>生效日<input type="date" name="effective_date"></label>
@@ -107,9 +107,9 @@
         {% if block.rows %}
         <div class="table-wrap">
           <table>
-            <thead><tr>{% for col in block.columns %}<th>{{ col }}</th>{% endfor %}</tr></thead>
+            <thead><tr>{% for col in block.columns %}<th>{{ block.column_labels.get(col, col) }}</th>{% endfor %}</tr></thead>
             <tbody>
-              {% for row in block.rows %}
+              {% for row in block.display_rows %}
               <tr>{% for col in block.columns %}<td>{{ row[col] if row[col] is not none else '—' }}</td>{% endfor %}</tr>
               {% endfor %}
             </tbody>
@@ -257,9 +257,9 @@
     <section class="section evidence-section-compact">
       <div class="result-card">
         <div class="table-label">线上采集刷新结果</div>
-        <h2>{{ online_collection_result.status }} · {{ online_collection_result.candidate_rows }} 个候选行</h2>
+        <h2>{{ online_collection_result.status_label or online_collection_result.status }} · {{ online_collection_result.candidate_rows }} 个候选行</h2>
         <p class="evidence-source-line">
-          来源={{ online_collection_result.source_rows }} · 搜索={{ online_collection_result.search_rows }} ·
+            来源={{ online_collection_result.source_rows }} · 搜索词={{ online_collection_result.search_rows }} ·
           年份={{ online_collection_result.year_rows }} · 缺口={{ online_collection_result.gap_rows }} ·
           来源入口={{ online_collection_result.hint_rows }}
         </p>
@@ -289,10 +289,10 @@
         <div class="table-wrap">
           <table>
             <thead>
-              <tr>{% for col in table.columns %}<th>{{ col }}</th>{% endfor %}</tr>
+              <tr>{% for col in table.columns %}<th>{{ table.column_labels.get(col, col) }}</th>{% endfor %}</tr>
             </thead>
             <tbody>
-              {% for row in table.rows %}
+              {% for row in table.display_rows %}
               <tr>
                 {% for col in table.columns %}
                 {% set cell = row[col] %}
@@ -332,10 +332,10 @@
         <div class="table-wrap">
           <table>
             <thead>
-              <tr>{% for col in table.columns %}<th>{{ col }}</th>{% endfor %}</tr>
+              <tr>{% for col in table.columns %}<th>{{ table.column_labels.get(col, col) }}</th>{% endfor %}</tr>
             </thead>
             <tbody>
-              {% for row in table.rows %}
+              {% for row in table.display_rows %}
               <tr>
                 {% for col in table.columns %}
                 <td>{{ row[col] if row[col] is not none else '—' }}</td>

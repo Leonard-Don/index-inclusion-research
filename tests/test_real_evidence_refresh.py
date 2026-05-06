@@ -97,12 +97,12 @@ def test_build_evidence_manifest_summarises_current_files(tmp_path) -> None:
     coverage = {row["item"]: row for row in manifest["coverage"]}
 
     assert coverage["H2_passive_aum"]["status"] == "warn"
-    assert "CN comparable passive AUM missing" in coverage["H2_passive_aum"]["detail"]
+    assert "缺少 A股可比被动 AUM" in coverage["H2_passive_aum"]["detail"]
     assert coverage["H6_weight_change"]["status"] == "pass"
     assert coverage["H7_cn_sector"]["status"] == "pass"
     assert coverage["RDD_L3_boundary"]["status"] == "warn"
     assert coverage["Match_robustness"]["status"] == "pass"
-    assert coverage["doctor"]["value"] == "1 pass / 0 warn / 0 fail"
+    assert coverage["doctor"]["value"] == "1 通过 / 0 警告 / 0 失败"
 
 
 def test_build_evidence_manifest_passes_h2_when_cn_aum_is_present(tmp_path) -> None:
@@ -130,7 +130,7 @@ def test_build_evidence_manifest_passes_h2_when_cn_aum_is_present(tmp_path) -> N
     coverage = {row["item"]: row for row in manifest["coverage"]}
 
     assert coverage["H2_passive_aum"]["status"] == "pass"
-    assert coverage["H2_passive_aum"]["value"] == "US 2 rows; CN 2 rows"
+    assert coverage["H2_passive_aum"]["value"] == "美国 2 行；A股 2 行"
 
 
 def test_run_refresh_pipeline_accepts_fake_step_runner_and_writes_manifest(

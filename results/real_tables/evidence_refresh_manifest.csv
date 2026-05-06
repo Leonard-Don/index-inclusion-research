@@ -1,8 +1,8 @@
-item,label,status,value,detail
-H2_passive_aum,H2 passive AUM,warn,US 16 rows; CN 0 rows,"data/raw/passive_aum.csv years 2010-2025; CN comparable passive AUM missing, so H2 stays supplementary"
-H6_weight_change,H6 weight_change,pass,CN rows=736; matched=67,weight rows CN=736; matched events=67; unique tickers=67
-H7_cn_sector,H7 CN sector,pass,268/271 (98.9%),"missing tickers: 000413, 002411, 600705"
-RDD_L3_boundary,HS300 RDD L3,pass,formal rows=356,data/raw/hs300_rdd_candidates.csv
-CMA_verdicts,CMA verdicts,pass,支持=3; 部分支持=0; 证据不足=4; 待补数据=0,7 H-row verdicts under results/real_tables
-Match_robustness,Match robustness,pass,best=announce_1to2; over=0; max|SMD|=0.157,specs=6; default=announce_1to3 over=0
-doctor,doctor,pass,15 pass / 0 warn / 0 fail,15 checks total
+item,label,status,status_label,value,detail
+H2_passive_aum,H2 被动 AUM,warn,需关注,美国 16 行；A股 0 行,data/raw/passive_aum.csv 覆盖 2010-2025；缺少 A股可比被动 AUM，H2 仍保持附录层级
+H6_weight_change,H6 权重变化,pass,通过,A股权重 736 行；匹配 67 个事件,A股权重行=736；匹配事件=67；股票数=67
+H7_cn_sector,H7 A股行业覆盖,pass,通过,268/271 (98.9%),"缺少行业 ticker：000413, 002411, 600705"
+RDD_L3_boundary,HS300 RDD L3,pass,通过,正式样本 356 行,data/raw/hs300_rdd_candidates.csv
+CMA_verdicts,CMA 假说裁决,pass,通过,支持 3；部分支持 0；证据不足 4；待补数据 0,results/real_tables 下共有 7 条 H1-H7 裁决
+Match_robustness,匹配稳健性,pass,通过,最佳规格 announce_1to2；超阈值 0；max|SMD| 0.157,规格数=6；默认规格=announce_1to3；超阈值=0
+doctor,项目健康检查,pass,通过,15 通过 / 0 警告 / 0 失败,共 15 项检查

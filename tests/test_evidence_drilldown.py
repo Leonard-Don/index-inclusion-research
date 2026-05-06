@@ -50,6 +50,7 @@ def test_h2_evidence_detail_reads_passive_aum(tmp_path: Path) -> None:
     assert detail["label"] == "H2_passive_aum"
     assert detail["tables"][0]["key"] == "aum_market_summary"
     assert detail["tables"][0]["rows"][0]["market"] == "US"
+    assert detail["tables"][0]["column_labels"]["latest_aum_trillion"] == "最新 AUM（万亿美元）"
 
 
 def test_h6_evidence_detail_exposes_joined_rows_and_explanation(tmp_path: Path) -> None:
@@ -125,7 +126,8 @@ def test_h7_evidence_detail_includes_sector_interaction(tmp_path: Path) -> None:
     tables_by_key = {table["key"]: table for table in detail["tables"]}
 
     assert detail is not None
-    assert detail["summary_cards"][1]["label"] == "sector interaction"
+    assert detail["summary_cards"][1]["label"] == "行业交互回归"
+    assert detail["summary_cards"][1]["detail"] == "支持信号"
     assert tables_by_key["h7_sector_interaction"]["rows"][0]["market"] == "US"
 
 

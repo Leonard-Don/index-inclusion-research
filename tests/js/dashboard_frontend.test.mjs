@@ -1158,7 +1158,7 @@ test("sensitivity threshold chip click flips p-gated cards between sig and not_s
 
   assert.equal(cards[2].stripAttrs.get("data-sensitivity"), "na");
   assert.equal(cards[2].iconEl.textContent, "·");
-  assert.match(cards[2].textEl.textContent, /不在 sweep 范围/);
+  assert.match(cards[2].textEl.textContent, /不参与阈值切换/);
 });
 
 

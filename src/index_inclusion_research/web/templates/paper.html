@@ -98,7 +98,7 @@
           <div class="section-kicker">CMA 假说证据</div>
           <h2>这篇论文支持的机制假说</h2>
         </div>
-        <div class="section-intro">本论文被 CMA 体系下的 {{ current.verdict_citations|length }} 条机制假说引用为证据支撑。每条假说的当前 verdict 来自真实样本 pipeline，点 dashboard 链接可看完整裁决卡片。</div>
+        <div class="section-intro">本论文被 CMA 体系下的 {{ current.verdict_citations|length }} 条机制假说引用为证据支撑。每条假说的当前裁决来自真实样本流水线，可点击 Dashboard 链接查看完整裁决卡片。</div>
       </div>
       <ul class="paper-verdict-list">
         {% for cit in current.verdict_citations %}
@@ -107,16 +107,23 @@
           <div class="paper-verdict-body">
             <h3>{{ cit.name_cn }}</h3>
             <div class="paper-verdict-meta">
-              <span class="paper-verdict-track">主线:{{ cit.track_label }}</span>
+              <span class="paper-verdict-track">主线：{{ cit.track_label }}</span>
               {% if cit.verdict %}
-              <span class="paper-verdict-tier" data-verdict="{{ cit.verdict }}">当前 verdict:<strong>{{ cit.verdict }}</strong></span>
+              <span class="paper-verdict-tier" data-verdict="{{ cit.verdict }}">当前裁决：<strong>{{ cit.verdict }}</strong></span>
               {% endif %}
               {% if cit.key_label and cit.key_value == cit.key_value %}
-              <span class="paper-verdict-key">{{ cit.key_label }} = {{ '%.3f'|format(cit.key_value) }}{% if cit.n_obs and cit.n_obs > 0 %} (n={{ cit.n_obs }}){% endif %}</span>
+              {% set key_label_text = {
+                'US AUM ratio': 'US AUM 倍数',
+                'bootstrap p': 'bootstrap p 值',
+                'regression p': '回归 p 值',
+                'limit_coef p': '涨跌停系数 p 值',
+                'heavy−light spread': '重权重−轻权重差'
+              }.get(cit.key_label, cit.key_label) %}
+              <span class="paper-verdict-key">{{ key_label_text }} = {{ '%.3f'|format(cit.key_value) }}{% if cit.n_obs and cit.n_obs > 0 %} (n={{ cit.n_obs }}){% endif %}</span>
               {% endif %}
             </div>
           </div>
-          <a class="paper-verdict-link" href="/verdict/{{ cit.hid }}">看 dashboard 裁决 →</a>
+          <a class="paper-verdict-link" href="/verdict/{{ cit.hid }}">查看 Dashboard 裁决</a>
         </li>
         {% endfor %}
       </ul>

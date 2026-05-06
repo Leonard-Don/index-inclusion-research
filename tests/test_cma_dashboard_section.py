@@ -426,9 +426,10 @@ def test_section_exposes_evidence_coverage_from_manifest(tmp_path):
                 "coverage": [
                     {
                         "item": "H6_weight_change",
-                        "label": "H6 weight_change",
+                        "label": "H6 权重变化",
                         "status": "pass",
-                        "value": "matched=12",
+                        "status_label": "通过",
+                        "value": "匹配 12 个事件",
                         "detail": "fixture",
                     }
                 ],
