@@ -664,7 +664,7 @@ def test_home_dashboard_supports_three_minute_mode() -> None:
     assert 'data-section-key="framework"' not in html
     assert 'data-section-key="supplement"' not in html
     assert (
-        'data-allowed-hashes="#overview,#design,#tracks,#limits,#price_pressure_track,#demand_curve_track,#identification_china_track"'
+        'data-allowed-hashes="#overview,#design,#tracks,#limits,#cross_market_asymmetry,#price_pressure_track,#demand_curve_track,#identification_china_track"'
         in html
     )
     assert "这一模式把真实样本、三条主线与研究边界压缩到一页里" in html

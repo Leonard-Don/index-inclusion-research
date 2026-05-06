@@ -49,7 +49,7 @@ def nav_sections_for_mode(mode: ModeName) -> list[NavSection]:
 
 
 def available_hashes_for_mode(mode: ModeName) -> list[str]:
-    hashes = ["#overview", "#design", "#tracks", "#limits"]
+    hashes = ["#overview", "#design", "#tracks", "#limits", "#cross_market_asymmetry"]
     if mode != "brief":
         hashes.extend(["#framework", "#supplement"])
     if mode == "full":

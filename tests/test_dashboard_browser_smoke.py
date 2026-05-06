@@ -759,6 +759,50 @@ def test_dashboard_browser_smoke() -> None:
     assert console_errors == []
 
 
+def test_dashboard_bottom_scroll_does_not_snap_back_to_top() -> None:
+    with (
+        _running_dashboard_server() as base_url,
+        playwright_sync_api.sync_playwright() as playwright,
+    ):
+        browser = _launch_chromium(playwright)
+        try:
+            page = _new_dashboard_page(browser, viewport={"width": 1440, "height": 960})
+            page.goto(f"{base_url}/?mode=demo", wait_until="domcontentloaded")
+            page.wait_for_load_state("networkidle")
+
+            page.evaluate("window.scrollTo(0, document.documentElement.scrollHeight)")
+            page.wait_for_function(
+                """
+                () => {
+                    return (
+                        window.scrollY > window.innerHeight * 2 &&
+                        window.location.hash === '#cross_market_asymmetry'
+                    );
+                }
+                """
+            )
+            page.wait_for_timeout(800)
+            bottom_state = page.evaluate(
+                """
+                () => {
+                    const root = document.documentElement;
+                    const maxScroll = Math.max(0, root.scrollHeight - window.innerHeight);
+                    return {
+                        hash: window.location.hash,
+                        stayedAwayFromTop: window.scrollY > window.innerHeight * 2,
+                        scrollY: window.scrollY,
+                        maxScroll,
+                    };
+                }
+                """
+            )
+
+            assert bottom_state["hash"] == "#cross_market_asymmetry"
+            assert bottom_state["stayedAwayFromTop"] is True, bottom_state
+        finally:
+            browser.close()
+
+
 def test_cross_market_section_renders_in_full_mode() -> None:
     """CMA section should render in full mode with quadrant table, figures,
     hypothesis map, and all detail tables in collapsibles."""
