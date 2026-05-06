@@ -1,4 +1,4 @@
-.PHONY: setup sync lock test lint typecheck quality coverage-gate ci serve coverage clean help rebuild verdicts doctor doctor-strict paper paper-audit
+.PHONY: setup sync lock test lint typecheck quality coverage-gate ci serve coverage clean help rebuild verdicts doctor doctor-strict paper paper-audit pre-commit-install pre-commit-run
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -57,6 +57,12 @@ paper: ## Aggregate paper-grade artefacts into ./paper/ (tables / figures / narr
 
 paper-audit: ## Audit paper claims against result artifacts and bundle copies
 	python3 -m index_inclusion_research.paper_audit --fail-on-warn
+
+pre-commit-install: ## Install pre-commit git hooks (one-time, per clone)
+	pre-commit install
+
+pre-commit-run: ## Run all pre-commit hooks against the working tree
+	pre-commit run --all-files
 
 clean: ## Remove generated artifacts
 	rm -rf htmlcov .coverage .pytest_cache .ruff_cache __pycache__
