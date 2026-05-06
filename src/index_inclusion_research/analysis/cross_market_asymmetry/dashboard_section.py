@@ -116,6 +116,7 @@ def build_cross_market_section(
     time_series_break = _safe_read(tables_dir / "cma_time_series_break.csv")
     h6_weight_robustness = _safe_read(tables_dir / "cma_h6_weight_robustness.csv")
     h6_weight_explanation = _safe_read(tables_dir / "cma_h6_weight_explanation.csv")
+    h7_sector_interaction = _safe_read(tables_dir / "cma_h7_sector_interaction.csv")
     ar_path = _safe_read(tables_dir / "cma_ar_path.csv")
     car_path = _safe_read(tables_dir / "cma_car_path.csv")
     if hypothesis_verdicts.empty and any(
@@ -156,6 +157,7 @@ def build_cross_market_section(
             "mechanism_panel": _frame_to_payload(mechanism_panel),
             "h6_weight_robustness": _frame_to_payload(h6_weight_robustness),
             "h6_weight_explanation": _frame_to_payload(h6_weight_explanation),
+            "h7_sector_interaction": _frame_to_payload(h7_sector_interaction),
             "time_series_rolling": _frame_to_payload(time_series_rolling),
             "time_series_break": _frame_to_payload(time_series_break),
             "ar_path": _frame_to_payload(ar_path),

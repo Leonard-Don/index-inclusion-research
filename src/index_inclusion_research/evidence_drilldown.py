@@ -227,11 +227,13 @@ def _detail_h6(detail: dict[str, Any], *, root: Path) -> None:
 def _detail_h7(detail: dict[str, Any], *, root: Path) -> None:
     events_path = root / "data" / "raw" / "real_events.csv"
     metadata_path = root / "data" / "raw" / "real_metadata.csv"
-    for path in (events_path, metadata_path):
+    interaction_path = root / "results" / "real_tables" / "cma_h7_sector_interaction.csv"
+    for path in (events_path, metadata_path, interaction_path):
         _add_source(detail, path, root=root)
     coverage = compute_cn_sector_coverage(root)
     missing = coverage.get("missing_tickers", [])
     missing_rows = pd.DataFrame({"ticker": missing if isinstance(missing, list) else []})
+    interaction = _read_csv(interaction_path)
     detail["summary_cards"].append(
         {
             "label": "CN sector coverage",
@@ -239,8 +241,29 @@ def _detail_h7(detail: dict[str, Any], *, root: Path) -> None:
             "detail": f"{_float_metric(coverage['rate']):.1%}",
         }
     )
+    if not interaction.empty and {"market", "status", "joint_p_value"}.issubset(interaction.columns):
+        best = interaction.copy()
+        best["joint_p_value"] = pd.to_numeric(best["joint_p_value"], errors="coerce")
+        best = best.sort_values("joint_p_value", na_position="last")
+        row = best.iloc[0]
+        detail["summary_cards"].append(
+            {
+                "label": "sector interaction",
+                "value": f"{row.get('market', '')} p={_float_metric(row.get('joint_p_value')):.3f}",
+                "detail": str(row.get("signal", "")),
+            }
+        )
     detail["tables"].append(
         _table_payload("missing_cn_sector_tickers", "missing CN sector tickers", missing_rows, root=root)
+    )
+    detail["tables"].append(
+        _table_payload(
+            "h7_sector_interaction",
+            "H7 sector interaction regression",
+            interaction,
+            source_path=interaction_path,
+            root=root,
+        )
     )
 
 

@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-04T14:27:40+00:00",
-  "root": ".",
-  "tables_dir": "results/real_tables",
+  "generated_at": "2026-05-06T07:31:58+00:00",
+  "root": "/Users/leonardodon/index-inclusion-research",
+  "tables_dir": "/Users/leonardodon/index-inclusion-research/results/real_tables",
   "steps": [
     {
       "slug": "enrich-cn-sectors",
@@ -9,85 +9,19 @@
       "detail": "CN sector coverage 268/271 (98.9%)"
     },
     {
-      "slug": "build-event-sample",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 0.055
-    },
-    {
-      "slug": "build-price-panel",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 18.66
-    },
-    {
-      "slug": "match-controls",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 57.743
-    },
-    {
-      "slug": "match-robustness",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 34.76
-    },
-    {
-      "slug": "build-matched-panel",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 44.513
-    },
-    {
-      "slug": "run-event-study",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 2.706
-    },
-    {
-      "slug": "run-regressions",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 5.188
-    },
-    {
-      "slug": "hs300-rdd",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 5.805
-    },
-    {
-      "slug": "compute-h6-weight-change",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 2.137
-    },
-    {
       "slug": "cma",
       "status": "pass",
       "exit_code": 0,
-      "elapsed_sec": 8.138
-    },
-    {
-      "slug": "make-figures-tables",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 22.195
-    },
-    {
-      "slug": "generate-research-report",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 0.006
+      "elapsed_sec": 10.485
     }
   ],
   "coverage": [
     {
       "item": "H2_passive_aum",
       "label": "H2 passive AUM",
-      "status": "pass",
-      "value": "US 16 rows",
-      "detail": "data/raw/passive_aum.csv years 2010-2025"
+      "status": "warn",
+      "value": "US 16 rows; CN 0 rows",
+      "detail": "data/raw/passive_aum.csv years 2010-2025; CN comparable passive AUM missing, so H2 stays supplementary"
     },
     {
       "item": "H6_weight_change",
@@ -128,16 +62,16 @@
       "item": "doctor",
       "label": "doctor",
       "status": "pass",
-      "value": "14 pass / 0 warn / 0 fail",
-      "detail": "14 checks total"
+      "value": "15 pass / 0 warn / 0 fail",
+      "detail": "15 checks total"
     }
   ],
   "doctor": {
     "summary": {
-      "pass": 14,
+      "pass": 15,
       "warn": 0,
       "fail": 0,
-      "total": 14
+      "total": 15
     },
     "checks": [
       {
@@ -240,7 +174,14 @@
       {
         "name": "console_scripts_importable",
         "status": "pass",
-        "message": "All 26 console_script entry points resolve to callables.",
+        "message": "All 28 console_script entry points resolve to callables.",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "paper_audit_claims",
+        "status": "pass",
+        "message": "Paper audit maps all 5 claim group(s) to current artifacts.",
         "fix": "",
         "details": []
       }

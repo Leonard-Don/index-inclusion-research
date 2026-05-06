@@ -102,4 +102,4 @@
 | H4 | 卖空约束 | 证据不足 | 中 | regression p | 0.537 | 436 | 控制 gap_length_days 后 CN-US gap_drift 差异 0.61% 不显著 (p=0.537)，跨市场差异口径无法支持 H4 套利约束解释。 |
 | H5 | 涨跌停限制 | 支持 | 高 | limit_coef p | 0.008 | 936 | CN 事件级涨跌停命中率正向预测 announce-day CAR (limit_coef=0.1549, p=0.008, R²=0.011, n=936)，支持 H5 涨跌停截断机制。 |
 | H6 | 指数权重可预测性 | 证据不足 | 中 | heavy−light spread | -0.019 | 67 | CN 重权重 announce_jump 并不明显高于轻权重 (+1.29% vs +3.20%,spread=-1.90%),H6 不被支持。 |
-| H7 | 行业结构差异 | 支持 | 中 | US sector spread | 5.954 | 187 | US 行业间 asymmetry_index spread = 5.95(Materials +3.90 vs Real Estate -2.05),行业结构在 inclusion 效应中显著起作用。CN 状态:已分行业。 |
+| H7 | 行业结构差异 | 支持 | 中 | US sector spread | 5.954 | 187 | US 行业间 asymmetry_index spread = 5.95(Materials +3.90 vs Real Estate -2.05),行业结构在 inclusion 效应中显著起作用。CN 状态:已分行业。 进一步的 sector×phase/treatment 交互回归在 US 显著(joint p=0.094, n=1882)，增强 H7 的机制支持。 |

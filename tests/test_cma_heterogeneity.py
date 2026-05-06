@@ -7,6 +7,8 @@ import pytest
 from index_inclusion_research.analysis.cross_market_asymmetry.heterogeneity import (
     build_heterogeneity_panel,
     compute_cell_statistics,
+    compute_h7_sector_interaction,
+    export_h7_sector_interaction,
     export_heterogeneity_tables,
     render_heterogeneity_matrix,
 )
@@ -115,3 +117,62 @@ def test_export_heterogeneity_tables_writes_csvs(tmp_path):
     )
     paths = export_heterogeneity_tables({"size": df}, output_dir=tmp_path)
     assert paths["size"].exists()
+
+
+def _make_h7_mechanism_panel():
+    rng = np.random.default_rng(7)
+    rows = []
+    for market in ("CN", "US"):
+        for sector in ("Tech", "Finance", "Energy"):
+            for phase in ("announce", "effective"):
+                for treatment in (0, 1):
+                    for i in range(8):
+                        sector_effect = 0.0
+                        if market == "US" and sector == "Tech" and treatment == 1:
+                            sector_effect = 0.05
+                        rows.append(
+                            {
+                                "market": market,
+                                "event_phase": phase,
+                                "treatment_group": treatment,
+                                "sector": sector,
+                                "car_1_1": (
+                                    0.01 * treatment
+                                    + sector_effect
+                                    + 0.002 * rng.standard_normal()
+                                    + 0.001 * i
+                                ),
+                            }
+                        )
+    return pd.DataFrame(rows)
+
+
+def test_compute_h7_sector_interaction_estimates_market_rows():
+    out = compute_h7_sector_interaction(
+        _make_h7_mechanism_panel(), min_obs_per_sector=6
+    )
+    expected = {
+        "market",
+        "status",
+        "signal",
+        "n_obs",
+        "sector_count",
+        "joint_p_value",
+        "top_term",
+    }
+    assert expected.issubset(out.columns)
+    assert set(out["market"]) == {"CN", "US"}
+    assert (out["status"] == "pass").all()
+    us = out.set_index("market").loc["US"]
+    assert us["signal"] == "support"
+    assert float(us["joint_p_value"]) < 0.10
+
+
+def test_export_h7_sector_interaction_writes_csv(tmp_path):
+    out = compute_h7_sector_interaction(
+        _make_h7_mechanism_panel(), min_obs_per_sector=6
+    )
+    path = export_h7_sector_interaction(out, output_dir=tmp_path)
+    assert path.exists()
+    saved = pd.read_csv(path)
+    assert "joint_p_value" in saved.columns

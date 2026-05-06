@@ -278,6 +278,43 @@ def test_h7_uses_us_sector_spread_when_provided() -> None:
     assert abs(float(h7["key_value"]) - 1.8) < 1e-6
 
 
+def test_h7_mentions_sector_interaction_when_available() -> None:
+    sector = pd.DataFrame(
+        [
+            {"market": "US", "bucket": "Tech", "asymmetry_index": 2.5, "n_events": 40},
+            {"market": "US", "bucket": "Energy", "asymmetry_index": -1.0, "n_events": 25},
+            {"market": "CN", "bucket": "Manufacturing", "asymmetry_index": 0.7, "n_events": 100},
+            {"market": "CN", "bucket": "Finance", "asymmetry_index": 0.2, "n_events": 30},
+        ]
+    )
+    interaction = pd.DataFrame(
+        [
+            {
+                "market": "US",
+                "status": "pass",
+                "signal": "support",
+                "n_obs": 96,
+                "joint_p_value": 0.031,
+                "top_term": "treatment_x_sector_Tech",
+            }
+        ]
+    )
+    verdicts = build_hypothesis_verdicts(
+        gap_summary=_gap_summary(),
+        mechanism_panel=_mechanism_panel(),
+        heterogeneity_size=_heterogeneity_size(),
+        time_series_rolling=_rolling(),
+        heterogeneity_sector=sector,
+        h7_sector_interaction=interaction,
+    )
+    h7 = verdicts.set_index("hid").loc["H7"]
+    assert h7["verdict"] == "支持"
+    assert h7["confidence"] == "中"
+    assert "sector×phase/treatment" in h7["evidence_summary"]
+    assert "cma_h7_sector_interaction.csv" in h7["next_step"]
+    assert pd.isna(h7["p_value"])
+
+
 def test_h2_uses_aum_when_available() -> None:
     aum = pd.DataFrame(
         {

@@ -96,12 +96,41 @@ def test_build_evidence_manifest_summarises_current_files(tmp_path) -> None:
     )
     coverage = {row["item"]: row for row in manifest["coverage"]}
 
-    assert coverage["H2_passive_aum"]["status"] == "pass"
+    assert coverage["H2_passive_aum"]["status"] == "warn"
+    assert "CN comparable passive AUM missing" in coverage["H2_passive_aum"]["detail"]
     assert coverage["H6_weight_change"]["status"] == "pass"
     assert coverage["H7_cn_sector"]["status"] == "pass"
     assert coverage["RDD_L3_boundary"]["status"] == "warn"
     assert coverage["Match_robustness"]["status"] == "pass"
     assert coverage["doctor"]["value"] == "1 pass / 0 warn / 0 fail"
+
+
+def test_build_evidence_manifest_passes_h2_when_cn_aum_is_present(tmp_path) -> None:
+    raw = tmp_path / "data" / "raw"
+    tables = tmp_path / "results" / "real_tables"
+    regressions = tmp_path / "results" / "real_regressions"
+    raw.mkdir(parents=True)
+    tables.mkdir(parents=True)
+    regressions.mkdir(parents=True)
+    pd.DataFrame(
+        [
+            {"market": "US", "year": 2019, "aum_trillion": 4.0},
+            {"market": "US", "year": 2020, "aum_trillion": 5.0},
+            {"market": "CN", "year": 2019, "aum_trillion": 0.8},
+            {"market": "CN", "year": 2020, "aum_trillion": 1.0},
+        ]
+    ).to_csv(raw / "passive_aum.csv", index=False)
+    checks = [CheckResult("fixture", "pass", "ok")]
+
+    manifest = build_evidence_manifest(
+        root=tmp_path,
+        tables_dir=tables,
+        doctor_results=checks,
+    )
+    coverage = {row["item"]: row for row in manifest["coverage"]}
+
+    assert coverage["H2_passive_aum"]["status"] == "pass"
+    assert coverage["H2_passive_aum"]["value"] == "US 2 rows; CN 2 rows"
 
 
 def test_run_refresh_pipeline_accepts_fake_step_runner_and_writes_manifest(

@@ -878,7 +878,8 @@ def _h7(
     hypothesis: StructuralHypothesis,
     heterogeneity_sector: pd.DataFrame,
     *,
-    significance_level: float = SIGNIFICANCE_LEVEL,  # noqa: ARG001 — H7 verdict is decided by US sector spread, not p
+    h7_sector_interaction: pd.DataFrame | None = None,
+    significance_level: float = SIGNIFICANCE_LEVEL,  # noqa: ARG001 — H7 verdict is decided by spread/interactions, not sensitivity p
 ) -> dict[str, object]:
     required = {"market", "bucket", "asymmetry_index", "n_events"}
     if heterogeneity_sector.empty or not required.issubset(heterogeneity_sector.columns):
@@ -949,16 +950,61 @@ def _h7(
         metric_snapshot += f"; CN sectors={len(cn_buckets)}"
     else:
         metric_snapshot += "; CN sector 未填充"
+    interaction = _h7_interaction_note(h7_sector_interaction)
+    if interaction:
+        summary += interaction["summary"]
+        metric_snapshot += interaction["snapshot"]
+        next_step = (
+            "交互回归表见 cma_h7_sector_interaction.csv；下一步可统一 CN/US 行业分类后，"
+            "做跨市场共同 sector taxonomy 与 permutation 稳健性。"
+        )
+    else:
+        next_step = (
+            "若 CN sector 字段补齐，可做 CN-US 行业 × 阶段交互回归；否则限定为美股结论。"
+        )
     return _make_verdict(
         hypothesis,
         verdict=verdict,
         confidence=confidence,
         evidence_summary=summary,
         metric_snapshot=metric_snapshot,
-        next_step=(
-            "若 CN sector 字段补齐，可做 CN-US 行业 × 阶段交互回归；否则限定为美股结论。"
-        ),
+        next_step=next_step,
         key_label="US sector spread",
         key_value=spread,
         n_obs=us_n,
     )
+
+
+def _h7_interaction_note(frame: pd.DataFrame | None) -> dict[str, str] | None:
+    if frame is None or frame.empty:
+        return None
+    required = {"market", "status", "joint_p_value", "n_obs", "top_term", "signal"}
+    if not required.issubset(frame.columns):
+        return None
+    work = frame.loc[frame["status"].astype(str) == "pass"].copy()
+    if work.empty:
+        return None
+    work["joint_p_value"] = pd.to_numeric(work["joint_p_value"], errors="coerce")
+    if work["joint_p_value"].notna().any():
+        best = work.sort_values("joint_p_value", na_position="last").iloc[0]
+    else:
+        work["max_abs_t"] = pd.to_numeric(work.get("max_abs_t"), errors="coerce").abs()
+        best = work.sort_values("max_abs_t", ascending=False, na_position="last").iloc[0]
+    market = str(best.get("market", ""))
+    p_value = _float_or_none(best.get("joint_p_value"))
+    n_obs = _int_value(best.get("n_obs"))
+    top_term = str(best.get("top_term", "") or "")
+    signal = str(best.get("signal", "weak") or "weak")
+    p_text = "NA" if p_value is None else f"{p_value:.3f}"
+    if signal == "support":
+        summary = (
+            f" 进一步的 sector×phase/treatment 交互回归在 {market} 显著"
+            f"(joint p={p_text}, n={n_obs})，增强 H7 的机制支持。"
+        )
+    else:
+        summary = (
+            f" 同时新增 sector×phase/treatment 交互回归；{market} joint p={p_text}"
+            f"(n={n_obs})，作为行业机制的稳健性边界。"
+        )
+    snapshot = f"; interaction {market} joint p={p_text}, top={top_term}, n={n_obs}"
+    return {"summary": summary, "snapshot": snapshot, "signal": signal}
