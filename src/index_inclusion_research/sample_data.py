@@ -53,25 +53,25 @@ def main(argv: list[str] | None = None) -> None:
 
     for market, spec in market_specs.items():
         dates = spec["dates"]
-        benchmark_ret = rng.normal(spec["benchmark_mu"], spec["benchmark_sigma"], len(dates))
+        benchmark_ret = rng.normal(spec["benchmark_mu"], spec["benchmark_sigma"], len(dates))  # type: ignore[arg-type,call-overload]
         benchmark_rows.extend(
             {"market": market, "date": date, "benchmark_ret": ret}
-            for date, ret in zip(dates, benchmark_ret, strict=True)
+            for date, ret in zip(dates, benchmark_ret, strict=True)  # type: ignore[call-overload]
         )
-        benchmark_series = pd.Series(benchmark_ret, index=dates)
+        benchmark_series = pd.Series(benchmark_ret, index=dates)  # type: ignore[call-overload]
 
         sector_map = {
             ticker: sector
-            for ticker, sector in zip(
+            for ticker, sector in zip(  # type: ignore[call-overload]
                 spec["tickers"],
                 ["Industrials", "Technology", "Consumer", "Healthcare", "Finance", "Energy", "Materials", "Utilities"],
                 strict=True,
             )
         }
-        base_caps = {ticker: rng.uniform(8e9, 35e9) for ticker in spec["tickers"]}
+        base_caps = {ticker: rng.uniform(8e9, 35e9) for ticker in spec["tickers"]}  # type: ignore[attr-defined]
 
         treatment_effects: dict[str, dict[str, pd.Timestamp]] = {}
-        for ticker, announce_date, effective_date, sector in spec["event_rows"]:
+        for ticker, announce_date, effective_date, sector in spec["event_rows"]:  # type: ignore[attr-defined]
             event_rows.append(
                 {
                     "market": market,
@@ -90,31 +90,31 @@ def main(argv: list[str] | None = None) -> None:
                 "effective": pd.Timestamp(effective_date),
             }
 
-        for ticker in spec["tickers"]:
+        for ticker in spec["tickers"]:  # type: ignore[attr-defined]
             close = 100.0 + rng.normal(0, 2)
             market_beta = rng.uniform(0.85, 1.15)
-            idiosyncratic_noise = rng.normal(0, 0.012, len(dates))
+            idiosyncratic_noise = rng.normal(0, 0.012, len(dates))  # type: ignore[arg-type]
             rets = benchmark_series.to_numpy() * market_beta + idiosyncratic_noise
-            volumes = rng.normal(1.5e7, 1.2e6, len(dates)).clip(min=6e6)
-            turnovers = rng.normal(0.028, 0.004, len(dates)).clip(min=0.008)
-            mkt_caps = np.full(len(dates), base_caps[ticker]) * np.cumprod(1 + rets)
+            volumes = rng.normal(1.5e7, 1.2e6, len(dates)).clip(min=6e6)  # type: ignore[arg-type]
+            turnovers = rng.normal(0.028, 0.004, len(dates)).clip(min=0.008)  # type: ignore[arg-type]
+            mkt_caps = np.full(len(dates), base_caps[ticker]) * np.cumprod(1 + rets)  # type: ignore[arg-type]
 
             effects = treatment_effects.get(ticker)
             if effects:
                 for phase_name, date_value in effects.items():
-                    mapped_date = dates[dates.searchsorted(date_value, side="left")]
-                    center = dates.get_loc(mapped_date)
+                    mapped_date = dates[dates.searchsorted(date_value, side="left")]  # type: ignore[attr-defined,index]
+                    center = dates.get_loc(mapped_date)  # type: ignore[attr-defined]
                     for offset in range(-1, 2):
                         loc = center + offset
-                        if 0 <= loc < len(dates):
+                        if 0 <= loc < len(dates):  # type: ignore[arg-type]
                             rets[loc] += 0.012 if phase_name == "announce" else 0.018
                     for offset in range(0, 6):
                         loc = center + offset
-                        if 0 <= loc < len(dates):
+                        if 0 <= loc < len(dates):  # type: ignore[arg-type]
                             volumes[loc] *= 1.22 if phase_name == "effective" else 1.12
                             turnovers[loc] *= 1.18 if phase_name == "effective" else 1.08
 
-            for idx, date in enumerate(dates):
+            for idx, date in enumerate(dates):  # type: ignore[arg-type,var-annotated]
                 close *= 1 + rets[idx]
                 price_rows.append(
                     {
