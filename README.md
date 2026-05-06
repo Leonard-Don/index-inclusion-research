@@ -109,7 +109,7 @@ make smoke   # 浏览器 smoke test，需要 Playwright + Chromium
 1. [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)：16 篇文献如何统一映射到当前项目。
 2. [docs/research_delivery_package.md](docs/research_delivery_package.md)：论文 / 答辩交付边界。
 3. [docs/dashboard_architecture.md](docs/dashboard_architecture.md)：dashboard 主干。
-4. [docs/cli_reference.md](docs/cli_reference.md)：27 个 console scripts 的完整说明。
+4. [docs/cli_reference.md](docs/cli_reference.md)：28 个 console scripts 的完整说明。
 5. 启动界面：`index-inclusion-dashboard` → 打开 <http://localhost:5001>。
 
 ## 项目结构
@@ -178,15 +178,16 @@ index-inclusion-verdict-summary --sensitivity        # 阈值 sweep + Bonferroni
 index-inclusion-verdict-summary --vs-pap             # 当前 vs 最新 PAP 快照 diff
 index-inclusion-verdict-summary --compare-with ...   # 任意时点 diff（详见 docs/verdict_iteration.md）
 index-inclusion-paper-bundle --force                 # 论文产出聚合（同 make paper）
+index-inclusion-paper-audit                          # 论文主张 ↔ 证据产物审计
 index-inclusion-refresh-real-evidence                # 真实数据 + evidence manifest 一次刷
 index-inclusion-doctor --fail-on-warn                # 严格门禁（warn 也阻断）
 ```
 
-按用途分组（共 27 个 console scripts）：
+按用途分组（共 28 个 console scripts）：
 
 - 数据流水线：`build-event-sample` / `build-price-panel` / `match-controls` / `match-robustness` / `run-event-study` / `run-regressions`
 - 样本数据：`generate-sample-data` / `download-real-data`
-- 报表与图表：`make-figures-tables` / `generate-research-report` / `paper-bundle`
+- 报表与图表：`make-figures-tables` / `generate-research-report` / `paper-bundle` / `paper-audit`
 - Dashboard 与三条主线：`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - HS300 RDD 工具链：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`
 - 跨市场不对称 + 假说证据：`cma` / `prepare-passive-aum` / `compute-h6-weight-change` / `refresh-real-evidence`
@@ -218,6 +219,7 @@ make doctor-strict
 
 ```bash
 make smoke
+make paper-audit
 ```
 
 GitHub Actions 通过 `astral-sh/setup-uv` + `uv sync --extra dev`（按 `uv.lock`）安装依赖，分两步：

@@ -28,6 +28,7 @@ from index_inclusion_research.dashboard_view_models import (
     build_table_primary_view,
     build_table_suite_section_view,
 )
+from index_inclusion_research.paper_audit import run_paper_audit, summarize_audit
 from index_inclusion_research.rdd_evidence import rdd_evidence_tier_from_status
 from index_inclusion_research.results_snapshot import ResultsSnapshot
 
@@ -650,6 +651,123 @@ def build_limits_section(
                 demo_copy="展示版默认只保留最关键的边界摘要，完整识别范围说明按需展开，结尾更利落。",
                 container="library-panels",
                 kicker="补充说明",
+            ),
+        ),
+    }
+
+
+def build_paper_audit_section(
+    root: Path,
+    *,
+    render_table: TableRenderer,
+    attach_display_tiers: DisplayTableTiersAttacher,
+    split_items_by_tier: DisplayTableTierSplitter,
+) -> DashboardSection:
+    audit_results = run_paper_audit(root, require_bundle=(root / "paper").exists())
+    summary = summarize_audit(audit_results)
+    status_label = {"pass": "通过", "warn": "需关注", "fail": "阻断"}
+
+    summary_cards: list[SummaryCard] = []
+    for result in audit_results:
+        summary_cards.append(
+            {
+                "kicker": status_label.get(result.status, result.status),
+                "title": result.name.replace("_", " "),
+                "meta": result.message,
+                "copy": result.claim,
+                "foot": result.fix or f"已映射 {len(result.artifacts)} 个证据产物。",
+            }
+        )
+
+    summary_table = pd.DataFrame(
+        [
+            {
+                "检查项": result.name,
+                "状态": status_label.get(result.status, result.status),
+                "主张": result.claim,
+                "结果": result.message,
+                "修复建议": result.fix,
+            }
+            for result in audit_results
+        ]
+    )
+
+    artifact_rows: list[dict[str, str]] = []
+    for result in audit_results:
+        for artifact in result.artifacts:
+            artifact_rows.append(
+                {
+                    "检查项": result.name,
+                    "状态": status_label.get(result.status, result.status),
+                    "证据路径": artifact,
+                    "用途": result.claim,
+                }
+            )
+        for detail in result.details:
+            artifact_rows.append(
+                {
+                    "检查项": result.name,
+                    "状态": status_label.get(result.status, result.status),
+                    "证据路径": detail,
+                    "用途": "审计细节 / 缺口提示",
+                }
+            )
+
+    artifact_table = pd.DataFrame(
+        artifact_rows,
+        columns=["检查项", "状态", "证据路径", "用途"],
+    )
+    tables = attach_display_tiers(
+        [
+            {
+                "label": "交付审计摘要",
+                "html": render_table(summary_table, compact=True),
+                "layout_class": "wide",
+                "tier": "primary",
+            },
+            {
+                "label": "主张证据路径",
+                "html": render_table(artifact_table, compact=True),
+                "layout_class": "wide",
+                "tier": "detail",
+            },
+        ]
+    )
+    primary_tables, detail_tables = split_items_by_tier(tables)
+
+    return {
+        "summary": (
+            f"当前论文交付审计为 {summary['pass']} 项通过、{summary['warn']} 项需关注、"
+            f"{summary['fail']} 项阻断；它把正文主结论、稳健性、机制主表、RDD 附录和 PAP 边界逐项映射到可追溯产物。"
+        ),
+        "summary_cards": summary_cards,
+        "tables": tables,
+        "primary_tables": primary_tables,
+        "detail_tables": detail_tables,
+        "section_view": build_table_suite_section_view(
+            head=build_section_head_view(
+                section_id="paper_audit",
+                waypoint_label="交付审计",
+                kicker="交付审计",
+                title="每个论文主张都要能回到一份真实产物。",
+                intro="把写作结论、PAP 边界和交付包状态放在同一张审计表里。",
+                side_label="审计口径",
+            ),
+            primary=build_table_primary_view(
+                key="demo-paper-audit-primary-tables",
+                title="主张审计摘要",
+                copy="先看每个写作主张是否通过，再按需展开证据路径和缺口细节。",
+                container="library-panels",
+                collapsed_copy="展示版默认只露出审计摘要，完整证据路径按需展开。",
+            ),
+            detail=build_table_detail_view(
+                full_title="证据路径明细",
+                full_copy="这些路径就是答辩、写作和复现时需要回查的真实文件。",
+                demo_key="demo-paper-audit-detail-tables",
+                demo_title=f"交付审计证据路径（{len(detail_tables)} 张）",
+                demo_copy="展示版默认收起完整路径，真正要核对来源时再展开。",
+                container="library-panels",
+                kicker="证据路径",
             ),
         ),
     }

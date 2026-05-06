@@ -498,6 +498,7 @@ class HomeContext(TypedDict):
     supplement_section: SecondarySection
     robustness_section: RobustnessSection
     limits_section: DashboardSection
+    paper_audit_section: DashboardSection | None
     cma_section: dict[str, Any] | None
 
 

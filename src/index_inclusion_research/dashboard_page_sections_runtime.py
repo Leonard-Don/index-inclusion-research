@@ -78,6 +78,14 @@ class DashboardPageSectionsRuntime:
             format_share=self.track.format_share,
         )
 
+    def build_paper_audit_section(self) -> DashboardSection:
+        return dashboard_sections.build_paper_audit_section(
+            self.track.root,
+            render_table=self.track.render_table,
+            attach_display_tiers=self.track.attach_display_tiers,
+            split_items_by_tier=self.track.split_items_by_tier,
+        )
+
     def build_cross_market_section(self, mode: ModeName = "full") -> dict[str, Any]:
         from pathlib import Path
 
@@ -148,6 +156,7 @@ class DashboardPageSectionsRuntime:
             build_sample_design_section=self.build_sample_design_section,
             build_robustness_section=self.build_robustness_section,
             build_limits_section=self.build_limits_section,
+            build_paper_audit_section=self.build_paper_audit_section,
             build_cross_market_section=self.build_cross_market_section,
             write_cache=self.track.run_cache,
         ).build(

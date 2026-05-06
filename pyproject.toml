@@ -43,6 +43,7 @@ index-inclusion-compute-h6-weight-change = "index_inclusion_research.cli:run_com
 index-inclusion-refresh-real-evidence = "index_inclusion_research.cli:run_refresh_real_evidence_main"
 index-inclusion-rebuild-all = "index_inclusion_research.cli:run_rebuild_all_main"
 index-inclusion-paper-bundle = "index_inclusion_research.cli:run_paper_bundle_main"
+index-inclusion-paper-audit = "index_inclusion_research.cli:run_paper_audit_main"
 index-inclusion-verdict-summary = "index_inclusion_research.cli:run_verdict_summary_main"
 index-inclusion-doctor = "index_inclusion_research.cli:run_doctor_main"
 index-inclusion-generate-sample-data = "index_inclusion_research.cli:run_generate_sample_data_main"

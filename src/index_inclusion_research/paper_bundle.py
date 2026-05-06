@@ -34,8 +34,9 @@ def _section_specs(root: Path) -> tuple[BundleSection, ...]:
         BundleSection(
             name="tables",
             target_subdir="tables",
-            sources=(root / "results" / "real_tables",),
+            sources=(root / "results" / "real_tables", root / "results" / "real_event_study"),
             glob_pattern="*.tex",
+            explicit_files=("patell_bmp_summary.csv",),
         ),
         BundleSection(
             name="figures",
@@ -101,15 +102,16 @@ def _resolve_files(section: BundleSection) -> list[Path]:
             if source.is_dir():
                 files.extend(sorted(source.glob(section.glob_pattern)))
     if section.explicit_files:
-        # The first source is treated as the explicit-files anchor.
-        anchor = section.sources[0]
         for relative in section.explicit_files:
-            candidate = anchor / relative
-            if candidate.is_dir():
-                files.extend(sorted(candidate.rglob("*")))
-            elif candidate.exists():
-                files.append(candidate)
-    return files
+            for anchor in section.sources:
+                candidate = anchor / relative
+                if candidate.is_dir():
+                    files.extend(sorted(candidate.rglob("*")))
+                    break
+                if candidate.exists():
+                    files.append(candidate)
+                    break
+    return list(dict.fromkeys(files))
 
 
 def _copy_into_section(

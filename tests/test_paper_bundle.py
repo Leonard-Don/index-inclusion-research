@@ -26,6 +26,12 @@ def _seed_minimal_project(root: Path) -> None:
         "H4,卖空约束,证据不足,supplementary\n",
         encoding="utf-8",
     )
+    (root / "results" / "real_event_study").mkdir(parents=True)
+    (root / "results" / "real_event_study" / "patell_bmp_summary.csv").write_text(
+        "market,event_phase,inclusion,window_slug,patell_p,bmp_p\n"
+        "CN,announce,1,m1_p1,0.001,0.002\n",
+        encoding="utf-8",
+    )
 
     (root / "results" / "real_figures").mkdir(parents=True)
     (root / "results" / "real_figures" / "cma_mechanism_heatmap.png").write_bytes(b"png")
@@ -78,6 +84,7 @@ def test_build_paper_bundle_creates_expected_structure(tmp_path: Path) -> None:
     # Tables flatten into paper/tables/
     assert (result.dest / "tables" / "cma_hypothesis_verdicts.tex").exists()
     assert (result.dest / "tables" / "data_sources.tex").exists()
+    assert (result.dest / "tables" / "patell_bmp_summary.csv").exists()
     # Figures
     assert (result.dest / "figures" / "cma_mechanism_heatmap.png").exists()
     # RDD CSVs and figures land flat in paper/rdd/

@@ -148,3 +148,17 @@ def test_build_limits_section_derives_live_rdd_tier_for_summary_cards_and_scope_
     identification_scope = next(frame for frame in captured_tables if "分析层" in frame.columns)
     rdd_row = identification_scope.loc[identification_scope["分析层"] == "中国 RDD 扩展"].iloc[0]
     assert rdd_row["证据等级"] == "L2"
+
+
+def test_build_paper_audit_section_maps_claims_to_tables() -> None:
+    section = dashboard_sections.build_paper_audit_section(
+        ROOT,
+        render_table=_render_table_stub,
+        attach_display_tiers=dashboard_presenters.attach_display_tiers,
+        split_items_by_tier=dashboard_presenters.split_items_by_tier,
+    )
+
+    assert section["summary_cards"]
+    assert section["section_view"]["head"]["section_id"] == "paper_audit"
+    assert [table["label"] for table in section["primary_tables"]] == ["交付审计摘要"]
+    assert [table["label"] for table in section["detail_tables"]] == ["主张证据路径"]

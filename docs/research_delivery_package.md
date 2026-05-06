@@ -109,6 +109,7 @@ US inclusion 为 **+1.47%** (t=5.19, p<0.001)；生效日窗口在两国市场�
 ```bash
 make rebuild
 make paper
+make paper-audit
 make doctor-strict
 make ci
 ```

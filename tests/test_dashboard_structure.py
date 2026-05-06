@@ -440,6 +440,7 @@ def test_dashboard_template_uses_shared_section_and_figure_macros() -> None:
     assert "macro render_supplement_section" in macros
     assert "macro render_robustness_section" in macros
     assert "macro render_limits_section" in macros
+    assert "macro render_paper_audit_section" in macros
     assert "macro render_insight_strip" in macros
     assert "macro render_status_panel" in macros
     assert "macro render_collapsible_figure_group" in macros
@@ -468,6 +469,7 @@ def test_dashboard_template_uses_shared_section_and_figure_macros() -> None:
     assert "ui.render_supplement_section(" in dashboard_template
     assert "ui.render_robustness_section(" in dashboard_template
     assert "ui.render_limits_section(" in dashboard_template
+    assert "ui.render_paper_audit_section(" in dashboard_template
     assert "ui.render_tracks_section(" in dashboard_template
     assert "ui.render_cta_strip(" in dashboard_template
     assert "ui.render_waypoint_navigation(" in dashboard_template

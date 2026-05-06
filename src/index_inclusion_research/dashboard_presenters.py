@@ -45,13 +45,15 @@ def nav_sections_for_mode(mode: ModeName) -> list[NavSection]:
     if mode == "full":
         items.append({"anchor": "robustness", "label": "稳健性检查"})
     items.append({"anchor": "limits", "label": "研究边界"})
+    if mode != "brief":
+        items.append({"anchor": "paper_audit", "label": "交付审计"})
     return items
 
 
 def available_hashes_for_mode(mode: ModeName) -> list[str]:
     hashes = ["#overview", "#design", "#tracks", "#limits", "#cross_market_asymmetry"]
     if mode != "brief":
-        hashes.extend(["#framework", "#supplement"])
+        hashes.extend(["#framework", "#supplement", "#paper_audit"])
     if mode == "full":
         hashes.append("#robustness")
     hashes.extend(
@@ -134,6 +136,8 @@ def table_tier_for_label(label: str) -> DisplayTier:
         "事件研究稳健性",
         "回归稳健性",
         "样本与数据范围",
+        "交付审计摘要",
+        "主张证据路径",
     }
     return "primary" if label in primary_labels else "detail"
 

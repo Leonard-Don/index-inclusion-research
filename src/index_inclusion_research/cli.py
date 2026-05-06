@@ -88,6 +88,10 @@ def run_paper_bundle_main() -> int | None:
     return _run_package_main("index_inclusion_research.paper_bundle")
 
 
+def run_paper_audit_main() -> int | None:
+    return _run_package_main("index_inclusion_research.paper_audit")
+
+
 def run_verdict_summary_main() -> int | None:
     return _run_package_main("index_inclusion_research.verdict_summary")
 
