@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, Protocol
 
 import matplotlib
 
@@ -13,6 +14,10 @@ import statsmodels.api as sm  # noqa: E402
 _VALID_DIMS: tuple[str, ...] = ("size", "liquidity", "sector", "gap_bucket")
 EPS = 1e-4
 H7_MIN_EVENTS_PER_SECTOR = 10
+
+
+class _SupportsFTest(Protocol):
+    def f_test(self, r_matrix: np.ndarray) -> Any: ...
 
 
 def _pre_event_mean(panel: pd.DataFrame, col: str, lo: int = -20, hi: int = -1) -> pd.Series:
@@ -375,7 +380,7 @@ def _fit_h7_market_sector_interaction(
     }
 
 
-def _joint_p_value(model: object, columns: list[str], terms: list[str]) -> float:
+def _joint_p_value(model: _SupportsFTest, columns: list[str], terms: list[str]) -> float:
     if not terms:
         return float("nan")
     R = np.zeros((len(terms), len(columns)))
