@@ -798,6 +798,33 @@ def check_console_scripts_importable() -> CheckResult:
     )
 
 
+def check_paper_audit() -> CheckResult:
+    """Paper-facing claims should be backed by current artifacts and bundle copies."""
+    from index_inclusion_research.paper_audit import run_paper_audit, summarize_audit
+
+    results = run_paper_audit(ROOT, require_bundle=False)
+    summary = summarize_audit(results)
+    warn_or_fail = [item for item in results if item.status in {"warn", "fail"}]
+    if warn_or_fail:
+        details = tuple(f"{item.name}: {item.message}" for item in warn_or_fail)
+        status: Status = "fail" if any(item.status == "fail" for item in warn_or_fail) else "warn"
+        return CheckResult(
+            name="paper_audit_claims",
+            status=status,
+            message=(
+                f"Paper audit has {summary['pass']} pass, {summary['warn']} warn, "
+                f"{summary['fail']} fail."
+            ),
+            fix="Run `make paper` and inspect `index-inclusion-paper-audit` output.",
+            details=details,
+        )
+    return CheckResult(
+        name="paper_audit_claims",
+        status="pass",
+        message=f"Paper audit maps all {summary['total']} claim group(s) to current artifacts.",
+    )
+
+
 # ── orchestrator ─────────────────────────────────────────────────────
 
 
@@ -954,6 +981,7 @@ DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_match_robustness_grid,
     check_chart_builders_register,
     check_console_scripts_importable,
+    check_paper_audit,
 )
 
 

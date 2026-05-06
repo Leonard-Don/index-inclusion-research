@@ -235,6 +235,7 @@ class DashboardHomeContextBuilder:
     build_sample_design_section: DemoModeSectionBuilder
     build_robustness_section: RobustnessSectionBuilder
     build_limits_section: DashboardSectionBuilder
+    build_paper_audit_section: DashboardSectionBuilder | None = None
     build_cross_market_section: Callable[[ModeName], dict[str, Any]] | None = None
     write_cache: AnalysisCache | None = None
 
@@ -349,6 +350,11 @@ class DashboardHomeContextBuilder:
                 else self._empty_robustness_section()
             ),
             "limits_section": self.build_limits_section(),
+            "paper_audit_section": (
+                self.build_paper_audit_section()
+                if self.build_paper_audit_section is not None and display_mode != "brief"
+                else None
+            ),
             "cma_section": (
                 self.build_cross_market_section(display_mode)
                 if self.build_cross_market_section is not None
@@ -384,6 +390,7 @@ def build_home_context(
     build_robustness_section: RobustnessSectionBuilder,
     build_limits_section: DashboardSectionBuilder,
     refresh_status_url: str,
+    build_paper_audit_section: DashboardSectionBuilder | None = None,
     write_cache: AnalysisCache | None = None,
 ) -> HomeContext:
     return DashboardHomeContextBuilder(
@@ -409,6 +416,7 @@ def build_home_context(
         build_sample_design_section=build_sample_design_section,
         build_robustness_section=build_robustness_section,
         build_limits_section=build_limits_section,
+        build_paper_audit_section=build_paper_audit_section,
         write_cache=write_cache,
     ).build(
         display_mode=display_mode,

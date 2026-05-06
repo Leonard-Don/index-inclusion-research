@@ -1,4 +1,4 @@
-.PHONY: setup sync lock test lint typecheck quality coverage-gate ci serve coverage clean help rebuild verdicts doctor doctor-strict paper
+.PHONY: setup sync lock test lint typecheck quality coverage-gate ci serve coverage clean help rebuild verdicts doctor doctor-strict paper paper-audit
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -53,6 +53,10 @@ doctor-strict: ## Run project health checks with --fail-on-warn (CI-strict)
 
 paper: ## Aggregate paper-grade artefacts into ./paper/ (tables / figures / narrative / RDD)
 	python3 -m index_inclusion_research.paper_bundle --force
+	python3 -m index_inclusion_research.paper_audit --fail-on-warn
+
+paper-audit: ## Audit paper claims against result artifacts and bundle copies
+	python3 -m index_inclusion_research.paper_audit --fail-on-warn
 
 clean: ## Remove generated artifacts
 	rm -rf htmlcov .coverage .pytest_cache .ruff_cache __pycache__

@@ -19,6 +19,7 @@ from index_inclusion_research.doctor import (
     check_match_robustness_grid,
     check_matched_sample_balance,
     check_p_gated_verdict_sensitivity,
+    check_paper_audit,
     check_paper_verdict_section_synced,
     check_pending_data_verdicts,
     check_rdd_l3_sample_readiness,
@@ -527,6 +528,11 @@ def test_check_chart_builders_register_warns_when_too_few() -> None:
 
 def test_check_console_scripts_importable_passes() -> None:
     result = check_console_scripts_importable()
+    assert result.status == "pass"
+
+
+def test_check_paper_audit_passes_current_repo() -> None:
+    result = check_paper_audit()
     assert result.status == "pass"
 
 

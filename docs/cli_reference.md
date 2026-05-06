@@ -1,10 +1,10 @@
 # 命令行入口参考
 
-27 个 console scripts 按用途分组：
+28 个 console scripts 按用途分组：
 
 - **数据流水线**：`build-event-sample` / `build-price-panel` / `match-controls` / `match-robustness` / `run-event-study` / `run-regressions`
 - **样本数据**：`generate-sample-data` / `download-real-data`
-- **报表与图表**：`make-figures-tables` / `generate-research-report` / `paper-bundle`
+- **报表与图表**：`make-figures-tables` / `generate-research-report` / `paper-bundle` / `paper-audit`
 - **Dashboard 与三条主线**：`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - **HS300 RDD 工具链**：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`（详见 [docs/hs300_rdd_workflow.md](hs300_rdd_workflow.md)）
 - **跨市场不对称 + 假说证据**：`cma`（7 条假说 verdict）/ `prepare-passive-aum` / `compute-h6-weight-change` / `refresh-real-evidence`
@@ -85,6 +85,26 @@ index-inclusion-generate-research-report
 ```
 
 默认读 `results/real_event_study/` 与 `results/real_regressions/`，写到 `results/real_tables/research_summary.md`。回到 sample：`--profile sample`。
+
+## 8b. 聚合并审计论文交付包
+
+```bash
+index-inclusion-paper-bundle --force
+index-inclusion-paper-audit --fail-on-warn
+```
+
+`paper-bundle` 会把正文表、图、叙事、RDD 附录和 PAP snapshot 聚合到 `paper/`。
+`paper-audit` 逐项检查正文主结论、Patell/BMP 稳健性、CMA core 机制主表、RDD 附录、PAP/limitations 与 `paper/` 交付包是否都有可追溯产物。机器可读输出：
+
+```bash
+index-inclusion-paper-audit --format json
+```
+
+fresh checkout 尚未生成 `paper/` 时，可以只检查源产物：
+
+```bash
+index-inclusion-paper-audit --source-only --fail-on-warn
+```
 
 ## 9. 打开仪表盘
 

@@ -74,6 +74,12 @@
 {% endif %}
 {%- endmacro %}
 
+{% macro render_paper_audit_section(mode, paper_audit_section) -%}
+{% if paper_audit_section %}
+{{ render_table_suite_section(mode, paper_audit_section) }}
+{% endif %}
+{%- endmacro %}
+
 {% macro render_cma_generic_table(payload, label) -%}
 {% if payload and payload.rows %}
 <div class="result-card cma-detail-table">
