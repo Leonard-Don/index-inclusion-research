@@ -194,7 +194,7 @@ def compute_event_level_metrics(
         post_group = group.loc[(group["relative_day"] >= 0) & (group["relative_day"] <= 5)]
         pre_return_group = group.loc[(group["relative_day"] >= -20) & (group["relative_day"] <= -1)]
         metrics["pre_event_return"] = (
-            (1.0 + pre_return_group["ret"].fillna(0.0)).prod() - 1.0 if not pre_return_group.empty else 0.0
+            (1.0 + pre_return_group["ret"].fillna(0.0)).prod() - 1.0 if not pre_return_group.empty else 0.0  # type: ignore[operator]
         )
         reference_mkt_cap = group.loc[group["relative_day"] == -1, "mkt_cap"]
         if reference_mkt_cap.empty:
@@ -273,7 +273,7 @@ def compute_patell_bmp_summary(
                 agg_spec[col] = (col, "first")
 
         car_per_event = (
-            window_frame.groupby(["event_id", "event_phase"], dropna=False)
+            window_frame.groupby(["event_id", "event_phase"], dropna=False)  # type: ignore[call-overload]
             .agg(**agg_spec)
             .reset_index()
         )

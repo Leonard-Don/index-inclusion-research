@@ -35,7 +35,7 @@ def _read_csv(path: Path) -> pd.DataFrame:
 
 
 def _float_metric(value: object, default: float = 0.0) -> float:
-    if value is None or pd.isna(value):
+    if value is None or pd.isna(value):  # type: ignore[call-overload]
         return default
     try:
         return float(str(value))
@@ -68,7 +68,7 @@ def _records(frame: pd.DataFrame, *, limit: int = 80) -> list[dict[str, Any]]:
         return []
     clean = frame.head(limit).copy()
     return [
-        {column: _clean_value(value) for column, value in row.items()}
+        {column: _clean_value(value) for column, value in row.items()}  # type: ignore[misc]
         for row in clean.to_dict(orient="records")
     ]
 

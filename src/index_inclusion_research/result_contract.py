@@ -20,7 +20,7 @@ def read_csv_if_exists(path: str | Path, parse_dates: list[str] | None = None) -
     csv_path = Path(path)
     if not csv_path.exists():
         return pd.DataFrame()
-    return pd.read_csv(csv_path, parse_dates=parse_dates, low_memory=False)
+    return pd.read_csv(csv_path, parse_dates=parse_dates, low_memory=False)  # type: ignore[arg-type]
 
 
 def _optional_int(value) -> int | None:

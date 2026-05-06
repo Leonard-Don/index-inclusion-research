@@ -38,7 +38,7 @@ def _cn_code_to_yahoo_symbol(code: object) -> str:
 
 
 def _is_missing_sector(value: object) -> bool:
-    if value is None or pd.isna(value):
+    if value is None or pd.isna(value):  # type: ignore[call-overload]
         return True
     text = str(value).strip()
     return text == "" or text.lower() in {"nan", "none", "<na>", "unknown"}

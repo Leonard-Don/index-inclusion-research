@@ -30,13 +30,13 @@ _H7_MIN_EVENTS_PER_SECTOR = 10
 
 
 def _float_value(value: object, default: float = float("nan")) -> float:
-    if value is None or pd.isna(value):
+    if value is None or pd.isna(value):  # type: ignore[call-overload]
         return default
     return float(str(value))
 
 
 def _float_or_none(value: object) -> float | None:
-    if value is None or pd.isna(value):
+    if value is None or pd.isna(value):  # type: ignore[call-overload]
         return None
     try:
         return float(str(value))
@@ -45,7 +45,7 @@ def _float_or_none(value: object) -> float | None:
 
 
 def _int_value(value: object, default: int = 0) -> int:
-    if value is None or pd.isna(value):
+    if value is None or pd.isna(value):  # type: ignore[call-overload]
         return default
     return int(float(str(value)))
 
@@ -988,7 +988,7 @@ def _h7_interaction_note(frame: pd.DataFrame | None) -> dict[str, str] | None:
     if work["joint_p_value"].notna().any():
         best = work.sort_values("joint_p_value", na_position="last").iloc[0]
     else:
-        work["max_abs_t"] = pd.to_numeric(work.get("max_abs_t"), errors="coerce").abs()
+        work["max_abs_t"] = pd.to_numeric(work.get("max_abs_t"), errors="coerce").abs()  # type: ignore[call-overload]
         best = work.sort_values("max_abs_t", ascending=False, na_position="last").iloc[0]
     market = str(best.get("market", ""))
     p_value = _float_or_none(best.get("joint_p_value"))

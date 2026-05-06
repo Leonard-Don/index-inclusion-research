@@ -51,9 +51,9 @@ def _relative_or_absolute(path: Path) -> str:
 
 
 def _format_date(value: object) -> str:
-    if value is None or pd.isna(value):
+    if value is None or pd.isna(value):  # type: ignore[call-overload]
         return ""
-    return pd.Timestamp(value).strftime("%Y-%m-%d")
+    return pd.Timestamp(value).strftime("%Y-%m-%d")  # type: ignore[arg-type]
 
 
 def build_batch_collection_checklist(candidates: pd.DataFrame) -> pd.DataFrame:

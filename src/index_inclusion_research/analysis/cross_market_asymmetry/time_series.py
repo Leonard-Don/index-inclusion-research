@@ -20,7 +20,7 @@ def build_rolling_car(
     work["year"] = work["event_date"].dt.year
     car_window = work.loc[(work["relative_day"] >= -1) & (work["relative_day"] <= 1)]
     per_event = (
-        car_window.groupby(
+        car_window.groupby(  # type: ignore[call-overload]
             ["event_id", "market", "event_phase", "year"], as_index=False
         )["ar"]
         .sum()
@@ -135,7 +135,7 @@ def render_rolling_figure(
                 sub["aum_trillion"],
                 linestyle="--",
                 alpha=0.5,
-                label=f"AUM {market}",
+                label=f"AUM {market}",  # type: ignore[str-bytes-safe]
             )
         ax2.set_ylabel("passive AUM (trillion)")
         aum_handles, aum_labels = ax2.get_legend_handles_labels()

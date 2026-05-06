@@ -194,7 +194,7 @@ def _clean_cell_text(value: object) -> str:
     if value is None:
         return ""
     try:
-        if pd.isna(value):
+        if pd.isna(value):  # type: ignore[call-overload]
             return ""
     except (TypeError, ValueError):
         pass
@@ -202,7 +202,7 @@ def _clean_cell_text(value: object) -> str:
 
 
 def _safe_int(value: object, default: int = 0) -> int:
-    if value is None or pd.isna(value):
+    if value is None or pd.isna(value):  # type: ignore[call-overload]
         return default
     try:
         return int(float(str(value)))

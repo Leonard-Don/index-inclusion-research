@@ -55,7 +55,7 @@ index-inclusion-cma = "index_inclusion_research.cli:run_cma_main"
 [project.optional-dependencies]
 dev = [
   "mypy>=1.10",
-  "pandas-stubs>=2.2",
+  "pandas-stubs>=2.2,<2.3",
   "playwright>=1.54",
   "pytest>=8.0",
   "pytest-cov>=6.0",
@@ -99,13 +99,26 @@ module = [
   "matplotlib.*",
   "scipy.*",
   "bs4.*",
-  "playwright.*",
   "requests",
   "requests.*",
   "yaml",
   "yaml.*",
 ]
 ignore_missing_imports = true
+
+# Mypy debt baseline: these modules are pandas/numpy-heavy and triggered
+# >130 stub-driven errors. Re-enable and clean up file-by-file — see
+# docs/mypy_rollout.md for the playbook and progress.
+[[tool.mypy.overrides]]
+module = [
+  "index_inclusion_research.research_report",
+  "index_inclusion_research.pipeline.matching",
+  "index_inclusion_research.analysis.cross_market_asymmetry.verdicts._paper",
+  "index_inclusion_research.sample_data",
+  "index_inclusion_research.chart_data",
+  "index_inclusion_research.dashboard_figures",
+]
+ignore_errors = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

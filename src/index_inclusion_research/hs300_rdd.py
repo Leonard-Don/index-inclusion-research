@@ -142,8 +142,8 @@ def _render_rdd_robustness_tex(rdd_robustness: pd.DataFrame) -> str:
 
     def _ci(row: pd.Series) -> str:
         try:
-            tau = float(row.get("tau"))
-            se = float(row.get("std_error"))
+            tau = float(row.get("tau"))  # type: ignore[arg-type]
+            se = float(row.get("std_error"))  # type: ignore[arg-type]
         except (TypeError, ValueError):
             return "—"
         if tau != tau or se != se:
@@ -153,7 +153,7 @@ def _render_rdd_robustness_tex(rdd_robustness: pd.DataFrame) -> str:
     def _interp(row: pd.Series) -> str:
         spec_kind = str(row.get("spec_kind", ""))
         try:
-            p = float(row.get("p_value"))
+            p = float(row.get("p_value"))  # type: ignore[arg-type]
         except (TypeError, ValueError):
             p = float("nan")
         if spec_kind == "main":
@@ -249,8 +249,8 @@ def _generate_demo_candidates() -> pd.DataFrame:
         controls = group.loc[group["treatment_group"] == 0].copy().sort_values("ticker").reset_index(drop=True)
         if not treated.empty:
             treated["inclusion"] = 1
-            treated = treated.assign(running_variable=[300.35] * len(treated))
-            demo_rows.extend(treated.to_dict(orient="records"))
+            treated = treated.assign(running_variable=[300.35] * len(treated))  # type: ignore[arg-type]
+            demo_rows.extend(treated.to_dict(orient="records"))  # type: ignore[arg-type]
         demo_scores = [299.85, 299.55, 299.25, 298.95, 298.65]
         for idx, (_, row) in enumerate(controls.iterrows()):
             score = demo_scores[idx] if idx < len(demo_scores) else 298.35 - idx * 0.1

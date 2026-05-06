@@ -113,7 +113,7 @@ def render_gap_figures(
 
     fig1, ax1 = plt.subplots(figsize=(8, 5))
     for market, sub in gap.groupby("market"):
-        ax1.hist(sub["gap_length_days"].dropna(), alpha=0.5, label=market, bins=20)
+        ax1.hist(sub["gap_length_days"].dropna(), alpha=0.5, label=market, bins=20)  # type: ignore[arg-type]
     ax1.set_xlabel("gap_length_days")
     ax1.set_ylabel("count")
     ax1.set_title("Announce-to-Effective gap length by market")
@@ -195,7 +195,7 @@ def compute_pre_runup_bootstrap_test(
     else:
         cn_values = cn_sub["pre_announce_runup"].dropna().to_numpy(dtype=float)
         us_values = us_sub["pre_announce_runup"].dropna().to_numpy(dtype=float)
-        cn_keys = us_keys = None
+        cn_keys = us_keys = None  # type: ignore[assignment]
 
     n_cn = int(cn_values.size)
     n_us = int(us_values.size)

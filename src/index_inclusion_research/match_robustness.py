@@ -37,11 +37,11 @@ def _matched_group_key(frame: pd.DataFrame) -> pd.Series:
             r"-ctrl-\d+$", "", regex=True
         )
     else:
-        key = pd.Series(range(len(frame)), index=frame.index, dtype="string")
+        key = pd.Series(range(len(frame)), index=frame.index, dtype="string")  # type: ignore[assignment]
     if "event_id" in frame.columns:
         event_id = frame["event_id"].astype("string")
         key = key.fillna(event_id.str.replace(r"-ctrl-\d+$", "", regex=True))
-    return key.fillna(pd.Series(range(len(frame)), index=frame.index, dtype="string"))
+    return key.fillna(pd.Series(range(len(frame)), index=frame.index, dtype="string"))  # type: ignore[arg-type]
 
 
 def _with_control_rank(matched_events: pd.DataFrame) -> pd.DataFrame:

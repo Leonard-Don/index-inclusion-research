@@ -74,7 +74,7 @@ def compute_window_summary(
         per_event = sub.groupby(
             ["event_id", "market", "event_phase"], as_index=False
         )["ar"].sum()
-        per_event = per_event.rename(columns={"ar": "car_window"})
+        per_event = per_event.rename(columns={"ar": "car_window"})  # type: ignore[call-overload]
         summary = per_event.groupby(["market", "event_phase"], as_index=False).agg(
             n_events=("event_id", "nunique"),
             car_mean=("car_window", "mean"),

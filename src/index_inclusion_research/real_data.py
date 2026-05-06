@@ -105,7 +105,7 @@ def build_us_events(start_year: int = 2010, end_year: int = 2025) -> tuple[pd.Da
         ]
         announce_candidates = [reference_dates.get(ref_id) for ref_id in ref_ids if reference_dates.get(ref_id)]
         announce_date = (
-            pd.to_datetime(announce_candidates[0], errors="coerce")
+            pd.to_datetime(announce_candidates[0], errors="coerce")  # type: ignore[call-overload]
             if announce_candidates
             else effective_date
         )
@@ -240,10 +240,10 @@ def _build_price_rows(
     price_rows: list[dict[str, object]] = []
     for row in security_frame.itertuples(index=False):
         yahoo_symbol = row.yahoo_symbol
-        history = history_map.get(yahoo_symbol)
+        history = history_map.get(yahoo_symbol)  # type: ignore[arg-type]
         if history is None or history.empty:
             continue
-        metadata = _fetch_metadata(yahoo_symbol, getattr(row, "sector", None))
+        metadata = _fetch_metadata(yahoo_symbol, getattr(row, "sector", None))  # type: ignore[arg-type]
         shares = metadata.shares_outstanding
         sector = metadata.sector
         history = history.rename(
@@ -273,7 +273,7 @@ def _build_price_rows(
         history["ticker"] = row.ticker
         history["sector"] = sector
         history = history.loc[:, ["market", "ticker", "date", "close", "ret", "volume", "turnover", "mkt_cap", "sector"]]
-        price_rows.extend(history.to_dict(orient="records"))
+        price_rows.extend(history.to_dict(orient="records"))  # type: ignore[arg-type]
         time.sleep(0.02)
     return pd.DataFrame(price_rows), pd.DataFrame(metadata_rows)
 
@@ -344,7 +344,7 @@ def build_real_dataset(
     cn_universe = pd.concat(
         [
             cn_event_sector.assign(market="CN"),
-            cn_controls.loc[:, ["ticker"]].assign(sector=pd.NA, market="CN"),
+            cn_controls.loc[:, ["ticker"]].assign(sector=pd.NA, market="CN"),  # type: ignore[arg-type]
         ],
         ignore_index=True,
     ).drop_duplicates(subset=["market", "ticker"])
