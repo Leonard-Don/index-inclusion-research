@@ -77,8 +77,8 @@ _细节_: matched=67, median weight=0.0039, heavy announce_jump=+1.29%, light=+3
 
 ### H7 · 行业结构差异 —— 支持(可信度:中)
 **US sector spread = 5.954**, n = 187
-US 行业间 asymmetry_index spread = 5.95(Materials +3.90 vs Real Estate -2.05),行业结构在 inclusion 效应中显著起作用。CN 状态:已分行业。 进一步的 sector×phase/treatment 交互回归在 US 显著(joint p=0.094, n=1882)，增强 H7 的机制支持。
-_细节_: US eligible sectors=8, max=+3.90(Materials), min=-2.05(Real Estate), spread=5.95, n=187; CN sectors=35; interaction US joint p=0.094, top=effective_x_sector_Industrials, n=1882
+US 行业间 asymmetry_index spread = 5.95(Materials +3.90 vs Real Estate -2.05),行业结构在 inclusion 效应中显著起作用。CN 状态:已分行业。 进一步的 sector×phase/treatment 交互回归在 US 显著(joint p=0.064, n=1924)，增强 H7 的机制支持。
+_细节_: US eligible sectors=8, max=+3.90(Materials), min=-2.05(Real Estate), spread=5.95, n=187; CN sectors=35; interaction US joint p=0.064, top=effective_x_sector_Industrials, n=1924
 
 ### 限制与稳健性补强方向
 

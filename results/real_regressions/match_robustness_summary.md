@@ -3,8 +3,8 @@
 This artifact is local-only. It reads the checked local matched-event sample
 and local price history; it does not download or scrape web data.
 
-- matched events: `data/processed/real_matched_events.csv`
-- prices: `data/raw/real_prices.csv`
+- matched events: `/Users/leonardodon/index-inclusion-research/data/processed/real_matched_events.csv`
+- prices: `/Users/leonardodon/index-inclusion-research/data/raw/real_prices.csv`
 - threshold: `|SMD| < 0.25`
 
 ## Best Current Specification

@@ -309,7 +309,7 @@ US-s-p500-amd-20170310-20170320-add-02,matched,3,True,penalized
 US-s-p500-ame-20130911-20130920-add-01,matched,3,True,penalized
 US-s-p500-amg-20140624-20140701-add-01,matched,3,True,penalized
 US-s-p500-amg-20191213-20191223-del-02,matched,3,True,penalized
-US-s-p500-amtm-20240924-20240930-add-01,skipped_no_valid_match,0,True,penalized
+US-s-p500-amtm-20240924-20240930-add-01,matched,3,True,penalized
 US-s-p500-amtm-20241206-20241223-del-02,matched,3,True,penalized
 US-s-p500-an-20170731-20170808-del-01,matched,3,True,penalized
 US-s-p500-andv-20180925-20181001-del-01,skipped_no_valid_match,0,True,penalized
@@ -420,7 +420,7 @@ US-s-p500-csra-20151123-20151201-add-01,skipped_no_valid_match,0,True,penalized
 US-s-p500-csra-20180328-20180404-del-02,skipped_no_valid_match,0,True,penalized
 US-s-p500-ctlt-20200904-20200921-add-01,skipped_no_valid_match,0,True,penalized
 US-s-p500-ctlt-20241218-20241223-del-02,skipped_no_valid_match,0,True,penalized
-US-s-p500-ctva-20190528-20190603-add-01,skipped_no_valid_match,0,True,penalized
+US-s-p500-ctva-20190528-20190603-add-01,matched,3,True,penalized
 US-s-p500-ctxs-20220923-20221003-del-01,skipped_no_valid_match,0,True,penalized
 US-s-p500-cvc-20101209-20101217-add-01,skipped_no_valid_match,0,True,penalized
 US-s-p500-cvc-20160621-20160622-del-02,skipped_no_valid_match,0,True,penalized
@@ -510,8 +510,8 @@ US-s-p500-fmc-20250307-20250324-del-01,matched,3,True,penalized
 US-s-p500-fosl-20120402-20120403-add-01,matched,3,True,penalized
 US-s-p500-fosl-20151228-20160105-del-02,matched,3,True,penalized
 US-s-p500-fox-20150918-20150918-add-01,skipped_no_valid_match,0,True,penalized
-US-s-p500-fox-20190314-20190319-del-02,skipped_no_valid_match,0,True,penalized
-US-s-p500-fox-20190314-20190319-add-03,skipped_no_valid_match,0,True,penalized
+US-s-p500-fox-20190314-20190319-del-02,matched,3,True,penalized
+US-s-p500-fox-20190314-20190319-add-03,matched,3,True,penalized
 US-s-p500-foxa-20190314-20190319-del-01,matched,3,True,penalized
 US-s-p500-foxa-20190314-20190319-add-02,matched,3,True,penalized
 US-s-p500-frc-20181227-20190102-add-01,skipped_no_valid_match,0,True,penalized
@@ -530,7 +530,7 @@ US-s-p500-gas-20160629-20160701-del-03,skipped_no_valid_match,0,True,penalized
 US-s-p500-gddy-20240607-20240624-add-01,matched,3,True,penalized
 US-s-p500-gehc-20221228-20230104-add-01,matched,3,True,penalized
 US-s-p500-genz-20110329-20110401-del-01,skipped_no_valid_match,0,True,penalized
-US-s-p500-gev-20240327-20240402-add-01,skipped_no_valid_match,0,True,penalized
+US-s-p500-gev-20240327-20240402-add-01,matched,3,True,penalized
 US-s-p500-ggp-20131204-20131210-add-01,skipped_no_valid_match,0,True,penalized
 US-s-p500-ggp-20180823-20180828-del-02,skipped_no_valid_match,0,True,penalized
 US-s-p500-ghc-20140920-20140920-del-01,matched,3,True,penalized
@@ -639,7 +639,7 @@ US-s-p500-maa-20161129-20161202-add-01,matched,3,True,penalized
 US-s-p500-mac-20130503-20130508-add-01,matched,3,True,penalized
 US-s-p500-mac-20191213-20191223-del-02,matched,3,True,penalized
 US-s-p500-mat-20190603-20190607-del-01,matched,3,True,penalized
-US-s-p500-mbc-20221212-20221215-add-01,skipped_no_valid_match,0,True,penalized
+US-s-p500-mbc-20221212-20221215-add-01,matched,3,True,penalized
 US-s-p500-mdlz-20121001-20121002-add-01,matched,3,True,penalized
 US-s-p500-mdp-20101223-20110103-del-01,skipped_no_valid_match,0,True,penalized
 US-s-p500-mee-20110601-20110601-del-01,skipped_missing_target_snapshot,0,,
@@ -695,7 +695,7 @@ US-s-p500-nvls-20120510-20120605-del-01,skipped_no_valid_match,0,True,penalized
 US-s-p500-nvr-20190920-20190926-add-01,matched,3,True,penalized
 US-s-p500-nwl-20230914-20230918-del-01,matched,3,True,penalized
 US-s-p500-nws-20150918-20150918-add-01,matched,3,True,penalized
-US-s-p500-nwsa-20130620-20130701-add-01,skipped_no_valid_match,0,True,penalized
+US-s-p500-nwsa-20130620-20130701-add-01,matched,3,True,penalized
 US-s-p500-nxpi-20210312-20210322-add-01,matched,3,True,penalized
 US-s-p500-nyt-20101217-20101217-del-01,matched,3,True,penalized
 US-s-p500-nyx-20131113-20131113-del-01,skipped_no_valid_match,0,True,penalized
@@ -791,7 +791,7 @@ US-s-p500-sni-20180302-20180307-del-01,skipped_no_valid_match,0,True,penalized
 US-s-p500-snps-20170313-20170316-add-01,matched,3,True,penalized
 US-s-p500-sols-20251030-20251030-add-01,matched,3,True,penalized
 US-s-p500-sols-20251205-20251222-del-02,matched,3,True,penalized
-US-s-p500-solv-20240327-20240401-add-01,skipped_no_valid_match,0,True,penalized
+US-s-p500-solv-20240327-20240401-add-01,matched,3,True,penalized
 US-s-p500-spls-20170824-20170918-del-01,skipped_no_valid_match,0,True,penalized
 US-s-p500-srcl-20181126-20181203-del-01,skipped_no_valid_match,0,True,penalized
 US-s-p500-ste-20191213-20191223-add-01,matched,3,True,penalized
