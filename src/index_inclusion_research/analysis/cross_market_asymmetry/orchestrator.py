@@ -172,6 +172,10 @@ def run_cma_pipeline(
     mechanism_panel.export_h5_limit_predictive_regression_table(
         limit_regression, output_dir=tables_dir
     )
+    h7_sector_interaction = heterogeneity.compute_h7_sector_interaction(mech_panel)
+    heterogeneity.export_h7_sector_interaction(
+        h7_sector_interaction, output_dir=tables_dir
+    )
 
     het_tables: dict[str, pd.DataFrame] = {}
     for dim in ("size", "liquidity", "sector", "gap_bucket"):
@@ -226,6 +230,7 @@ def run_cma_pipeline(
         gap_drift_regression=gap_drift_regression,
         channel_concentration=channel_concentration,
         heterogeneity_sector=het_tables.get("sector", pd.DataFrame()),
+        h7_sector_interaction=h7_sector_interaction,
         weight_change=weight_change_frame,
         gap_event_level=gap,
         h6_weight_robustness=h6_weight_robustness,

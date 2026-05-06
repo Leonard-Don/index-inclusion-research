@@ -26,17 +26,18 @@
 
 跨市场不对称（CMA）pipeline 在真实样本上的 7 条机制假说裁决（`index-inclusion-verdict-summary` 也能终端打印）：
 
-| 假说 | 名称 | 裁决 | 头条指标 | 主线 |
-|---|---|---|---|---|
-| H1 | 信息泄露与预运行 | 证据不足 | bootstrap p = 0.875 (n=436) | 制度识别 |
-| H2 | 被动基金 AUM 差异 | 证据不足 | US AUM ratio = 13.48 (n=12) | 需求曲线 |
-| H3 | 散户 vs 机构结构 | 支持 | 双通道命中率 = 0.75 (n=4) | 短期价格压力 |
-| H4 | 卖空约束 | 证据不足 | regression p = 0.537 (n=436) | 制度识别 |
-| H5 | 涨跌停限制 | 支持 | limit_coef p = 0.008 (n=936) | 制度识别 |
-| H6 | 指数权重可预测性 | 证据不足 | heavy−light spread = -0.019 (n=67) | 需求曲线 |
-| H7 | 行业结构差异 | 支持 | US sector spread = 5.95 (n=187) | 制度识别 |
+| 假说 | 名称 | 裁决 | 头条指标 | 写作层级 | 主线 |
+|---|---|---|---|---|---|
+| H1 | 信息泄露与预运行 | 证据不足 | bootstrap p = 0.875 (n=436) | 正文 core | 制度识别 |
+| H2 | 被动基金 AUM 差异 | 证据不足 | US AUM ratio = 13.48；CN AUM 待补 (n=12) | 附录 supplementary | 需求曲线 |
+| H3 | 散户 vs 机构结构 | 支持 | 双通道命中率 = 0.75 (n=4) | 附录 supplementary | 短期价格压力 |
+| H4 | 卖空约束 | 证据不足 | regression p = 0.537 (n=436) | 附录 supplementary | 制度识别 |
+| H5 | 涨跌停限制 | 支持 | limit_coef p = 0.008 (n=936) | 正文 core | 制度识别 |
+| H6 | 指数权重可预测性 | 证据不足 | heavy−light spread = -0.019 (n=67) | 附录 supplementary | 需求曲线 |
+| H7 | 行业结构差异 | 支持 | US sector spread = 5.95；交互 p = 0.094 | 正文 core | 制度识别 |
 
 `make rebuild` 跑 10 步流水线刷新所有产出。详见 [results/real_tables/cma_hypothesis_verdicts.csv](results/real_tables/cma_hypothesis_verdicts.csv) 和 [docs/paper_outline_verdicts.md](docs/paper_outline_verdicts.md)。
+其中 H2 已在 evidence manifest 中明确标为 `warn`：当前只有 US 被动 AUM 年度序列，缺少 CN 可比被动 AUM，因此只适合附录解释，不写成主因果机制。
 
 阈值灵敏度（"如果阈值是 0.05 而不是 0.10？"）做成五层入口（决定 / 数据 / CLI / dashboard / doctor），终端一行：`index-inclusion-verdict-summary --sensitivity`。完整说明见 [docs/sensitivity_workflow.md](docs/sensitivity_workflow.md)。
 
@@ -62,6 +63,12 @@
     <td><img src="docs/screenshots/dashboard-home.png" alt="Dashboard homepage" width="100%"></td>
     <td><img src="docs/screenshots/paper-brief.png" alt="Paper brief page" width="100%"></td>
     <td><img src="docs/screenshots/dashboard-mobile.png" alt="Dashboard mobile view" width="100%"></td>
+  </tr>
+  <tr>
+    <td colspan="3"><strong>CMA 证据层级与 H7 行业交互</strong></td>
+  </tr>
+  <tr>
+    <td colspan="3"><img src="docs/screenshots/cma-evidence-tiers.png" alt="CMA evidence tiers and H7 interaction detail" width="100%"></td>
   </tr>
 </table>
 
@@ -258,6 +265,7 @@ GitHub Actions 通过 `astral-sh/setup-uv` + `uv sync --extra dev`（按 `uv.loc
 - HS300 RDD 当前 L3 覆盖 2020-11 到 2025-11 共 11 个批次、356 条候选，论文级因果声明需扩展到 ≥10 年（见 [docs/hs300_rdd_l3_collection_audit.md](docs/hs300_rdd_l3_collection_audit.md)）。
 - 7 条 CMA 假说当前为 post-hoc 拟合；预注册基线（PAP + 2026-05-03 verdicts 快照）见 [docs/pre_registration.md](docs/pre_registration.md)；当前 vs 基线的偏离用 `index-inclusion-verdict-summary --vs-pap` 一行查看，dashboard hero 上 PAP 状态 pill 也会标 `基线已锁` / `偏离`。
 - 假说证据强度分层：`core`（H1/H5/H7）vs `supplementary`（H2/H3/H4/H6），见 `cma_hypothesis_verdicts.csv` 的 `evidence_tier` 列。
+- H7 现在同时有描述性 sector spread 与 `cma_h7_sector_interaction.csv` 的 sector×phase/treatment 回归；H2 仍缺 CN 可比 AUM，系统会在 evidence manifest 与 dashboard 卡片上显示 warn。
 - 事件研究除简单 t 外提供 Patell Z 与 BMP t（`results/real_event_study/patell_bmp_summary.csv`）。
 - HS300 RDD 主结果 (`car_m1_p1` τ=3.92%, p=0.048, n=120) 同时跑了完整稳健性面板（main / donut / placebo±0.05 / polynomial），见 `results/literature/hs300_rdd/rdd_robustness.csv` 与首页 forest plot；论文应当报告全套面板而非只引用显著的 main spec。
 

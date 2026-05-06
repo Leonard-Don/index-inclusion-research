@@ -251,6 +251,7 @@ def _build_aum_coverage(root: Path) -> dict[str, str]:
             f"missing or invalid: {_relative_label(path, root=root)}",
         )
     us = frame.loc[frame["market"].astype(str).str.upper() == "US"].copy()
+    cn = frame.loc[frame["market"].astype(str).str.upper() == "CN"].copy()
     if us.empty:
         return _coverage_row(
             "H2_passive_aum",
@@ -259,16 +260,18 @@ def _build_aum_coverage(root: Path) -> dict[str, str]:
             f"{len(frame)} total rows",
             "US AUM rows are required for current H2 trend evidence",
         )
-    years = pd.to_numeric(us["year"], errors="coerce").dropna()
-    year_text = (
-        f"{int(years.min())}-{int(years.max())}" if not years.empty else "unknown years"
-    )
+    years = pd.to_numeric(frame["year"], errors="coerce").dropna()
+    year_text = f"{int(years.min())}-{int(years.max())}" if not years.empty else "unknown years"
+    status = "pass" if len(us) >= 2 and len(cn) >= 2 else "warn"
+    detail = f"{_relative_label(path, root=root)} years {year_text}"
+    if len(cn) < 2:
+        detail += "; CN comparable passive AUM missing, so H2 stays supplementary"
     return _coverage_row(
         "H2_passive_aum",
         "H2 passive AUM",
-        "pass" if len(us) >= 2 else "warn",
-        f"US {len(us)} rows",
-        f"{_relative_label(path, root=root)} years {year_text}",
+        status,
+        f"US {len(us)} rows; CN {len(cn)} rows",
+        detail,
     )
 
 

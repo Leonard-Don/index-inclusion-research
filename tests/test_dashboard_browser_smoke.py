@@ -882,7 +882,7 @@ def test_cross_market_section_renders_in_full_mode() -> None:
             assert hypothesis_rows.count() == 7
 
             collapsibles = section.locator("details.cma-collapsible")
-            assert collapsibles.count() >= 11
+            assert collapsibles.count() >= 12
 
             summaries = [
                 "窗口摘要全集",
@@ -891,6 +891,7 @@ def test_cross_market_section_renders_in_full_mode() -> None:
                 "异质性 · 市值五分位",
                 "异质性 · 流动性五分位",
                 "异质性 · 行业",
+                "H7 行业交互回归",
                 "异质性 · 空窗期分桶",
                 "滚动时序",
                 "结构变点",
@@ -937,6 +938,16 @@ def test_evidence_detail_and_rdd_l3_workbench_pages_render() -> None:
             assert "H6 weight_change" in page.locator("h1").inner_text()
             assert page.locator(".evidence-detail-table:has-text('H6 explanation layer')").count() == 1
             assert page.locator("a[href='/rdd-l3']").count() >= 1
+
+            page.goto(f"{base_url}/evidence/H7_cn_sector", wait_until="domcontentloaded")
+            page.wait_for_load_state("networkidle")
+            assert "H7 CN sector" in page.locator("h1").inner_text()
+            assert (
+                page.locator(
+                    ".evidence-detail-table:has-text('H7 sector interaction regression')"
+                ).count()
+                == 1
+            )
 
             page.goto(f"{base_url}/rdd-l3", wait_until="domcontentloaded")
             page.wait_for_load_state("networkidle")

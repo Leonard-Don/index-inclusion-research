@@ -97,6 +97,38 @@ def test_h6_evidence_detail_exposes_joined_rows_and_explanation(tmp_path: Path) 
     assert tables_by_key["h6_verdict"]["rows"][0]["hid"] == "H6"
 
 
+def test_h7_evidence_detail_includes_sector_interaction(tmp_path: Path) -> None:
+    _write_manifest(tmp_path, "H7_cn_sector")
+    raw = tmp_path / "data" / "raw"
+    tables = tmp_path / "results" / "real_tables"
+    raw.mkdir(parents=True)
+    pd.DataFrame(
+        [
+            {"market": "CN", "ticker": "000001", "sector": "Tech"},
+            {"market": "CN", "ticker": "000002", "sector": "Finance"},
+        ]
+    ).to_csv(raw / "real_events.csv", index=False)
+    pd.DataFrame(
+        [
+            {
+                "market": "US",
+                "status": "pass",
+                "signal": "support",
+                "n_obs": 1882,
+                "joint_p_value": 0.094,
+                "top_term": "effective_x_sector_Industrials",
+            }
+        ]
+    ).to_csv(tables / "cma_h7_sector_interaction.csv", index=False)
+
+    detail = build_evidence_detail("H7_cn_sector", root=tmp_path)
+    tables_by_key = {table["key"]: table for table in detail["tables"]}
+
+    assert detail is not None
+    assert detail["summary_cards"][1]["label"] == "sector interaction"
+    assert tables_by_key["h7_sector_interaction"]["rows"][0]["market"] == "US"
+
+
 def test_rdd_evidence_detail_surfaces_live_status(tmp_path: Path) -> None:
     _write_manifest(tmp_path, "RDD_L3_boundary")
     status_dir = tmp_path / "results" / "literature" / "hs300_rdd"

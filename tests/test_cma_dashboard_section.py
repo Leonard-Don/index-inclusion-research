@@ -254,6 +254,7 @@ def test_section_missing_tables_yield_empty_rows(tmp_path):
             "mechanism_panel": {"columns": [], "rows": []},
             "h6_weight_explanation": {"columns": [], "rows": []},
             "h6_weight_robustness": {"columns": [], "rows": []},
+            "h7_sector_interaction": {"columns": [], "rows": []},
         "heterogeneity_size": {"columns": [], "rows": []},
         "heterogeneity_liquidity": {"columns": [], "rows": []},
         "heterogeneity_sector": {"columns": [], "rows": []},
@@ -375,6 +376,20 @@ def test_section_full_mode_exposes_all_detail_tables(tmp_path):
             }
         ]
     ).to_csv(tables / "cma_h6_weight_explanation.csv", index=False)
+    pd.DataFrame(
+        [
+            {
+                "market": "US",
+                "status": "pass",
+                "signal": "support",
+                "n_obs": 96,
+                "sector_count": 3,
+                "eligible_sectors": "Tech | Finance | Energy",
+                "joint_p_value": 0.03,
+                "top_term": "treatment_x_sector_Tech",
+            }
+        ]
+    ).to_csv(tables / "cma_h7_sector_interaction.csv", index=False)
 
     section = build_cross_market_section(
         tables_dir=tables, figures_dir=figures, mode="full"
@@ -386,6 +401,7 @@ def test_section_full_mode_exposes_all_detail_tables(tmp_path):
         "mechanism_panel",
         "h6_weight_explanation",
         "h6_weight_robustness",
+        "h7_sector_interaction",
         "heterogeneity_size",
         "heterogeneity_liquidity",
         "heterogeneity_sector",
