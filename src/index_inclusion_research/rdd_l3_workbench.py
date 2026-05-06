@@ -9,6 +9,7 @@ from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
 from index_inclusion_research import (
+    dashboard_formatting,
     doctor,
     hs300_rdd,
     hs300_rdd_l3_collection,
@@ -85,9 +86,21 @@ def _defaults(
 
 def _payload_table(frame: pd.DataFrame, *, limit: int = 80) -> dict[str, Any]:
     clean = frame.head(limit).where(pd.notna(frame.head(limit)), None)
+    columns = list(frame.columns)
+    rows = clean.to_dict(orient="records")
     return {
-        "columns": list(frame.columns),
-        "rows": clean.to_dict(orient="records"),
+        "columns": columns,
+        "column_labels": {
+            column: dashboard_formatting.display_column_label(column) for column in columns
+        },
+        "rows": rows,
+        "display_rows": [
+            {
+                column: dashboard_formatting.display_value_label(value)
+                for column, value in row.items()
+            }
+            for row in rows
+        ],
         "total_rows": int(len(frame)),
         "shown_rows": int(min(len(frame), limit)),
     }
@@ -661,6 +674,7 @@ def refresh_online_collection(
         "hint_rows": int(outputs["hint_rows"]),
         "candidate_batches": int(outputs["candidate_batches"] or 0),
         "status": str(outputs["status"]),
+        "status_label": dashboard_formatting.display_status_label(outputs["status"]),
         "written_paths": [_path_payload(Path(path), root=root) for path in written_paths],
         "online_status": build_online_collection_status(root=root),
     }

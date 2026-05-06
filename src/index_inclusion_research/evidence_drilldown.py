@@ -6,7 +6,7 @@ from typing import Any
 
 import pandas as pd
 
-from index_inclusion_research import paths
+from index_inclusion_research import dashboard_formatting, paths
 from index_inclusion_research.analysis.cross_market_asymmetry.h6_robustness import (
     build_h6_weight_joined_frame,
 )
@@ -73,6 +73,17 @@ def _records(frame: pd.DataFrame, *, limit: int = 80) -> list[dict[str, Any]]:
     ]
 
 
+def _display_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {column: dashboard_formatting.display_value_label(value) for column, value in row.items()}
+        for row in records
+    ]
+
+
+def _column_labels(columns: list[str]) -> dict[str, str]:
+    return {column: dashboard_formatting.display_column_label(column) for column in columns}
+
+
 def _table_payload(
     key: str,
     title: str,
@@ -82,12 +93,16 @@ def _table_payload(
     root: Path,
     limit: int = 80,
 ) -> dict[str, Any]:
+    records = _records(frame, limit=limit)
+    columns = list(frame.columns) if not frame.empty else []
     return {
         "key": key,
         "title": title,
         "source_path": _relative_label(source_path, root=root) if source_path else "",
-        "columns": list(frame.columns) if not frame.empty else [],
-        "rows": _records(frame, limit=limit),
+        "columns": columns,
+        "column_labels": _column_labels(columns),
+        "rows": records,
+        "display_rows": _display_records(records),
         "total_rows": int(len(frame)),
         "shown_rows": int(min(len(frame), limit)),
     }
@@ -121,6 +136,7 @@ def _base_detail(root: Path, item: str, manifest: dict[str, Any]) -> dict[str, A
         "item": item,
         "label": str(row.get("label", item) or item),
         "status": str(row.get("status", "")),
+        "status_label": dashboard_formatting.display_status_label(row.get("status", "")),
         "value": str(row.get("value", "")),
         "detail": str(row.get("detail", "")),
         "generated_at": str(manifest.get("generated_at", "")),
@@ -160,10 +176,10 @@ def _detail_h2(detail: dict[str, Any], *, root: Path) -> None:
             .reset_index()
         )
         detail["tables"].append(
-            _table_payload("aum_market_summary", "AUM market summary", summary, root=root)
+            _table_payload("aum_market_summary", "AUM 市场覆盖摘要", summary, root=root)
         )
     detail["tables"].append(
-        _table_payload("passive_aum_rows", "passive_aum.csv preview", frame, source_path=path, root=root)
+        _table_payload("passive_aum_rows", "passive_aum.csv 预览", frame, source_path=path, root=root)
     )
 
 
@@ -199,17 +215,17 @@ def _detail_h6(detail: dict[str, Any], *, root: Path) -> None:
         )
     detail["tables"].extend(
         [
-            _table_payload("matched_weight_events", "matched H6 event rows", joined, root=root, limit=120),
+            _table_payload("matched_weight_events", "H6 已匹配权重事件", joined, root=root, limit=120),
             _table_payload(
                 "h6_weight_explanation",
-                "H6 explanation layer",
+                "H6 权重解释层",
                 _read_csv(explanation_path),
                 source_path=explanation_path,
                 root=root,
             ),
             _table_payload(
                 "h6_weight_robustness",
-                "H6 robustness specs",
+                "H6 稳健性规格",
                 _read_csv(robustness_path),
                 source_path=robustness_path,
                 root=root,
@@ -220,7 +236,7 @@ def _detail_h6(detail: dict[str, Any], *, root: Path) -> None:
     if not verdicts.empty and "hid" in verdicts.columns:
         h6 = verdicts.loc[verdicts["hid"].astype(str) == "H6"]
         detail["tables"].append(
-            _table_payload("h6_verdict", "H6 verdict row", h6, source_path=verdicts_path, root=root)
+            _table_payload("h6_verdict", "H6 裁决行", h6, source_path=verdicts_path, root=root)
         )
 
 
@@ -235,12 +251,12 @@ def _detail_h7(detail: dict[str, Any], *, root: Path) -> None:
     missing_rows = pd.DataFrame({"ticker": missing if isinstance(missing, list) else []})
     interaction = _read_csv(interaction_path)
     detail["summary_cards"].append(
-        {
-            "label": "CN sector coverage",
-            "value": f"{_int_metric(coverage['known'])}/{_int_metric(coverage['total'])}",
-            "detail": f"{_float_metric(coverage['rate']):.1%}",
-        }
-    )
+            {
+                "label": "A股行业覆盖",
+                "value": f"{_int_metric(coverage['known'])}/{_int_metric(coverage['total'])}",
+                "detail": f"覆盖率 {_float_metric(coverage['rate']):.1%}",
+            }
+        )
     if not interaction.empty and {"market", "status", "joint_p_value"}.issubset(interaction.columns):
         best = interaction.copy()
         best["joint_p_value"] = pd.to_numeric(best["joint_p_value"], errors="coerce")
@@ -248,18 +264,21 @@ def _detail_h7(detail: dict[str, Any], *, root: Path) -> None:
         row = best.iloc[0]
         detail["summary_cards"].append(
             {
-                "label": "sector interaction",
-                "value": f"{row.get('market', '')} p={_float_metric(row.get('joint_p_value')):.3f}",
-                "detail": str(row.get("signal", "")),
+                "label": "行业交互回归",
+                "value": (
+                    f"{dashboard_formatting.display_value_label(row.get('market', ''))} "
+                    f"p={_float_metric(row.get('joint_p_value')):.3f}"
+                ),
+                "detail": str(dashboard_formatting.display_value_label(row.get("signal", ""))),
             }
         )
     detail["tables"].append(
-        _table_payload("missing_cn_sector_tickers", "missing CN sector tickers", missing_rows, root=root)
+        _table_payload("missing_cn_sector_tickers", "缺少行业的 A股 ticker", missing_rows, root=root)
     )
     detail["tables"].append(
         _table_payload(
             "h7_sector_interaction",
-            "H7 sector interaction regression",
+            "H7 行业交互回归",
             interaction,
             source_path=interaction_path,
             root=root,
@@ -279,30 +298,30 @@ def _detail_rdd(detail: dict[str, Any], *, root: Path) -> None:
     detail["summary_cards"].extend(
         [
             {
-                "label": "evidence tier",
+                "label": "证据层级",
                 "value": status.get("evidence_tier", ""),
                 "detail": status.get("evidence_status", ""),
             },
             {
-                "label": "active mode",
-                "value": status.get("mode", ""),
+                "label": "当前口径",
+                "value": dashboard_formatting.display_value_label(status.get("mode", "")),
                 "detail": status.get("source_label", ""),
             },
         ]
     )
     detail["tables"].extend(
         [
-            _table_payload("rdd_status", "RDD status", status_frame, source_path=status_path, root=root),
+            _table_payload("rdd_status", "RDD 状态", status_frame, source_path=status_path, root=root),
             _table_payload(
                 "rdd_candidate_batch_audit",
-                "candidate batch audit",
+                "候选样本批次审计",
                 _read_csv(audit_path),
                 source_path=audit_path,
                 root=root,
             ),
         ]
     )
-    detail["notes"].append("L3 只有在 data/raw/hs300_rdd_candidates.csv 为正式候选排名表时才会变为 pass。")
+    detail["notes"].append("L3 只有在 data/raw/hs300_rdd_candidates.csv 为正式候选排名表时才会显示为通过。")
 
 
 def _detail_verdicts(detail: dict[str, Any], *, root: Path) -> None:
@@ -314,10 +333,10 @@ def _detail_verdicts(detail: dict[str, Any], *, root: Path) -> None:
             verdicts["verdict"].astype(str).value_counts().rename_axis("verdict").reset_index(name="count")
         )
         detail["tables"].append(
-            _table_payload("verdict_distribution", "verdict distribution", distribution, root=root)
+            _table_payload("verdict_distribution", "裁决分布", distribution, root=root)
         )
     detail["tables"].append(
-        _table_payload("hypothesis_verdicts", "H1-H7 verdict rows", verdicts, source_path=path, root=root)
+        _table_payload("hypothesis_verdicts", "H1-H7 裁决行", verdicts, source_path=path, root=root)
     )
 
 
@@ -354,10 +373,10 @@ def _detail_match_robustness(detail: dict[str, Any], *, root: Path) -> None:
         best = ranked.iloc[0]
         detail["summary_cards"].append(
             {
-                "label": "best spec",
+                "label": "最佳规格",
                 "value": str(best.get("spec_id", "")),
                 "detail": (
-                    f"over={int(float(best['_over_sort']))}; "
+                    f"超阈值={int(float(best['_over_sort']))}；"
                     f"max|SMD|={float(best['_max_abs_sort']):.3f}"
                 ),
             }
@@ -368,29 +387,29 @@ def _detail_match_robustness(detail: dict[str, Any], *, root: Path) -> None:
                 row = default.iloc[0]
                 detail["summary_cards"].append(
                     {
-                        "label": "default spec",
+                        "label": "默认规格",
                         "value": str(row.get("spec_id", "")),
                         "detail": (
-                            f"over={int(row.get('over_threshold_covariates', 0))}; "
+                            f"超阈值={int(row.get('over_threshold_covariates', 0))}；"
                             f"max|SMD|={float(row.get('max_abs_smd', 0.0)):.3f}"
                         ),
                     }
                 )
         detail["summary_cards"].append(
-            {"label": "spec count", "value": str(len(grid)), "detail": "local grid"}
+            {"label": "规格数", "value": str(len(grid)), "detail": "本地稳健性网格"}
         )
     detail["tables"].extend(
         [
             _table_payload(
                 "match_robustness_grid",
-                "match robustness grid",
+                "匹配稳健性规格表",
                 grid,
                 source_path=grid_path,
                 root=root,
             ),
             _table_payload(
                 "match_robustness_balance",
-                "match robustness balance rows",
+                "匹配稳健性平衡行",
                 _read_csv(balance_path),
                 source_path=balance_path,
                 root=root,
@@ -398,7 +417,7 @@ def _detail_match_robustness(detail: dict[str, Any], *, root: Path) -> None:
             ),
             _table_payload(
                 "default_match_balance",
-                "default match balance",
+                "默认匹配平衡",
                 _read_csv(default_balance_path),
                 source_path=default_balance_path,
                 root=root,
@@ -406,7 +425,7 @@ def _detail_match_robustness(detail: dict[str, Any], *, root: Path) -> None:
         ]
     )
     detail["notes"].append(
-        "This robustness page is local-only: it reuses the matched-event sample and local price history; no web collection is performed."
+        "该稳健性页只使用本地匹配样本和本地价格历史，不会触发线上采集。"
     )
 
 
@@ -415,7 +434,7 @@ def _detail_doctor(detail: dict[str, Any], manifest: dict[str, Any], *, root: Pa
     checks = doctor_payload.get("checks", []) if isinstance(doctor_payload, dict) else []
     frame = pd.DataFrame(checks if isinstance(checks, list) else [])
     _add_source(detail, root / "results" / "real_tables" / "evidence_refresh_manifest.json", root=root)
-    detail["tables"].append(_table_payload("doctor_checks", "doctor checks", frame, root=root))
+    detail["tables"].append(_table_payload("doctor_checks", "项目健康检查明细", frame, root=root))
 
 
 DETAIL_BUILDERS = {

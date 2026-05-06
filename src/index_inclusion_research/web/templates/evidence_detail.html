@@ -12,7 +12,7 @@
     <nav class="evidence-topbar" aria-label="证据明细导航">
       <a href="{{ url_for('home', mode='full', _anchor='cross_market_asymmetry') }}">首页总览</a>
       <a href="{{ url_for('show_rdd_l3_workbench') }}">RDD L3 工作台</a>
-      <a href="{{ url_for('evidence_api', item=detail.item) }}">JSON</a>
+      <a href="{{ url_for('evidence_api', item=detail.item) }}">接口 JSON</a>
     </nav>
 
     <section class="section evidence-hero">
@@ -26,14 +26,14 @@
       <div class="evidence-summary-grid">
         <article class="result-card evidence-summary-card" data-status="{{ detail.status }}">
           <div class="table-label">状态</div>
-          <strong>{{ detail.status }}</strong>
+          <strong>{{ detail.status_label or detail.status }}</strong>
           <p>{{ detail.value }}</p>
         </article>
         {% if detail.generated_at %}
         <article class="result-card evidence-summary-card">
           <div class="table-label">生成时间</div>
           <strong>{{ detail.generated_at }}</strong>
-          <p>来自 evidence_refresh_manifest.json</p>
+          <p>来自证据刷新清单</p>
         </article>
         {% endif %}
         {% for card in detail.summary_cards %}
@@ -50,7 +50,7 @@
     <section class="section evidence-section-compact">
       <div class="section-head">
         <div>
-          <div class="section-kicker">Artifact</div>
+          <div class="section-kicker">证据来源</div>
           <h2>来源文件</h2>
         </div>
       </div>
@@ -89,11 +89,11 @@
           <table>
             <thead>
               <tr>
-                {% for col in table.columns %}<th>{{ col }}</th>{% endfor %}
+                {% for col in table.columns %}<th>{{ table.column_labels.get(col, col) }}</th>{% endfor %}
               </tr>
             </thead>
             <tbody>
-              {% for row in table.rows %}
+              {% for row in table.display_rows %}
               <tr>
                 {% for col in table.columns %}
                 <td>

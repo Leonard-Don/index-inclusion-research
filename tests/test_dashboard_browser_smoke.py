@@ -869,7 +869,7 @@ def test_cross_market_section_renders_in_full_mode() -> None:
             evidence_cards = section.locator(".cma-evidence-card")
             assert evidence_cards.count() >= 2
             h6_evidence = section.locator(
-                ".cma-evidence-card:has-text('H6 weight_change')"
+                ".cma-evidence-card:has-text('H6 权重变化')"
             )
             assert h6_evidence.count() == 1
             assert h6_evidence.first.get_attribute("href") == "/evidence/H6_weight_change"
@@ -935,16 +935,16 @@ def test_evidence_detail_and_rdd_l3_workbench_pages_render() -> None:
                 wait_until="domcontentloaded",
             )
             page.wait_for_load_state("networkidle")
-            assert "H6 weight_change" in page.locator("h1").inner_text()
-            assert page.locator(".evidence-detail-table:has-text('H6 explanation layer')").count() == 1
+            assert "H6 权重变化" in page.locator("h1").inner_text()
+            assert page.locator(".evidence-detail-table:has-text('H6 权重解释层')").count() == 1
             assert page.locator("a[href='/rdd-l3']").count() >= 1
 
             page.goto(f"{base_url}/evidence/H7_cn_sector", wait_until="domcontentloaded")
             page.wait_for_load_state("networkidle")
-            assert "H7 CN sector" in page.locator("h1").inner_text()
+            assert "H7 A股行业覆盖" in page.locator("h1").inner_text()
             assert (
                 page.locator(
-                    ".evidence-detail-table:has-text('H7 sector interaction regression')"
+                    ".evidence-detail-table:has-text('H7 行业交互回归')"
                 ).count()
                 == 1
             )
@@ -1008,7 +1008,7 @@ def test_sensitivity_threshold_chip_flips_verdict_card_strips() -> None:
                 "#hypothesis-H2 .cma-verdict-sensitivity"
             )
             assert h2_strip.get_attribute("data-sensitivity") == "na"
-            assert "不在 sweep" in h2_strip.inner_text()
+            assert "不参与阈值切换" in h2_strip.inner_text()
 
             # ── Live click: pick 0.20, expect grid attr to flip ──
             chip_020 = nav.locator(

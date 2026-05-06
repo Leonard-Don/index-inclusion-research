@@ -18,6 +18,7 @@ from pathlib import Path
 import pandas as pd
 
 from index_inclusion_research import doctor, paths
+from index_inclusion_research.dashboard_formatting import display_status_label
 from index_inclusion_research.rebuild_all import PipelineStep, filter_steps, run_step
 
 ROOT = paths.project_root()
@@ -234,6 +235,7 @@ def _coverage_row(
         "item": item,
         "label": label,
         "status": status,
+        "status_label": display_status_label(status),
         "value": value,
         "detail": detail,
     }
@@ -245,32 +247,32 @@ def _build_aum_coverage(root: Path) -> dict[str, str]:
     if frame.empty or not {"market", "year", "aum_trillion"}.issubset(frame.columns):
         return _coverage_row(
             "H2_passive_aum",
-            "H2 passive AUM",
+            "H2 被动 AUM",
             "missing",
-            "0 rows",
-            f"missing or invalid: {_relative_label(path, root=root)}",
+            "0 行",
+            f"缺少或格式不正确：{_relative_label(path, root=root)}",
         )
     us = frame.loc[frame["market"].astype(str).str.upper() == "US"].copy()
     cn = frame.loc[frame["market"].astype(str).str.upper() == "CN"].copy()
     if us.empty:
         return _coverage_row(
             "H2_passive_aum",
-            "H2 passive AUM",
+            "H2 被动 AUM",
             "warn",
-            f"{len(frame)} total rows",
-            "US AUM rows are required for current H2 trend evidence",
+            f"共 {len(frame)} 行",
+            "当前 H2 趋势证据需要美国被动 AUM 行。",
         )
     years = pd.to_numeric(frame["year"], errors="coerce").dropna()
-    year_text = f"{int(years.min())}-{int(years.max())}" if not years.empty else "unknown years"
+    year_text = f"{int(years.min())}-{int(years.max())}" if not years.empty else "年份未知"
     status = "pass" if len(us) >= 2 and len(cn) >= 2 else "warn"
-    detail = f"{_relative_label(path, root=root)} years {year_text}"
+    detail = f"{_relative_label(path, root=root)} 覆盖 {year_text}"
     if len(cn) < 2:
-        detail += "; CN comparable passive AUM missing, so H2 stays supplementary"
+        detail += "；缺少 A股可比被动 AUM，H2 仍保持附录层级"
     return _coverage_row(
         "H2_passive_aum",
-        "H2 passive AUM",
+        "H2 被动 AUM",
         status,
-        f"US {len(us)} rows; CN {len(cn)} rows",
+        f"美国 {len(us)} 行；A股 {len(cn)} 行",
         detail,
     )
 
@@ -288,22 +290,27 @@ def _build_h6_coverage(root: Path, tables_dir: Path) -> dict[str, str]:
         )
     robustness = _read_csv(tables_dir / "cma_h6_weight_robustness.csv")
     matched = None
-    detail_bits = [f"weight rows CN={cn_rows}"]
+    detail_bits = [f"A股权重行={cn_rows}"]
     if not robustness.empty and {"test", "n_obs"}.issubset(robustness.columns):
         coverage = robustness.loc[robustness["test"].astype(str) == "coverage"]
         if not coverage.empty:
             matched = int(coverage.iloc[0].get("n_obs", 0) or 0)
-            detail_bits.append(str(coverage.iloc[0].get("detail", "")))
+            detail_bits.append(
+                str(coverage.iloc[0].get("detail", ""))
+                .replace("matched events=", "匹配事件=")
+                .replace("unique tickers=", "股票数=")
+                .replace("; ", "；")
+            )
     status = "pass" if cn_rows > 0 and (matched or 0) > 0 else "warn"
-    value = f"CN rows={cn_rows}"
+    value = f"A股权重 {cn_rows} 行"
     if matched is not None:
-        value += f"; matched={matched}"
+        value += f"；匹配 {matched} 个事件"
     return _coverage_row(
         "H6_weight_change",
-        "H6 weight_change",
+        "H6 权重变化",
         status,
         value,
-        "; ".join(bit for bit in detail_bits if bit),
+        "；".join(bit for bit in detail_bits if bit),
     )
 
 
@@ -316,10 +323,10 @@ def _build_h7_coverage(root: Path) -> dict[str, str]:
     missing_preview = ", ".join(list(missing)[:5]) if isinstance(missing, list) else ""
     return _coverage_row(
         "H7_cn_sector",
-        "H7 CN sector",
+        "H7 A股行业覆盖",
         "pass" if total and rate >= 0.95 else "warn",
         f"{known}/{total} ({rate:.1%})",
-        f"missing tickers: {missing_preview}" if missing_preview else "CN sectors usable",
+        f"缺少行业 ticker：{missing_preview}" if missing_preview else "A股行业字段可用于 H7",
     )
 
 
@@ -332,7 +339,7 @@ def _build_rdd_coverage(root: Path) -> dict[str, str]:
             "RDD_L3_boundary",
             "HS300 RDD L3",
             "pass",
-            f"formal rows={rows}",
+            f"正式样本 {rows} 行",
             _relative_label(formal, root=root),
         )
     if reconstructed.exists():
@@ -341,19 +348,19 @@ def _build_rdd_coverage(root: Path) -> dict[str, str]:
             "RDD_L3_boundary",
             "HS300 RDD L3",
             "warn",
-            f"fallback rows={rows}",
+            f"公开重建样本 {rows} 行",
             (
-                "formal boundary file missing; active public reconstructed sample: "
+                "缺少正式边界文件；当前使用公开重建样本："
                 f"{_relative_label(reconstructed, root=root)}"
             ),
         )
     return _coverage_row(
         "RDD_L3_boundary",
-        "HS300 RDD L3",
-        "missing",
-        "0 rows",
-        "no formal or reconstructed HS300 candidate file found",
-    )
+            "HS300 RDD L3",
+            "missing",
+            "0 行",
+            "未找到正式或公开重建的 HS300 候选样本文件",
+        )
 
 
 def _build_verdict_coverage(tables_dir: Path, *, root: Path = ROOT) -> dict[str, str]:
@@ -362,21 +369,21 @@ def _build_verdict_coverage(tables_dir: Path, *, root: Path = ROOT) -> dict[str,
     if verdicts.empty or "verdict" not in verdicts.columns:
         return _coverage_row(
             "CMA_verdicts",
-            "CMA verdicts",
+            "CMA 假说裁决",
             "missing",
-            "0 rows",
-            f"missing or invalid: {_relative_label(path, root=root)}",
+            "0 行",
+            f"缺少或格式不正确：{_relative_label(path, root=root)}",
         )
     order = ["支持", "部分支持", "证据不足", "待补数据"]
     counts = verdicts["verdict"].astype(str).value_counts().to_dict()
-    value = "; ".join(f"{label}={int(counts.get(label, 0))}" for label in order)
+    value = "；".join(f"{label} {int(counts.get(label, 0))}" for label in order)
     pending = int(counts.get("待补数据", 0))
     return _coverage_row(
         "CMA_verdicts",
-        "CMA verdicts",
+        "CMA 假说裁决",
         "pass" if pending == 0 and len(verdicts) >= 7 else "warn",
         value,
-        f"{len(verdicts)} H-row verdicts under {_relative_label(tables_dir, root=root)}",
+        f"{_relative_label(tables_dir, root=root)} 下共有 {len(verdicts)} 条 H1-H7 裁决",
     )
 
 
@@ -386,10 +393,10 @@ def _build_match_robustness_coverage(root: Path) -> dict[str, str]:
     if grid.empty or "spec_id" not in grid.columns:
         return _coverage_row(
             "Match_robustness",
-            "Match robustness",
+            "匹配稳健性",
             "missing",
-            "0 specs",
-            f"missing or invalid: {_relative_label(path, root=root)}",
+            "0 个规格",
+            f"缺少或格式不正确：{_relative_label(path, root=root)}",
         )
     over_source = (
         grid["over_threshold_covariates"]
@@ -417,19 +424,19 @@ def _build_match_robustness_coverage(root: Path) -> dict[str, str]:
         if "is_default" in grid.columns
         else pd.DataFrame()
     )
-    detail_bits = [f"specs={len(grid)}"]
+    detail_bits = [f"规格数={len(grid)}"]
     if not default.empty:
         row = default.iloc[0]
         detail_bits.append(
-            "default="
-            f"{row.get('spec_id')} over={int(row.get('over_threshold_covariates', 0))}"
+            "默认规格="
+            f"{row.get('spec_id')}；超阈值={int(row.get('over_threshold_covariates', 0))}"
         )
     return _coverage_row(
         "Match_robustness",
-        "Match robustness",
+        "匹配稳健性",
         "pass" if best_over == 0 else "warn",
-        f"best={best.get('spec_id')}; over={best_over}; max|SMD|={best_max:.3f}",
-        "; ".join(detail_bits),
+        f"最佳规格 {best.get('spec_id')}；超阈值 {best_over}；max|SMD| {best_max:.3f}",
+        "；".join(detail_bits),
     )
 
 
@@ -454,10 +461,10 @@ def build_evidence_manifest(
         _build_match_robustness_coverage(root),
         _coverage_row(
             "doctor",
-            "doctor",
+            "项目健康检查",
             doctor_status,
-            f"{summary['pass']} pass / {summary['warn']} warn / {summary['fail']} fail",
-            f"{summary['total']} checks total",
+            f"{summary['pass']} 通过 / {summary['warn']} 警告 / {summary['fail']} 失败",
+            f"共 {summary['total']} 项检查",
         ),
     ]
     return {
