@@ -426,7 +426,7 @@ def display_value_label(value: object) -> object:
     if value is None:
         return None
     try:
-        if pd.isna(value):
+        if pd.isna(value):  # type: ignore[call-overload]
             return None
     except (TypeError, ValueError):
         pass

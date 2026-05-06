@@ -41,7 +41,7 @@ def build_event_sample(events: pd.DataFrame, duplicate_window_days: int = 30) ->
                 announce_gap = abs((row["announce_date"] - previous_announce).days)
                 effective_gap = abs((row["effective_date"] - previous_effective).days)
                 if min(announce_gap, effective_gap) <= duplicate_window_days:
-                    prepared.loc[index, "has_nearby_event_conflict"] = True
+                    prepared.loc[index, "has_nearby_event_conflict"] = True  # type: ignore[index]
             previous_announce = row["announce_date"]
             previous_effective = row["effective_date"]
 

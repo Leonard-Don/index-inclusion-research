@@ -105,14 +105,14 @@ def _relative_label(path: Path, *, root: Path = ROOT) -> str:
 
 
 def _is_missing_text(value: object) -> bool:
-    if value is None or pd.isna(value):
+    if value is None or pd.isna(value):  # type: ignore[call-overload]
         return True
     text = str(value).strip().lower()
     return text in {"", "nan", "none", "<na>", "unknown"}
 
 
 def _float_metric(value: object, default: float = 0.0) -> float:
-    if value is None or pd.isna(value):
+    if value is None or pd.isna(value):  # type: ignore[call-overload]
         return default
     try:
         return float(str(value))
@@ -121,7 +121,7 @@ def _float_metric(value: object, default: float = 0.0) -> float:
 
 
 def _int_metric(value: object, default: int = 0) -> int:
-    if value is None or pd.isna(value):
+    if value is None or pd.isna(value):  # type: ignore[call-overload]
         return default
     try:
         return int(float(str(value)))
@@ -488,7 +488,7 @@ def write_evidence_manifest(
     json_path.parent.mkdir(parents=True, exist_ok=True)
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     json_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
-    pd.DataFrame(manifest.get("coverage", [])).to_csv(csv_path, index=False)
+    pd.DataFrame(manifest.get("coverage", [])).to_csv(csv_path, index=False)  # type: ignore[call-overload]
     return json_path, csv_path
 
 

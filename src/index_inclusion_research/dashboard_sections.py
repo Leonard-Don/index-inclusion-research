@@ -537,7 +537,7 @@ def build_limits_section(
             )
         else:
             insert_at = identification_scope.columns.get_loc("证据状态")
-            identification_scope.insert(insert_at, "证据等级", derived_tier)
+            identification_scope.insert(insert_at, "证据等级", derived_tier)  # type: ignore[arg-type]
     data_sources = current_snapshot.csv("results", "real_tables", "data_sources.csv")
     sample_scope = current_snapshot.csv("results", "real_tables", "sample_scope.csv")
     diagnostics = current_snapshot.csv("results", "real_regressions", "match_diagnostics.csv")

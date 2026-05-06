@@ -158,14 +158,14 @@ def prepare_candidate_frame(
         string_mask = work[column].astype("string").str.strip().eq("").fillna(False)
         mask = mask | string_mask
         if mask.any():
-            work.loc[mask, column] = value
+            work.loc[mask, column] = value  # type: ignore[call-overload]
             defaults_applied.append(column)
 
     if "batch_id" not in work.columns and "announce_date" in work.columns:
         announce_dates = pd.to_datetime(work["announce_date"], errors="coerce", format="mixed").dropna()
         unique_dates = announce_dates.dt.normalize().unique()
         if len(unique_dates) == 1:
-            work["batch_id"] = pd.Timestamp(unique_dates[0]).strftime("%Y-%m-%d")
+            work["batch_id"] = pd.Timestamp(unique_dates[0]).strftime("%Y-%m-%d")  # type: ignore[arg-type]
             derived_fields.append("batch_id")
 
     for column in ["batch_id", "market", "index_name", "ticker", "security_name", "event_type", "source", "source_url", "note", "sector"]:
@@ -298,7 +298,7 @@ def _column_slug(name: object) -> str:
 
 
 def _clean_numeric_token(value: object) -> object:
-    if value is None or pd.isna(value):
+    if value is None or pd.isna(value):  # type: ignore[call-overload]
         return pd.NA
     if isinstance(value, str):
         cleaned = value.strip().replace(",", "")
@@ -307,7 +307,7 @@ def _clean_numeric_token(value: object) -> object:
 
 
 def _normalize_inclusion_value(value: object) -> object:
-    if value is None or pd.isna(value):
+    if value is None or pd.isna(value):  # type: ignore[call-overload]
         return pd.NA
     if isinstance(value, bool):
         return int(value)

@@ -248,15 +248,15 @@ class DashboardTrackRuntime:
             updated.loc[mask, "证据等级"] = tier
         else:
             insert_at = updated.columns.get_loc("证据状态") if "证据状态" in updated.columns else len(updated.columns)
-            updated.insert(insert_at, "证据等级", pd.NA)
+            updated.insert(insert_at, "证据等级", pd.NA)  # type: ignore[arg-type]
             updated.loc[mask, "证据等级"] = tier
         updated.loc[mask, "证据状态"] = status["evidence_status"]
         updated.loc[mask, "当前口径"] = status["note"]
         if "来源摘要" in updated.columns:
             updated.loc[mask, "来源摘要"] = provenance
         else:
-            insert_at = updated.columns.get_loc("当前口径") + 1 if "当前口径" in updated.columns else len(updated.columns)
-            updated.insert(insert_at, "来源摘要", pd.NA)
+            insert_at = updated.columns.get_loc("当前口径") + 1 if "当前口径" in updated.columns else len(updated.columns)  # type: ignore[assignment,operator]
+            updated.insert(insert_at, "来源摘要", pd.NA)  # type: ignore[arg-type]
             updated.loc[mask, "来源摘要"] = provenance
         return updated
 

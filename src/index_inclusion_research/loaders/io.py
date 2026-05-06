@@ -19,7 +19,7 @@ DELETION_EVENT_TYPES = {"deletion", "removal", "exclusion", "delete", "剔除", 
 
 
 def _infer_inclusion_from_event_type(event_type: object) -> int | None:
-    if event_type is None or pd.isna(event_type):
+    if event_type is None or pd.isna(event_type):  # type: ignore[call-overload]
         return None
     value = str(event_type).strip().lower()
     if value in ADDITION_EVENT_TYPES:

@@ -19,7 +19,7 @@ DEFAULT_PHASES = [
 ]
 
 
-def map_to_trading_date(event_date: pd.Timestamp, trading_dates: Iterable[pd.Timestamp]) -> pd.Timestamp | pd.NaT:
+def map_to_trading_date(event_date: pd.Timestamp, trading_dates: Iterable[pd.Timestamp]) -> pd.Timestamp | pd.NaT:  # type: ignore[valid-type]
     dates = pd.DatetimeIndex(pd.to_datetime(list(trading_dates))).sort_values().unique()
     if len(dates) == 0 or pd.isna(event_date):
         return pd.NaT
@@ -32,14 +32,14 @@ def map_to_trading_date(event_date: pd.Timestamp, trading_dates: Iterable[pd.Tim
 def _build_market_calendars(prices: pd.DataFrame, benchmarks: pd.DataFrame) -> dict[str, pd.DatetimeIndex]:
     calendars: dict[str, pd.DatetimeIndex] = {}
     for market, group in benchmarks.groupby("market"):
-        calendars[market] = pd.DatetimeIndex(group["date"].sort_values().unique())
+        calendars[market] = pd.DatetimeIndex(group["date"].sort_values().unique())  # type: ignore[index]
     for market, group in prices.groupby("market"):
         if market not in calendars:
-            calendars[market] = pd.DatetimeIndex(group["date"].sort_values().unique())
+            calendars[market] = pd.DatetimeIndex(group["date"].sort_values().unique())  # type: ignore[index]
     return calendars
 
 
-def _map_to_ticker_date(event_date: pd.Timestamp, ticker_dates: pd.Series) -> pd.Timestamp | pd.NaT:
+def _map_to_ticker_date(event_date: pd.Timestamp, ticker_dates: pd.Series) -> pd.Timestamp | pd.NaT:  # type: ignore[valid-type]
     return map_to_trading_date(event_date, ticker_dates.tolist())
 
 
@@ -72,7 +72,7 @@ def build_event_panel(
 
         for phase in phases:
             raw_event_date = getattr(event, phase.date_column, pd.NaT)
-            mapped_market_date = map_to_trading_date(raw_event_date, calendars[market])
+            mapped_market_date = map_to_trading_date(raw_event_date, calendars[market])  # type: ignore[arg-type,index]
             mapped_ticker_date = _map_to_ticker_date(mapped_market_date, ticker_prices["date"])
             if pd.isna(mapped_ticker_date):
                 continue
@@ -115,7 +115,7 @@ def build_event_panel(
             else:
                 event_sector = getattr(event, "sector", pd.NA)
                 window_frame["sector"] = window_frame["sector"].where(window_frame["sector"].notna(), event_sector)
-            rows.extend(window_frame.to_dict(orient="records"))
+            rows.extend(window_frame.to_dict(orient="records"))  # type: ignore[arg-type]
 
     if not rows:
         return pd.DataFrame()
