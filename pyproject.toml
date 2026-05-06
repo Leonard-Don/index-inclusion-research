@@ -39,6 +39,7 @@ index-inclusion-reconstruct-hs300-rdd = "index_inclusion_research.cli:run_recons
 index-inclusion-plan-hs300-rdd-l3 = "index_inclusion_research.cli:run_plan_hs300_rdd_l3_main"
 index-inclusion-collect-hs300-rdd-l3 = "index_inclusion_research.cli:run_collect_hs300_rdd_l3_main"
 index-inclusion-prepare-passive-aum = "index_inclusion_research.cli:run_prepare_passive_aum_main"
+index-inclusion-download-passive-aum-cn = "index_inclusion_research.cli:run_download_passive_aum_cn_main"
 index-inclusion-compute-h6-weight-change = "index_inclusion_research.cli:run_compute_h6_weight_change_main"
 index-inclusion-refresh-real-evidence = "index_inclusion_research.cli:run_refresh_real_evidence_main"
 index-inclusion-rebuild-all = "index_inclusion_research.cli:run_rebuild_all_main"
@@ -106,19 +107,6 @@ module = [
 ]
 ignore_missing_imports = true
 
-# Mypy debt baseline: these modules are pandas/numpy-heavy and triggered
-# >130 stub-driven errors. Re-enable and clean up file-by-file — see
-# docs/mypy_rollout.md for the playbook and progress.
-[[tool.mypy.overrides]]
-module = [
-  "index_inclusion_research.research_report",
-  "index_inclusion_research.pipeline.matching",
-  "index_inclusion_research.analysis.cross_market_asymmetry.verdicts._paper",
-  "index_inclusion_research.sample_data",
-  "index_inclusion_research.chart_data",
-  "index_inclusion_research.dashboard_figures",
-]
-ignore_errors = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

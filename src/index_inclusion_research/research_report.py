@@ -66,11 +66,11 @@ def build_report_text(
             lines.append(f"- {phase_name}：当前没有可用结果。")
             continue
         for row in phase_rows.itertuples(index=False):
-            direction = "正向" if row.mean_car > 0 else "负向"
-            significance = "显著" if pd.notna(row.p_value) and row.p_value < 0.10 else "不显著"
+            direction = "正向" if row.mean_car > 0 else "负向"  # type: ignore[operator]
+            significance = "显著" if pd.notna(row.p_value) and row.p_value < 0.10 else "不显著"  # type: ignore[operator]
             lines.append(
-                f"- {row.market} 市场在{phase_name} `CAR[-1,+1]` 的平均值为 `{_fmt(row.mean_car)}`，"
-                f"方向为{direction}，t 值为 `{_fmt(row.t_stat)}`，p 值为 `{_fmt(row.p_value)}`，统计上{significance}。"
+                f"- {row.market} 市场在{phase_name} `CAR[-1,+1]` 的平均值为 `{_fmt(row.mean_car)}`，"  # type: ignore[arg-type]
+                f"方向为{direction}，t 值为 `{_fmt(row.t_stat)}`，p 值为 `{_fmt(row.p_value)}`，统计上{significance}。"  # type: ignore[arg-type]
             )
 
     lines.append("")
@@ -87,11 +87,11 @@ def build_report_text(
             lines.append(f"- {cn_label}：当前没有足够样本支撑回归。")
             continue
         for row in subset.itertuples(index=False):
-            direction = "正相关" if row.coefficient > 0 else "负相关"
-            significance = "显著" if row.p_value < 0.10 else "不显著"
+            direction = "正相关" if row.coefficient > 0 else "负相关"  # type: ignore[operator]
+            significance = "显著" if row.p_value < 0.10 else "不显著"  # type: ignore[operator]
             lines.append(
                 f"- {row.market} 市场 {row.event_phase} 阶段中，处理组变量对 `{row.dependent_variable}` 的系数为 "
-                f"`{_fmt(row.coefficient)}`，表现为{direction}，统计上{significance}。"
+                f"`{_fmt(row.coefficient)}`，表现为{direction}，统计上{significance}。"  # type: ignore[arg-type]
             )
 
     lines.append("")
@@ -126,8 +126,8 @@ def build_report_text(
         lines.append("")
         for row in regression_models.sort_values(["market", "event_phase", "specification"]).itertuples(index=False):
             lines.append(
-                f"- {row.market} {row.event_phase} {row.specification}：样本量 `{int(row.n_obs)}`，"
-                f"R² 为 `{_fmt(row.r_squared)}`。"
+                f"- {row.market} {row.event_phase} {row.specification}：样本量 `{int(row.n_obs)}`，"  # type: ignore[arg-type]
+                f"R² 为 `{_fmt(row.r_squared)}`。"  # type: ignore[arg-type]
             )
 
     return "\n".join(lines) + "\n"

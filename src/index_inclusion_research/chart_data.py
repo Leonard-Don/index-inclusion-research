@@ -36,7 +36,7 @@ def _significance_stars(p_value: float) -> str:
 
 
 def _float_or_none(value: object) -> float | None:
-    if value is None or pd.isna(value):
+    if value is None or pd.isna(value):  # type: ignore[call-overload]
         return None
     try:
         return float(cast(Any, value))
@@ -184,8 +184,8 @@ def build_car_heatmap_chart_data(root: Path) -> dict:
     annotations: list[dict] = []
     for i, row_label in enumerate(row_order):
         for j, window in enumerate(col_order):
-            car = float(heat_matrix.loc[row_label, window])
-            p = float(p_matrix.loc[row_label, window])
+            car = float(heat_matrix.loc[row_label, window])  # type: ignore[arg-type]
+            p = float(p_matrix.loc[row_label, window])  # type: ignore[arg-type]
             data.append([j, i, round(car, 6)])
             annotations.append({
                 "col": j,
@@ -300,11 +300,11 @@ def build_heterogeneity_size_chart_data(root: Path) -> dict:
         )
         series.append(
             {
-                "name": MARKET_LABELS.get(market, market),
+                "name": MARKET_LABELS.get(market, market),  # type: ignore[arg-type]
                 "type": "bar",
                 "data": data,
                 "n_events": n_events,
-                "color": MARKET_COLORS.get(market, "#30424f"),
+                "color": MARKET_COLORS.get(market, "#30424f"),  # type: ignore[arg-type]
                 "market": market,
             }
         )
@@ -519,10 +519,10 @@ def build_event_counts_chart_data(root: Path) -> dict:
         data = [int(by_year.get(year, 0)) for year in years]
         series.append(
             {
-                "name": MARKET_LABELS.get(market, market),
+                "name": MARKET_LABELS.get(market, market),  # type: ignore[arg-type]
                 "type": "bar",
                 "data": data,
-                "color": MARKET_COLORS.get(market, "#30424f"),
+                "color": MARKET_COLORS.get(market, "#30424f"),  # type: ignore[arg-type]
                 "market": market,
             }
         )
@@ -591,12 +591,12 @@ def build_cma_mechanism_heatmap_chart_data(root: Path) -> dict:
             if t_val is None or pd.isna(t_val):
                 continue
             p_float = _float_or_none(p_val)
-            data.append([j, i, round(float(t_val), 3)])
+            data.append([j, i, round(float(t_val), 3)])  # type: ignore[arg-type]
             annotations.append(
                 {
                     "col": j,
                     "row": i,
-                    "t": round(float(t_val), 3),
+                    "t": round(float(t_val), 3),  # type: ignore[arg-type]
                     "p_value": round(p_float, 4) if p_float is not None else None,
                     "stars": _significance_stars(p_float) if p_float is not None else "",
                 }
@@ -639,10 +639,10 @@ def build_cma_gap_length_distribution_chart_data(root: Path) -> dict:
         data = [int(counts.get(length, 0)) for length in lengths]
         series.append(
             {
-                "name": MARKET_LABELS.get(market, market),
+                "name": MARKET_LABELS.get(market, market),  # type: ignore[arg-type]
                 "type": "bar",
                 "data": data,
-                "color": MARKET_COLORS.get(market, "#30424f"),
+                "color": MARKET_COLORS.get(market, "#30424f"),  # type: ignore[arg-type]
                 "market": market,
             }
         )
@@ -784,7 +784,7 @@ def build_rdd_scatter_chart_data(root: Path) -> dict:
     color_map = {0: "#5c6b77", 1: "#a63b28"}
     for inclusion_value, group in df.groupby("inclusion", dropna=False):
         try:
-            inc = int(inclusion_value)
+            inc = int(inclusion_value)  # type: ignore[arg-type]
         except (TypeError, ValueError):
             continue
         points: list[dict] = []

@@ -79,16 +79,16 @@ def _main_finding_block(event_study_summary: pd.DataFrame | None) -> list[str]:
         if isinstance(row, pd.DataFrame):
             row = row.iloc[0]
         cells[(market, phase)] = {
-            "n": int(row["n_events"]),
-            "mean_car": float(row["mean_car"]),
-            "t": float(row["t_stat"]),
-            "p": float(row["p_value"]),
+            "n": int(row["n_events"]),  # type: ignore[call-overload,index]
+            "mean_car": float(row["mean_car"]),  # type: ignore[call-overload,index]
+            "t": float(row["t_stat"]),  # type: ignore[call-overload,index]
+            "p": float(row["p_value"]),  # type: ignore[call-overload,index]
         }
         rows_md.append(
-            f"| {market} | {phase} | {int(row['n_events'])} | "
-            f"{float(row['mean_car']) * 100:+.2f}% | "
-            f"{float(row['t_stat']):.2f} | "
-            f"{float(row['p_value']):.4f} |"
+            f"| {market} | {phase} | {int(row['n_events'])} | "  # type: ignore[call-overload,index]
+            f"{float(row['mean_car']) * 100:+.2f}% | "  # type: ignore[call-overload,index]
+            f"{float(row['t_stat']):.2f} | "  # type: ignore[call-overload,index]
+            f"{float(row['p_value']):.4f} |"  # type: ignore[call-overload,index]
         )
 
     if not rows_md:

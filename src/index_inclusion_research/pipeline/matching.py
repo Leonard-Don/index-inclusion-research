@@ -9,7 +9,7 @@ from .panel import map_to_trading_date
 
 
 def _float_cell(value: object, default: float = float("nan")) -> float:
-    if value is None or pd.isna(value):
+    if value is None or pd.isna(value):  # type: ignore[call-overload]
         return default
     try:
         return float(str(value))
@@ -39,7 +39,7 @@ def _compute_security_snapshot(
         return None
     latest = window.iloc[-1]
     pre_window = window.iloc[:-1]
-    pre_return = (1.0 + pre_window["ret"].fillna(0.0)).prod() - 1.0 if not pre_window.empty else 0.0
+    pre_return = (1.0 + pre_window["ret"].fillna(0.0)).prod() - 1.0 if not pre_window.empty else 0.0  # type: ignore[operator]
     pre_volatility = pre_window["ret"].std(ddof=0) if len(pre_window) > 1 else 0.0
     return {
         "market": market,
@@ -155,8 +155,8 @@ def build_matched_sample(
     for event in treated.itertuples(index=False):
         reference_date = getattr(event, reference_date_column)
         target_snapshot = get_snapshot(
-            market=event.market,
-            ticker=event.ticker,
+            market=event.market,  # type: ignore[arg-type]
+            ticker=event.ticker,  # type: ignore[arg-type]
             reference_date=reference_date,
         )
         if target_snapshot is None:
@@ -174,7 +174,7 @@ def build_matched_sample(
             if candidate_ticker == event.ticker or str(candidate_ticker) in treated_tickers:
                 continue
             candidate_snapshot = get_snapshot(
-                market=event.market,
+                market=event.market,  # type: ignore[arg-type]
                 ticker=candidate_ticker,
                 reference_date=reference_date,
             )
@@ -195,7 +195,7 @@ def build_matched_sample(
         candidate_frame = pd.DataFrame(candidates)
         if (
             sector_filter_mode == "exact_when_available"
-            and pd.notna(target_snapshot.get("sector"))
+            and pd.notna(target_snapshot.get("sector"))  # type: ignore[call-overload]
             and "sector" in candidate_frame
         ):
             sector_candidates = candidate_frame.loc[candidate_frame["sector"] == target_snapshot["sector"]].copy()
@@ -221,7 +221,7 @@ def build_matched_sample(
         )
         sector_candidates = sector_candidates.replace([np.inf, -np.inf], np.nan).dropna(subset=["distance"])
         selected = sector_candidates.nsmallest(num_controls, "distance")
-        if sector_filter_mode == "penalized" and pd.notna(target_snapshot.get("sector")) and not selected.empty:
+        if sector_filter_mode == "penalized" and pd.notna(target_snapshot.get("sector")) and not selected.empty:  # type: ignore[call-overload]
             relaxed_sector = bool((selected["sector"] != target_snapshot["sector"]).any())
 
         diagnostics.append(
@@ -236,7 +236,7 @@ def build_matched_sample(
         for rank, candidate in enumerate(selected.itertuples(index=False), start=1):
             matched_rows.append(
                 {
-                    **event._asdict(),
+                    **event._asdict(),  # type: ignore[operator]
                     "event_id": f"{event.event_id}-ctrl-{rank:02d}",
                     "ticker": candidate.ticker,
                     "treatment_group": 0,
@@ -325,10 +325,10 @@ def compute_covariate_balance(
 
     if "matched_to_event_id" in matched_events.columns:
         has_treated = matched_events.groupby("matched_to_event_id")["treatment_group"].transform(
-            lambda values: (pd.to_numeric(values, errors="coerce") == 1).any()
+            lambda values: (pd.to_numeric(values, errors="coerce") == 1).any()  # type: ignore[attr-defined]
         )
         has_control = matched_events.groupby("matched_to_event_id")["treatment_group"].transform(
-            lambda values: (pd.to_numeric(values, errors="coerce") == 0).any()
+            lambda values: (pd.to_numeric(values, errors="coerce") == 0).any()  # type: ignore[attr-defined]
         )
         matched_events = matched_events.loc[has_treated & has_control].copy()
 
