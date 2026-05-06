@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-06T08:08:48+00:00",
+  "generated_at": "2026-05-06T08:50:55+00:00",
   "root": "/Users/leonardodon/index-inclusion-research",
   "tables_dir": "/Users/leonardodon/index-inclusion-research/results/real_tables",
   "steps": [
@@ -9,20 +9,86 @@
       "detail": "CN sector coverage 268/271 (98.9%)"
     },
     {
+      "slug": "build-event-sample",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 0.102
+    },
+    {
+      "slug": "build-price-panel",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 13.279
+    },
+    {
+      "slug": "match-controls",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 38.59
+    },
+    {
+      "slug": "match-robustness",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 23.353
+    },
+    {
+      "slug": "build-matched-panel",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 33.894
+    },
+    {
+      "slug": "run-event-study",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 3.421
+    },
+    {
+      "slug": "run-regressions",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 7.354
+    },
+    {
+      "slug": "hs300-rdd",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 4.998
+    },
+    {
+      "slug": "compute-h6-weight-change",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 2.179
+    },
+    {
       "slug": "cma",
       "status": "pass",
       "exit_code": 0,
-      "elapsed_sec": 11.636
+      "elapsed_sec": 9.208
+    },
+    {
+      "slug": "make-figures-tables",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 18.573
+    },
+    {
+      "slug": "generate-research-report",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 0.006
     }
   ],
   "coverage": [
     {
       "item": "H2_passive_aum",
       "label": "H2 被动 AUM",
-      "status": "warn",
-      "status_label": "需关注",
-      "value": "美国 16 行；A股 0 行",
-      "detail": "data/raw/passive_aum.csv 覆盖 2010-2025；缺少 A股可比被动 AUM，H2 仍保持附录层级"
+      "status": "pass",
+      "status_label": "通过",
+      "value": "美国 16 行；A股 5 行",
+      "detail": "data/raw/passive_aum.csv 覆盖 2010-2025"
     },
     {
       "item": "H6_weight_change",
@@ -181,7 +247,7 @@
       {
         "name": "console_scripts_importable",
         "status": "pass",
-        "message": "All 28 console_script entry points resolve to callables.",
+        "message": "All 29 console_script entry points resolve to callables.",
         "fix": "",
         "details": []
       },

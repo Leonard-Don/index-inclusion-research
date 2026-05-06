@@ -1,5 +1,5 @@
 item,label,status,status_label,value,detail
-H2_passive_aum,H2 被动 AUM,warn,需关注,美国 16 行；A股 0 行,data/raw/passive_aum.csv 覆盖 2010-2025；缺少 A股可比被动 AUM，H2 仍保持附录层级
+H2_passive_aum,H2 被动 AUM,pass,通过,美国 16 行；A股 5 行,data/raw/passive_aum.csv 覆盖 2010-2025
 H6_weight_change,H6 权重变化,pass,通过,A股权重 736 行；匹配 67 个事件,A股权重行=736；匹配事件=67；股票数=67
 H7_cn_sector,H7 A股行业覆盖,pass,通过,268/271 (98.9%),"缺少行业 ticker：000413, 002411, 600705"
 RDD_L3_boundary,HS300 RDD L3,pass,通过,正式样本 356 行,data/raw/hs300_rdd_candidates.csv
