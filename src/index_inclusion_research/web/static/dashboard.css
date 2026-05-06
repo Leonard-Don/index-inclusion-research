@@ -2721,6 +2721,16 @@
       gap: 12px;
       align-content: start;
     }
+    .cma-verdict-card[data-evidence-tier="core"] {
+      box-shadow:
+        inset 0 3px 0 rgba(15, 92, 110, 0.52),
+        0 14px 32px rgba(28,45,58,0.07);
+    }
+    .cma-verdict-card[data-evidence-tier="supplementary"] {
+      box-shadow:
+        inset 0 3px 0 rgba(195, 106, 45, 0.44),
+        0 14px 32px rgba(28,45,58,0.05);
+    }
     .cma-evidence-coverage {
       margin: 18px 0;
       display: grid;
@@ -3052,8 +3062,15 @@
       font-weight: 800;
       letter-spacing: 0.08em;
     }
-    .cma-verdict-badge {
+    .cma-verdict-badges {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
       flex: 0 0 auto;
+      max-width: 140px;
+    }
+    .cma-verdict-badge {
       padding: 6px 9px;
       border-radius: 999px;
       background: rgba(15, 92, 110, 0.11);
@@ -3074,12 +3091,50 @@
       background: rgba(166, 59, 40, 0.12);
       color: #8d3325;
     }
+    .cma-evidence-tier-badge {
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(15, 92, 110, 0.18);
+      background: rgba(255, 255, 255, 0.62);
+      color: #405163;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .cma-evidence-tier-badge[data-evidence-tier="core"] {
+      border-color: rgba(15, 92, 110, 0.34);
+      background: rgba(15, 92, 110, 0.10);
+      color: #0f5c6e;
+    }
+    .cma-evidence-tier-badge[data-evidence-tier="supplementary"] {
+      border-color: rgba(195, 106, 45, 0.34);
+      background: rgba(195, 106, 45, 0.10);
+      color: #8b5526;
+    }
     .cma-verdict-summary,
     .cma-verdict-metric,
-    .cma-verdict-next {
+    .cma-verdict-next,
+    .cma-verdict-tier-note {
       margin: 0;
       line-height: 1.55;
       overflow-wrap: anywhere;
+    }
+    .cma-verdict-tier-note {
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .cma-verdict-tier-note[data-evidence-tier="core"] {
+      border: 1px solid rgba(15, 92, 110, 0.18);
+      background: rgba(15, 92, 110, 0.07);
+      color: #184653;
+    }
+    .cma-verdict-tier-note[data-evidence-tier="supplementary"] {
+      border: 1px solid rgba(195, 106, 45, 0.22);
+      background: rgba(195, 106, 45, 0.08);
+      color: #74461f;
     }
     .cma-verdict-summary {
       color: #243545;
@@ -3166,6 +3221,17 @@
       background: rgba(92, 107, 119, 0.20);
       border-color: rgba(92, 107, 119, 0.55);
     }
+    .cma-evidence-tier-filter {
+      margin-top: -4px;
+    }
+    .cma-verdict-filter-chip[data-evidence-tier="core"].is-active {
+      background: rgba(15, 92, 110, 0.18);
+      border-color: rgba(15, 92, 110, 0.50);
+    }
+    .cma-verdict-filter-chip[data-evidence-tier="supplementary"].is-active {
+      background: rgba(195, 106, 45, 0.18);
+      border-color: rgba(195, 106, 45, 0.50);
+    }
     /* p-value sensitivity threshold filter (sister of cma-verdict-filter) */
     .cma-sensitivity-threshold-filter {
       display: flex;
@@ -3247,6 +3313,10 @@
     .cma-verdict-grid[data-filter="部分支持"] .cma-verdict-card:not([data-verdict="部分支持"]),
     .cma-verdict-grid[data-filter="证据不足"] .cma-verdict-card:not([data-verdict="证据不足"]),
     .cma-verdict-grid[data-filter="待补数据"] .cma-verdict-card:not([data-verdict="待补数据"]) {
+      display: none;
+    }
+    .cma-verdict-grid[data-filter-tier="core"] .cma-verdict-card:not([data-evidence-tier="core"]),
+    .cma-verdict-grid[data-filter-tier="supplementary"] .cma-verdict-card:not([data-evidence-tier="supplementary"]) {
       display: none;
     }
     .cma-verdict-grid[data-filter-track="price_pressure"]
