@@ -147,6 +147,7 @@
 {% macro render_cma_verdict_cards(payload, mode) -%}
 {% if payload and payload.rows %}
 {% set verdict_tiers_present = payload.rows | map(attribute='verdict') | list | unique | list %}
+{% set evidence_tiers_present = payload.rows | map(attribute='evidence_tier') | list | unique | list %}
 <nav class="cma-verdict-filter" data-active="all" aria-label="按裁决 tier 筛选 verdict 卡片">
   <span class="cma-verdict-filter-label">筛选</span>
   <button type="button" class="cma-verdict-filter-chip is-active" data-filter="all">全部</button>
@@ -155,6 +156,16 @@
     <button type="button" class="cma-verdict-filter-chip" data-filter="{{ tier }}" data-verdict="{{ tier }}">{{ tier }}</button>
     {% endif %}
   {% endfor %}
+</nav>
+<nav class="cma-verdict-filter cma-evidence-tier-filter" data-active="all" aria-label="按正文或附录证据层级筛选 verdict 卡片">
+  <span class="cma-verdict-filter-label">证据层级</span>
+  <button type="button" class="cma-verdict-filter-chip is-active" data-filter-tier="all">全部层级</button>
+  {% if 'core' in evidence_tiers_present %}
+  <button type="button" class="cma-verdict-filter-chip" data-filter-tier="core" data-evidence-tier="core">正文可引用</button>
+  {% endif %}
+  {% if 'supplementary' in evidence_tiers_present %}
+  <button type="button" class="cma-verdict-filter-chip" data-filter-tier="supplementary" data-evidence-tier="supplementary">附录/探索性</button>
+  {% endif %}
 </nav>
 <nav class="cma-sensitivity-threshold-filter" data-active="0.10" aria-label="切换 p 值显著性阈值，实时刷新 H1 / H4 / H5 卡片上的显著性指示">
   <span class="cma-sensitivity-threshold-label">p 阈值</span>
@@ -167,14 +178,29 @@
   {% for verdict in payload.rows %}
   {% set p_is_num = verdict.p_value is number and verdict.p_value == verdict.p_value %}
   {% set p_sig_at_default = p_is_num and verdict.p_value < 0.10 %}
-  <article id="hypothesis-{{ verdict.hid }}" class="result-card cma-verdict-card" data-verdict="{{ verdict.verdict }}" data-track="{{ verdict.track or '' }}" data-p-value="{% if p_is_num %}{{ verdict.p_value }}{% endif %}">
+  {% set evidence_tier = verdict.evidence_tier or 'supplementary' %}
+  <article id="hypothesis-{{ verdict.hid }}" class="result-card cma-verdict-card" data-verdict="{{ verdict.verdict }}" data-evidence-tier="{{ evidence_tier }}" data-track="{{ verdict.track or '' }}" data-p-value="{% if p_is_num %}{{ verdict.p_value }}{% endif %}">
     <div class="cma-verdict-head">
       <div>
         <div class="cma-verdict-id">{{ verdict.hid }}</div>
         <h3>{{ verdict.name_cn }}</h3>
       </div>
-      <span class="cma-verdict-badge">{{ verdict.verdict }}</span>
+      <div class="cma-verdict-badges">
+        <span class="cma-verdict-badge">{{ verdict.verdict }}</span>
+        {% if evidence_tier == 'core' %}
+        <span class="cma-evidence-tier-badge" data-evidence-tier="core">正文可引用</span>
+        {% else %}
+        <span class="cma-evidence-tier-badge" data-evidence-tier="supplementary">附录/探索性</span>
+        {% endif %}
+      </div>
     </div>
+    <p class="cma-verdict-tier-note" data-evidence-tier="{{ evidence_tier }}">
+      {% if evidence_tier == 'core' %}
+      正文主表层级：样本与口径可进入主文，结论仍按当前 verdict 读取。
+      {% else %}
+      附录层级：样本或代理变量仍有限，适合做机制提示，不宜写成主因果结论。
+      {% endif %}
+    </p>
     <p class="cma-verdict-summary">{{ verdict.evidence_summary }}</p>
     {% if verdict.key_label %}
     <div class="cma-verdict-keymetric" data-key="{{ verdict.key_label }}">

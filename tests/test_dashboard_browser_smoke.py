@@ -836,6 +836,34 @@ def test_cross_market_section_renders_in_full_mode() -> None:
 
             verdict_cards = section.locator(".cma-verdict-card")
             assert verdict_cards.count() == 7
+            assert section.locator(".cma-verdict-card[data-evidence-tier='core']").count() == 3
+            assert (
+                section.locator(".cma-verdict-card[data-evidence-tier='supplementary']").count()
+                == 4
+            )
+            evidence_tier_nav = section.locator(".cma-evidence-tier-filter")
+            assert evidence_tier_nav.count() == 1
+            evidence_tier_nav.locator(
+                ".cma-verdict-filter-chip[data-filter-tier='supplementary']"
+            ).click()
+            page.wait_for_function(
+                """
+                () => {
+                    const grid = document.querySelector(".cma-verdict-grid");
+                    return grid?.getAttribute("data-filter-tier") === "supplementary";
+                }
+                """,
+                timeout=5000,
+            )
+            assert (
+                section.locator(
+                    ".cma-verdict-card[data-evidence-tier='supplementary']:visible"
+                ).count()
+                == 4
+            )
+            evidence_tier_nav.locator(
+                ".cma-verdict-filter-chip[data-filter-tier='all']"
+            ).click()
             track_cards = section.locator(".cma-track-card")
             assert track_cards.count() == 3
             evidence_cards = section.locator(".cma-evidence-card")

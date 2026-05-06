@@ -672,9 +672,9 @@ test("refresh request helpers build urls and post payloads with dashboard header
 // ── verdict tier filter ──────────────────────────────────────────────
 
 
-function makeChip(filter) {
+function makeChip(filter, attribute = "data-filter") {
   const listeners = new Map();
-  const attrs = new Map([["data-filter", filter]]);
+  const attrs = new Map([[attribute, filter]]);
   const classes = new Set(filter === "all" ? ["is-active"] : []);
   return {
     listeners,
@@ -942,6 +942,81 @@ test("track filter and tier filter coexist independently on the same grid", () =
   cards[2].click();
   assert.equal(grid.getAttribute("data-filter-track"), null);
   assert.equal(grid.getAttribute("data-filter"), "证据不足");
+});
+
+
+test("evidence tier filter writes data-filter-tier without clearing verdict filter", () => {
+  const coreChip = makeChip("core", "data-filter-tier");
+  coreChip.attrs.set("data-evidence-tier", "core");
+  const allTierChip = makeChip("all", "data-filter-tier");
+  const verdictChip = makeChip("支持");
+  const allVerdictChip = makeChip("all");
+  const gridAttrs = new Map([["data-filter", "支持"]]);
+  const grid = {
+    getAttribute(name) {
+      return gridAttrs.get(name) ?? null;
+    },
+    setAttribute(name, value) {
+      gridAttrs.set(name, value);
+    },
+    removeAttribute(name) {
+      gridAttrs.delete(name);
+    },
+  };
+  const tierNavAttrs = new Map();
+  const tierNav = {
+    getAttribute(name) {
+      return tierNavAttrs.get(name) ?? null;
+    },
+    setAttribute(name, value) {
+      tierNavAttrs.set(name, value);
+    },
+    parentElement: {
+      querySelector(selector) {
+        return selector === ".cma-verdict-grid" ? grid : null;
+      },
+    },
+    querySelectorAll(selector) {
+      return selector === ".cma-verdict-filter-chip"
+        ? [allTierChip, coreChip]
+        : [];
+    },
+  };
+  const verdictNav = {
+    setAttribute() {},
+    parentElement: {
+      querySelector(selector) {
+        return selector === ".cma-verdict-grid" ? grid : null;
+      },
+    },
+    querySelectorAll(selector) {
+      return selector === ".cma-verdict-filter-chip"
+        ? [allVerdictChip, verdictChip]
+        : [];
+    },
+  };
+  const fakeDoc = {
+    querySelectorAll(selector) {
+      return selector === ".cma-verdict-filter" ? [verdictNav, tierNav] : [];
+    },
+    querySelector(selector) {
+      return selector === ".cma-verdict-grid" ? grid : null;
+    },
+  };
+  const controller = createVerdictFilterController({ doc: fakeDoc });
+  controller.initialize();
+
+  coreChip.click();
+  assert.equal(grid.getAttribute("data-filter"), "支持");
+  assert.equal(grid.getAttribute("data-filter-tier"), "core");
+  assert.equal(tierNav.getAttribute("data-active"), "core");
+  assert.ok(coreChip.classList.contains("is-active"));
+  assert.ok(!allTierChip.classList.contains("is-active"));
+
+  allTierChip.click();
+  assert.equal(grid.getAttribute("data-filter"), "支持");
+  assert.equal(grid.getAttribute("data-filter-tier"), null);
+  assert.ok(allTierChip.classList.contains("is-active"));
 });
 
 

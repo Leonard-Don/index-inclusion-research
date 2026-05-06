@@ -221,6 +221,31 @@ def test_home_dashboard_full_mode_renders_verdict_card_anchor_ids() -> None:
         assert f'id="hypothesis-{hid}"' in html
 
 
+def test_home_dashboard_full_mode_marks_cma_evidence_tiers() -> None:
+    client = dashboard.app.test_client()
+    response = client.get("/?mode=full")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert 'data-filter-tier="core"' in html
+    assert 'data-filter-tier="supplementary"' in html
+    assert "正文主表层级" in html
+    assert "附录层级" in html
+    assert html.count('data-evidence-tier="core"') >= 6
+    assert html.count('data-evidence-tier="supplementary"') >= 8
+    for hid in ("H1", "H5", "H7"):
+        marker = f'id="hypothesis-{hid}"'
+        card_start = html.index(marker)
+        card_end = html.index("</article>", card_start)
+        assert 'data-evidence-tier="core"' in html[card_start:card_end]
+        assert "正文可引用" in html[card_start:card_end]
+    for hid in ("H2", "H3", "H4", "H6"):
+        marker = f'id="hypothesis-{hid}"'
+        card_start = html.index(marker)
+        card_end = html.index("</article>", card_start)
+        assert 'data-evidence-tier="supplementary"' in html[card_start:card_end]
+        assert "附录/探索性" in html[card_start:card_end]
+
+
 def test_home_dashboard_supports_full_mode() -> None:
     client = dashboard.app.test_client()
     response = client.get("/?mode=full")

@@ -3,9 +3,10 @@
  *
  * Wires click handlers on every ``.cma-verdict-filter-chip`` so that
  * pressing one toggles the matching ``.cma-verdict-grid``'s ``data-filter``
- * attribute. CSS rules in dashboard.css then hide cards whose
- * ``data-verdict`` doesn't match the active tier; pressing "全部" clears
- * the attribute and shows everything again.
+ * or ``data-filter-tier`` attribute. CSS rules in dashboard.css then hide
+ * cards whose ``data-verdict`` or ``data-evidence-tier`` doesn't match the
+ * active filter; pressing "全部" clears the relevant attribute and shows
+ * everything in that dimension again.
  *
  * Stateless beyond the DOM — no localStorage / URL persistence in this
  * cut. Tests inject a fake document via ``createVerdictFilterController(
@@ -46,25 +47,29 @@ export function createVerdictFilterController(options = {}) {
     chips.forEach((chip) => {
       chip.addEventListener("click", (event) => {
         event.preventDefault();
-        const filter = chip.getAttribute("data-filter") || "all";
-        applyFilter({ chips, grid, nav, filter });
+        const isEvidenceTierFilter = chip.getAttribute("data-filter-tier") !== null;
+        const filterAttribute = isEvidenceTierFilter
+          ? "data-filter-tier"
+          : "data-filter";
+        const filter = chip.getAttribute(filterAttribute) || "all";
+        applyFilter({ chips, grid, nav, filter, filterAttribute });
       });
     });
   }
 
-  function applyFilter({ chips, grid, nav, filter }) {
+  function applyFilter({ chips, grid, nav, filter, filterAttribute = "data-filter" }) {
     nav.setAttribute("data-active", filter);
     chips.forEach((chip) => {
-      if ((chip.getAttribute("data-filter") || "") === filter) {
+      if ((chip.getAttribute(filterAttribute) || "") === filter) {
         chip.classList.add(ACTIVE_CLASS);
       } else {
         chip.classList.remove(ACTIVE_CLASS);
       }
     });
     if (filter === "all") {
-      grid.removeAttribute("data-filter");
+      grid.removeAttribute(filterAttribute);
     } else {
-      grid.setAttribute("data-filter", filter);
+      grid.setAttribute(filterAttribute, filter);
     }
   }
 
