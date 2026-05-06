@@ -46,6 +46,7 @@ def test_mode_tabs_for_mode_uses_url_builder_and_allowed_hashes() -> None:
     assert tabs[1]["base_href"] == "/?mode=demo"
     assert tabs[1]["href"] == "/?mode=demo#overview"
     assert "#framework" in tabs[1]["allowed_hashes"]
+    assert "#cross_market_asymmetry" in tabs[1]["allowed_hashes"]
     assert "#robustness" not in tabs[1]["allowed_hashes"]
     assert "#robustness" in tabs[2]["allowed_hashes"]
 
