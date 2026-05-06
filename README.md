@@ -116,7 +116,7 @@ make smoke   # 浏览器 smoke test，需要 Playwright + Chromium
 1. [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)：16 篇文献如何统一映射到当前项目。
 2. [docs/research_delivery_package.md](docs/research_delivery_package.md)：论文 / 答辩交付边界。
 3. [docs/dashboard_architecture.md](docs/dashboard_architecture.md)：dashboard 主干。
-4. [docs/cli_reference.md](docs/cli_reference.md)：28 个 console scripts 的完整说明。
+4. [docs/cli_reference.md](docs/cli_reference.md)：29 个 console scripts 的完整说明。
 5. 启动界面：`index-inclusion-dashboard` → 打开 <http://localhost:5001>。
 
 ## 项目结构
@@ -132,7 +132,7 @@ src/index_inclusion_research/
   pipeline/            样本构建、匹配（含 covariate balance）
   web/templates/+static/
   literature.py / literature_catalog.py / paths.py
-tests/                 638+ 个单元测试 + 浏览器 smoke
+tests/                 657+ 个单元测试 + 浏览器 smoke
 ```
 
 `paths.py` 提供 `paths.project_root()` 与 `paths.results_dir()` 等工具，所有模块都用它读项目根。设置 `INDEX_INCLUSION_ROOT` 环境变量可以覆盖默认根（容器化或并行测试时有用）。
@@ -190,14 +190,14 @@ index-inclusion-refresh-real-evidence                # 真实数据 + evidence m
 index-inclusion-doctor --fail-on-warn                # 严格门禁（warn 也阻断）
 ```
 
-按用途分组（共 28 个 console scripts）：
+按用途分组（共 29 个 console scripts）：
 
 - 数据流水线：`build-event-sample` / `build-price-panel` / `match-controls` / `match-robustness` / `run-event-study` / `run-regressions`
 - 样本数据：`generate-sample-data` / `download-real-data`
 - 报表与图表：`make-figures-tables` / `generate-research-report` / `paper-bundle` / `paper-audit`
 - Dashboard 与三条主线：`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - HS300 RDD 工具链：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`
-- 跨市场不对称 + 假说证据：`cma` / `prepare-passive-aum` / `compute-h6-weight-change` / `refresh-real-evidence`
+- 跨市场不对称 + 假说证据：`cma` / `prepare-passive-aum` / `download-passive-aum-cn` / `compute-h6-weight-change` / `refresh-real-evidence`
 - 总入口：`rebuild-all` / `verdict-summary` / `doctor`
 
 `match-controls` 现在会同时输出 covariate balance 表（`match_balance.csv`，Stuart 2010 SMD）；`doctor` 的 `matched_sample_balance` 检查在 |SMD|≥0.25 时变 warn。`compute_pre_runup_bootstrap_test` 默认按 `announce_date` 做 block bootstrap，`cluster_method` 列记录采样方式。
