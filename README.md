@@ -3,6 +3,9 @@
 [![CI](https://github.com/Leonard-Don/index-inclusion-research/actions/workflows/ci.yml/badge.svg)](https://github.com/Leonard-Don/index-inclusion-research/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%2B-3776AB)
 ![Research](https://img.shields.io/badge/focus-index%20inclusion%20research-1f6feb)
+![Literature](https://img.shields.io/badge/literature-16%20papers-6f42c1)
+![Pipeline](https://img.shields.io/badge/pipeline-10%20steps-0969da)
+![CLI](https://img.shields.io/badge/CLI-29%20commands-2da44e)
 
 `index-inclusion-research` 是一个把指数纳入效应文献、真实样本结果与识别设计放到同一工作流里的实证研究项目。它把 16 篇文献库、3 条研究主线、真实样本表和 HS300 RDD 扩展统一到同一 dashboard 与 CLI 体系，适合：
 
@@ -21,6 +24,13 @@
 - 指数纳入后的上涨是不是只是短期交易冲击？
 - 价格效应会不会只部分回吐，从而支持需求曲线向下倾斜？
 - 不同市场制度和识别方法会不会改变结论，尤其是在中国市场？
+
+## 一屏速览
+
+- **交付形态**：本地 dashboard + CLI + 论文交付包，把文献、样本、图表和结论放在同一 workflow。
+- **证据主线**：短期价格压力、长期需求曲线、制度识别 / 中国市场扩展。
+- **真实样本**：CMA 跨市场 pipeline 已输出 7 条机制假说裁决，并显式标注正文 / 附录边界。
+- **维护门禁**：README、CLI reference、console scripts、pipeline 步数和 paper wording 都有回归 guard。
 
 ## 研究当前结论速览
 
