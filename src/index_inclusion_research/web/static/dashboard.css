@@ -4172,6 +4172,37 @@
     .echart-fallback[hidden] {
       display: none;
     }
+    .cma-figures {
+      align-items: stretch;
+    }
+    .cma-figure {
+      overflow: hidden;
+    }
+    .cma-figure .echart-panel {
+      margin-top: 0;
+    }
+    .cma-figure .echart-fallback {
+      margin-top: 12px;
+      border-radius: 16px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.58);
+      border: 1px solid rgba(24, 33, 43, 0.08);
+    }
+    .cma-figure img {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      border-radius: 14px;
+      background: #fff;
+    }
+    .cma-figure figcaption {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
     @media (max-width: 740px) {
       .echart-container {
         height: 320px;
