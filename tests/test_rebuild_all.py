@@ -56,7 +56,9 @@ def test_default_steps_count_matches_readme_pipeline_claim() -> None:
     )
 
 
-def test_readme_pipeline_badge_matches_default_steps_count() -> None:
+def test_readme_pipeline_badge_matches_default_steps_count(
+    readme_repo_card_badge_lines,
+) -> None:
     """README's shields.io pipeline badge must match ``len(DEFAULT_STEPS)``.
 
     Why: README.md (line 7) renders ``badge/pipeline-10%20steps-…`` as the
@@ -69,19 +71,29 @@ def test_readme_pipeline_badge_matches_default_steps_count() -> None:
     badge would silently keep advertising the stale ``10 steps`` to every
     English reader landing on the project page.
 
-    The ``(?<!\\d)…(?!\\d)`` digit-boundary lookarounds match the literature
-    badge guard's recent count tightening (commit deaa0c5) so a stale
-    ``110%20steps`` or ``10%20steps9`` rendering can never satisfy a naive
-    substring check.
+    The assertion is scoped to the leading README badge block so a duplicate
+    prose or code-block URL later in the file cannot mask a stale repo-card
+    badge.
     """
     expected_count = len(DEFAULT_STEPS)
     pattern = re.compile(
-        rf"badge/pipeline-(?<!\d){expected_count}(?!\d)%20steps-"
+        rf"!\[Pipeline\]\("
+        rf"https://img\.shields\.io/badge/pipeline-"
+        rf"(?<!\d){expected_count}(?!\d)%20steps-"
+        rf"[0-9a-fA-F]+\)"
     )
 
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    pipeline_badges = [
+        line
+        for line in readme_repo_card_badge_lines(readme)
+        if line.startswith("![Pipeline](")
+    ]
 
-    assert pattern.search(readme) is not None, (
+    assert len(pipeline_badges) == 1, (
+        "README.md must render exactly one leading repo-card Pipeline shields.io badge"
+    )
+    assert pattern.fullmatch(pipeline_badges[0]) is not None, (
         f"README.md must render shields.io badge 'pipeline-{expected_count}%20steps' "
         f"(no adjacent digits) to match len(DEFAULT_STEPS)={expected_count}"
     )

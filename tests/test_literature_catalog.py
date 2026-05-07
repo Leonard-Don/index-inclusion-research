@@ -155,7 +155,9 @@ def test_five_camp_framework_is_populated() -> None:
     assert "改善价格发现" in target["核心表述"]
 
 
-def test_readme_literature_badge_matches_paper_library_count() -> None:
+def test_readme_literature_badge_matches_paper_library_count(
+    readme_repo_card_badge_lines,
+) -> None:
     """README's shields.io literature badge must match ``len(PAPER_LIBRARY)``.
 
     Why: README.md (line 6) renders ``badge/literature-16%20papers-…`` as the
@@ -167,18 +169,29 @@ def test_readme_literature_badge_matches_paper_library_count() -> None:
     to 17 papers and the in-code tests were updated, the README badge would
     silently keep lying to anyone landing on the GitHub repo page.
 
-    The ``(?<!\\d)…(?!\\d)`` digit-boundary lookarounds match the recent
-    count-guard tightening (commit deaa0c5) so a stale ``116%20papers`` or
-    ``16%20papers9`` rendering can never satisfy a naive substring check.
+    The assertion is scoped to the leading README badge block so a duplicate
+    prose or code-block URL later in the file cannot mask a stale repo-card
+    badge.
     """
     expected_count = len(PAPER_LIBRARY)
     pattern = re.compile(
-        rf"badge/literature-(?<!\d){expected_count}(?!\d)%20papers-"
+        rf"!\[Literature\]\("
+        rf"https://img\.shields\.io/badge/literature-"
+        rf"(?<!\d){expected_count}(?!\d)%20papers-"
+        rf"[0-9a-fA-F]+\)"
     )
 
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    literature_badges = [
+        line
+        for line in readme_repo_card_badge_lines(readme)
+        if line.startswith("![Literature](")
+    ]
 
-    assert pattern.search(readme) is not None, (
+    assert len(literature_badges) == 1, (
+        "README.md must render exactly one leading repo-card Literature shields.io badge"
+    )
+    assert pattern.fullmatch(literature_badges[0]) is not None, (
         f"README.md must render shields.io badge 'literature-{expected_count}%20papers' "
         f"(no adjacent digits) to match len(PAPER_LIBRARY)={expected_count}"
     )
