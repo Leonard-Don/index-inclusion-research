@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import re
+from pathlib import Path
+
 from index_inclusion_research.literature_catalog import (
     DEEP_ANALYSIS,
     PAPER_LIBRARY,
@@ -18,6 +21,8 @@ from index_inclusion_research.literature_catalog import (
     get_literature_paper,
     list_literature_papers,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_literature_catalog_has_expected_size_and_stance_counts() -> None:
@@ -148,3 +153,32 @@ def test_five_camp_framework_is_populated() -> None:
     meeting = build_literature_meeting_frame()
     target = meeting.loc[meeting["讨论主题"] == "为何识别与价格发现要一起讨论"].iloc[0]
     assert "改善价格发现" in target["核心表述"]
+
+
+def test_readme_literature_badge_matches_paper_library_count() -> None:
+    """README's shields.io literature badge must match ``len(PAPER_LIBRARY)``.
+
+    Why: README.md (line 6) renders ``badge/literature-16%20papers-…`` as the
+    prominent English GitHub-repo-card badge. The existing literature counts
+    that compare against ``16`` (this file's ``len(catalog) == 16`` and
+    test_dashboard_structure's ``"16 篇文献" in html``) only cover code-level
+    frames and dashboard HTML; none of them reads the URL-encoded English
+    message inside the README's shields.io badge. If ``PAPER_LIBRARY`` grew
+    to 17 papers and the in-code tests were updated, the README badge would
+    silently keep lying to anyone landing on the GitHub repo page.
+
+    The ``(?<!\\d)…(?!\\d)`` digit-boundary lookarounds match the recent
+    count-guard tightening (commit deaa0c5) so a stale ``116%20papers`` or
+    ``16%20papers9`` rendering can never satisfy a naive substring check.
+    """
+    expected_count = len(PAPER_LIBRARY)
+    pattern = re.compile(
+        rf"badge/literature-(?<!\d){expected_count}(?!\d)%20papers-"
+    )
+
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert pattern.search(readme) is not None, (
+        f"README.md must render shields.io badge 'literature-{expected_count}%20papers' "
+        f"(no adjacent digits) to match len(PAPER_LIBRARY)={expected_count}"
+    )
