@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -624,6 +625,24 @@ def test_doctor_exit_code_counts_failures_and_strict_warnings() -> None:
     ]
     assert doctor_exit_code(results) == 1
     assert doctor_exit_code(results, fail_on_warn=True) == 2
+
+
+def test_makefile_quality_and_ci_targets_keep_doctor_strict() -> None:
+    """Local quality gates should fail on doctor warnings, not just failures."""
+    makefile = (Path(__file__).resolve().parents[1] / "Makefile").read_text()
+
+    assert re.search(r"^quality:.*\bdoctor-strict\b", makefile, flags=re.MULTILINE)
+    assert re.search(r"^ci:.*\bdoctor-strict\b", makefile, flags=re.MULTILINE)
+    assert "doctor-strict: ## Run project health checks with --fail-on-warn" in makefile
+    assert "index-inclusion-doctor --fail-on-warn" in makefile
+
+
+def test_makefile_paper_targets_run_claim_audit_in_strict_mode() -> None:
+    """Paper bundle/export shortcuts must keep the stricter claim-audit contract."""
+    makefile = (Path(__file__).resolve().parents[1] / "Makefile").read_text()
+
+    assert "python3 -m index_inclusion_research.paper_audit --fail-on-warn" in makefile
+    assert "paper-audit: ## Audit paper claims" in makefile
 
 
 # ── CLI ──────────────────────────────────────────────────────────────
