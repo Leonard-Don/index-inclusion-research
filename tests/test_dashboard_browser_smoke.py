@@ -832,7 +832,82 @@ def test_cross_market_section_renders_in_full_mode() -> None:
             assert figures.count() >= 3
 
             cma_images = section.locator("img[src*='cma_']")
-            assert cma_images.count() >= 3
+            cma_image_count = cma_images.count()
+            assert cma_image_count >= 3
+            for image_index in range(cma_image_count):
+                page.wait_for_function(
+                    """
+                    ({ selector, index }) => {
+                        const img = document.querySelectorAll(selector)[index];
+                        if (!img) {
+                            return false;
+                        }
+                        img.loading = "eager";
+                        img.scrollIntoView({ block: "center", inline: "nearest" });
+                        return img.complete && img.naturalWidth > 0;
+                    }
+                    """,
+                    arg={"selector": "section#cross_market_asymmetry img[src*='cma_']", "index": image_index},
+                    timeout=8000,
+                )
+            cma_chart_metrics = page.evaluate(
+                """
+                () => Array.from(document.querySelectorAll(
+                    "section#cross_market_asymmetry figure.cma-figure"
+                )).map((figure) => {
+                    const img = figure.querySelector("img[src*='cma_']");
+                    const fallback = img?.closest(".echart-fallback");
+                    const panel = figure.querySelector(".echart-panel");
+                    const panelRect = panel?.getBoundingClientRect();
+                    return {
+                        caption: figure.querySelector("figcaption")?.textContent?.trim() || "",
+                        naturalWidth: img?.naturalWidth ?? 0,
+                        naturalHeight: img?.naturalHeight ?? 0,
+                        fallbackHidden: fallback?.hasAttribute("hidden") ?? false,
+                        panelHeight: panelRect?.height ?? 0,
+                    };
+                })
+                """
+            )
+            assert len(cma_chart_metrics) >= 3
+            for metric in cma_chart_metrics:
+                assert metric["naturalWidth"] > 0, metric
+                assert metric["naturalHeight"] > 0, metric
+                if metric["fallbackHidden"]:
+                    assert metric["panelHeight"] >= 160, metric
+
+            page.evaluate(
+                """
+                () => Array.from(document.querySelectorAll(
+                    "section#cross_market_asymmetry .echart-fallback"
+                )).forEach((fallback) => { fallback.hidden = false; })
+                """
+            )
+            cma_fallback_metrics = page.evaluate(
+                """
+                () => Array.from(document.querySelectorAll(
+                    "section#cross_market_asymmetry figure.cma-figure"
+                )).map((figure) => {
+                    const img = figure.querySelector("img[src*='cma_']");
+                    const figureRect = figure.getBoundingClientRect();
+                    const imgRect = img?.getBoundingClientRect();
+                    return {
+                        caption: figure.querySelector("figcaption")?.textContent?.trim() || "",
+                        figureWidth: figureRect.width,
+                        imageWidth: imgRect?.width ?? 0,
+                        imageHeight: imgRect?.height ?? 0,
+                        naturalWidth: img?.naturalWidth ?? 0,
+                        naturalHeight: img?.naturalHeight ?? 0,
+                    };
+                })
+                """
+            )
+            assert len(cma_fallback_metrics) >= 3
+            for metric in cma_fallback_metrics:
+                assert metric["naturalWidth"] > 0, metric
+                assert metric["naturalHeight"] > 0, metric
+                assert metric["imageWidth"] <= metric["figureWidth"] + 1, metric
+                assert metric["imageHeight"] >= 80, metric
 
             verdict_cards = section.locator(".cma-verdict-card")
             assert verdict_cards.count() == 7
