@@ -138,6 +138,62 @@ def test_readme_repo_card_badge_lines_ignores_later_non_leading_badges(
     assert readme_repo_card_badge_lines(readme) == []
 
 
+def test_readme_ci_badge_targets_existing_workflow_file(
+    readme_repo_card_badge_lines,
+) -> None:
+    """README's leading CI badge must stay tied to the actual GitHub Actions workflow.
+
+    Why: README.md (line 3) renders the GitHub Actions badge that most readers
+    use as the first health signal for the project. If the workflow file is
+    renamed or the clickable URL drifts from the image URL, the repo card can
+    quietly advertise a broken or stale CI status while local tests keep
+    passing.
+
+    The assertion is scoped to the leading README badge block so a duplicate
+    prose or code-block URL later in the file cannot mask a stale repo-card
+    badge.
+    """
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    ci_badges = [
+        line
+        for line in readme_repo_card_badge_lines(readme)
+        if line.startswith("[![CI](")
+    ]
+
+    assert len(ci_badges) == 1, (
+        "README.md must render exactly one leading repo-card CI GitHub Actions badge"
+    )
+
+    pattern = re.compile(
+        r"\[!\[CI\]\("
+        r"https://github\.com/(?P<repo>[^/]+/[^/]+)/actions/workflows/"
+        r"(?P<badge_workflow>[^/)]+\.ya?ml)/badge\.svg"
+        r"\)\]\("
+        r"https://github\.com/(?P=repo)/actions/workflows/"
+        r"(?P<link_workflow>[^/)]+\.ya?ml)"
+        r"\)"
+    )
+    match = pattern.fullmatch(ci_badges[0])
+
+    assert match is not None, (
+        "README.md CI badge must use matching GitHub Actions image and target URLs"
+    )
+    assert match.group("badge_workflow") == match.group("link_workflow"), (
+        "README.md CI badge image URL and clickable URL must reference the same workflow file"
+    )
+
+    workflow_relpath = Path(".github") / "workflows" / match.group("badge_workflow")
+    workflow_path = ROOT / workflow_relpath
+    assert workflow_path.is_file(), (
+        f"README.md CI badge must reference an existing workflow file: {workflow_relpath}"
+    )
+
+    workflow_text = workflow_path.read_text(encoding="utf-8")
+    assert re.search(r"^name:\s*[\"']?CI[\"']?\s*$", workflow_text, re.MULTILINE), (
+        f"{workflow_relpath} must keep workflow name 'CI' to match README.md CI badge label"
+    )
+
+
 def test_readme_cli_badge_matches_console_scripts_count(
     readme_repo_card_badge_lines,
 ) -> None:
