@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from index_inclusion_research.rebuild_all import (
     DEFAULT_STEPS,
     PipelineStep,
@@ -9,6 +11,28 @@ from index_inclusion_research.rebuild_all import (
     main,
     run_pipeline,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_default_steps_count_matches_readme_pipeline_claim() -> None:
+    """README and CLI reference both advertise the rebuild step count.
+
+    Why: README.md (line 39, 176) and docs/cli_reference.md (line 11) literally
+    claim '10 步' for ``make rebuild``; if DEFAULT_STEPS grows or shrinks the
+    docs must move with it or readers will pip-install and see a different
+    number than the README promises.
+    """
+    expected = f"{len(DEFAULT_STEPS)} 步"
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    cli_reference = (REPO_ROOT / "docs" / "cli_reference.md").read_text(encoding="utf-8")
+
+    assert (
+        expected in readme
+    ), f"README.md must advertise '{expected}' to match len(DEFAULT_STEPS)={len(DEFAULT_STEPS)}"
+    assert (
+        expected in cli_reference
+    ), f"docs/cli_reference.md must advertise '{expected}' to match len(DEFAULT_STEPS)={len(DEFAULT_STEPS)}"
 
 
 def test_default_steps_are_in_dependency_order() -> None:
