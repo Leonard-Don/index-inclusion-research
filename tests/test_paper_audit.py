@@ -169,3 +169,27 @@ def test_render_audit_json_is_machine_readable(tmp_path: Path) -> None:
 
     assert payload["summary"]["total"] == 6
     assert payload["checks"][0]["claim"]
+
+
+def test_cma_core_audit_warns_when_core_tier_mapping_drifts(tmp_path: Path) -> None:
+    _seed_audit_project(tmp_path)
+    verdicts_path = tmp_path / "results" / "real_tables" / "cma_hypothesis_verdicts.csv"
+    verdicts = pd.read_csv(verdicts_path)
+    verdicts.loc[verdicts["hid"] == "H2", "evidence_tier"] = "core"
+    verdicts.to_csv(verdicts_path, index=False)
+
+    result = paper_audit.audit_cma_core(tmp_path, require_bundle=False)
+
+    assert result.status == "warn"
+    assert "Core hypothesis set" in result.message
+    assert any("H2 · core" in detail for detail in result.details)
+
+
+def test_pap_limitations_audit_fails_when_pre_registration_snapshot_missing(tmp_path: Path) -> None:
+    _seed_audit_project(tmp_path)
+    (tmp_path / "snapshots" / "pre-registration-2026-05-03.csv").unlink()
+
+    result = paper_audit.audit_pap_limitations(tmp_path, require_bundle=False)
+
+    assert result.status == "fail"
+    assert any("pre-registration-2026-05-03.csv" in detail for detail in result.details)
