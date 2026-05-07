@@ -13,6 +13,23 @@ from index_inclusion_research.literature_dashboard import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+README_REPO_CARD_BADGE_LINE_RE = re.compile(
+    r"(?:\[(?:!\[[^\]]+\]\([^)]+\))\]\([^)]+\)|!\[[^\]]+\]\([^)]+\))"
+)
+
+
+def _readme_repo_card_badge_lines(readme: str) -> list[str]:
+    """Return the leading Markdown badge block rendered on the GitHub repo card."""
+    badge_lines: list[str] = []
+    for line in readme.splitlines():
+        if not badge_lines and (not line.strip() or line.startswith("# ")):
+            continue
+        if README_REPO_CARD_BADGE_LINE_RE.fullmatch(line):
+            badge_lines.append(line)
+            continue
+        if badge_lines:
+            break
+    return badge_lines
 
 
 def test_bootstrap_dashboard_paths_resolves_repo_layout() -> None:
@@ -149,16 +166,27 @@ def test_readme_cli_badge_matches_console_scripts_count() -> None:
     The ``(?<!\\d)…(?!\\d)`` digit-boundary lookarounds match the literature
     and pipeline badge guards (commit deaa0c5) so a stale ``129%20commands``
     or ``29%20commands9`` rendering can never satisfy a naive substring check.
+    The assertion is additionally scoped to the leading README badge block so
+    a duplicate prose or code-block URL later in the file cannot mask a stale
+    repo-card badge.
     """
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
     expected_count = len(project["scripts"])
     pattern = re.compile(
-        rf"badge/CLI-(?<!\d){expected_count}(?!\d)%20commands-"
+        rf"!\[CLI\]\("
+        rf"https://img\.shields\.io/badge/CLI-(?<!\d){expected_count}(?!\d)%20commands-"
+        rf"[0-9a-fA-F]+\)"
     )
 
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    cli_badges = [
+        line for line in _readme_repo_card_badge_lines(readme) if line.startswith("![CLI](")
+    ]
 
-    assert pattern.search(readme) is not None, (
+    assert len(cli_badges) == 1, (
+        "README.md must render exactly one leading repo-card CLI shields.io badge"
+    )
+    assert pattern.fullmatch(cli_badges[0]) is not None, (
         f"README.md must render shields.io badge 'CLI-{expected_count}%20commands' "
         f"(no adjacent digits) to match pyproject.toml [project.scripts] count="
         f"{expected_count}"
