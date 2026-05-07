@@ -56,6 +56,37 @@ def test_default_steps_count_matches_readme_pipeline_claim() -> None:
     )
 
 
+def test_readme_pipeline_badge_matches_default_steps_count() -> None:
+    """README's shields.io pipeline badge must match ``len(DEFAULT_STEPS)``.
+
+    Why: README.md (line 7) renders ``badge/pipeline-10%20steps-…`` as the
+    English shields.io badge on the GitHub repo card, sitting next to the
+    already-guarded ``literature-16%20papers`` badge. The existing
+    ``test_default_steps_count_matches_readme_pipeline_claim`` only guards
+    the Chinese ``10 步`` narrative tied to a ``rebuild`` token; it never
+    reads the URL-encoded English badge. If ``DEFAULT_STEPS`` grew to 11
+    and the in-code / Chinese docs were updated, the GitHub repo-card
+    badge would silently keep advertising the stale ``10 steps`` to every
+    English reader landing on the project page.
+
+    The ``(?<!\\d)…(?!\\d)`` digit-boundary lookarounds match the literature
+    badge guard's recent count tightening (commit deaa0c5) so a stale
+    ``110%20steps`` or ``10%20steps9`` rendering can never satisfy a naive
+    substring check.
+    """
+    expected_count = len(DEFAULT_STEPS)
+    pattern = re.compile(
+        rf"badge/pipeline-(?<!\d){expected_count}(?!\d)%20steps-"
+    )
+
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert pattern.search(readme) is not None, (
+        f"README.md must render shields.io badge 'pipeline-{expected_count}%20steps' "
+        f"(no adjacent digits) to match len(DEFAULT_STEPS)={expected_count}"
+    )
+
+
 def test_default_steps_are_in_dependency_order() -> None:
     slugs = [s.slug for s in DEFAULT_STEPS]
     # event-sample must precede price-panel which must precede event-study
