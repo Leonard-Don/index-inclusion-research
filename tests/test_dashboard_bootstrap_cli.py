@@ -13,23 +13,6 @@ from index_inclusion_research.literature_dashboard import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-README_REPO_CARD_BADGE_LINE_RE = re.compile(
-    r"(?:\[(?:!\[[^\]]+\]\([^)]+\))\]\([^)]+\)|!\[[^\]]+\]\([^)]+\))"
-)
-
-
-def _readme_repo_card_badge_lines(readme: str) -> list[str]:
-    """Return the leading Markdown badge block rendered on the GitHub repo card."""
-    badge_lines: list[str] = []
-    for line in readme.splitlines():
-        if not badge_lines and (not line.strip() or line.startswith("# ")):
-            continue
-        if README_REPO_CARD_BADGE_LINE_RE.fullmatch(line):
-            badge_lines.append(line)
-            continue
-        if badge_lines:
-            break
-    return badge_lines
 
 
 def test_bootstrap_dashboard_paths_resolves_repo_layout() -> None:
@@ -147,7 +130,17 @@ def test_console_scripts_count_matches_readme_and_cli_reference_claim() -> None:
     ), f"docs/cli_reference.md must advertise '{expected_phrase}' (with no adjacent digits) to match pyproject.toml [project.scripts]"
 
 
-def test_readme_cli_badge_matches_console_scripts_count() -> None:
+def test_readme_repo_card_badge_lines_ignores_later_non_leading_badges(
+    readme_repo_card_badge_lines,
+) -> None:
+    readme = """# Title\n\nIntro prose before any repo-card badges.\n\n![CLI](https://img.shields.io/badge/CLI-999%20commands-2da44e)\n"""
+
+    assert readme_repo_card_badge_lines(readme) == []
+
+
+def test_readme_cli_badge_matches_console_scripts_count(
+    readme_repo_card_badge_lines,
+) -> None:
     """README's shields.io CLI badge must match pyproject.toml [project.scripts].
 
     Why: README.md (line 8) renders ``badge/CLI-29%20commands-…`` as the third
@@ -180,7 +173,9 @@ def test_readme_cli_badge_matches_console_scripts_count() -> None:
 
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     cli_badges = [
-        line for line in _readme_repo_card_badge_lines(readme) if line.startswith("![CLI](")
+        line
+        for line in readme_repo_card_badge_lines(readme)
+        if line.startswith("![CLI](")
     ]
 
     assert len(cli_badges) == 1, (
