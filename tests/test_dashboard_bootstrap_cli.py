@@ -130,6 +130,41 @@ def test_console_scripts_count_matches_readme_and_cli_reference_claim() -> None:
     ), f"docs/cli_reference.md must advertise '{expected_phrase}' (with no adjacent digits) to match pyproject.toml [project.scripts]"
 
 
+def test_readme_cli_badge_matches_console_scripts_count() -> None:
+    """README's shields.io CLI badge must match pyproject.toml [project.scripts].
+
+    Why: README.md (line 8) renders ``badge/CLI-29%20commands-…`` as the third
+    English shields.io badge on the GitHub repo card, sitting next to the
+    already-guarded ``literature-16%20papers`` (test_literature_catalog) and
+    ``pipeline-10%20steps`` (test_rebuild_all) badges. The existing
+    ``test_console_scripts_count_matches_readme_and_cli_reference_claim`` only
+    guards the Chinese ``29 个 console scripts`` narrative on lines 119 and
+    193; it never reads the URL-encoded English badge. If pyproject.toml
+    gained a 30th ``index-inclusion-*`` script and the in-code / Chinese docs
+    were updated, the GitHub repo-card badge would silently keep advertising
+    the stale ``29 commands`` to every English reader landing on the project
+    page — exactly the failure mode the literature and pipeline badge guards
+    were added to prevent for their respective counts.
+
+    The ``(?<!\\d)…(?!\\d)`` digit-boundary lookarounds match the literature
+    and pipeline badge guards (commit deaa0c5) so a stale ``129%20commands``
+    or ``29%20commands9`` rendering can never satisfy a naive substring check.
+    """
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    expected_count = len(project["scripts"])
+    pattern = re.compile(
+        rf"badge/CLI-(?<!\d){expected_count}(?!\d)%20commands-"
+    )
+
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert pattern.search(readme) is not None, (
+        f"README.md must render shields.io badge 'CLI-{expected_count}%20commands' "
+        f"(no adjacent digits) to match pyproject.toml [project.scripts] count="
+        f"{expected_count}"
+    )
+
+
 def test_track_console_wrappers_delegate_to_expected_package_modules(monkeypatch) -> None:
     calls: list[str] = []
     monkeypatch.setattr(cli, "_run_package_main", lambda module_name: calls.append(module_name))
