@@ -102,6 +102,28 @@ def test_project_metadata_declares_flask_and_console_scripts() -> None:
     )
 
 
+def test_console_scripts_count_matches_readme_and_cli_reference_claim() -> None:
+    """README and CLI reference both advertise the total console-script count.
+
+    Why: README.md (line 119, 193) and docs/cli_reference.md (line 3) literally
+    claim '29 个 console scripts'; if pyproject.toml gains or loses an
+    ``index-inclusion-*`` script the docs must move with it, otherwise the
+    README's grouped list and the reference doc drift out of sync.
+    """
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    expected = f"{len(project['scripts'])} 个 console scripts"
+
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    cli_reference = (ROOT / "docs" / "cli_reference.md").read_text(encoding="utf-8")
+
+    assert (
+        expected in readme
+    ), f"README.md must advertise '{expected}' to match pyproject.toml [project.scripts]"
+    assert (
+        expected in cli_reference
+    ), f"docs/cli_reference.md must advertise '{expected}' to match pyproject.toml [project.scripts]"
+
+
 def test_track_console_wrappers_delegate_to_expected_package_modules(monkeypatch) -> None:
     calls: list[str] = []
     monkeypatch.setattr(cli, "_run_package_main", lambda module_name: calls.append(module_name))
