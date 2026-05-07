@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from index_inclusion_research.rebuild_all import (
@@ -22,17 +23,37 @@ def test_default_steps_count_matches_readme_pipeline_claim() -> None:
     claim '10 步' for ``make rebuild``; if DEFAULT_STEPS grows or shrinks the
     docs must move with it or readers will pip-install and see a different
     number than the README promises.
+
+    The '10 步' claim must additionally appear next to a ``rebuild`` token so
+    that unrelated narrative counts (e.g. '建议按这 4 步看' on README line 46
+    or '流水线 5 步' on cli_reference.md line 52) cannot satisfy the guard
+    when DEFAULT_STEPS happens to land on those values.
     """
-    expected = f"{len(DEFAULT_STEPS)} 步"
+    expected_count = len(DEFAULT_STEPS)
+    expected_phrase = f"{expected_count} 步"
+    # (?<!\d)..(?!\d) prevents the count from being matched inside '210 步'
+    # or '109 步'; '.{0,40}rebuild|rebuild.{0,40}' anchors to the rebuild
+    # context so an unrelated '5 步' navigation tip cannot stand in.
+    rebuild_count_pattern = re.compile(
+        rf"(?:rebuild[^\n]{{0,40}}(?<!\d){expected_count}(?!\d) 步"
+        rf"|(?<!\d){expected_count}(?!\d) 步[^\n]{{0,40}}rebuild)"
+    )
+
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
     cli_reference = (REPO_ROOT / "docs" / "cli_reference.md").read_text(encoding="utf-8")
 
     assert (
-        expected in readme
-    ), f"README.md must advertise '{expected}' to match len(DEFAULT_STEPS)={len(DEFAULT_STEPS)}"
+        rebuild_count_pattern.search(readme) is not None
+    ), (
+        f"README.md must advertise '{expected_phrase}' adjacent to a 'rebuild' "
+        f"token to match len(DEFAULT_STEPS)={expected_count}"
+    )
     assert (
-        expected in cli_reference
-    ), f"docs/cli_reference.md must advertise '{expected}' to match len(DEFAULT_STEPS)={len(DEFAULT_STEPS)}"
+        rebuild_count_pattern.search(cli_reference) is not None
+    ), (
+        f"docs/cli_reference.md must advertise '{expected_phrase}' adjacent to a "
+        f"'rebuild' token to match len(DEFAULT_STEPS)={expected_count}"
+    )
 
 
 def test_default_steps_are_in_dependency_order() -> None:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import sys
 import tomllib
 from pathlib import Path
@@ -111,17 +112,22 @@ def test_console_scripts_count_matches_readme_and_cli_reference_claim() -> None:
     README's grouped list and the reference doc drift out of sync.
     """
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
-    expected = f"{len(project['scripts'])} 个 console scripts"
+    expected_count = len(project["scripts"])
+    expected_phrase = f"{expected_count} 个 console scripts"
+    # Anchor the count with a digit-boundary lookaround so a stale doc that
+    # read '129 个 console scripts' could never silently satisfy a substring
+    # check for '29 个 console scripts' (and vice versa for trailing digits).
+    pattern = re.compile(rf"(?<!\d){expected_count}(?!\d) 个 console scripts")
 
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     cli_reference = (ROOT / "docs" / "cli_reference.md").read_text(encoding="utf-8")
 
     assert (
-        expected in readme
-    ), f"README.md must advertise '{expected}' to match pyproject.toml [project.scripts]"
+        pattern.search(readme) is not None
+    ), f"README.md must advertise '{expected_phrase}' (with no adjacent digits) to match pyproject.toml [project.scripts]"
     assert (
-        expected in cli_reference
-    ), f"docs/cli_reference.md must advertise '{expected}' to match pyproject.toml [project.scripts]"
+        pattern.search(cli_reference) is not None
+    ), f"docs/cli_reference.md must advertise '{expected_phrase}' (with no adjacent digits) to match pyproject.toml [project.scripts]"
 
 
 def test_track_console_wrappers_delegate_to_expected_package_modules(monkeypatch) -> None:
