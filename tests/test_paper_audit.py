@@ -193,3 +193,15 @@ def test_pap_limitations_audit_fails_when_pre_registration_snapshot_missing(tmp_
 
     assert result.status == "fail"
     assert any("pre-registration-2026-05-03.csv" in detail for detail in result.details)
+
+
+def test_rdd_appendix_audit_warns_when_preliminary_wording_dropped(tmp_path: Path) -> None:
+    _seed_audit_project(tmp_path)
+    (tmp_path / "docs" / "research_delivery_package.md").write_text(
+        "RDD: paper-grade main claim.", encoding="utf-8"
+    )
+
+    result = paper_audit.audit_rdd_appendix(tmp_path, require_bundle=False)
+
+    assert result.status == "warn"
+    assert "preliminary" in result.message
