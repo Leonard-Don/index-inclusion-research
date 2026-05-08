@@ -8,6 +8,7 @@ from index_inclusion_research.analysis import (
     build_regression_dataset,
     compute_event_study,
     filter_nonoverlap_event_windows,
+    summarize_market_model_estimation_obs,
     winsorize_event_level_metrics,
 )
 from index_inclusion_research.pipeline import (
@@ -188,6 +189,88 @@ def test_build_event_panel_can_opt_into_market_model_abnormal_returns() -> None:
     assert event_day["market_model_beta"] == pytest.approx(beta)
     assert event_day["ar_market_model"] == pytest.approx(event_shock)
     assert event_day["ar"] != pytest.approx(event_shock)
+
+
+def test_build_event_panel_preserves_market_model_columns_when_no_events_match() -> None:
+    """When ``--include-market-model-ar`` is set but no event row has matching
+    prices/benchmarks, the empty panel must still expose the four market-model
+    columns (``ar_market_model`` / ``market_model_alpha`` / ``market_model_beta``
+    / ``market_model_estimation_obs``).
+
+    Why: commit ``cf3d29c`` already guaranteed those columns on an empty input
+    inside ``compute_market_model_abnormal_returns``. ``build_event_panel``,
+    however, short-circuits with ``pd.DataFrame()`` (zero columns) when no
+    event row produces a window — *before* the helper is invoked. The
+    cf3d29c contract therefore evaporates one layer up: the same
+    ``--include-market-model-ar`` CLI run against a "no events match prices"
+    input collapses the CSV schema to zero columns and forces every
+    downstream consumer (paper bundle, dashboards,
+    ``summarize_market_model_estimation_obs``) to branch on column presence
+    or raise ``KeyError`` on a state that should be a deterministic
+    "no events" rollup.
+
+    Anchor the schema at the pipeline boundary: an opted-in empty panel must
+    be interchangeable with an opted-in populated panel for downstream
+    consumers, including the existing audit helper.
+    """
+    events = pd.DataFrame(
+        [
+            {
+                "market": "CN",
+                "index_name": "CSI300",
+                "ticker": "CN_NO_PRICES",
+                "announce_date": pd.Timestamp("2024-02-09"),
+                "effective_date": pd.Timestamp("2024-02-09"),
+                "event_type": "addition",
+                "sector": "Technology",
+                "inclusion": 1,
+                "treatment_group": 1,
+                "event_id": "missing",
+            }
+        ]
+    )
+    prices = pd.DataFrame(
+        [
+            {
+                "market": "CN",
+                "ticker": "CN_OTHER",
+                "date": pd.Timestamp("2024-02-09"),
+                "close": 100.0,
+                "ret": 0.001,
+                "volume": 1_000_000,
+                "turnover": 0.01,
+                "mkt_cap": 1e9,
+                "sector": "Technology",
+            }
+        ]
+    )
+    benchmarks = pd.DataFrame(
+        [{"market": "CN", "date": pd.Timestamp("2024-02-09"), "benchmark_ret": 0.0005}]
+    )
+
+    panel = build_event_panel(
+        events,
+        prices,
+        benchmarks,
+        window_pre=2,
+        window_post=2,
+        include_market_model_ar=True,
+    )
+
+    expected_columns = {
+        "ar_market_model",
+        "market_model_alpha",
+        "market_model_beta",
+        "market_model_estimation_obs",
+    }
+    assert len(panel) == 0
+    assert expected_columns.issubset(panel.columns), (
+        f"empty panel must still expose market-model columns, got {list(panel.columns)!r}"
+    )
+
+    summary = summarize_market_model_estimation_obs(panel)
+    assert int(summary.iloc[0]["n_events_total"]) == 0
+    assert int(summary.iloc[0]["minimum_estimation_obs"]) == 2
 
 
 def test_matching_skips_missing_market_cap_candidates_without_failing() -> None:

@@ -120,6 +120,15 @@ def build_event_panel(
             rows.extend(window_frame.to_dict(orient="records"))  # type: ignore[arg-type]
 
     if not rows:
+        if include_market_model_ar:
+            from index_inclusion_research.analysis.event_study import (
+                compute_market_model_abnormal_returns,
+            )
+
+            return compute_market_model_abnormal_returns(
+                pd.DataFrame(),
+                estimation_window=market_model_estimation_window,
+            )
         return pd.DataFrame()
 
     panel = pd.DataFrame(rows)
