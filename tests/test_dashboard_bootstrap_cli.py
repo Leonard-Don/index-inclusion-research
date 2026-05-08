@@ -346,6 +346,41 @@ def test_readme_generated_artifact_paths_resolve_to_committed_fixtures() -> None
     )
 
 
+def test_readme_generated_artifact_references_are_not_machine_local() -> None:
+    """Public README artifact refs must never point at one developer's machine."""
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    reference_pattern = re.compile(
+        r"\[[^\]]+\]\((?P<markdown>[^)#?]+)(?:[#?][^)]+)?\)"
+        r"|<img\s+[^>]*\bsrc=\"(?P<img>[^\"]+)\""
+        r"|`(?P<inline>(?:results/|data/processed/|docs/screenshots/|/tmp/|/Users/|/home/|~/|file:)[^`]+)`"
+    )
+    machine_local = re.compile(r"^(?:/tmp/|/Users/|/home/|~/|file:|[A-Za-z]:[\\/])")
+
+    refs: set[str] = set()
+    for match in reference_pattern.finditer(readme):
+        target = next(
+            value for value in match.groupdict().values() if value is not None
+        ).strip()
+        if target.startswith("./"):
+            target = target[2:]
+        refs.add(target)
+
+    intended_relative_refs = {
+        "docs/screenshots/dashboard-home.png",
+        "results/real_tables/research_summary.md",
+    }
+    assert intended_relative_refs.issubset(refs), (
+        "README.md machine-local guard must parse intended relative artifact "
+        f"references; missing {sorted(intended_relative_refs - refs)}"
+    )
+
+    leaked_refs = sorted(ref for ref in refs if machine_local.match(ref))
+    assert leaked_refs == [], (
+        "README.md generated artifact references must use repo-relative paths, "
+        f"not machine-local paths: {leaked_refs}"
+    )
+
+
 def test_track_console_wrappers_delegate_to_expected_package_modules(monkeypatch) -> None:
     calls: list[str] = []
     monkeypatch.setattr(cli, "_run_package_main", lambda module_name: calls.append(module_name))
