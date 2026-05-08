@@ -66,6 +66,63 @@ def test_readme_hypothesis_count_claim_matches_evidence_tier() -> None:
     )
 
 
+def test_readme_h1_h7_verdict_table_tier_column_matches_evidence_tier() -> None:
+    """README's H1..H7 verdict table 写作层级 column must mirror EVIDENCE_TIER per row.
+
+    Why: README.md (lines 39-47) renders the H1..H7 verdict table as the
+    first concrete result GitHub readers see for the CMA pipeline. The
+    table's ``写作层级`` column maps each hypothesis to ``正文 core``
+    (paper main table) or ``附录 supplementary`` (appendix). This is the
+    same per-hypothesis decision encoded in ``EVIDENCE_TIER``
+    (``verdicts._core``), referenced by ``docs/limitations.md §7`` and
+    ``docs/paper_outline_verdicts.md`` as the canonical writing-tier
+    registry.
+
+    The existing ``test_readme_hypothesis_count_claim_matches_evidence_tier``
+    above only pins the COUNT ``7 条机制假说``, not per-row tier values,
+    so a silent mismatch like H7 marked ``supplementary`` in code but
+    ``正文 core`` in the README table — or vice versa — would still pass
+    that test. The leading badge guards (CLI / literature / pipeline /
+    Python / CI) likewise only pin counts or workflow targets, not
+    per-hypothesis tier assignments. This guard pins each row's tier
+    cell to the canonical EVIDENCE_TIER value so the table cannot drift
+    from code.
+
+    Anchoring to ``^\\|\\s*Hn\\s*\\|`` (with ``re.MULTILINE``) and
+    requiring the row to terminate with ``|`` ensures an unrelated
+    ``H1/H5/H7`` mention elsewhere — e.g. the ``core (H1/H5/H7) vs
+    supplementary (H2/H3/H4/H6)`` evidence-strength bullet on README
+    line 281 — cannot masquerade as a verdict-table row.
+    """
+    tier_label = {"core": "正文 core", "supplementary": "附录 supplementary"}
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    for hid, tier in EVIDENCE_TIER.items():
+        expected_label = tier_label[tier]
+        opposite_label = tier_label[
+            "supplementary" if tier == "core" else "core"
+        ]
+        row_pattern = re.compile(
+            rf"^\|\s*{re.escape(hid)}\s*\|.*\|\s*$",
+            re.MULTILINE,
+        )
+        rows = row_pattern.findall(readme)
+        assert len(rows) == 1, (
+            f"README.md must contain exactly one H1..H7 verdict-table row "
+            f"for {hid}; found {len(rows)}: {rows!r}"
+        )
+        row = rows[0]
+        assert expected_label in row, (
+            f"README.md H1..H7 verdict-table row for {hid} must contain "
+            f"'{expected_label}' (写作层级 cell) to match "
+            f"EVIDENCE_TIER[{hid!r}]={tier!r}; row: {row!r}"
+        )
+        assert opposite_label not in row, (
+            f"README.md H1..H7 verdict-table row for {hid} must NOT contain "
+            f"'{opposite_label}' (would contradict "
+            f"EVIDENCE_TIER[{hid!r}]={tier!r}); row: {row!r}"
+        )
+
+
 def test_existing_verdicts_csv_has_tier_after_pipeline_run() -> None:
     """If the live CSV exists, it should carry the tier column."""
     from index_inclusion_research.paths import results_dir
