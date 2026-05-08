@@ -80,17 +80,14 @@ def compute_market_model_abnormal_returns(
     too little/degenerate estimation data receive NaN in ``output_col``. The
     returned frame preserves the input row order and index.
     """
-    if panel.empty:
-        return panel.copy()
-
     work = panel.copy()
-    work[output_col] = np.nan
-    work["market_model_alpha"] = np.nan
-    work["market_model_beta"] = np.nan
-    work["market_model_estimation_obs"] = 0
+    work[output_col] = pd.Series(np.nan, index=work.index, dtype=float)
+    work["market_model_alpha"] = pd.Series(np.nan, index=work.index, dtype=float)
+    work["market_model_beta"] = pd.Series(np.nan, index=work.index, dtype=float)
+    work["market_model_estimation_obs"] = pd.Series(0, index=work.index, dtype=int)
 
     required = {event_id_col, phase_col, relative_day_col, return_col, benchmark_col}
-    if not required.issubset(work.columns):
+    if work.empty or not required.issubset(work.columns):
         return work
 
     row_id_col = "__market_model_row_id"
