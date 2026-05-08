@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from index_inclusion_research.analysis import (
     build_regression_dataset,
@@ -118,6 +119,75 @@ def test_markets_use_separate_benchmarks() -> None:
     us_ar = panel.loc[(panel["market"] == "US") & (panel["relative_day"] == 0), "ar"].iloc[0]
     assert np.isclose(cn_ar, 0.01)
     assert np.isclose(us_ar, 0.01)
+
+
+def test_build_event_panel_can_opt_into_market_model_abnormal_returns() -> None:
+    dates = pd.bdate_range("2024-01-02", periods=10)
+    event_date = dates[6]
+    alpha = 0.001
+    beta = 1.4
+    event_shock = 0.03
+    benchmark_returns = np.linspace(-0.01, 0.012, len(dates))
+    price_rows = []
+    benchmark_rows = []
+    for date, benchmark_ret in zip(dates, benchmark_returns, strict=True):
+        ret = alpha + beta * benchmark_ret + (event_shock if date == event_date else 0.0)
+        price_rows.append(
+            {
+                "market": "CN",
+                "ticker": "CN01",
+                "date": date,
+                "close": 100.0,
+                "ret": ret,
+                "volume": 1_000_000,
+                "turnover": 0.01,
+                "mkt_cap": 1e9,
+                "sector": "Technology",
+            }
+        )
+        benchmark_rows.append({"market": "CN", "date": date, "benchmark_ret": benchmark_ret})
+
+    events = pd.DataFrame(
+        [
+            {
+                "market": "CN",
+                "index_name": "CSI300",
+                "ticker": "CN01",
+                "announce_date": event_date,
+                "effective_date": event_date,
+                "event_type": "addition",
+                "sector": "Technology",
+                "inclusion": 1,
+                "treatment_group": 1,
+                "event_id": "event-1",
+            }
+        ]
+    )
+    prices = pd.DataFrame(price_rows)
+    benchmarks = pd.DataFrame(benchmark_rows)
+
+    default_panel = build_event_panel(events, prices, benchmarks, window_pre=6, window_post=1)
+    assert "ar_market_model" not in default_panel.columns
+
+    market_model_panel = build_event_panel(
+        events,
+        prices,
+        benchmarks,
+        window_pre=6,
+        window_post=1,
+        include_market_model_ar=True,
+        market_model_estimation_window=(-6, -2),
+    )
+
+    assert {"ar_market_model", "market_model_alpha", "market_model_beta"}.issubset(
+        market_model_panel.columns
+    )
+    announce = market_model_panel.loc[market_model_panel["event_phase"] == "announce"]
+    event_day = announce.loc[announce["relative_day"] == 0].iloc[0]
+    assert event_day["market_model_alpha"] == pytest.approx(alpha)
+    assert event_day["market_model_beta"] == pytest.approx(beta)
+    assert event_day["ar_market_model"] == pytest.approx(event_shock)
+    assert event_day["ar"] != pytest.approx(event_shock)
 
 
 def test_matching_skips_missing_market_cap_candidates_without_failing() -> None:

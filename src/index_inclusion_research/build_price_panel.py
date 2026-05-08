@@ -24,6 +24,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--benchmarks", default="", help="Benchmark returns CSV.")
     parser.add_argument("--output", default="", help="Panel output CSV.")
     parser.add_argument("--config", default="config/markets.yml", help="Project config path.")
+    parser.add_argument(
+        "--include-market-model-ar",
+        action="store_true",
+        help="Also append market-model abnormal return columns; default AR remains benchmark-adjusted.",
+    )
     return parser
 
 
@@ -42,6 +47,7 @@ def main(argv: list[str] | None = None) -> int:
         benchmarks=benchmarks,
         window_pre=defaults["event_window_pre"],
         window_post=defaults["event_window_post"],
+        include_market_model_ar=args.include_market_model_ar,
     )
     save_dataframe(panel, args.output)
     print(f"Saved {len(panel)} panel rows to {args.output} (profile: {args.profile})")

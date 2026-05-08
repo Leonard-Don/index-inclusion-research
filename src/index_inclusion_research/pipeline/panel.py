@@ -50,6 +50,8 @@ def build_event_panel(
     window_pre: int = 20,
     window_post: int = 20,
     phases: list[EventPhase] | None = None,
+    include_market_model_ar: bool = False,
+    market_model_estimation_window: tuple[int, int] = (-20, -2),
 ) -> pd.DataFrame:
     phases = phases or DEFAULT_PHASES
     calendars = _build_market_calendars(prices, benchmarks)
@@ -152,6 +154,16 @@ def build_event_panel(
         "source_url",
         "note",
     ]
-    return panel[column_order].sort_values(
+    panel = panel[column_order].sort_values(
         ["market", "event_phase", "event_id", "relative_day"]
     ).reset_index(drop=True)
+    if include_market_model_ar:
+        from index_inclusion_research.analysis.event_study import (
+            compute_market_model_abnormal_returns,
+        )
+
+        panel = compute_market_model_abnormal_returns(
+            panel,
+            estimation_window=market_model_estimation_window,
+        )
+    return panel

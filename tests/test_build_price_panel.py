@@ -90,3 +90,23 @@ def test_main_writes_panel_csv(tmp_path: Path) -> None:
     }
     assert expected_cols.issubset(df.columns)
     assert len(df) > 0
+
+
+def test_main_can_opt_into_market_model_ar_columns(tmp_path: Path) -> None:
+    events, prices, bench, out = _write_inputs(tmp_path)
+    rc = cli.main(
+        [
+            "--events",
+            str(events),
+            "--prices",
+            str(prices),
+            "--benchmarks",
+            str(bench),
+            "--output",
+            str(out),
+            "--include-market-model-ar",
+        ]
+    )
+    assert rc == 0
+    df = pd.read_csv(out)
+    assert {"ar_market_model", "market_model_alpha", "market_model_beta"}.issubset(df.columns)
