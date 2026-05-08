@@ -87,6 +87,7 @@ def compute_market_model_abnormal_returns(
     work[output_col] = np.nan
     work["market_model_alpha"] = np.nan
     work["market_model_beta"] = np.nan
+    work["market_model_estimation_obs"] = 0
 
     required = {event_id_col, phase_col, relative_day_col, return_col, benchmark_col}
     if not required.issubset(work.columns):
@@ -103,10 +104,12 @@ def compute_market_model_abnormal_returns(
 
     for _, group in work.groupby([event_id_col, phase_col], dropna=False, sort=False):
         est = group.loc[group[relative_day_col].between(est_lo, est_hi, inclusive="both")]
+        paired_obs = int(est[[return_col, benchmark_col]].dropna().shape[0])
+        row_mask = work[row_id_col].isin(group[row_id_col])
+        work.loc[row_mask, "market_model_estimation_obs"] = paired_obs
         alpha, beta = estimate_market_model(est[return_col], est[benchmark_col])
         if not np.isfinite(alpha) or not np.isfinite(beta):
             continue
-        row_mask = work[row_id_col].isin(group[row_id_col])
         work.loc[row_mask, "market_model_alpha"] = alpha
         work.loc[row_mask, "market_model_beta"] = beta
         work.loc[row_mask, output_col] = work.loc[row_mask, return_col].astype(float) - (
