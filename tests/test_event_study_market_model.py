@@ -177,6 +177,103 @@ def test_compute_market_model_abnormal_returns_empty_panel() -> None:
     assert result.empty
 
 
+def test_compute_market_model_abnormal_returns_records_estimation_obs_count() -> None:
+    """Expose a per-event diagnostic so a NaN ``ar_market_model`` is auditable.
+
+    Why: ``compute_market_model_abnormal_returns`` silently returns NaN when an
+    event/phase has too few estimation rows (or a degenerate benchmark). Once
+    the column flows into the panel, downstream dashboards / paper tables only
+    see the NaN — they cannot tell whether the estimation window was thin, the
+    benchmark variance was zero, or the row simply lay outside the estimation
+    window. A deterministic ``market_model_estimation_obs`` column lets every
+    consumer audit the failure mode straight from the panel without re-running
+    the estimation or reading logs.
+
+    The count must reflect the number of *paired* (ret, benchmark_ret) rows
+    inside the estimation window — i.e., what ``estimate_market_model``
+    actually consumes after dropping NaNs — and must be present on every row
+    of the event/phase, whether estimation succeeded or not.
+    """
+    rows: list[dict[str, object]] = []
+    # Event "fat": full estimation window, all rows non-null -> count = 5.
+    for relative_day in range(-5, 1):
+        rows.append(
+            {
+                "event_id": "fat",
+                "event_phase": "announce",
+                "relative_day": relative_day,
+                "ret": 0.001 + 1.2 * (0.0005 * relative_day),
+                "benchmark_ret": 0.0005 * relative_day,
+            }
+        )
+    # Event "thin": only one estimation-window observation -> count = 1, AR NaN.
+    rows.extend(
+        [
+            {
+                "event_id": "thin",
+                "event_phase": "announce",
+                "relative_day": -2,
+                "ret": 0.01,
+                "benchmark_ret": 0.004,
+            },
+            {
+                "event_id": "thin",
+                "event_phase": "announce",
+                "relative_day": 0,
+                "ret": 0.02,
+                "benchmark_ret": 0.005,
+            },
+        ]
+    )
+    # Event "nan_bench": estimation-window benchmark all NaN -> count = 0, AR NaN.
+    rows.extend(
+        [
+            {
+                "event_id": "nan_bench",
+                "event_phase": "announce",
+                "relative_day": rel,
+                "ret": 0.01,
+                "benchmark_ret": float("nan"),
+            }
+            for rel in (-4, -3, -2)
+        ]
+        + [
+            {
+                "event_id": "nan_bench",
+                "event_phase": "announce",
+                "relative_day": 0,
+                "ret": 0.05,
+                "benchmark_ret": 0.001,
+            }
+        ]
+    )
+    panel = pd.DataFrame(rows)
+
+    result = compute_market_model_abnormal_returns(
+        panel, estimation_window=(-5, -1)
+    )
+
+    assert "market_model_estimation_obs" in result.columns
+    fat = result.loc[result["event_id"] == "fat"]
+    thin = result.loc[result["event_id"] == "thin"]
+    nan_bench = result.loc[result["event_id"] == "nan_bench"]
+
+    # Every row in an event/phase shares the same diagnostic count.
+    assert fat["market_model_estimation_obs"].nunique() == 1
+    assert thin["market_model_estimation_obs"].nunique() == 1
+    assert nan_bench["market_model_estimation_obs"].nunique() == 1
+
+    assert int(fat["market_model_estimation_obs"].iloc[0]) == 5
+    assert int(thin["market_model_estimation_obs"].iloc[0]) == 1
+    assert int(nan_bench["market_model_estimation_obs"].iloc[0]) == 0
+
+    # Diagnostic is recorded even when AR cannot be estimated.
+    assert thin["ar_market_model"].isna().all()
+    assert nan_bench["ar_market_model"].isna().all()
+    # Successful event still gets a finite AR.
+    assert fat["ar_market_model"].notna().all()
+
+
 def test_cli_reference_documents_market_model_ar_flag_and_output_columns() -> None:
     """docs/cli_reference.md must document the build-price-panel market-model
     AR opt-in flag and every column the helper appends.

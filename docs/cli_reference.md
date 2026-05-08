@@ -78,7 +78,7 @@ index-inclusion-make-figures-tables
 
 `match-controls` 现在会同时输出 covariate-balance 表（默认 `match_balance.csv`，与 `--output-diagnostics` 同目录）。`index-inclusion-doctor` 的 `matched_sample_balance` 检查会扫这份表，遇到 |SMD|≥0.25 时变 warn。
 
-`build-price-panel` 默认 AR 仍是基准调整后的 `ret - benchmark_ret`；想额外得到 market-model 残差，加上 `--include-market-model-ar` 即可。该 flag 会在面板上追加三列 `ar_market_model`、`market_model_alpha`、`market_model_beta`（按事件 × phase 在估计窗口 [-20,-2] 上对 `ret = α + β·benchmark_ret` 做 OLS，估计窗口数据不足时整个事件留 NaN）。
+`build-price-panel` 默认 AR 仍是基准调整后的 `ret - benchmark_ret`；想额外得到 market-model 残差，加上 `--include-market-model-ar` 即可。该 flag 会在面板上追加四列 `ar_market_model`、`market_model_alpha`、`market_model_beta`、`market_model_estimation_obs`（按事件 × phase 在估计窗口 [-20,-2] 上对 `ret = α + β·benchmark_ret` 做 OLS，估计窗口数据不足时整个事件留 NaN）。`market_model_estimation_obs` 记录该事件 × phase 在估计窗口内同时具备 `ret` 与 `benchmark_ret` 的配对观测数，便于下游审计 NaN 是因为窗口太薄、基准方差为零，还是事件外行未参与估计。
 
 ## 8. 自动生成论文结果摘要
 
