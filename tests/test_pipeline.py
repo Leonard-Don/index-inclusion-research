@@ -273,6 +273,96 @@ def test_build_event_panel_preserves_market_model_columns_when_no_events_match()
     assert int(summary.iloc[0]["minimum_estimation_obs"]) == 2
 
 
+def test_build_event_panel_empty_market_model_panel_matches_populated_schema() -> None:
+    """An empty event panel built with ``--include-market-model-ar`` must
+    expose the same column SCHEMA (set and order) as a populated panel built
+    with the same flag, so downstream CLI consumers can ``pd.read_csv`` it
+    without branching on whether the run produced events.
+
+    Why: ``run-event-study`` loads the panel with
+    ``pd.read_csv(panel, parse_dates=["event_date_raw", "mapped_market_date",
+    "event_date", "date"])``. If ``--include-market-model-ar`` is set but no
+    event matches prices, ``build_event_panel`` currently returns a frame
+    with *only* the four market-model columns — the four date columns
+    ``run-event-study`` parses are gone, so loading the saved CSV raises
+    ``ValueError: Missing column provided to 'parse_dates'`` *before* the
+    downstream code can short-circuit on the "no events" state. That turns
+    a clean empty-result pipeline path into a hard error.
+
+    Commit ``cf3d29c`` anchored the four market-model columns at the empty-
+    panel boundary; the natural next step is to anchor the full standard
+    panel schema there too, so the empty and populated paths are
+    interchangeable for every downstream consumer.
+    """
+    market_dates = pd.bdate_range("2024-01-02", periods=10)
+    benchmarks = pd.DataFrame(
+        [
+            {"market": "CN", "date": date, "benchmark_ret": 0.0005}
+            for date in market_dates
+        ]
+    )
+    prices = pd.DataFrame(
+        [
+            {
+                "market": "CN",
+                "ticker": "CN01",
+                "date": date,
+                "close": 100.0 + idx,
+                "ret": 0.001 * idx,
+                "volume": 1_000_000,
+                "turnover": 0.01,
+                "mkt_cap": 1e9,
+                "sector": "Technology",
+            }
+            for idx, date in enumerate(market_dates)
+        ]
+    )
+    populated_events = pd.DataFrame(
+        [
+            {
+                "market": "CN",
+                "index_name": "CSI300",
+                "ticker": "CN01",
+                "announce_date": market_dates[5],
+                "effective_date": market_dates[5],
+                "event_type": "addition",
+                "sector": "Technology",
+                "inclusion": 1,
+                "treatment_group": 1,
+                "event_id": "populated",
+            }
+        ]
+    )
+    empty_events = populated_events.assign(
+        ticker="CN_NO_PRICES", event_id="missing"
+    )
+
+    populated = build_event_panel(
+        populated_events,
+        prices,
+        benchmarks,
+        window_pre=2,
+        window_post=2,
+        include_market_model_ar=True,
+    )
+    empty = build_event_panel(
+        empty_events,
+        prices,
+        benchmarks,
+        window_pre=2,
+        window_post=2,
+        include_market_model_ar=True,
+    )
+
+    assert len(populated) > 0
+    assert len(empty) == 0
+    assert list(empty.columns) == list(populated.columns), (
+        "empty panel column schema must match populated panel; "
+        f"missing: {set(populated.columns) - set(empty.columns)}; "
+        f"extra: {set(empty.columns) - set(populated.columns)}"
+    )
+
+
 def test_matching_skips_missing_market_cap_candidates_without_failing() -> None:
     events = _sample_events().iloc[[0]].copy()
     events["announce_date"] = pd.to_datetime(events["announce_date"])
