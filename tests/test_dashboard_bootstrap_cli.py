@@ -303,6 +303,49 @@ def test_readme_python_badge_matches_pyproject_requires_python(
     )
 
 
+def test_readme_generated_artifact_paths_resolve_to_committed_fixtures() -> None:
+    """README generated-artifact references should stay aligned with repo fixtures."""
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    prefixes = ("results/", "data/processed/", "docs/screenshots/")
+    target_pattern = re.compile(
+        r"\[[^\]]+\]\((?P<markdown>[^)#?]+)(?:[#?][^)]+)?\)"
+        r"|<img\s+[^>]*\bsrc=\"(?P<img>[^\"]+)\""
+        r"|`(?P<inline>(?:results/|data/processed/|docs/screenshots/)[^`]+)`"
+    )
+
+    targets: set[str] = set()
+    for match in target_pattern.finditer(readme):
+        target = next(
+            value for value in match.groupdict().values() if value is not None
+        )
+        if target.startswith("./"):
+            target = target[2:]
+        if target.startswith(prefixes):
+            targets.add(target)
+
+    expected_core_targets = {
+        "docs/screenshots/dashboard-home.png",
+        "docs/screenshots/paper-brief.png",
+        "docs/screenshots/dashboard-mobile.png",
+        "docs/screenshots/cma-evidence-tiers.png",
+        "results/real_tables/cma_hypothesis_verdicts.csv",
+        "results/real_tables/research_summary.md",
+    }
+    assert expected_core_targets.issubset(targets), (
+        "README.md artifact-path guard must keep covering screenshot and "
+        f"generated result fixtures; missing from parsed targets: "
+        f"{sorted(expected_core_targets - targets)}"
+    )
+
+    missing_targets = sorted(
+        target for target in targets if not (ROOT / target).exists()
+    )
+    assert missing_targets == [], (
+        "README.md generated/data/screenshot artifact references must resolve "
+        f"to committed repo files or fixture directories: {missing_targets}"
+    )
+
+
 def test_track_console_wrappers_delegate_to_expected_package_modules(monkeypatch) -> None:
     calls: list[str] = []
     monkeypatch.setattr(cli, "_run_package_main", lambda module_name: calls.append(module_name))
