@@ -352,7 +352,7 @@ def test_readme_generated_artifact_references_are_not_machine_local() -> None:
     reference_pattern = re.compile(
         r"\[[^\]]+\]\((?P<markdown>[^)#?]+)(?:[#?][^)]+)?\)"
         r"|<img\s+[^>]*\bsrc=\"(?P<img>[^\"]+)\""
-        r"|`(?P<inline>(?:results/|data/processed/|docs/screenshots/|/tmp/|/Users/|/home/|~/|file:)[^`]+)`"
+        r"|`(?P<inline>(?:results/|data/processed/|docs/screenshots/|/tmp/|/Users/|/home/|~/|file:|[A-Za-z]:[\\/])[^`]+)`"
     )
     machine_local = re.compile(r"^(?:/tmp/|/Users/|/home/|~/|file:|[A-Za-z]:[\\/])")
 
@@ -379,6 +379,36 @@ def test_readme_generated_artifact_references_are_not_machine_local() -> None:
         "README.md generated artifact references must use repo-relative paths, "
         f"not machine-local paths: {leaked_refs}"
     )
+
+
+def test_readme_machine_local_guard_flags_negative_reference_fixture() -> None:
+    """The machine-local guard must catch markdown, image, inline and Windows refs."""
+    sample = r"""
+[local csv](/tmp/index-run/results.csv)
+<img src="/Users/alice/index-inclusion/docs/screenshots/dashboard.png" />
+`~/index-inclusion/results/real_tables/research_summary.md`
+`C:\Users\alice\index-inclusion\results.csv`
+[repo relative](results/real_tables/research_summary.md)
+"""
+    reference_pattern = re.compile(
+        r"\[[^\]]+\]\((?P<markdown>[^)#?]+)(?:[#?][^)]+)?\)"
+        r"|<img\s+[^>]*\bsrc=\"(?P<img>[^\"]+)\""
+        r"|`(?P<inline>(?:results/|data/processed/|docs/screenshots/|/tmp/|/Users/|/home/|~/|file:|[A-Za-z]:[\\/])[^`]+)`"
+    )
+    machine_local = re.compile(r"^(?:/tmp/|/Users/|/home/|~/|file:|[A-Za-z]:[\\/])")
+
+    refs = {
+        next(value for value in match.groupdict().values() if value is not None).strip()
+        for match in reference_pattern.finditer(sample)
+    }
+
+    assert "results/real_tables/research_summary.md" in refs
+    assert sorted(ref for ref in refs if machine_local.match(ref)) == [
+        "/Users/alice/index-inclusion/docs/screenshots/dashboard.png",
+        "/tmp/index-run/results.csv",
+        r"C:\Users\alice\index-inclusion\results.csv",
+        "~/index-inclusion/results/real_tables/research_summary.md",
+    ]
 
 
 def test_track_console_wrappers_delegate_to_expected_package_modules(monkeypatch) -> None:
