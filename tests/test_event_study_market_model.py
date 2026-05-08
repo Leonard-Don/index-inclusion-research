@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -8,6 +10,7 @@ from index_inclusion_research.analysis.event_study import (
     compute_market_model_abnormal_returns,
     estimate_market_model,
 )
+from index_inclusion_research.build_price_panel import build_arg_parser
 
 
 def test_estimate_market_model_recovers_known_alpha_beta() -> None:
@@ -172,3 +175,70 @@ def test_compute_market_model_abnormal_returns_empty_panel() -> None:
         pd.DataFrame(), estimation_window=(-30, -2)
     )
     assert result.empty
+
+
+def test_cli_reference_documents_market_model_ar_flag_and_output_columns() -> None:
+    """docs/cli_reference.md must document the build-price-panel market-model
+    AR opt-in flag and every column the helper appends.
+
+    Why: ``index-inclusion-build-price-panel --include-market-model-ar`` is
+    the only user-facing path to the new ``ar_market_model`` /
+    ``market_model_alpha`` / ``market_model_beta`` columns; if the flag or any
+    column rename slips in without the docs moving, downstream researchers,
+    dashboard loaders and the paper bundle scripts will silently consume a
+    schema that no longer matches the published CLI reference.
+
+    The flag is read from ``build_arg_parser()`` and the columns are read by
+    actually running ``compute_market_model_abnormal_returns`` on a tiny
+    panel, so this guard tracks the source of truth instead of a hand-copied
+    string list.
+    """
+    parser = build_arg_parser()
+    market_model_actions = [
+        action
+        for action in parser._actions  # type: ignore[attr-defined]
+        if any("market-model-ar" in opt for opt in (action.option_strings or ()))
+    ]
+    assert market_model_actions, (
+        "build-price-panel must expose a --*market-model-ar* opt-in flag"
+    )
+    flag_strings = {
+        option
+        for action in market_model_actions
+        for option in action.option_strings
+    }
+
+    sample_panel = pd.DataFrame(
+        [
+            {
+                "event_id": "guard",
+                "event_phase": "announce",
+                "relative_day": rel,
+                "ret": 0.001 * rel,
+                "benchmark_ret": 0.0005 * rel,
+            }
+            for rel in range(-5, 1)
+        ]
+    )
+    augmented = compute_market_model_abnormal_returns(
+        sample_panel, estimation_window=(-5, -1)
+    )
+    appended_columns = [
+        column for column in augmented.columns if column not in sample_panel.columns
+    ]
+    assert appended_columns, (
+        "compute_market_model_abnormal_returns must append market-model columns"
+    )
+
+    cli_reference = (
+        Path(__file__).resolve().parents[1] / "docs" / "cli_reference.md"
+    ).read_text(encoding="utf-8")
+
+    for flag in flag_strings:
+        assert flag in cli_reference, (
+            f"docs/cli_reference.md must document build-price-panel flag {flag!r}"
+        )
+    for column in appended_columns:
+        assert column in cli_reference, (
+            f"docs/cli_reference.md must document market-model AR output column {column!r}"
+        )
