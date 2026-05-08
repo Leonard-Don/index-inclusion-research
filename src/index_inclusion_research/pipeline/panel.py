@@ -19,6 +19,39 @@ DEFAULT_PHASES = [
 ]
 
 
+EVENT_PANEL_COLUMN_ORDER = [
+    "event_id",
+    "matched_to_event_id",
+    "market",
+    "index_name",
+    "event_ticker",
+    "event_phase",
+    "event_type",
+    "inclusion",
+    "treatment_group",
+    "batch_id",
+    "security_name",
+    "announce_date",
+    "effective_date",
+    "event_date_raw",
+    "mapped_market_date",
+    "event_date",
+    "date",
+    "relative_day",
+    "close",
+    "ret",
+    "benchmark_ret",
+    "ar",
+    "volume",
+    "turnover",
+    "mkt_cap",
+    "sector",
+    "source",
+    "source_url",
+    "note",
+]
+
+
 def map_to_trading_date(event_date: pd.Timestamp, trading_dates: Iterable[pd.Timestamp]) -> pd.Timestamp | pd.NaT:  # type: ignore[valid-type]
     dates = pd.DatetimeIndex(pd.to_datetime(list(trading_dates))).sort_values().unique()
     if len(dates) == 0 or pd.isna(event_date):
@@ -126,44 +159,13 @@ def build_event_panel(
             )
 
             return compute_market_model_abnormal_returns(
-                pd.DataFrame(),
+                pd.DataFrame(columns=EVENT_PANEL_COLUMN_ORDER),
                 estimation_window=market_model_estimation_window,
             )
         return pd.DataFrame()
 
     panel = pd.DataFrame(rows)
-    column_order = [
-        "event_id",
-        "matched_to_event_id",
-        "market",
-        "index_name",
-        "event_ticker",
-        "event_phase",
-        "event_type",
-        "inclusion",
-        "treatment_group",
-        "batch_id",
-        "security_name",
-        "announce_date",
-        "effective_date",
-        "event_date_raw",
-        "mapped_market_date",
-        "event_date",
-        "date",
-        "relative_day",
-        "close",
-        "ret",
-        "benchmark_ret",
-        "ar",
-        "volume",
-        "turnover",
-        "mkt_cap",
-        "sector",
-        "source",
-        "source_url",
-        "note",
-    ]
-    panel = panel[column_order].sort_values(
+    panel = panel[EVENT_PANEL_COLUMN_ORDER].sort_values(
         ["market", "event_phase", "event_id", "relative_day"]
     ).reset_index(drop=True)
     if include_market_model_ar:
