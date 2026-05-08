@@ -244,6 +244,65 @@ def test_readme_cli_badge_matches_console_scripts_count(
     )
 
 
+def test_readme_python_badge_matches_pyproject_requires_python(
+    readme_repo_card_badge_lines,
+) -> None:
+    """README's shields.io Python badge must match pyproject.toml ``requires-python``.
+
+    Why: README.md (line 4) renders ``badge/python-3.11%2B-…`` as the leading
+    English shields.io Python-version badge on the GitHub repo card, sitting
+    next to the already-guarded ``literature-16%20papers`` (test_literature_catalog),
+    ``pipeline-10%20steps`` (test_rebuild_all) and ``CLI-29%20commands``
+    badges. The existing guards cover every other leading repo-card badge
+    that carries a numeric or workflow claim, but no test reads the
+    URL-encoded ``python-3.11%2B`` token against the actual ``requires-python``
+    declaration in pyproject.toml. If pyproject.toml bumped the floor to
+    ``>=3.12`` (e.g., once the Python 3.11 trove classifier is retired) and
+    the in-code invariants were updated, the README badge would silently
+    keep advertising ``python-3.11%2B`` to every English reader landing on
+    the project page — exactly the failure mode the literature, pipeline
+    and CLI badge guards were added to prevent for their respective claims.
+
+    The ``(?<!\\d)…(?!\\d)`` digit-boundary lookarounds match the literature,
+    pipeline and CLI badge guards (commits 490746e/dc8670c/7591f2e) so a
+    stale ``python-13.11%2B`` or ``python-3.111%2B`` rendering can never
+    satisfy a naive substring check. The assertion is additionally scoped to
+    the leading README badge block so a duplicate prose or code-block URL
+    later in the file cannot mask a stale repo-card badge.
+    """
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    requires_python = project["requires-python"]
+    declaration = re.fullmatch(r">=\s*(\d+)\.(\d+)", requires_python)
+    assert declaration is not None, (
+        "pyproject.toml [project] requires-python must be a '>=X.Y' declaration "
+        "so the README Python badge can mirror it; "
+        f"got {requires_python!r}"
+    )
+    expected_min = f"{declaration.group(1)}.{declaration.group(2)}"
+    pattern = re.compile(
+        rf"!\[Python\]\("
+        rf"https://img\.shields\.io/badge/python-"
+        rf"(?<!\d){re.escape(expected_min)}(?!\d)%2B-"
+        rf"[0-9a-fA-F]+\)"
+    )
+
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    python_badges = [
+        line
+        for line in readme_repo_card_badge_lines(readme)
+        if line.startswith("![Python](")
+    ]
+
+    assert len(python_badges) == 1, (
+        "README.md must render exactly one leading repo-card Python shields.io badge"
+    )
+    assert pattern.fullmatch(python_badges[0]) is not None, (
+        f"README.md must render shields.io badge 'python-{expected_min}%2B' "
+        f"(no adjacent digits) to match pyproject.toml [project] requires-python="
+        f"{requires_python!r}"
+    )
+
+
 def test_track_console_wrappers_delegate_to_expected_package_modules(monkeypatch) -> None:
     calls: list[str] = []
     monkeypatch.setattr(cli, "_run_package_main", lambda module_name: calls.append(module_name))
