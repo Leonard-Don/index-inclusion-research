@@ -35,6 +35,87 @@ def _window_definition_from_slug(slug: str) -> WindowDefinition:
     raise ValueError(f"Unsupported CAR window slug: {slug}")
 
 
+def estimate_market_model(
+    returns: pd.Series | np.ndarray | list[float],
+    benchmark_returns: pd.Series | np.ndarray | list[float],
+) -> tuple[float, float]:
+    """Estimate alpha/beta for ``ret = alpha + beta * benchmark_ret``.
+
+    The helper is intentionally pure and conservative: it drops paired NaNs,
+    requires at least two observations, and returns ``(nan, nan)`` when the
+    benchmark has no usable variance. That lets callers preserve existing
+    event-study behavior while opting into market-model AR only where an
+    estimation window is available.
+    """
+    frame = pd.DataFrame({"ret": returns, "benchmark_ret": benchmark_returns}).dropna()
+    if len(frame) < 2:
+        return float("nan"), float("nan")
+
+    benchmark = frame["benchmark_ret"].astype(float).to_numpy()
+    ret = frame["ret"].astype(float).to_numpy()
+    benchmark_variance = float(np.var(benchmark, ddof=0))
+    if not np.isfinite(benchmark_variance) or benchmark_variance <= 0:
+        return float("nan"), float("nan")
+
+    beta = float(np.mean((benchmark - benchmark.mean()) * (ret - ret.mean())) / benchmark_variance)
+    alpha = float(ret.mean() - beta * benchmark.mean())
+    return alpha, beta
+
+
+def compute_market_model_abnormal_returns(
+    panel: pd.DataFrame,
+    *,
+    estimation_window: tuple[int, int] = (-20, -2),
+    event_id_col: str = "event_id",
+    phase_col: str = "event_phase",
+    relative_day_col: str = "relative_day",
+    return_col: str = "ret",
+    benchmark_col: str = "benchmark_ret",
+    output_col: str = "ar_market_model",
+) -> pd.DataFrame:
+    """Add market-model abnormal returns without changing existing ``ar``.
+
+    For each event/phase, alpha and beta are estimated on rows whose
+    ``relative_day`` falls inside ``estimation_window``. Rows for events with
+    too little/degenerate estimation data receive NaN in ``output_col``. The
+    returned frame preserves the input row order and index.
+    """
+    if panel.empty:
+        return panel.copy()
+
+    work = panel.copy()
+    work[output_col] = np.nan
+    work["market_model_alpha"] = np.nan
+    work["market_model_beta"] = np.nan
+
+    required = {event_id_col, phase_col, relative_day_col, return_col, benchmark_col}
+    if not required.issubset(work.columns):
+        return work
+
+    row_id_col = "__market_model_row_id"
+    while row_id_col in work.columns:
+        row_id_col = f"_{row_id_col}"
+    work[row_id_col] = np.arange(len(work))
+
+    est_lo, est_hi = estimation_window
+    if est_hi < est_lo:
+        raise ValueError("estimation_window must be (low, high) with low <= high")
+
+    for _, group in work.groupby([event_id_col, phase_col], dropna=False, sort=False):
+        est = group.loc[group[relative_day_col].between(est_lo, est_hi, inclusive="both")]
+        alpha, beta = estimate_market_model(est[return_col], est[benchmark_col])
+        if not np.isfinite(alpha) or not np.isfinite(beta):
+            continue
+        row_mask = work[row_id_col].isin(group[row_id_col])
+        work.loc[row_mask, "market_model_alpha"] = alpha
+        work.loc[row_mask, "market_model_beta"] = beta
+        work.loc[row_mask, output_col] = work.loc[row_mask, return_col].astype(float) - (
+            alpha + beta * work.loc[row_mask, benchmark_col].astype(float)
+        )
+
+    return work.drop(columns=[row_id_col])
+
+
 def _summarise_values(values: pd.Series) -> dict[str, float | int]:
     clean = values.dropna().astype(float)
     n_obs = int(clean.count())
