@@ -9,6 +9,7 @@ import pytest
 from index_inclusion_research.analysis.event_study import (
     compute_market_model_abnormal_returns,
     estimate_market_model,
+    summarize_market_model_estimation_obs,
 )
 from index_inclusion_research.build_price_panel import build_arg_parser
 
@@ -272,6 +273,134 @@ def test_compute_market_model_abnormal_returns_records_estimation_obs_count() ->
     assert nan_bench["ar_market_model"].isna().all()
     # Successful event still gets a finite AR.
     assert fat["ar_market_model"].notna().all()
+
+
+def test_summarize_market_model_estimation_obs_counts_events_under_existing_gate() -> None:
+    """Aggregate the per-row diagnostic into a one-row audit summary.
+
+    Why: ``compute_market_model_abnormal_returns`` already writes
+    ``market_model_estimation_obs`` on every panel row, but downstream
+    consumers (paper bundle scripts, dashboards, doctor checks) need a
+    deterministic, fixed-shape rollup so they can answer "how many event ×
+    phase rows fell below the OLS gate of two paired observations?" without
+    re-deriving the count themselves. Anchoring the threshold to the model's
+    existing minimum-observation gate (``len(frame) < 2`` inside
+    ``estimate_market_model``) avoids inventing a new user-facing policy.
+
+    The summary must:
+    - have exactly one row (a single audit record per panel),
+    - count distinct event/phase combos rather than panel rows,
+    - separate AR finiteness from below-minimum estimation obs (the latter
+      is a strict subset of the former by construction, but distinguishing
+      them lets users see thin estimation windows vs. zero-variance
+      benchmarks at a glance),
+    - record the threshold itself so future drift is auditable.
+    """
+    rows: list[dict[str, object]] = []
+    # Event "fat": 5 estimation obs, finite AR.
+    for relative_day in range(-5, 1):
+        rows.append(
+            {
+                "event_id": "fat",
+                "event_phase": "announce",
+                "relative_day": relative_day,
+                "ret": 0.001 + 1.2 * (0.0005 * relative_day),
+                "benchmark_ret": 0.0005 * relative_day,
+            }
+        )
+    # Event "thin": 1 estimation obs -> below gate, AR NaN.
+    rows.extend(
+        [
+            {
+                "event_id": "thin",
+                "event_phase": "announce",
+                "relative_day": -2,
+                "ret": 0.01,
+                "benchmark_ret": 0.004,
+            },
+            {
+                "event_id": "thin",
+                "event_phase": "announce",
+                "relative_day": 0,
+                "ret": 0.02,
+                "benchmark_ret": 0.005,
+            },
+        ]
+    )
+    # Event "nan_bench": 0 estimation obs (benchmark all NaN), AR NaN.
+    rows.extend(
+        [
+            {
+                "event_id": "nan_bench",
+                "event_phase": "announce",
+                "relative_day": rel,
+                "ret": 0.01,
+                "benchmark_ret": float("nan"),
+            }
+            for rel in (-4, -3, -2)
+        ]
+        + [
+            {
+                "event_id": "nan_bench",
+                "event_phase": "announce",
+                "relative_day": 0,
+                "ret": 0.05,
+                "benchmark_ret": 0.001,
+            }
+        ]
+    )
+    panel = pd.DataFrame(rows)
+    augmented = compute_market_model_abnormal_returns(
+        panel, estimation_window=(-5, -1)
+    )
+
+    summary = summarize_market_model_estimation_obs(augmented)
+
+    assert isinstance(summary, pd.DataFrame)
+    assert len(summary) == 1
+    expected_columns = {
+        "n_events_total",
+        "n_events_finite_ar",
+        "n_events_nan_ar",
+        "n_events_below_min_obs",
+        "minimum_estimation_obs",
+    }
+    assert expected_columns.issubset(summary.columns)
+    record = summary.iloc[0]
+    assert int(record["n_events_total"]) == 3
+    assert int(record["n_events_finite_ar"]) == 1
+    assert int(record["n_events_nan_ar"]) == 2
+    # "thin" (1 obs) and "nan_bench" (0 obs) both fall below the OLS gate of 2.
+    assert int(record["n_events_below_min_obs"]) == 2
+    assert int(record["minimum_estimation_obs"]) == 2
+
+
+def test_summarize_market_model_estimation_obs_returns_zeros_when_columns_missing() -> None:
+    """Calling on a panel without the diagnostic columns yields a deterministic
+    empty rollup, not a KeyError.
+
+    Why: the helper is meant to be safe to invoke against any event panel,
+    including those built without ``--include-market-model-ar``. Returning a
+    one-row, all-zero summary lets pipelines emit the diagnostic
+    unconditionally and lets dashboards render a "no market-model AR run"
+    state without branching on column presence.
+    """
+    panel = pd.DataFrame(
+        [
+            {"event_id": "x", "event_phase": "announce", "ar": 0.001},
+            {"event_id": "y", "event_phase": "effective", "ar": 0.002},
+        ]
+    )
+
+    summary = summarize_market_model_estimation_obs(panel)
+
+    assert len(summary) == 1
+    record = summary.iloc[0]
+    assert int(record["n_events_total"]) == 0
+    assert int(record["n_events_finite_ar"]) == 0
+    assert int(record["n_events_nan_ar"]) == 0
+    assert int(record["n_events_below_min_obs"]) == 0
+    assert int(record["minimum_estimation_obs"]) == 2
 
 
 def test_cli_reference_documents_market_model_ar_flag_and_output_columns() -> None:

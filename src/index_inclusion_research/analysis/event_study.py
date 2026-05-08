@@ -119,6 +119,51 @@ def compute_market_model_abnormal_returns(
     return work.drop(columns=[row_id_col])
 
 
+_MARKET_MODEL_MIN_ESTIMATION_OBS = 2
+
+
+def summarize_market_model_estimation_obs(
+    panel: pd.DataFrame,
+    *,
+    event_id_col: str = "event_id",
+    phase_col: str = "event_phase",
+    obs_col: str = "market_model_estimation_obs",
+    ar_col: str = "ar_market_model",
+) -> pd.DataFrame:
+    """One-row audit summary of market-model estimation diagnostics.
+
+    The threshold ``minimum_estimation_obs`` mirrors the OLS gate inside
+    ``estimate_market_model`` (which returns NaN when fewer than 2 paired
+    observations are available). It is *not* a new policy: it lets downstream
+    consumers tell apart event/phase rows whose AR is NaN because the
+    estimation window was thinner than the model already requires from those
+    where the gate was met but the benchmark variance was degenerate.
+    """
+    template = {
+        "n_events_total": 0,
+        "n_events_finite_ar": 0,
+        "n_events_nan_ar": 0,
+        "n_events_below_min_obs": 0,
+        "minimum_estimation_obs": _MARKET_MODEL_MIN_ESTIMATION_OBS,
+    }
+    required = {event_id_col, phase_col, obs_col, ar_col}
+    if panel.empty or not required.issubset(panel.columns):
+        return pd.DataFrame([template])
+
+    per_event = (
+        panel.groupby([event_id_col, phase_col], dropna=False, sort=False)
+        .agg(obs=(obs_col, "first"), ar_finite=(ar_col, lambda series: series.notna().any()))
+        .reset_index(drop=True)
+    )
+    template["n_events_total"] = int(len(per_event))
+    template["n_events_finite_ar"] = int(per_event["ar_finite"].sum())
+    template["n_events_nan_ar"] = int((~per_event["ar_finite"]).sum())
+    template["n_events_below_min_obs"] = int(
+        (per_event["obs"].fillna(0) < _MARKET_MODEL_MIN_ESTIMATION_OBS).sum()
+    )
+    return pd.DataFrame([template])
+
+
 def _summarise_values(values: pd.Series) -> dict[str, float | int]:
     clean = values.dropna().astype(float)
     n_obs = int(clean.count())

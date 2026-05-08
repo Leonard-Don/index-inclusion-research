@@ -4,6 +4,7 @@ from .event_study import (
     compute_patell_bmp_summary,
     filter_nonoverlap_event_windows,
     summarize_event_level_metrics,
+    summarize_market_model_estimation_obs,
     winsorize_event_level_metrics,
 )
 from .rdd import (
@@ -32,5 +33,6 @@ __all__ = [
     "run_rdd_robustness",
     "run_rdd_suite",
     "summarize_event_level_metrics",
+    "summarize_market_model_estimation_obs",
     "winsorize_event_level_metrics",
 ]
