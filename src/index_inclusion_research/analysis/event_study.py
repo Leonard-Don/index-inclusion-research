@@ -476,6 +476,27 @@ def compute_event_study(
     car_windows: list[list[int]] | list[tuple[int, int]],
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     event_level = compute_event_level_metrics(panel, car_windows)
+    summary = summarize_event_level_metrics(event_level, car_windows)
+
+    if panel.empty:
+        average_paths = pd.DataFrame(
+            columns=[
+                "market",
+                "event_phase",
+                "inclusion",
+                "relative_day",
+                "mean_ar",
+                "std_ar",
+                "mean_car",
+                "std_car",
+                "n_obs",
+                "se_ar",
+                "se_car",
+                "ci_low_95",
+                "ci_high_95",
+            ]
+        )
+        return event_level, summary, average_paths
 
     path_frame = panel.sort_values(["event_id", "event_phase", "relative_day"]).copy()
     path_frame["car_path"] = path_frame.groupby(["event_id", "event_phase"], dropna=False)["ar"].cumsum()
@@ -495,5 +516,4 @@ def compute_event_study(
     average_paths["ci_low_95"] = average_paths["mean_car"] - 1.96 * average_paths["se_car"]
     average_paths["ci_high_95"] = average_paths["mean_car"] + 1.96 * average_paths["se_car"]
 
-    summary = summarize_event_level_metrics(event_level, car_windows)
     return event_level, summary, average_paths
