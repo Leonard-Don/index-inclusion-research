@@ -178,6 +178,46 @@ def test_compute_market_model_abnormal_returns_empty_panel() -> None:
     assert result.empty
 
 
+def test_compute_market_model_abnormal_returns_empty_panel_exposes_diagnostic_columns() -> None:
+    """An empty input must still expose the four market-model columns.
+
+    Why: ``compute_market_model_abnormal_returns`` is the only producer of
+    ``ar_market_model`` / ``market_model_alpha`` / ``market_model_beta`` /
+    ``market_model_estimation_obs``. ``build_event_panel`` returns an empty
+    DataFrame when no event row matches its prices/benchmarks, so a CLI run
+    with ``--include-market-model-ar`` against a degenerate input writes a CSV
+    whose schema collapses entirely to zero columns. Downstream consumers
+    (paper bundle, dashboards, ``summarize_market_model_estimation_obs``)
+    that always read these four columns then raise ``KeyError`` on what is
+    really a "no events" state, masking it as a hard failure.
+
+    Anchor the schema to the populated path: the four columns must be present
+    on the output even when there are zero rows, so a "no events" panel and a
+    populated panel are interchangeable as inputs to the existing audit
+    helper.
+    """
+    result = compute_market_model_abnormal_returns(
+        pd.DataFrame(), estimation_window=(-30, -2)
+    )
+
+    expected_columns = {
+        "ar_market_model",
+        "market_model_alpha",
+        "market_model_beta",
+        "market_model_estimation_obs",
+    }
+    assert expected_columns.issubset(result.columns), (
+        f"empty panel must still expose market-model columns, got {list(result.columns)!r}"
+    )
+    assert len(result) == 0
+
+    # The audit helper must consume the empty result without branching on
+    # column presence — its all-zero rollup is the correct "no events" state.
+    summary = summarize_market_model_estimation_obs(result)
+    assert int(summary.iloc[0]["n_events_total"]) == 0
+    assert int(summary.iloc[0]["minimum_estimation_obs"]) == 2
+
+
 def test_compute_market_model_abnormal_returns_records_estimation_obs_count() -> None:
     """Expose a per-event diagnostic so a NaN ``ar_market_model`` is auditable.
 
