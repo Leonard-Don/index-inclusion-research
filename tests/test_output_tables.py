@@ -719,3 +719,77 @@ def test_header_only_asymmetry_summary_is_saved_by_figures_tables_gate() -> None
     assert list(summary.columns) == list(EXPECTED_ASYMMETRY_SUMMARY_COLUMNS)
     assert _should_save_dataframe(summary)
     assert not _should_save_dataframe(pd.DataFrame())
+
+
+def test_figures_tables_main_writes_header_only_robustness_event_study_summary(
+    tmp_path: Path,
+) -> None:
+    """No-event/no-panel CLI runs must still emit a readable robustness_event_study_summary.csv.
+
+    Why: ``figures_tables.main`` writes ``build_robustness_event_study_summary``'s
+    output via ``save_dataframe``. The cycle 9 helper fix (commit ``22448a2``)
+    preserves a header-only schema for fully empty inputs, but a bare
+    ``if not frame.empty`` save gate skips that schema and leaves audit and
+    dashboard consumers without a readable ``robustness_event_study_summary.csv``.
+    The production save gate must therefore route through ``_should_save_dataframe``
+    so a "no events" run round-trips through the same downstream consumers as a
+    populated run, mirroring the event_counts_by_year integration fix
+    (commit ``af32c62``).
+    """
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "tables"
+    figures_dir = tmp_path / "figures"
+    missing_dir = tmp_path / "missing"
+    input_dir.mkdir()
+
+    events_path = input_dir / "events.csv"
+    pd.DataFrame(
+        columns=[
+            "market",
+            "index_name",
+            "ticker",
+            "announce_date",
+            "effective_date",
+        ]
+    ).to_csv(events_path, index=False)
+
+    figures_tables_main([
+        "--profile",
+        "sample",
+        "--events",
+        str(events_path),
+        "--panel",
+        str(missing_dir / "panel.csv"),
+        "--prices",
+        str(missing_dir / "prices.csv"),
+        "--benchmarks",
+        str(missing_dir / "benchmarks.csv"),
+        "--metadata",
+        str(missing_dir / "metadata.csv"),
+        "--matched-panel",
+        str(missing_dir / "matched_panel.csv"),
+        "--average-paths",
+        str(missing_dir / "average_paths.csv"),
+        "--event-summary",
+        str(missing_dir / "event_summary.csv"),
+        "--regression-coefs",
+        str(missing_dir / "regression_coefficients.csv"),
+        "--regression-models",
+        str(missing_dir / "regression_models.csv"),
+        "--rdd-summary",
+        str(missing_dir / "rdd_summary.csv"),
+        "--rdd-output-dir",
+        str(missing_dir / "rdd"),
+        "--long-window-output-dir",
+        str(missing_dir / "long"),
+        "--figures-dir",
+        str(figures_dir),
+        "--tables-dir",
+        str(output_dir),
+        "--results-manifest",
+        str(output_dir / "results_manifest.csv"),
+    ])
+
+    reloaded = pd.read_csv(output_dir / "robustness_event_study_summary.csv")
+    assert reloaded.empty
+    assert list(reloaded.columns) == list(EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS)
