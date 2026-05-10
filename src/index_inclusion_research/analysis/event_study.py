@@ -333,6 +333,30 @@ def compute_event_level_metrics(
     return pd.DataFrame(rows)
 
 
+_PATELL_BMP_STAT_COLUMNS: tuple[str, ...] = (
+    "window",
+    "window_slug",
+    "n_events",
+    "patell_z",
+    "patell_p",
+    "bmp_t",
+    "bmp_p",
+    "mean_scar",
+    "std_scar",
+)
+
+
+def _empty_patell_bmp_frame(group_columns: tuple[str, ...]) -> pd.DataFrame:
+    """Empty Patell/BMP summary anchored on the populated-path schema.
+
+    Why: ``save_dataframe`` writes ``pd.DataFrame()`` as a bare newline, which
+    ``pd.read_csv`` then refuses with ``EmptyDataError``. Mirroring the
+    populated path's column set lets downstream auditors round-trip the
+    "no events" CSV without branching on column presence.
+    """
+    return pd.DataFrame(columns=[*group_columns, *_PATELL_BMP_STAT_COLUMNS])
+
+
 def compute_patell_bmp_summary(
     panel: pd.DataFrame,
     car_windows: list[list[int]] | list[tuple[int, int]],
@@ -350,13 +374,13 @@ def compute_patell_bmp_summary(
     The literature standard is [-250, -21]; see docs/limitations.md.
     """
     if panel.empty or "ar" not in panel.columns or "relative_day" not in panel.columns:
-        return pd.DataFrame()
+        return _empty_patell_bmp_frame(group_columns)
 
     work = panel.copy()
     if "treatment_group" in work.columns:
         work = work.loc[work["treatment_group"] == 1]
     if work.empty:
-        return pd.DataFrame()
+        return _empty_patell_bmp_frame(group_columns)
 
     est_lo, est_hi = estimation_window
     if est_hi < est_lo:
@@ -365,7 +389,7 @@ def compute_patell_bmp_summary(
     est_mask = work["relative_day"].between(est_lo, est_hi, inclusive="both")
     est_window = work.loc[est_mask, ["event_id", "event_phase", "ar"]].dropna(subset=["ar"])
     if est_window.empty:
-        return pd.DataFrame()
+        return _empty_patell_bmp_frame(group_columns)
 
     sigma_per_event = (
         est_window.groupby(["event_id", "event_phase"], dropna=False)["ar"]
@@ -468,6 +492,8 @@ def compute_patell_bmp_summary(
             )
             summary_rows.append(row)
 
+    if not summary_rows:
+        return _empty_patell_bmp_frame(group_columns)
     return pd.DataFrame(summary_rows)
 
 
