@@ -122,6 +122,33 @@ def _summarise_event_sources(events: pd.DataFrame) -> str:
     return "；".join(sources)
 
 
+_DATA_SOURCE_TABLE_COLUMNS: tuple[str, ...] = (
+    "数据集",
+    "来源",
+    "市场范围",
+    "起始日期",
+    "结束日期",
+    "行数",
+    "股票数",
+    "事件数",
+    "备注",
+)
+
+
+def _empty_data_source_table_frame() -> pd.DataFrame:
+    """Empty data source table anchored on the populated-path schema.
+
+    Why: ``figures_tables.main`` writes this helper's output via
+    ``save_dataframe(data_sources, ... / 'data_sources.csv')``. Returning a
+    bare ``pd.DataFrame()`` causes ``to_csv`` to emit a single newline that
+    ``pd.read_csv`` (used by audit and dashboard consumers that mirror
+    ``data_sources.csv``) refuses with ``EmptyDataError``. Mirroring the
+    populated-path columns lets a "no rows" run round-trip through the same
+    downstream consumers as a populated run.
+    """
+    return pd.DataFrame(columns=list(_DATA_SOURCE_TABLE_COLUMNS))
+
+
 def build_data_source_table(
     events: pd.DataFrame,
     prices: pd.DataFrame | None = None,
@@ -234,7 +261,9 @@ def build_data_source_table(
             }
         )
 
-    return pd.DataFrame(rows)
+    if not rows:
+        return _empty_data_source_table_frame()
+    return pd.DataFrame(rows, columns=list(_DATA_SOURCE_TABLE_COLUMNS))
 
 
 _SAMPLE_SCOPE_TABLE_COLUMNS: tuple[str, ...] = (

@@ -121,6 +121,18 @@ EXPECTED_SAMPLE_SCOPE_TABLE_COLUMNS = (
     "说明",
 )
 
+EXPECTED_DATA_SOURCE_TABLE_COLUMNS = (
+    "数据集",
+    "来源",
+    "市场范围",
+    "起始日期",
+    "结束日期",
+    "行数",
+    "股票数",
+    "事件数",
+    "备注",
+)
+
 EXPECTED_TIME_SERIES_EVENT_STUDY_COLUMNS = {
     "market",
     "inclusion",
@@ -1981,3 +1993,261 @@ def test_figures_tables_main_does_not_write_sample_scope_outside_events_branch(
     ])
 
     assert not (output_dir / "sample_scope.csv").exists()
+
+
+def test_build_data_source_table_empty_input_round_trips_via_save_dataframe(
+    tmp_path: Path,
+) -> None:
+    """Empty data source table must round-trip through CSV.
+
+    Why: ``figures_tables.main`` writes this helper's output via
+    ``save_dataframe(data_sources, ... / 'data_sources.csv')``. Returning a
+    bare ``pd.DataFrame()`` here causes ``to_csv`` to emit a single newline
+    that ``pd.read_csv`` (used by audit and dashboard consumers that mirror
+    data source tables) refuses with ``EmptyDataError``. Anchoring the empty
+    path on the populated-path column set lets a "no rows" run round-trip
+    through the same downstream consumers as a populated run, mirroring the
+    ``build_sample_scope_table`` empty-schema fix (commit ``6915f59``).
+    """
+    summary = build_data_source_table(pd.DataFrame())
+    assert summary.empty
+    assert list(summary.columns) == list(EXPECTED_DATA_SOURCE_TABLE_COLUMNS), (
+        "empty data source table must expose populated schema, got "
+        f"{list(summary.columns)!r}"
+    )
+
+    output_path = tmp_path / "data_sources.csv"
+    save_dataframe(summary, output_path)
+    reloaded = pd.read_csv(output_path)
+    assert reloaded.empty
+    assert list(reloaded.columns) == list(EXPECTED_DATA_SOURCE_TABLE_COLUMNS)
+
+
+def test_build_data_source_table_populated_column_order_is_stable() -> None:
+    """Populated path must keep the canonical column order the empty schema mirrors.
+
+    Why: the empty-path schema constant duplicates the populated-path column
+    order. If the populated path silently reorders, the two paths diverge and
+    consumers comparing positional columns across populated and "no rows"
+    runs break.
+    """
+    events = pd.DataFrame(
+        [
+            {
+                "market": "CN",
+                "ticker": "000001",
+                "announce_date": "2024-01-01",
+                "effective_date": "2024-01-15",
+                "source": "CSIndex sample adjustment attachment",
+                "source_url": "https://www.csindex.com.cn/",
+            }
+        ]
+    )
+    prices = pd.DataFrame(
+        [{"market": "CN", "ticker": "000001", "date": "2024-01-02"}]
+    )
+    benchmarks = pd.DataFrame([{"market": "CN", "date": "2024-01-02"}])
+    metadata = pd.DataFrame([{"market": "CN", "ticker": "000001"}])
+    panel = pd.DataFrame(
+        [
+            {
+                "event_id": "e1",
+                "event_phase": "announce",
+                "market": "CN",
+                "event_ticker": "000001",
+                "date": "2024-01-02",
+            }
+        ]
+    )
+    matched_panel = pd.DataFrame(
+        [
+            {
+                "event_id": "e1",
+                "matched_to_event_id": "e1",
+                "event_phase": "announce",
+                "market": "CN",
+                "event_ticker": "000001",
+                "date": "2024-01-02",
+            }
+        ]
+    )
+    summary = build_data_source_table(
+        events,
+        prices=prices,
+        benchmarks=benchmarks,
+        metadata=metadata,
+        panel=panel,
+        matched_panel=matched_panel,
+    )
+    assert not summary.empty
+    assert list(summary.columns) == list(EXPECTED_DATA_SOURCE_TABLE_COLUMNS)
+
+
+def test_header_only_data_source_table_is_saved_by_figures_tables_gate() -> None:
+    """The production save gate must keep header-only data source artifacts.
+
+    A header-only frame is still empty in pandas terms, so a bare
+    ``if not frame.empty`` guard skips the artifact and leaves dashboard CSV
+    readers without a readable ``data_sources.csv``. The events-branch save
+    gate must therefore route through ``_should_save_dataframe`` so a
+    schema-only run round-trips through the same downstream consumers as a
+    populated run.
+    """
+    summary = build_data_source_table(pd.DataFrame())
+    assert summary.empty
+    assert list(summary.columns) == list(EXPECTED_DATA_SOURCE_TABLE_COLUMNS)
+    assert _should_save_dataframe(summary)
+    assert not _should_save_dataframe(pd.DataFrame())
+
+
+def test_figures_tables_main_writes_header_only_data_sources(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """Events-only CLI runs must emit a readable header-only data_sources.csv.
+
+    Why: ``figures_tables.main`` writes ``build_data_source_table``'s output
+    via ``save_dataframe`` inside the events branch. When that branch runs
+    but the helper returns a header-only frame, a bare ``if not frame.empty``
+    save gate skips the schema and leaves audit and dashboard consumers
+    without a readable ``data_sources.csv``. The events-branch save gate must
+    therefore route through ``_should_save_dataframe``.
+    """
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "tables"
+    figures_dir = tmp_path / "figures"
+    missing_dir = tmp_path / "missing"
+    input_dir.mkdir()
+
+    events_path = input_dir / "events.csv"
+    pd.DataFrame(
+        [
+            {
+                "event_id": "e1",
+                "market": "CN",
+                "index_name": "沪深300",
+                "ticker": "000001",
+                "announce_date": "2024-05-31",
+                "effective_date": "2024-06-14",
+            }
+        ]
+    ).to_csv(events_path, index=False)
+
+    monkeypatch.setattr(
+        figures_tables,
+        "build_data_source_table",
+        lambda *args, **kwargs: pd.DataFrame(columns=list(EXPECTED_DATA_SOURCE_TABLE_COLUMNS)),
+    )
+
+    figures_tables.main([
+        "--profile",
+        "sample",
+        "--events",
+        str(events_path),
+        "--panel",
+        str(missing_dir / "panel.csv"),
+        "--prices",
+        str(missing_dir / "prices.csv"),
+        "--benchmarks",
+        str(missing_dir / "benchmarks.csv"),
+        "--metadata",
+        str(missing_dir / "metadata.csv"),
+        "--matched-panel",
+        str(missing_dir / "matched_panel.csv"),
+        "--average-paths",
+        str(missing_dir / "average_paths.csv"),
+        "--event-summary",
+        str(missing_dir / "event_summary.csv"),
+        "--regression-coefs",
+        str(missing_dir / "regression_coefficients.csv"),
+        "--regression-models",
+        str(missing_dir / "regression_models.csv"),
+        "--rdd-summary",
+        str(missing_dir / "rdd_summary.csv"),
+        "--rdd-output-dir",
+        str(missing_dir / "rdd"),
+        "--long-window-output-dir",
+        str(missing_dir / "long"),
+        "--figures-dir",
+        str(figures_dir),
+        "--tables-dir",
+        str(output_dir),
+        "--results-manifest",
+        str(output_dir / "results_manifest.csv"),
+    ])
+
+    reloaded = pd.read_csv(output_dir / "data_sources.csv")
+    assert reloaded.empty
+    expected_with_file = (
+        EXPECTED_DATA_SOURCE_TABLE_COLUMNS[:1]
+        + ("文件",)
+        + EXPECTED_DATA_SOURCE_TABLE_COLUMNS[1:]
+    )
+    assert list(reloaded.columns) == list(expected_with_file)
+
+
+def test_figures_tables_main_does_not_write_data_sources_outside_events_branch(
+    tmp_path: Path,
+) -> None:
+    """No-events runs must not emit data_sources.csv.
+
+    Why: the production save gate change only routes the existing events
+    branch through ``_should_save_dataframe``. Outside that branch the helper
+    is never called, so no artifact should appear. This pins the behavior so
+    future refactors do not silently extend the gate beyond the events branch.
+    """
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "tables"
+    figures_dir = tmp_path / "figures"
+    missing_dir = tmp_path / "missing"
+    input_dir.mkdir()
+
+    events_path = input_dir / "events.csv"
+    pd.DataFrame(
+        columns=[
+            "market",
+            "index_name",
+            "ticker",
+            "announce_date",
+            "effective_date",
+        ]
+    ).to_csv(events_path, index=False)
+
+    figures_tables_main([
+        "--profile",
+        "sample",
+        "--events",
+        str(events_path),
+        "--panel",
+        str(missing_dir / "panel.csv"),
+        "--prices",
+        str(missing_dir / "prices.csv"),
+        "--benchmarks",
+        str(missing_dir / "benchmarks.csv"),
+        "--metadata",
+        str(missing_dir / "metadata.csv"),
+        "--matched-panel",
+        str(missing_dir / "matched_panel.csv"),
+        "--average-paths",
+        str(missing_dir / "average_paths.csv"),
+        "--event-summary",
+        str(missing_dir / "event_summary.csv"),
+        "--regression-coefs",
+        str(missing_dir / "regression_coefficients.csv"),
+        "--regression-models",
+        str(missing_dir / "regression_models.csv"),
+        "--rdd-summary",
+        str(missing_dir / "rdd_summary.csv"),
+        "--rdd-output-dir",
+        str(missing_dir / "rdd"),
+        "--long-window-output-dir",
+        str(missing_dir / "long"),
+        "--figures-dir",
+        str(figures_dir),
+        "--tables-dir",
+        str(output_dir),
+        "--results-manifest",
+        str(output_dir / "results_manifest.csv"),
+    ])
+
+    assert not (output_dir / "data_sources.csv").exists()
