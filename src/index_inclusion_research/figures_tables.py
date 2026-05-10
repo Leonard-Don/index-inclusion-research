@@ -205,7 +205,7 @@ def main(argv: list[str] | None = None) -> None:
                 save_dataframe(asymmetry_summary, Path(args.tables_dir) / "asymmetry_summary.csv")
                 frames["asymmetry_summary"] = asymmetry_summary
             robustness_retention_summary = build_robustness_retention_summary(long_event_level)
-            if not robustness_retention_summary.empty:
+            if _should_save_dataframe(robustness_retention_summary):
                 save_dataframe(robustness_retention_summary, Path(args.tables_dir) / "robustness_retention_summary.csv")
                 frames["robustness_retention_summary"] = robustness_retention_summary
 
