@@ -276,7 +276,7 @@ def main(argv: list[str] | None = None) -> None:
                 long_event_level=long_event_level,
                 regression_dataset=regression_dataset,
             )
-            if not sample_filter_summary.empty:
+            if _should_save_dataframe(sample_filter_summary):
                 save_dataframe(sample_filter_summary, Path(args.tables_dir) / "sample_filter_summary.csv")
                 frames["sample_filter_summary"] = sample_filter_summary
             robustness_event_summary = build_robustness_event_study_summary(
