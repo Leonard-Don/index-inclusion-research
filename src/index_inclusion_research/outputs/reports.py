@@ -839,6 +839,28 @@ def build_robustness_event_study_summary(
     return pd.concat(frames, ignore_index=True)
 
 
+_ROBUSTNESS_REGRESSION_SUMMARY_COLUMNS = (
+    "market",
+    "event_phase",
+    "specification",
+    "dependent_variable",
+    "parameter",
+    "coefficient",
+    "std_error",
+    "t_stat",
+    "p_value",
+    "estimation",
+    "n_obs",
+    "r_squared",
+    "adj_r_squared",
+    "covariance",
+)
+
+
+def _empty_robustness_regression_summary_frame() -> pd.DataFrame:
+    return pd.DataFrame(columns=list(_ROBUSTNESS_REGRESSION_SUMMARY_COLUMNS))
+
+
 def build_robustness_regression_summary(
     regression_dataset: pd.DataFrame,
     *,
@@ -846,7 +868,7 @@ def build_robustness_regression_summary(
     overlap_window_days: int = 120,
 ) -> pd.DataFrame:
     if regression_dataset.empty:
-        return pd.DataFrame()
+        return _empty_robustness_regression_summary_frame()
 
     work = _attach_comparison_id(regression_dataset)
     variants = [
@@ -874,9 +896,9 @@ def build_robustness_regression_summary(
             how="left",
         )
         merged["covariance"] = "OLS" if cov_type == "nonrobust" else cov_type
-        frames.append(merged)
+        frames.append(merged.loc[:, list(_ROBUSTNESS_REGRESSION_SUMMARY_COLUMNS)])
     if not frames:
-        return pd.DataFrame()
+        return _empty_robustness_regression_summary_frame()
     return pd.concat(frames, ignore_index=True)
 
 

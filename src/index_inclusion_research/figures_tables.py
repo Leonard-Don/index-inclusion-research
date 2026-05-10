@@ -287,7 +287,7 @@ def main(argv: list[str] | None = None) -> None:
                 save_dataframe(robustness_event_summary, Path(args.tables_dir) / "robustness_event_study_summary.csv")
                 frames["robustness_event_study_summary"] = robustness_event_summary
             robustness_regression_summary = build_robustness_regression_summary(regression_dataset)
-            if not robustness_regression_summary.empty:
+            if _should_save_dataframe(robustness_regression_summary):
                 save_dataframe(robustness_regression_summary, Path(args.tables_dir) / "robustness_regression_summary.csv")
                 frames["robustness_regression_summary"] = robustness_regression_summary
 
