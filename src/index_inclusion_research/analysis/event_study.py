@@ -185,19 +185,58 @@ def _summarise_values(values: pd.Series) -> dict[str, float | int]:
     }
 
 
+_EVENT_STUDY_SUMMARY_GROUP_COLUMNS: tuple[str, ...] = (
+    "market",
+    "event_phase",
+    "inclusion",
+    "window",
+    "window_slug",
+)
+_EVENT_STUDY_SUMMARY_STAT_COLUMNS: tuple[str, ...] = (
+    "n_events",
+    "mean_car",
+    "std_car",
+    "se_car",
+    "ci_low_95",
+    "ci_high_95",
+    "t_stat",
+    "p_value",
+)
+
+
+def _empty_event_study_summary_frame(*, sample_filter: str | None = None) -> pd.DataFrame:
+    """Empty event-study summary anchored on the populated-path schema.
+
+    Why: ``run_event_study.main`` writes this helper's output via
+    ``save_dataframe(summary, output_dir / 'event_study_summary.csv')``.
+    Returning a bare ``pd.DataFrame()`` here causes ``to_csv`` to write a
+    single newline, which ``pd.read_csv`` (used by
+    ``paper_audit.audit_main_event_study``, dashboard loaders, and the CMA
+    orchestrator) then refuses with ``EmptyDataError``. Mirroring the
+    populated-path columns lets a "no events" run round-trip through the
+    same downstream consumers as a populated run, mirroring the Patell/BMP
+    empty-schema fix.
+    """
+    columns: list[str] = list(_EVENT_STUDY_SUMMARY_GROUP_COLUMNS)
+    if sample_filter is not None:
+        columns.append("sample_filter")
+    columns.extend(_EVENT_STUDY_SUMMARY_STAT_COLUMNS)
+    return pd.DataFrame(columns=columns)
+
+
 def summarize_event_level_metrics(
     event_level: pd.DataFrame,
     car_windows: list[list[int]] | list[tuple[int, int]] | None = None,
     sample_filter: str | None = None,
 ) -> pd.DataFrame:
     if event_level.empty:
-        return pd.DataFrame()
+        return _empty_event_study_summary_frame(sample_filter=sample_filter)
 
     work = event_level.copy()
     if "treatment_group" in work.columns:
         work = work.loc[work["treatment_group"] == 1].copy()
     if work.empty:
-        return pd.DataFrame()
+        return _empty_event_study_summary_frame(sample_filter=sample_filter)
 
     windows = _normalise_windows(car_windows) if car_windows is not None else [
         _window_definition_from_slug(column.removeprefix("car_"))
@@ -224,6 +263,8 @@ def summarize_event_level_metrics(
             row.update(_summarise_values(group[column]))
             summary_rows.append(row)
 
+    if not summary_rows:
+        return _empty_event_study_summary_frame(sample_filter=sample_filter)
     return pd.DataFrame(summary_rows)
 
 
