@@ -588,18 +588,51 @@ def build_time_series_event_study_summary(event_level: pd.DataFrame) -> pd.DataF
     return summary
 
 
+_ASYMMETRY_SUMMARY_COLUMNS: tuple[str, ...] = (
+    "market",
+    "event_phase",
+    "n_additions",
+    "n_deletions",
+    "addition_car_m1_p1",
+    "deletion_car_m1_p1",
+    "asymmetry_car_m1_p1",
+    "addition_turnover_change",
+    "deletion_turnover_change",
+    "addition_volume_change",
+    "deletion_volume_change",
+    "addition_car_p0_p120",
+    "deletion_car_p0_p120",
+    "asymmetry_car_p0_p120",
+)
+
+
+def _empty_asymmetry_summary_frame() -> pd.DataFrame:
+    """Empty asymmetry summary anchored on the populated-path schema.
+
+    Why: ``figures_tables.main`` writes this helper's output via
+    ``save_dataframe(asymmetry_summary, ... / 'asymmetry_summary.csv')``.
+    Returning a bare ``pd.DataFrame()`` causes ``to_csv`` to emit a
+    single newline that ``pd.read_csv`` (used by ``dashboard_home``,
+    ``dashboard_metrics``, and ``dashboard_sections``) refuses with
+    ``EmptyDataError``. Mirroring the populated-path columns lets a
+    "no events" run round-trip through the same downstream consumers
+    as a populated run.
+    """
+    return pd.DataFrame(columns=list(_ASYMMETRY_SUMMARY_COLUMNS))
+
+
 def build_asymmetry_summary(
     event_level: pd.DataFrame,
     long_event_level: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     long_event_level = pd.DataFrame() if long_event_level is None else long_event_level
     if event_level.empty:
-        return pd.DataFrame()
+        return _empty_asymmetry_summary_frame()
     treated = event_level.copy()
     if "treatment_group" in treated.columns:
         treated = treated.loc[treated["treatment_group"] == 1].copy()
     if treated.empty:
-        return pd.DataFrame()
+        return _empty_asymmetry_summary_frame()
 
     long_treated = long_event_level.copy()
     if not long_treated.empty and "treatment_group" in long_treated.columns:

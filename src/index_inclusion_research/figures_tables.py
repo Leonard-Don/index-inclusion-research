@@ -56,6 +56,11 @@ def _project_relative_label(path: str | Path) -> str:
         return str(path)
 
 
+def _should_save_dataframe(frame: pd.DataFrame) -> bool:
+    """Return true when a table has rows or a meaningful header-only schema."""
+    return not frame.empty or len(frame.columns) > 0
+
+
 def _profile_paths(profile: str, *, root: Path = ROOT) -> dict[str, str]:
     if profile == "real":
         return {
@@ -196,7 +201,7 @@ def main(argv: list[str] | None = None) -> None:
                 event_level=_read_csv_if_exists(long_output_dir / "event_level_metrics.csv"),
                 long_event_level=long_event_level,
             )
-            if not asymmetry_summary.empty:
+            if _should_save_dataframe(asymmetry_summary):
                 save_dataframe(asymmetry_summary, Path(args.tables_dir) / "asymmetry_summary.csv")
                 frames["asymmetry_summary"] = asymmetry_summary
             robustness_retention_summary = build_robustness_retention_summary(long_event_level)
@@ -263,7 +268,7 @@ def main(argv: list[str] | None = None) -> None:
                 frames["time_series_event_study_summary"] = time_series_summary
             if "asymmetry_summary" not in frames:
                 asymmetry_summary = build_asymmetry_summary(short_event_level, long_event_level=long_event_level)
-                if not asymmetry_summary.empty:
+                if _should_save_dataframe(asymmetry_summary):
                     save_dataframe(asymmetry_summary, Path(args.tables_dir) / "asymmetry_summary.csv")
                     frames["asymmetry_summary"] = asymmetry_summary
             sample_filter_summary = build_sample_filter_summary(
