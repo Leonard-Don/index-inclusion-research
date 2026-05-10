@@ -729,6 +729,22 @@ def _filter_nonoverlap_regression_dataset(dataset: pd.DataFrame, *, days: int = 
     return merged.loc[merged["_keep"].eq(True)].drop(columns="_keep").copy()
 
 
+_SAMPLE_FILTER_SUMMARY_COLUMNS: tuple[str, ...] = (
+    "sample_filter",
+    "n_treated_events",
+    "n_short_event_phase_windows",
+    "n_long_event_phase_windows",
+    "n_regression_comparisons",
+    "n_regression_rows",
+    "share_of_baseline",
+    "note",
+)
+
+
+def _empty_sample_filter_summary_frame() -> pd.DataFrame:
+    return pd.DataFrame(columns=list(_SAMPLE_FILTER_SUMMARY_COLUMNS))
+
+
 def build_sample_filter_summary(
     short_event_level: pd.DataFrame,
     long_event_level: pd.DataFrame | None = None,
@@ -739,7 +755,7 @@ def build_sample_filter_summary(
     long_event_level = pd.DataFrame() if long_event_level is None else long_event_level
     regression_dataset = pd.DataFrame() if regression_dataset is None else regression_dataset
     if short_event_level.empty:
-        return pd.DataFrame()
+        return _empty_sample_filter_summary_frame()
 
     short_work = short_event_level.copy()
     if "treatment_group" in short_work.columns:
@@ -772,7 +788,9 @@ def build_sample_filter_summary(
         _row("winsorized_1pct", short_work, long_work, regression_work, "仅对事件级 CAR 做 1% / 99% winsorize，不改变样本量。"),
         _row("nonoverlap_120d", short_nonoverlap, long_nonoverlap, regression_nonoverlap, "剔除同一 ticker、同一事件阶段下 ±120 日历日内重叠的事件窗口。"),
     ]
-    return pd.DataFrame(rows)
+    if not rows:
+        return _empty_sample_filter_summary_frame()
+    return pd.DataFrame(rows, columns=list(_SAMPLE_FILTER_SUMMARY_COLUMNS))
 
 
 _ROBUSTNESS_EVENT_STUDY_SUMMARY_COLUMNS: tuple[str, ...] = (
