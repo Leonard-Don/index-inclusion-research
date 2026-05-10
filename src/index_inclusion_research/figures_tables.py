@@ -219,12 +219,12 @@ def main(argv: list[str] | None = None) -> None:
         save_dataframe(regression_models, Path(args.tables_dir) / "regression_models.csv")
         frames["regression_models"] = regression_models
 
-    if not events.empty:
-        event_counts_by_year = build_event_counts_by_year_table(events)
-        if not event_counts_by_year.empty:
-            save_dataframe(event_counts_by_year, Path(args.tables_dir) / "event_counts_by_year.csv")
-            frames["event_counts_by_year"] = event_counts_by_year
+    event_counts_by_year = build_event_counts_by_year_table(events)
+    if _should_save_dataframe(event_counts_by_year):
+        save_dataframe(event_counts_by_year, Path(args.tables_dir) / "event_counts_by_year.csv")
+        frames["event_counts_by_year"] = event_counts_by_year
 
+    if not events.empty:
         data_sources = build_data_source_table(
             events,
             prices=prices,

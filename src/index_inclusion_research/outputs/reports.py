@@ -498,9 +498,33 @@ def export_descriptive_tables(
     return event_counts, panel_coverage
 
 
+_EVENT_COUNTS_BY_YEAR_COLUMNS: tuple[str, ...] = (
+    "market",
+    "announce_year",
+    "inclusion",
+    "n_events",
+    "n_tickers",
+    "n_batches",
+)
+
+
+def _empty_event_counts_by_year_frame() -> pd.DataFrame:
+    """Empty event-counts-by-year table anchored on the populated-path schema.
+
+    Why: ``figures_tables.main`` writes this helper's output via
+    ``save_dataframe(event_counts_by_year, ... / 'event_counts_by_year.csv')``.
+    Returning a bare ``pd.DataFrame()`` causes ``to_csv`` to emit a single
+    newline that ``pd.read_csv`` (used by audit and dashboard consumers
+    that mirror ``event_counts.csv``) refuses with ``EmptyDataError``.
+    Mirroring the populated-path columns lets a "no events" run round-trip
+    through the same downstream consumers as a populated run.
+    """
+    return pd.DataFrame(columns=list(_EVENT_COUNTS_BY_YEAR_COLUMNS))
+
+
 def build_event_counts_by_year_table(events: pd.DataFrame) -> pd.DataFrame:
     if events.empty:
-        return pd.DataFrame()
+        return _empty_event_counts_by_year_frame()
     work = events.copy()
     work["announce_year"] = pd.to_datetime(work["announce_date"], errors="coerce").dt.year
     return (
