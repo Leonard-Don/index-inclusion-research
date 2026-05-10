@@ -775,6 +775,39 @@ def build_sample_filter_summary(
     return pd.DataFrame(rows)
 
 
+_ROBUSTNESS_EVENT_STUDY_SUMMARY_COLUMNS: tuple[str, ...] = (
+    "market",
+    "event_phase",
+    "inclusion",
+    "window",
+    "window_slug",
+    "sample_filter",
+    "n_events",
+    "mean_car",
+    "std_car",
+    "se_car",
+    "ci_low_95",
+    "ci_high_95",
+    "t_stat",
+    "p_value",
+)
+
+
+def _empty_robustness_event_study_summary_frame() -> pd.DataFrame:
+    """Empty robustness event-study summary anchored on the populated-path schema.
+
+    Why: ``figures_tables.main`` writes this helper's output via
+    ``save_dataframe(robustness_event_summary, ... / 'robustness_event_study_summary.csv')``.
+    Returning a bare ``pd.DataFrame()`` causes ``to_csv`` to emit a single
+    newline that ``pd.read_csv`` (used by audit and dashboard consumers
+    that mirror ``event_study_summary.csv``) refuses with
+    ``EmptyDataError``. Mirroring the populated-path columns lets a
+    "no events" run round-trip through the same downstream consumers as a
+    populated run, mirroring the asymmetry summary fix (commit ``37e47e0``).
+    """
+    return pd.DataFrame(columns=list(_ROBUSTNESS_EVENT_STUDY_SUMMARY_COLUMNS))
+
+
 def build_robustness_event_study_summary(
     short_event_level: pd.DataFrame,
     long_event_level: pd.DataFrame | None = None,
@@ -783,6 +816,8 @@ def build_robustness_event_study_summary(
     winsor_quantile: float = 0.01,
 ) -> pd.DataFrame:
     long_event_level = pd.DataFrame() if long_event_level is None else long_event_level
+    if short_event_level.empty and long_event_level.empty:
+        return _empty_robustness_event_study_summary_frame()
 
     frames: list[pd.DataFrame] = []
     variants = [
