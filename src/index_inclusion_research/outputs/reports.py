@@ -686,8 +686,6 @@ def build_robustness_event_study_summary(
     winsor_quantile: float = 0.01,
 ) -> pd.DataFrame:
     long_event_level = pd.DataFrame() if long_event_level is None else long_event_level
-    if short_event_level.empty:
-        return pd.DataFrame()
 
     frames: list[pd.DataFrame] = []
     variants = [
@@ -704,14 +702,8 @@ def build_robustness_event_study_summary(
         ),
     ]
     for sample_filter, short_frame, long_frame in variants:
-        short_summary = summarize_event_level_metrics(short_frame, sample_filter=sample_filter)
-        if not short_summary.empty:
-            frames.append(short_summary)
-        long_summary = summarize_event_level_metrics(long_frame, sample_filter=sample_filter)
-        if not long_summary.empty:
-            frames.append(long_summary)
-    if not frames:
-        return pd.DataFrame()
+        frames.append(summarize_event_level_metrics(short_frame, sample_filter=sample_filter))
+        frames.append(summarize_event_level_metrics(long_frame, sample_filter=sample_filter))
     return pd.concat(frames, ignore_index=True)
 
 
