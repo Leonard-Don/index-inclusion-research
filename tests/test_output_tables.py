@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
+import index_inclusion_research.figures_tables as figures_tables
 from index_inclusion_research.figures_tables import _should_save_dataframe
 from index_inclusion_research.figures_tables import main as figures_tables_main
 from index_inclusion_research.loaders import save_dataframe
@@ -793,3 +794,118 @@ def test_figures_tables_main_writes_header_only_robustness_event_study_summary(
     reloaded = pd.read_csv(output_dir / "robustness_event_study_summary.csv")
     assert reloaded.empty
     assert list(reloaded.columns) == list(EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS)
+    assert not (output_dir / "time_series_event_study_summary.csv").exists()
+
+
+def test_header_only_time_series_summary_is_saved_by_figures_tables_gate() -> None:
+    """The production save gate must keep header-only time-series artifacts."""
+    summary = build_time_series_event_study_summary(pd.DataFrame())
+    assert summary.empty
+    assert EXPECTED_TIME_SERIES_EVENT_STUDY_COLUMNS.issubset(summary.columns)
+    assert _should_save_dataframe(summary)
+    assert not _should_save_dataframe(pd.DataFrame())
+
+
+def test_figures_tables_main_writes_header_only_time_series_event_study_summary(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """Panel-path CLI runs must emit readable header-only time-series summaries."""
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "tables"
+    figures_dir = tmp_path / "figures"
+    missing_dir = tmp_path / "missing"
+    input_dir.mkdir()
+
+    events_path = input_dir / "events.csv"
+    pd.DataFrame(
+        [
+            {
+                "event_id": "e1",
+                "market": "CN",
+                "index_name": "沪深300",
+                "ticker": "000001",
+                "announce_date": "2024-05-31",
+                "effective_date": "2024-06-14",
+            }
+        ]
+    ).to_csv(events_path, index=False)
+
+    panel_path = input_dir / "panel.csv"
+    pd.DataFrame(
+        [
+            {
+                "event_id": "e1",
+                "market": "CN",
+                "event_phase": "announce",
+                "inclusion": 1,
+                "relative_day": 0,
+                "turnover": 0.0,
+                "volume": 0.0,
+                "event_date_raw": "2024-05-31",
+                "mapped_market_date": "2024-05-31",
+                "event_date": "2024-05-31",
+                "date": "2024-05-31",
+            }
+        ]
+    ).to_csv(panel_path, index=False)
+
+    def _fake_compute_event_study(panel: pd.DataFrame, windows: list[tuple[int, int]]):
+        del panel, windows
+        return (
+            pd.DataFrame(
+                columns=[
+                    "event_id",
+                    "market",
+                    "event_phase",
+                    "inclusion",
+                    "treatment_group",
+                    "announce_date",
+                ]
+            ),
+            pd.DataFrame(),
+            pd.DataFrame(),
+        )
+
+    monkeypatch.setattr(figures_tables, "compute_event_study", _fake_compute_event_study)
+
+    figures_tables.main([
+        "--profile",
+        "sample",
+        "--events",
+        str(events_path),
+        "--panel",
+        str(panel_path),
+        "--prices",
+        str(missing_dir / "prices.csv"),
+        "--benchmarks",
+        str(missing_dir / "benchmarks.csv"),
+        "--metadata",
+        str(missing_dir / "metadata.csv"),
+        "--matched-panel",
+        str(missing_dir / "matched_panel.csv"),
+        "--average-paths",
+        str(missing_dir / "average_paths.csv"),
+        "--event-summary",
+        str(missing_dir / "event_summary.csv"),
+        "--regression-coefs",
+        str(missing_dir / "regression_coefficients.csv"),
+        "--regression-models",
+        str(missing_dir / "regression_models.csv"),
+        "--rdd-summary",
+        str(missing_dir / "rdd_summary.csv"),
+        "--rdd-output-dir",
+        str(missing_dir / "rdd"),
+        "--long-window-output-dir",
+        str(missing_dir / "long"),
+        "--figures-dir",
+        str(figures_dir),
+        "--tables-dir",
+        str(output_dir),
+        "--results-manifest",
+        str(output_dir / "results_manifest.csv"),
+    ])
+
+    reloaded = pd.read_csv(output_dir / "time_series_event_study_summary.csv")
+    assert reloaded.empty
+    assert EXPECTED_TIME_SERIES_EVENT_STUDY_COLUMNS.issubset(reloaded.columns)
