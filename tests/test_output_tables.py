@@ -35,6 +35,34 @@ EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS = {
     "p_value",
 }
 
+EXPECTED_TIME_SERIES_EVENT_STUDY_COLUMNS = {
+    "market",
+    "inclusion",
+    "event_phase",
+    "announce_year",
+    "n_events",
+    "mean_car_m1_p1",
+    "se_car_m1_p1",
+    "ci_low_95_car_m1_p1",
+    "ci_high_95_car_m1_p1",
+    "mean_car_m3_p3",
+    "se_car_m3_p3",
+    "ci_low_95_car_m3_p3",
+    "ci_high_95_car_m3_p3",
+    "mean_car_m5_p5",
+    "se_car_m5_p5",
+    "ci_low_95_car_m5_p5",
+    "ci_high_95_car_m5_p5",
+    "mean_car_p0_p20",
+    "se_car_p0_p20",
+    "ci_low_95_car_p0_p20",
+    "ci_high_95_car_p0_p20",
+    "mean_car_p0_p120",
+    "se_car_p0_p120",
+    "ci_low_95_car_p0_p120",
+    "ci_high_95_car_p0_p120",
+}
+
 
 def test_build_data_source_table_summarises_core_inputs() -> None:
     events = pd.DataFrame(
@@ -350,5 +378,62 @@ def test_build_robustness_event_study_summary_all_controls_preserves_schema() ->
     assert summary.empty
     assert EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS.issubset(summary.columns), (
         "all-controls robustness event-study summary must expose populated schema, got "
+        f"{list(summary.columns)!r}"
+    )
+
+
+def test_build_time_series_event_study_summary_empty_input_round_trips_via_save_dataframe(
+    tmp_path: Path,
+) -> None:
+    """Empty time-series event-study summary must round-trip through CSV.
+
+    Why: ``figures_tables.main`` writes this helper's output via
+    ``save_dataframe(time_series_summary, ... / 'time_series_event_study_summary.csv')``.
+    Returning a bare ``pd.DataFrame()`` here causes ``to_csv`` to emit a
+    single newline that ``pd.read_csv`` (used by ``chart_data``,
+    ``dashboard_figures``, ``dashboard_metrics``, and ``dashboard_sections``)
+    refuses with ``EmptyDataError``. Anchoring the empty path on the
+    populated-path column set lets a "no events" run round-trip through the
+    same downstream consumers as a populated run, mirroring the
+    ``summarize_event_level_metrics`` empty-schema fix (commit ``61bc4be``).
+    """
+    summary = build_time_series_event_study_summary(pd.DataFrame())
+    assert summary.empty
+    assert EXPECTED_TIME_SERIES_EVENT_STUDY_COLUMNS.issubset(summary.columns), (
+        "empty time-series event-study summary must expose populated schema, got "
+        f"{list(summary.columns)!r}"
+    )
+
+    output_path = tmp_path / "time_series_event_study_summary.csv"
+    save_dataframe(summary, output_path)
+    reloaded = pd.read_csv(output_path)
+    assert reloaded.empty
+    assert EXPECTED_TIME_SERIES_EVENT_STUDY_COLUMNS.issubset(reloaded.columns)
+
+
+def test_build_time_series_event_study_summary_no_value_columns_preserves_schema() -> None:
+    """When the input has announce_date but no CAR columns, schema still holds.
+
+    Why: the helper drops to its no-value-column branch when none of the
+    canonical ``car_*`` slugs are present in the input frame, which collapses
+    the populated path to zero columns and breaks the same CSV consumers as
+    the empty-input path.
+    """
+    event_level = pd.DataFrame(
+        [
+            {
+                "event_id": "e1",
+                "market": "CN",
+                "event_phase": "announce",
+                "inclusion": 1,
+                "treatment_group": 1,
+                "announce_date": "2024-05-31",
+            }
+        ]
+    )
+    summary = build_time_series_event_study_summary(event_level)
+    assert summary.empty
+    assert EXPECTED_TIME_SERIES_EVENT_STUDY_COLUMNS.issubset(summary.columns), (
+        "no-value-column time-series event-study summary must expose populated schema, got "
         f"{list(summary.columns)!r}"
     )
