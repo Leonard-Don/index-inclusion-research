@@ -64,6 +64,22 @@ EXPECTED_EVENT_COUNTS_BY_YEAR_COLUMNS = (
     "n_batches",
 )
 
+EXPECTED_ROBUSTNESS_RETENTION_SUMMARY_COLUMNS = (
+    "market",
+    "event_phase",
+    "inclusion",
+    "n_events",
+    "short_window_slug",
+    "long_window_slug",
+    "short_mean_car",
+    "long_mean_car",
+    "car_reversal",
+    "retention_ratio",
+    "retention_ratio_valid",
+    "retention_note",
+    "sample_filter",
+)
+
 EXPECTED_TIME_SERIES_EVENT_STUDY_COLUMNS = {
     "market",
     "inclusion",
@@ -909,3 +925,322 @@ def test_figures_tables_main_writes_header_only_time_series_event_study_summary(
     reloaded = pd.read_csv(output_dir / "time_series_event_study_summary.csv")
     assert reloaded.empty
     assert EXPECTED_TIME_SERIES_EVENT_STUDY_COLUMNS.issubset(reloaded.columns)
+
+
+def test_build_robustness_retention_summary_empty_input_round_trips_via_save_dataframe(
+    tmp_path: Path,
+) -> None:
+    """Empty robustness retention summary must round-trip through CSV.
+
+    Why: ``figures_tables.main`` writes this helper's output via
+    ``save_dataframe(robustness_retention_summary, ... / 'robustness_retention_summary.csv')``.
+    Returning a bare ``pd.DataFrame()`` here causes ``to_csv`` to emit a single
+    newline that ``pd.read_csv`` (used by audit and dashboard consumers that
+    mirror ``retention_summary.csv``) refuses with ``EmptyDataError``.
+    Anchoring the empty path on the populated-path column set lets a long
+    window run with no retained rows round-trip through the same downstream
+    consumers as a populated run, mirroring the
+    ``build_robustness_event_study_summary`` empty-schema fix
+    (commit ``22448a2``).
+    """
+    summary = build_robustness_retention_summary(pd.DataFrame())
+    assert summary.empty
+    assert list(summary.columns) == list(EXPECTED_ROBUSTNESS_RETENTION_SUMMARY_COLUMNS), (
+        "empty robustness retention summary must expose populated schema, got "
+        f"{list(summary.columns)!r}"
+    )
+
+    output_path = tmp_path / "robustness_retention_summary.csv"
+    save_dataframe(summary, output_path)
+    reloaded = pd.read_csv(output_path)
+    assert reloaded.empty
+    assert list(reloaded.columns) == list(EXPECTED_ROBUSTNESS_RETENTION_SUMMARY_COLUMNS)
+
+
+def test_build_robustness_retention_summary_all_controls_preserves_schema() -> None:
+    """When every long-window row is a control, the no-frames branch holds schema.
+
+    Why: ``compute_retention_summary`` filters on ``treatment_group == 1``,
+    so a long_event_level frame consisting entirely of controls produces
+    empty per-variant summaries, which makes ``build_robustness_retention_summary``
+    fall through to its no-frames branch. Without preserving schema in that
+    branch, the returned frame collapses to zero columns and breaks the same
+    CSV consumers as the empty-input path.
+    """
+    long_event_level = pd.DataFrame(
+        [
+            {
+                "event_id": "c1",
+                "market": "US",
+                "event_phase": "announce",
+                "event_ticker": "CTRL",
+                "event_date": "2024-01-01",
+                "inclusion": 0,
+                "treatment_group": 0,
+                "car_p0_p20": 0.0,
+                "car_p0_p120": 0.0,
+            }
+        ]
+    )
+    summary = build_robustness_retention_summary(long_event_level)
+    assert summary.empty
+    assert list(summary.columns) == list(EXPECTED_ROBUSTNESS_RETENTION_SUMMARY_COLUMNS), (
+        "all-controls robustness retention summary must expose populated schema, got "
+        f"{list(summary.columns)!r}"
+    )
+
+
+def test_header_only_robustness_retention_summary_is_saved_by_figures_tables_gate() -> None:
+    """The production save gate must keep header-only retention robustness artifacts.
+
+    A header-only frame is still empty in pandas terms, so a bare
+    ``if not frame.empty`` guard skips the artifact and leaves dashboard CSV
+    readers without a readable ``robustness_retention_summary.csv``. The
+    long-window branch's save gate must therefore route through
+    ``_should_save_dataframe`` so a "no retained rows" run round-trips through
+    the same downstream consumers as a populated run, mirroring the
+    ``robustness_event_study_summary`` integration fix (commit ``946d219``).
+    """
+    summary = build_robustness_retention_summary(pd.DataFrame())
+    assert summary.empty
+    assert list(summary.columns) == list(EXPECTED_ROBUSTNESS_RETENTION_SUMMARY_COLUMNS)
+    assert _should_save_dataframe(summary)
+    assert not _should_save_dataframe(pd.DataFrame())
+
+
+def test_figures_tables_main_writes_header_only_robustness_retention_summary(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """Long-window CLI runs must emit a readable header-only robustness_retention_summary.csv.
+
+    Why: ``figures_tables.main`` writes ``build_robustness_retention_summary``'s
+    output via ``save_dataframe`` only inside the long-window branch (where
+    prices, benchmarks, and the event panel are present). When that branch
+    runs but every retention variant is schema-only/no-rows, a bare
+    ``if not frame.empty`` save gate skips the schema and leaves audit and
+    dashboard consumers without a readable ``robustness_retention_summary.csv``.
+    The long-window save gate must therefore route through ``_should_save_dataframe``
+    so a "no retained rows" run round-trips through the same downstream
+    consumers as a populated run.
+    """
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "tables"
+    figures_dir = tmp_path / "figures"
+    missing_dir = tmp_path / "missing"
+    input_dir.mkdir()
+
+    events_path = input_dir / "events.csv"
+    pd.DataFrame(
+        [
+            {
+                "event_id": "e1",
+                "market": "CN",
+                "index_name": "沪深300",
+                "ticker": "000001",
+                "announce_date": "2024-05-31",
+                "effective_date": "2024-06-14",
+            }
+        ]
+    ).to_csv(events_path, index=False)
+
+    panel_path = input_dir / "panel.csv"
+    pd.DataFrame(
+        [
+            {
+                "event_id": "e1",
+                "market": "CN",
+                "event_phase": "announce",
+                "inclusion": 1,
+                "relative_day": 0,
+                "turnover": 0.0,
+                "volume": 0.0,
+                "event_date_raw": "2024-05-31",
+                "mapped_market_date": "2024-05-31",
+                "event_date": "2024-05-31",
+                "date": "2024-05-31",
+            }
+        ]
+    ).to_csv(panel_path, index=False)
+
+    prices_path = input_dir / "prices.csv"
+    pd.DataFrame(
+        [
+            {
+                "market": "CN",
+                "ticker": "000001",
+                "date": "2024-05-31",
+                "close": 10.0,
+                "ret": 0.0,
+                "volume": 0.0,
+                "turnover": 0.0,
+                "mkt_cap": 1000.0,
+            }
+        ]
+    ).to_csv(prices_path, index=False)
+
+    benchmarks_path = input_dir / "benchmarks.csv"
+    pd.DataFrame(
+        [
+            {
+                "market": "CN",
+                "date": "2024-05-31",
+                "benchmark_ret": 0.0,
+            }
+        ]
+    ).to_csv(benchmarks_path, index=False)
+
+    def _fake_build_event_panel(events, prices, benchmarks, **kwargs):
+        del events, prices, benchmarks, kwargs
+        return pd.DataFrame(
+            [
+                {
+                    "event_id": "e1",
+                    "market": "CN",
+                    "event_ticker": "000001",
+                    "event_phase": "announce",
+                    "inclusion": 0,
+                    "treatment_group": 0,
+                    "relative_day": 0,
+                    "date": "2024-05-31",
+                    "ar": 0.0,
+                    "abnormal_return": 0.0,
+                    "turnover": 0.0,
+                    "volume": 0.0,
+                }
+            ]
+        )
+
+    def _fake_compute_event_study(panel, windows):
+        del panel, windows
+        return (
+            pd.DataFrame(
+                [
+                    {
+                        "event_id": "e1",
+                        "market": "CN",
+                        "event_phase": "announce",
+                        "event_ticker": "000001",
+                        "event_date": "2024-05-31",
+                        "inclusion": 0,
+                        "treatment_group": 0,
+                        "car_p0_p20": 0.0,
+                        "car_p0_p120": 0.0,
+                    }
+                ]
+            ),
+            pd.DataFrame(),
+            pd.DataFrame(),
+        )
+
+    monkeypatch.setattr(figures_tables, "build_event_panel", _fake_build_event_panel)
+    monkeypatch.setattr(figures_tables, "compute_event_study", _fake_compute_event_study)
+
+    figures_tables.main([
+        "--profile",
+        "sample",
+        "--events",
+        str(events_path),
+        "--panel",
+        str(panel_path),
+        "--prices",
+        str(prices_path),
+        "--benchmarks",
+        str(benchmarks_path),
+        "--metadata",
+        str(missing_dir / "metadata.csv"),
+        "--matched-panel",
+        str(missing_dir / "matched_panel.csv"),
+        "--average-paths",
+        str(missing_dir / "average_paths.csv"),
+        "--event-summary",
+        str(missing_dir / "event_summary.csv"),
+        "--regression-coefs",
+        str(missing_dir / "regression_coefficients.csv"),
+        "--regression-models",
+        str(missing_dir / "regression_models.csv"),
+        "--rdd-summary",
+        str(missing_dir / "rdd_summary.csv"),
+        "--rdd-output-dir",
+        str(missing_dir / "rdd"),
+        "--long-window-output-dir",
+        str(missing_dir / "long"),
+        "--figures-dir",
+        str(figures_dir),
+        "--tables-dir",
+        str(output_dir),
+        "--results-manifest",
+        str(output_dir / "results_manifest.csv"),
+    ])
+
+    reloaded = pd.read_csv(output_dir / "robustness_retention_summary.csv")
+    assert reloaded.empty
+    assert list(reloaded.columns) == list(EXPECTED_ROBUSTNESS_RETENTION_SUMMARY_COLUMNS)
+
+
+def test_figures_tables_main_does_not_write_robustness_retention_outside_long_window_branch(
+    tmp_path: Path,
+) -> None:
+    """No-prices/no-benchmarks runs must not emit robustness_retention_summary.csv.
+
+    Why: the production save gate change only routes the existing long-window
+    branch through ``_should_save_dataframe``. Outside that branch the helper
+    is never called, so no artifact should appear. This pins the behavior so
+    future refactors do not silently extend the gate beyond the long-window
+    branch.
+    """
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "tables"
+    figures_dir = tmp_path / "figures"
+    missing_dir = tmp_path / "missing"
+    input_dir.mkdir()
+
+    events_path = input_dir / "events.csv"
+    pd.DataFrame(
+        columns=[
+            "market",
+            "index_name",
+            "ticker",
+            "announce_date",
+            "effective_date",
+        ]
+    ).to_csv(events_path, index=False)
+
+    figures_tables_main([
+        "--profile",
+        "sample",
+        "--events",
+        str(events_path),
+        "--panel",
+        str(missing_dir / "panel.csv"),
+        "--prices",
+        str(missing_dir / "prices.csv"),
+        "--benchmarks",
+        str(missing_dir / "benchmarks.csv"),
+        "--metadata",
+        str(missing_dir / "metadata.csv"),
+        "--matched-panel",
+        str(missing_dir / "matched_panel.csv"),
+        "--average-paths",
+        str(missing_dir / "average_paths.csv"),
+        "--event-summary",
+        str(missing_dir / "event_summary.csv"),
+        "--regression-coefs",
+        str(missing_dir / "regression_coefficients.csv"),
+        "--regression-models",
+        str(missing_dir / "regression_models.csv"),
+        "--rdd-summary",
+        str(missing_dir / "rdd_summary.csv"),
+        "--rdd-output-dir",
+        str(missing_dir / "rdd"),
+        "--long-window-output-dir",
+        str(missing_dir / "long"),
+        "--figures-dir",
+        str(figures_dir),
+        "--tables-dir",
+        str(output_dir),
+        "--results-manifest",
+        str(output_dir / "results_manifest.csv"),
+    ])
+
+    assert not (output_dir / "robustness_retention_summary.csv").exists()
