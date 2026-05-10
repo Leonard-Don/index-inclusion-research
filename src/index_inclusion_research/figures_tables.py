@@ -233,7 +233,7 @@ def main(argv: list[str] | None = None) -> None:
             panel=panel,
             matched_panel=matched_panel,
         )
-        if not data_sources.empty:
+        if _should_save_dataframe(data_sources):
             file_map = {
                 "事件样本": _project_relative_label(args.events),
                 "日频价格": _project_relative_label(args.prices),
