@@ -263,7 +263,7 @@ def main(argv: list[str] | None = None) -> None:
             if short_event_level.empty and args.panel:
                 short_event_level, _, _ = compute_event_study(panel, [(-1, 1), (-3, 3), (-5, 5)])
             time_series_summary = build_time_series_event_study_summary(short_event_level)
-            if not time_series_summary.empty:
+            if _should_save_dataframe(time_series_summary):
                 save_dataframe(time_series_summary, Path(args.tables_dir) / "time_series_event_study_summary.csv")
                 frames["time_series_event_study_summary"] = time_series_summary
             if "asymmetry_summary" not in frames:
