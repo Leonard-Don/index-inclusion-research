@@ -880,6 +880,27 @@ def build_robustness_regression_summary(
     return pd.concat(frames, ignore_index=True)
 
 
+_ROBUSTNESS_RETENTION_SUMMARY_COLUMNS = (
+    "market",
+    "event_phase",
+    "inclusion",
+    "n_events",
+    "short_window_slug",
+    "long_window_slug",
+    "short_mean_car",
+    "long_mean_car",
+    "car_reversal",
+    "retention_ratio",
+    "retention_ratio_valid",
+    "retention_note",
+    "sample_filter",
+)
+
+
+def _empty_robustness_retention_summary_frame() -> pd.DataFrame:
+    return pd.DataFrame(columns=list(_ROBUSTNESS_RETENTION_SUMMARY_COLUMNS))
+
+
 def build_robustness_retention_summary(
     long_event_level: pd.DataFrame,
     *,
@@ -889,7 +910,7 @@ def build_robustness_retention_summary(
     long_window_slug: str = "p0_p120",
 ) -> pd.DataFrame:
     if long_event_level.empty:
-        return pd.DataFrame()
+        return _empty_robustness_retention_summary_frame()
 
     frames: list[pd.DataFrame] = []
     variants = [
@@ -906,9 +927,9 @@ def build_robustness_retention_summary(
         if summary.empty:
             continue
         summary["sample_filter"] = sample_filter
-        frames.append(summary)
+        frames.append(summary.loc[:, list(_ROBUSTNESS_RETENTION_SUMMARY_COLUMNS)])
     if not frames:
-        return pd.DataFrame()
+        return _empty_robustness_retention_summary_frame()
     return pd.concat(frames, ignore_index=True)
 
 
