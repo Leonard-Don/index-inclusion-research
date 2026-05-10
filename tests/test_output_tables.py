@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from index_inclusion_research.figures_tables import _should_save_dataframe
 from index_inclusion_research.loaders import save_dataframe
 from index_inclusion_research.outputs import (
     build_asymmetry_summary,
@@ -34,6 +35,23 @@ EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS = {
     "t_stat",
     "p_value",
 }
+
+EXPECTED_ASYMMETRY_SUMMARY_COLUMNS = (
+    "market",
+    "event_phase",
+    "n_additions",
+    "n_deletions",
+    "addition_car_m1_p1",
+    "deletion_car_m1_p1",
+    "asymmetry_car_m1_p1",
+    "addition_turnover_change",
+    "deletion_turnover_change",
+    "addition_volume_change",
+    "deletion_volume_change",
+    "addition_car_p0_p120",
+    "deletion_car_p0_p120",
+    "asymmetry_car_p0_p120",
+)
 
 EXPECTED_TIME_SERIES_EVENT_STUDY_COLUMNS = {
     "market",
@@ -437,3 +455,77 @@ def test_build_time_series_event_study_summary_no_value_columns_preserves_schema
         "no-value-column time-series event-study summary must expose populated schema, got "
         f"{list(summary.columns)!r}"
     )
+
+
+def test_build_asymmetry_summary_empty_input_round_trips_via_save_dataframe(
+    tmp_path: Path,
+) -> None:
+    """Empty asymmetry summary must round-trip through CSV.
+
+    Why: ``figures_tables.main`` writes this helper's output via
+    ``save_dataframe(asymmetry_summary, ... / 'asymmetry_summary.csv')``.
+    Returning a bare ``pd.DataFrame()`` here causes ``to_csv`` to emit a
+    single newline that ``pd.read_csv`` (used by ``dashboard_home``,
+    ``dashboard_metrics``, and ``dashboard_sections``) refuses with
+    ``EmptyDataError``. Anchoring the empty path on the populated-path
+    column set lets a "no events" run round-trip through the same
+    downstream consumers as a populated run, mirroring the
+    ``build_time_series_event_study_summary`` empty-schema fix
+    (commit ``d6517e6``).
+    """
+    summary = build_asymmetry_summary(pd.DataFrame())
+    assert summary.empty
+    assert list(summary.columns) == list(EXPECTED_ASYMMETRY_SUMMARY_COLUMNS), (
+        "empty asymmetry summary must expose populated schema, got "
+        f"{list(summary.columns)!r}"
+    )
+
+    output_path = tmp_path / "asymmetry_summary.csv"
+    save_dataframe(summary, output_path)
+    reloaded = pd.read_csv(output_path)
+    assert reloaded.empty
+    assert list(reloaded.columns) == list(EXPECTED_ASYMMETRY_SUMMARY_COLUMNS)
+
+
+def test_build_asymmetry_summary_all_controls_preserves_schema() -> None:
+    """When every event_level row is a control, schema still holds.
+
+    Why: ``build_asymmetry_summary`` filters on ``treatment_group == 1``,
+    so an event_level frame consisting entirely of controls produces an
+    empty ``treated`` frame after filtering. Without preserving schema in
+    that branch, the returned frame collapses to zero columns and breaks
+    the same CSV consumers as the empty-input path.
+    """
+    event_level = pd.DataFrame(
+        [
+            {
+                "event_id": "c1",
+                "market": "US",
+                "event_phase": "announce",
+                "inclusion": 0,
+                "treatment_group": 0,
+                "car_m1_p1": 0.0,
+            }
+        ]
+    )
+    summary = build_asymmetry_summary(event_level)
+    assert summary.empty
+    assert list(summary.columns) == list(EXPECTED_ASYMMETRY_SUMMARY_COLUMNS), (
+        "all-controls asymmetry summary must expose populated schema, got "
+        f"{list(summary.columns)!r}"
+    )
+
+
+def test_header_only_asymmetry_summary_is_saved_by_figures_tables_gate() -> None:
+    """The production save gate must keep header-only asymmetry artifacts.
+
+    A header-only asymmetry frame is still empty in pandas terms, so a bare
+    ``if not frame.empty`` guard skips the artifact and leaves dashboard CSV
+    readers without a readable ``asymmetry_summary.csv``. The generator gate
+    must therefore treat schema-only frames as writeable.
+    """
+    summary = build_asymmetry_summary(pd.DataFrame())
+    assert summary.empty
+    assert list(summary.columns) == list(EXPECTED_ASYMMETRY_SUMMARY_COLUMNS)
+    assert _should_save_dataframe(summary)
+    assert not _should_save_dataframe(pd.DataFrame())
