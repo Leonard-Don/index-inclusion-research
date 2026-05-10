@@ -5,6 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 from index_inclusion_research.figures_tables import _should_save_dataframe
+from index_inclusion_research.figures_tables import main as figures_tables_main
 from index_inclusion_research.loaders import save_dataframe
 from index_inclusion_research.outputs import (
     build_asymmetry_summary,
@@ -51,6 +52,15 @@ EXPECTED_ASYMMETRY_SUMMARY_COLUMNS = (
     "addition_car_p0_p120",
     "deletion_car_p0_p120",
     "asymmetry_car_p0_p120",
+)
+
+EXPECTED_EVENT_COUNTS_BY_YEAR_COLUMNS = (
+    "market",
+    "announce_year",
+    "inclusion",
+    "n_events",
+    "n_tickers",
+    "n_batches",
 )
 
 EXPECTED_TIME_SERIES_EVENT_STUDY_COLUMNS = {
@@ -514,6 +524,136 @@ def test_build_asymmetry_summary_all_controls_preserves_schema() -> None:
         "all-controls asymmetry summary must expose populated schema, got "
         f"{list(summary.columns)!r}"
     )
+
+
+def test_build_event_counts_by_year_table_empty_input_round_trips_via_save_dataframe(
+    tmp_path: Path,
+) -> None:
+    """Empty event-counts-by-year table must round-trip through CSV.
+
+    Why: ``figures_tables.main`` writes this helper's output via
+    ``save_dataframe(event_counts_by_year, ... / 'event_counts_by_year.csv')``.
+    Returning a bare ``pd.DataFrame()`` here causes ``to_csv`` to emit a
+    single newline that ``pd.read_csv`` (used by audit and dashboard
+    consumers that mirror ``event_counts.csv``) refuses with
+    ``EmptyDataError``. Anchoring the empty path on the populated-path
+    column set lets a "no events" run round-trip through the same
+    downstream consumers as a populated run, mirroring the
+    ``build_asymmetry_summary`` empty-schema fix (commit ``37e47e0``).
+    """
+    counts = build_event_counts_by_year_table(pd.DataFrame())
+    assert counts.empty
+    assert list(counts.columns) == list(EXPECTED_EVENT_COUNTS_BY_YEAR_COLUMNS), (
+        "empty event-counts-by-year table must expose populated schema, got "
+        f"{list(counts.columns)!r}"
+    )
+
+    output_path = tmp_path / "event_counts_by_year.csv"
+    save_dataframe(counts, output_path)
+    reloaded = pd.read_csv(output_path)
+    assert reloaded.empty
+    assert list(reloaded.columns) == list(EXPECTED_EVENT_COUNTS_BY_YEAR_COLUMNS)
+
+
+def test_build_event_counts_by_year_table_populated_column_order_is_stable() -> None:
+    """Populated path must keep the canonical column order the empty schema mirrors.
+
+    Why: the empty-path schema constant duplicates the populated-path column
+    order. If the populated path silently reorders, the two paths diverge and
+    consumers comparing positional columns across populated and "no events"
+    runs break.
+    """
+    events = pd.DataFrame(
+        [
+            {
+                "event_id": "e1",
+                "market": "CN",
+                "ticker": "000001",
+                "announce_date": "2024-05-31",
+                "effective_date": "2024-06-14",
+                "inclusion": 1,
+                "batch_id": "csi300-2024-05",
+            }
+        ]
+    )
+    counts = build_event_counts_by_year_table(events)
+    assert list(counts.columns) == list(EXPECTED_EVENT_COUNTS_BY_YEAR_COLUMNS)
+
+
+def test_header_only_event_counts_by_year_table_is_accepted_by_figures_tables_gate() -> None:
+    """The production save gate must keep header-only event-counts-by-year artifacts.
+
+    A header-only frame is still empty in pandas terms, so a bare
+    ``if not frame.empty`` guard skips the artifact and leaves dashboard CSV
+    readers without a readable ``event_counts_by_year.csv``. The generator
+    gate must therefore treat schema-only frames as writeable.
+    """
+    counts = build_event_counts_by_year_table(pd.DataFrame())
+    assert counts.empty
+    assert list(counts.columns) == list(EXPECTED_EVENT_COUNTS_BY_YEAR_COLUMNS)
+    assert _should_save_dataframe(counts)
+    assert not _should_save_dataframe(pd.DataFrame())
+
+
+def test_figures_tables_main_writes_header_only_event_counts_by_year(tmp_path: Path) -> None:
+    """No-event CLI runs must still emit a readable event_counts_by_year.csv."""
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "tables"
+    figures_dir = tmp_path / "figures"
+    missing_dir = tmp_path / "missing"
+    input_dir.mkdir()
+
+    events_path = input_dir / "events.csv"
+    pd.DataFrame(
+        columns=[
+            "market",
+            "index_name",
+            "ticker",
+            "announce_date",
+            "effective_date",
+        ]
+    ).to_csv(events_path, index=False)
+
+    figures_tables_main([
+        "--profile",
+        "sample",
+        "--events",
+        str(events_path),
+        "--panel",
+        str(missing_dir / "panel.csv"),
+        "--prices",
+        str(missing_dir / "prices.csv"),
+        "--benchmarks",
+        str(missing_dir / "benchmarks.csv"),
+        "--metadata",
+        str(missing_dir / "metadata.csv"),
+        "--matched-panel",
+        str(missing_dir / "matched_panel.csv"),
+        "--average-paths",
+        str(missing_dir / "average_paths.csv"),
+        "--event-summary",
+        str(missing_dir / "event_summary.csv"),
+        "--regression-coefs",
+        str(missing_dir / "regression_coefficients.csv"),
+        "--regression-models",
+        str(missing_dir / "regression_models.csv"),
+        "--rdd-summary",
+        str(missing_dir / "rdd_summary.csv"),
+        "--rdd-output-dir",
+        str(missing_dir / "rdd"),
+        "--long-window-output-dir",
+        str(missing_dir / "long"),
+        "--figures-dir",
+        str(figures_dir),
+        "--tables-dir",
+        str(output_dir),
+        "--results-manifest",
+        str(output_dir / "results_manifest.csv"),
+    ])
+
+    reloaded = pd.read_csv(output_dir / "event_counts_by_year.csv")
+    assert reloaded.empty
+    assert list(reloaded.columns) == list(EXPECTED_EVENT_COUNTS_BY_YEAR_COLUMNS)
 
 
 def test_header_only_asymmetry_summary_is_saved_by_figures_tables_gate() -> None:
