@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pandas as pd
 
+from index_inclusion_research.loaders import save_dataframe
 from index_inclusion_research.outputs import (
     build_asymmetry_summary,
     build_data_source_table,
@@ -14,6 +17,23 @@ from index_inclusion_research.outputs import (
     build_sample_scope_table,
     build_time_series_event_study_summary,
 )
+
+EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS = {
+    "market",
+    "event_phase",
+    "inclusion",
+    "window",
+    "window_slug",
+    "sample_filter",
+    "n_events",
+    "mean_car",
+    "std_car",
+    "se_car",
+    "ci_low_95",
+    "ci_high_95",
+    "t_stat",
+    "p_value",
+}
 
 
 def test_build_data_source_table_summarises_core_inputs() -> None:
@@ -272,3 +292,63 @@ def test_robustness_output_tables_are_built_with_expected_columns() -> None:
     assert {"sample_filter", "market", "window", "se_car", "ci_low_95", "ci_high_95"}.issubset(robustness_events.columns)
     assert {"estimation", "covariance", "market", "coefficient", "std_error", "n_obs"}.issubset(robustness_regressions.columns)
     assert {"sample_filter", "retention_ratio_valid", "retention_note"}.issubset(robustness_retention.columns)
+
+
+def test_build_robustness_event_study_summary_empty_input_round_trips_via_save_dataframe(
+    tmp_path: Path,
+) -> None:
+    """Empty robustness event-study summary must round-trip through CSV.
+
+    Why: ``figures_tables.main`` writes this helper's output via
+    ``save_dataframe(robustness_event_summary, ... / 'robustness_event_study_summary.csv')``.
+    Returning a bare ``pd.DataFrame()`` here causes ``to_csv`` to emit a
+    single newline that ``pd.read_csv`` (used by audit and dashboard
+    consumers that mirror ``event_study_summary.csv``) refuses with
+    ``EmptyDataError``. Anchoring the empty path on the populated-path
+    column set lets a "no events" run round-trip through the same
+    downstream consumers as a populated run, mirroring the
+    ``summarize_event_level_metrics`` empty-schema fix (commit ``61bc4be``).
+    """
+    summary = build_robustness_event_study_summary(pd.DataFrame())
+    assert summary.empty
+    assert EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS.issubset(summary.columns), (
+        "empty robustness event-study summary must expose populated schema, got "
+        f"{list(summary.columns)!r}"
+    )
+
+    output_path = tmp_path / "robustness_event_study_summary.csv"
+    save_dataframe(summary, output_path)
+    reloaded = pd.read_csv(output_path)
+    assert reloaded.empty
+    assert EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS.issubset(reloaded.columns)
+
+
+def test_build_robustness_event_study_summary_all_controls_preserves_schema() -> None:
+    """When every variant filters away all treated rows, schema still holds.
+
+    Why: ``summarize_event_level_metrics`` filters on ``treatment_group == 1``,
+    so a short_event_level frame consisting entirely of controls produces
+    empty per-variant summaries. Without preserving schema in that branch,
+    the concatenated robustness frame collapses to zero columns and breaks
+    the same CSV consumers as the empty-input path.
+    """
+    short_event_level = pd.DataFrame(
+        [
+            {
+                "event_id": "c1",
+                "market": "US",
+                "event_phase": "announce",
+                "event_ticker": "CTRL",
+                "event_date": "2024-01-01",
+                "inclusion": 0,
+                "treatment_group": 0,
+                "car_m1_p1": 0.0,
+            }
+        ]
+    )
+    summary = build_robustness_event_study_summary(short_event_level)
+    assert summary.empty
+    assert EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS.issubset(summary.columns), (
+        "all-controls robustness event-study summary must expose populated schema, got "
+        f"{list(summary.columns)!r}"
+    )
