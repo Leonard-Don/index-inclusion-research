@@ -283,7 +283,7 @@ def main(argv: list[str] | None = None) -> None:
                 short_event_level,
                 long_event_level=long_event_level,
             )
-            if not robustness_event_summary.empty:
+            if _should_save_dataframe(robustness_event_summary):
                 save_dataframe(robustness_event_summary, Path(args.tables_dir) / "robustness_event_study_summary.csv")
                 frames["robustness_event_study_summary"] = robustness_event_summary
             robustness_regression_summary = build_robustness_regression_summary(regression_dataset)
@@ -307,6 +307,15 @@ def main(argv: list[str] | None = None) -> None:
         results_manifest = build_results_manifest(args.profile, rdd_status)
         save_dataframe(results_manifest, args.results_manifest)
         frames["results_manifest"] = results_manifest
+
+    if "robustness_event_study_summary" not in frames:
+        robustness_event_summary = build_robustness_event_study_summary(
+            pd.DataFrame(),
+            long_event_level=long_event_level,
+        )
+        if _should_save_dataframe(robustness_event_summary):
+            save_dataframe(robustness_event_summary, Path(args.tables_dir) / "robustness_event_study_summary.csv")
+            frames["robustness_event_study_summary"] = robustness_event_summary
 
     export_latex_tables(frames, args.tables_dir)
 
