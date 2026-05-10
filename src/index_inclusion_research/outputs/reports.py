@@ -516,16 +516,56 @@ def build_event_counts_by_year_table(events: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+_TIME_SERIES_EVENT_STUDY_GROUP_COLUMNS: tuple[str, ...] = (
+    "market",
+    "inclusion",
+    "event_phase",
+    "announce_year",
+)
+_TIME_SERIES_EVENT_STUDY_VALUE_COLUMNS: tuple[str, ...] = (
+    "car_m1_p1",
+    "car_m3_p3",
+    "car_m5_p5",
+    "car_p0_p20",
+    "car_p0_p120",
+)
+
+
+def _empty_time_series_event_study_summary_frame() -> pd.DataFrame:
+    """Empty time-series event-study summary anchored on the populated-path schema.
+
+    Why: ``figures_tables.main`` writes this helper's output via
+    ``save_dataframe(time_series_summary, ... / 'time_series_event_study_summary.csv')``.
+    Returning a bare ``pd.DataFrame()`` causes ``to_csv`` to emit a single
+    newline that ``pd.read_csv`` (used by ``chart_data``,
+    ``dashboard_figures``, ``dashboard_metrics``, and ``dashboard_sections``)
+    refuses with ``EmptyDataError``. Mirroring the populated-path columns
+    lets a "no events" run round-trip through the same downstream consumers
+    as a populated run.
+    """
+    columns: list[str] = list(_TIME_SERIES_EVENT_STUDY_GROUP_COLUMNS) + ["n_events"]
+    for value_column in _TIME_SERIES_EVENT_STUDY_VALUE_COLUMNS:
+        columns.extend(
+            [
+                f"mean_{value_column}",
+                f"se_{value_column}",
+                f"ci_low_95_{value_column}",
+                f"ci_high_95_{value_column}",
+            ]
+        )
+    return pd.DataFrame(columns=columns)
+
+
 def build_time_series_event_study_summary(event_level: pd.DataFrame) -> pd.DataFrame:
     if event_level.empty or "announce_date" not in event_level.columns:
-        return pd.DataFrame()
+        return _empty_time_series_event_study_summary_frame()
     work = event_level.copy()
     if "treatment_group" in work.columns:
         work = work.loc[work["treatment_group"] == 1].copy()
     work["announce_year"] = pd.to_datetime(work["announce_date"], errors="coerce").dt.year
-    value_columns = [column for column in ["car_m1_p1", "car_m3_p3", "car_m5_p5", "car_p0_p20", "car_p0_p120"] if column in work.columns]
+    value_columns = [column for column in _TIME_SERIES_EVENT_STUDY_VALUE_COLUMNS if column in work.columns]
     if not value_columns:
-        return pd.DataFrame()
+        return _empty_time_series_event_study_summary_frame()
     aggregations: dict[str, tuple[str, str | Callable[[pd.Series], float]]] = {"n_events": ("event_id", "nunique")}
     for column in value_columns:
         aggregations[f"mean_{column}"] = (column, "mean")
