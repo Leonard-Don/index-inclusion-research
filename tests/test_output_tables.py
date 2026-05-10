@@ -5,6 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 import index_inclusion_research.figures_tables as figures_tables
+import index_inclusion_research.outputs.reports as reports
 from index_inclusion_research.figures_tables import _should_save_dataframe
 from index_inclusion_research.figures_tables import main as figures_tables_main
 from index_inclusion_research.loaders import save_dataframe
@@ -78,6 +79,23 @@ EXPECTED_ROBUSTNESS_RETENTION_SUMMARY_COLUMNS = (
     "retention_ratio_valid",
     "retention_note",
     "sample_filter",
+)
+
+EXPECTED_ROBUSTNESS_REGRESSION_SUMMARY_COLUMNS = (
+    "market",
+    "event_phase",
+    "specification",
+    "dependent_variable",
+    "parameter",
+    "coefficient",
+    "std_error",
+    "t_stat",
+    "p_value",
+    "estimation",
+    "n_obs",
+    "r_squared",
+    "adj_r_squared",
+    "covariance",
 )
 
 EXPECTED_TIME_SERIES_EVENT_STUDY_COLUMNS = {
@@ -1244,3 +1262,222 @@ def test_figures_tables_main_does_not_write_robustness_retention_outside_long_wi
     ])
 
     assert not (output_dir / "robustness_retention_summary.csv").exists()
+
+
+
+def test_build_robustness_regression_summary_empty_input_round_trips_via_save_dataframe(
+    tmp_path: Path,
+) -> None:
+    summary = build_robustness_regression_summary(pd.DataFrame())
+    assert summary.empty
+    assert list(summary.columns) == list(EXPECTED_ROBUSTNESS_REGRESSION_SUMMARY_COLUMNS)
+
+    output_path = tmp_path / "robustness_regression_summary.csv"
+    save_dataframe(summary, output_path)
+    reloaded = pd.read_csv(output_path)
+    assert reloaded.empty
+    assert list(reloaded.columns) == list(EXPECTED_ROBUSTNESS_REGRESSION_SUMMARY_COLUMNS)
+
+
+def test_build_robustness_regression_summary_no_frames_preserves_schema(monkeypatch) -> None:
+    def _empty_regressions(*args, **kwargs):
+        del args, kwargs
+        return pd.DataFrame(), pd.DataFrame()
+
+    monkeypatch.setattr(reports, "run_regressions", _empty_regressions)
+    regression_dataset = pd.DataFrame(
+        [
+            {
+                "event_id": "e1",
+                "market": "CN",
+                "event_phase": "announce",
+                "event_date": "2024-05-31",
+                "treatment_group": 1,
+                "car_m1_p1": 0.0,
+            }
+        ]
+    )
+    summary = build_robustness_regression_summary(regression_dataset)
+    assert summary.empty
+    assert list(summary.columns) == list(EXPECTED_ROBUSTNESS_REGRESSION_SUMMARY_COLUMNS)
+
+
+def test_header_only_robustness_regression_summary_is_saved_by_figures_tables_gate() -> None:
+    summary = build_robustness_regression_summary(pd.DataFrame())
+    assert summary.empty
+    assert list(summary.columns) == list(EXPECTED_ROBUSTNESS_REGRESSION_SUMMARY_COLUMNS)
+    assert _should_save_dataframe(summary)
+    assert not _should_save_dataframe(pd.DataFrame())
+
+
+def test_figures_tables_main_writes_header_only_robustness_regression_summary(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "tables"
+    figures_dir = tmp_path / "figures"
+    missing_dir = tmp_path / "missing"
+    input_dir.mkdir()
+
+    events_path = input_dir / "events.csv"
+    pd.DataFrame(
+        [
+            {
+                "event_id": "e1",
+                "market": "CN",
+                "index_name": "沪深300",
+                "ticker": "000001",
+                "announce_date": "2024-05-31",
+                "effective_date": "2024-06-14",
+            }
+        ]
+    ).to_csv(events_path, index=False)
+
+    panel_path = input_dir / "panel.csv"
+    pd.DataFrame(
+        [
+            {
+                "event_id": "e1",
+                "market": "CN",
+                "event_phase": "announce",
+                "inclusion": 1,
+                "relative_day": 0,
+                "turnover": 0.0,
+                "volume": 0.0,
+                "event_date_raw": "2024-05-31",
+                "mapped_market_date": "2024-05-31",
+                "event_date": "2024-05-31",
+                "date": "2024-05-31",
+            }
+        ]
+    ).to_csv(panel_path, index=False)
+
+    def _fake_compute_event_study(panel, windows):
+        del panel, windows
+        return (
+            pd.DataFrame(
+                [
+                    {
+                        "event_id": "e1",
+                        "market": "CN",
+                        "event_phase": "announce",
+                        "event_ticker": "000001",
+                        "event_date": "2024-05-31",
+                        "inclusion": 1,
+                        "treatment_group": 1,
+                        "car_m1_p1": 0.0,
+                    }
+                ]
+            ),
+            pd.DataFrame(),
+            pd.DataFrame(),
+        )
+
+    monkeypatch.setattr(figures_tables, "compute_event_study", _fake_compute_event_study)
+    monkeypatch.setattr(
+        figures_tables,
+        "build_robustness_regression_summary",
+        lambda regression_dataset: pd.DataFrame(columns=list(EXPECTED_ROBUSTNESS_REGRESSION_SUMMARY_COLUMNS)),
+    )
+
+    figures_tables.main([
+        "--profile",
+        "sample",
+        "--events",
+        str(events_path),
+        "--panel",
+        str(panel_path),
+        "--prices",
+        str(missing_dir / "prices.csv"),
+        "--benchmarks",
+        str(missing_dir / "benchmarks.csv"),
+        "--metadata",
+        str(missing_dir / "metadata.csv"),
+        "--matched-panel",
+        str(missing_dir / "matched_panel.csv"),
+        "--average-paths",
+        str(missing_dir / "average_paths.csv"),
+        "--event-summary",
+        str(missing_dir / "event_summary.csv"),
+        "--regression-coefs",
+        str(missing_dir / "regression_coefficients.csv"),
+        "--regression-models",
+        str(missing_dir / "regression_models.csv"),
+        "--rdd-summary",
+        str(missing_dir / "rdd_summary.csv"),
+        "--rdd-output-dir",
+        str(missing_dir / "rdd"),
+        "--long-window-output-dir",
+        str(missing_dir / "long"),
+        "--figures-dir",
+        str(figures_dir),
+        "--tables-dir",
+        str(output_dir),
+        "--results-manifest",
+        str(output_dir / "results_manifest.csv"),
+    ])
+
+    reloaded = pd.read_csv(output_dir / "robustness_regression_summary.csv")
+    assert reloaded.empty
+    assert list(reloaded.columns) == list(EXPECTED_ROBUSTNESS_REGRESSION_SUMMARY_COLUMNS)
+
+
+def test_figures_tables_main_does_not_write_robustness_regression_outside_panel_branch(
+    tmp_path: Path,
+) -> None:
+    input_dir = tmp_path / "inputs"
+    output_dir = tmp_path / "tables"
+    figures_dir = tmp_path / "figures"
+    missing_dir = tmp_path / "missing"
+    input_dir.mkdir()
+
+    events_path = input_dir / "events.csv"
+    pd.DataFrame(
+        columns=[
+            "market",
+            "index_name",
+            "ticker",
+            "announce_date",
+            "effective_date",
+        ]
+    ).to_csv(events_path, index=False)
+
+    figures_tables_main([
+        "--profile",
+        "sample",
+        "--events",
+        str(events_path),
+        "--panel",
+        str(missing_dir / "panel.csv"),
+        "--prices",
+        str(missing_dir / "prices.csv"),
+        "--benchmarks",
+        str(missing_dir / "benchmarks.csv"),
+        "--metadata",
+        str(missing_dir / "metadata.csv"),
+        "--matched-panel",
+        str(missing_dir / "matched_panel.csv"),
+        "--average-paths",
+        str(missing_dir / "average_paths.csv"),
+        "--event-summary",
+        str(missing_dir / "event_summary.csv"),
+        "--regression-coefs",
+        str(missing_dir / "regression_coefficients.csv"),
+        "--regression-models",
+        str(missing_dir / "regression_models.csv"),
+        "--rdd-summary",
+        str(missing_dir / "rdd_summary.csv"),
+        "--rdd-output-dir",
+        str(missing_dir / "rdd"),
+        "--long-window-output-dir",
+        str(missing_dir / "long"),
+        "--figures-dir",
+        str(figures_dir),
+        "--tables-dir",
+        str(output_dir),
+        "--results-manifest",
+        str(output_dir / "results_manifest.csv"),
+    ])
+
+    assert not (output_dir / "robustness_regression_summary.csv").exists()
