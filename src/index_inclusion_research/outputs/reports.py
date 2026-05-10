@@ -237,6 +237,23 @@ def build_data_source_table(
     return pd.DataFrame(rows)
 
 
+_SAMPLE_SCOPE_TABLE_COLUMNS: tuple[str, ...] = (
+    "样本层",
+    "市场范围",
+    "事件数",
+    "事件相位窗口数",
+    "股票数",
+    "观测值",
+    "起始日期",
+    "结束日期",
+    "说明",
+)
+
+
+def _empty_sample_scope_table_frame() -> pd.DataFrame:
+    return pd.DataFrame(columns=list(_SAMPLE_SCOPE_TABLE_COLUMNS))
+
+
 def build_sample_scope_table(
     events: pd.DataFrame,
     panel: pd.DataFrame,
@@ -322,7 +339,9 @@ def build_sample_scope_table(
                 "说明": "在同一真实事件面板上计算 [0,+5]、[0,+20]、[0,+60] 与 [0,+120] 的 CAR。",
             }
         )
-    return pd.DataFrame(rows)
+    if not rows:
+        return _empty_sample_scope_table_frame()
+    return pd.DataFrame(rows, columns=list(_SAMPLE_SCOPE_TABLE_COLUMNS))
 
 
 def build_identification_scope_table(

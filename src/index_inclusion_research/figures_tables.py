@@ -253,7 +253,7 @@ def main(argv: list[str] | None = None) -> None:
             long_panel=long_panel,
             long_event_level=long_event_level,
         )
-        if not sample_scope.empty:
+        if _should_save_dataframe(sample_scope):
             save_dataframe(sample_scope, Path(args.tables_dir) / "sample_scope.csv")
             frames["sample_scope"] = sample_scope
 
