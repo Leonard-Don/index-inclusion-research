@@ -20,7 +20,7 @@ from index_inclusion_research.outputs import (
     build_time_series_event_study_summary,
 )
 
-EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS = {
+EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS = (
     "market",
     "event_phase",
     "inclusion",
@@ -35,7 +35,7 @@ EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS = {
     "ci_high_95",
     "t_stat",
     "p_value",
-}
+)
 
 EXPECTED_ASYMMETRY_SUMMARY_COLUMNS = (
     "market",
@@ -367,7 +367,7 @@ def test_build_robustness_event_study_summary_empty_input_round_trips_via_save_d
     """
     summary = build_robustness_event_study_summary(pd.DataFrame())
     assert summary.empty
-    assert EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS.issubset(summary.columns), (
+    assert list(summary.columns) == list(EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS), (
         "empty robustness event-study summary must expose populated schema, got "
         f"{list(summary.columns)!r}"
     )
@@ -376,7 +376,7 @@ def test_build_robustness_event_study_summary_empty_input_round_trips_via_save_d
     save_dataframe(summary, output_path)
     reloaded = pd.read_csv(output_path)
     assert reloaded.empty
-    assert EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS.issubset(reloaded.columns)
+    assert list(reloaded.columns) == list(EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS)
 
 
 def test_build_robustness_event_study_summary_all_controls_preserves_schema() -> None:
@@ -404,10 +404,60 @@ def test_build_robustness_event_study_summary_all_controls_preserves_schema() ->
     )
     summary = build_robustness_event_study_summary(short_event_level)
     assert summary.empty
-    assert EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS.issubset(summary.columns), (
+    assert list(summary.columns) == list(EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS), (
         "all-controls robustness event-study summary must expose populated schema, got "
         f"{list(summary.columns)!r}"
     )
+
+
+def test_build_robustness_event_study_summary_populated_column_order_is_stable() -> None:
+    """Populated path must keep the canonical column order the empty schema mirrors.
+
+    Why: the empty-path schema constant duplicates the populated-path column
+    order. If the populated path silently reorders, the two paths diverge and
+    consumers comparing positional columns across populated and "no events"
+    runs break.
+    """
+    short_event_level = pd.DataFrame(
+        [
+            {
+                "event_id": "e1",
+                "market": "US",
+                "event_phase": "announce",
+                "event_ticker": "AAA",
+                "event_date": "2024-01-01",
+                "inclusion": 1,
+                "treatment_group": 1,
+                "car_m1_p1": 0.03,
+            }
+        ]
+    )
+    summary = build_robustness_event_study_summary(short_event_level)
+    assert list(summary.columns) == list(EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS)
+
+
+def test_build_robustness_event_study_summary_long_only_input_is_not_dropped() -> None:
+    """Empty short-window inputs must not suppress populated long-window summaries."""
+    long_event_level = pd.DataFrame(
+        [
+            {
+                "event_id": "e1",
+                "market": "US",
+                "event_phase": "announce",
+                "event_ticker": "AAA",
+                "event_date": "2024-01-01",
+                "inclusion": 1,
+                "treatment_group": 1,
+                "car_p0_p120": 0.07,
+            }
+        ]
+    )
+
+    summary = build_robustness_event_study_summary(pd.DataFrame(), long_event_level)
+
+    assert list(summary.columns) == list(EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS)
+    assert not summary.empty
+    assert "p0_p120" in set(summary["window_slug"])
 
 
 def test_build_time_series_event_study_summary_empty_input_round_trips_via_save_dataframe(
