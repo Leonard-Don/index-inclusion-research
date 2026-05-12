@@ -57,6 +57,16 @@ OUTPUT_TABLE_SCHEMAS: Mapping[str, tuple[str, ...]] = {
         "结束日期",
         "说明",
     ),
+    "identification_scope": (
+        "分析层",
+        "市场范围",
+        "样本基础",
+        "主要输出",
+        "证据等级",
+        "证据状态",
+        "当前口径",
+        "来源摘要",
+    ),
     "event_counts_by_year": (
         "market",
         "announce_year",
