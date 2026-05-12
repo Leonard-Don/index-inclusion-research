@@ -77,7 +77,12 @@ function buildCarPathOption(payload) {
   });
 
   return {
-    title: { text: '日度 AR / CAR 路径（CN vs US × announce / effective）', left: 'center' },
+    title: {
+      text: '日度 AR / CAR 路径（中国 对比 美国 × 公告日 / 生效日）',
+      subtext: 'AR = 异常收益率（Abnormal Return）｜CAR = 累计异常收益率（Cumulative AR）',
+      left: 'center',
+      subtextStyle: { fontSize: 11, color: '#5c6b77' },
+    },
     tooltip: {
       trigger: 'axis',
       formatter: params => params.map(p =>
@@ -89,7 +94,7 @@ function buildCarPathOption(payload) {
       type: 'scroll',
       selected: defaultSelected,
     },
-    grid: { left: 60, right: 30, top: 50, bottom: 60 },
+    grid: { left: 60, right: 30, top: 60, bottom: 60 },
     xAxis: {
       type: 'value',
       name: '事件日',
@@ -156,7 +161,12 @@ function buildPricePressureOption(payload) {
   }
 
   return {
-    title: { text: '短窗口 CAR 的时间变化', left: 'center' },
+    title: {
+      text: '短窗口 CAR 的时间趋势',
+      subtext: 'CAR[-1,+1] = 事件前后各 1 个交易日的累计异常收益率',
+      left: 'center',
+      subtextStyle: { fontSize: 11, color: '#5c6b77' },
+    },
     tooltip: {
       trigger: 'axis',
       formatter: params => {
@@ -193,7 +203,12 @@ function buildPricePressureOption(payload) {
 
 function buildCarHeatmapOption(payload) {
   return {
-    title: { text: '真实样本短窗口 CAR 热力图', left: 'center' },
+    title: {
+      text: '真实样本短窗口 CAR 热力图',
+      subtext: 'CAR = 累计异常收益率 ｜ 窗口如 [-1,+1] 表示事件前后各 1 个交易日',
+      left: 'center',
+      subtextStyle: { fontSize: 11, color: '#5c6b77' },
+    },
     tooltip: {
       formatter: params => {
         const ann = payload.annotations.find(
@@ -202,11 +217,11 @@ function buildCarHeatmapOption(payload) {
         if (!ann) return '';
         return `<strong>${payload.row_labels[ann.row]}</strong><br>` +
           `窗口 ${payload.col_labels[ann.col]}<br>` +
-          `CAR: ${ann.car_pct} ${ann.stars}<br>` +
-          `p = ${ann.p_value.toFixed(4)}`;
+          `CAR（累计异常收益率）: ${ann.car_pct} ${ann.stars}<br>` +
+          `p 值（显著性）= ${ann.p_value.toFixed(4)}`;
       },
     },
-    grid: { left: 140, right: 80, top: 50, bottom: 30 },
+    grid: { left: 140, right: 80, top: 60, bottom: 30 },
     xAxis: {
       type: 'category',
       data: payload.col_labels,
@@ -267,7 +282,12 @@ function buildGapDecompositionOption(payload) {
     },
   }));
   return {
-    title: { text: '空窗期分段：公告→空窗→生效→反转', left: 'center' },
+    title: {
+      text: '空窗期分段：公告→空窗→生效→反转',
+      subtext: 'AR = 异常收益率 ｜ 各阶段为公告日到生效日之间的分段平均异常收益',
+      left: 'center',
+      subtextStyle: { fontSize: 11, color: '#5c6b77' },
+    },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
@@ -307,7 +327,12 @@ function buildHeterogeneitySizeOption(payload) {
     },
   }));
   return {
-    title: { text: '市值五分位的不对称指数（CN vs US）', left: 'center' },
+    title: {
+      text: '市值五分位的不对称指数（中国 对比 美国）',
+      subtext: '不对称指数 = 调入与调出 CAR 差异 ｜ n = 该分组的事件数',
+      left: 'center',
+      subtextStyle: { fontSize: 11, color: '#5c6b77' },
+    },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
@@ -316,7 +341,7 @@ function buildHeterogeneitySizeOption(payload) {
         return `<strong>${bucket}</strong><br>` + params.map(p => {
           const seriesIdx = payload.series.findIndex(s => s.name === p.seriesName);
           const n = seriesIdx >= 0 ? payload.series[seriesIdx].n_events[p.dataIndex] : '';
-          return `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:6px"></span>${p.seriesName}: ${p.value?.toFixed(3) ?? '—'} (n=${n})`;
+          return `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:6px"></span>${p.seriesName}: ${p.value?.toFixed(3) ?? '—'}（样本量 n=${n}）`;
         }).join('<br>');
       },
     },
@@ -345,7 +370,12 @@ function buildTimeSeriesRollingOption(payload) {
     emphasis: { lineStyle: { width: 3.5 } },
   }));
   return {
-    title: { text: 'Rolling CAR：5 年滚动窗口（CN vs US × announce / effective）', left: 'center' },
+    title: {
+      text: '滚动 CAR：5 年滚动窗口（中国 对比 美国 × 公告日 / 生效日）',
+      subtext: 'CAR = 累计异常收益率 ｜ 每个点为该年结束的 5 年窗口内的平均 CAR',
+      left: 'center',
+      subtextStyle: { fontSize: 11, color: '#5c6b77' },
+    },
     tooltip: {
       trigger: 'axis',
       formatter: params => {
@@ -392,7 +422,7 @@ function buildMainRegressionOption(payload) {
   }));
   // CI bars rendered via custom series
   const ciSeries = {
-    name: '95% CI',
+    name: '95% 置信区间',
     type: 'custom',
     renderItem: (params, api) => {
       const idx = api.value(0);
@@ -419,7 +449,12 @@ function buildMainRegressionOption(payload) {
     z: -1,
   };
   return {
-    title: { text: '主回归 treatment_group 系数（CAR[-1,+1] × 4 象限，带 95% CI）', left: 'center' },
+    title: {
+      text: '主回归处理组系数（CAR[-1,+1] × 4 象限，带 95% 置信区间）',
+      subtext: 'CAR[-1,+1] = 事件前后各 1 日的累计异常收益率 ｜ 4 象限 = 市场×事件阶段的交叉',
+      left: 'center',
+      subtextStyle: { fontSize: 11, color: '#5c6b77' },
+    },
     tooltip: {
       trigger: 'item',
       formatter: params => {
@@ -427,15 +462,16 @@ function buildMainRegressionOption(payload) {
         if (!d || d.value == null) return '';
         const coef = d.value[0];
         return `<strong>${labels[d.value[1]] ?? ''}</strong><br>` +
-          `coef: ${(coef * 100).toFixed(3)}% ${d.stars ?? ''}<br>` +
-          `95% CI: [${(d.ci_lo * 100).toFixed(3)}%, ${(d.ci_hi * 100).toFixed(3)}%]<br>` +
-          `p = ${d.p_value?.toFixed(4) ?? '—'}`;
+          `系数（处理效应）: ${(coef * 100).toFixed(3)}% ${d.stars ?? ''}<br>` +
+          `95% 置信区间: [${(d.ci_lo * 100).toFixed(3)}%, ${(d.ci_hi * 100).toFixed(3)}%]<br>` +
+          `p 值（显著性）= ${d.p_value?.toFixed(4) ?? '—'}<br>` +
+          `<span style="color:#5c6b77;font-size:11px">*p<0.10 **p<0.05 ***p<0.01</span>`;
       },
     },
-    grid: { left: 140, right: 30, top: 50, bottom: 60 },
+    grid: { left: 140, right: 30, top: 60, bottom: 60 },
     xAxis: {
       type: 'value',
-      name: 'treatment_group 系数',
+      name: '处理组系数',
       nameLocation: 'center',
       nameGap: 28,
       scale: true,
@@ -488,7 +524,12 @@ const CHART_OPTION_BUILDERS = {
   // chart title and series dataset come straight from the payload.
   mechanism_regression: payload => {
     const opt = buildMainRegressionOption(payload);
-    opt.title = { text: '机制回归 turnover_mechanism 系数（× 4 象限，带 95% CI）', left: 'center' };
+    opt.title = {
+      text: '机制回归换手率系数（× 4 象限，带 95% 置信区间）',
+      subtext: '换手率机制 = 通过换手率渠道传导的指数纳入效应',
+      left: 'center',
+      subtextStyle: { fontSize: 11, color: '#5c6b77' },
+    };
     return opt;
   },
   // rdd_robustness reuses the same forest-plot option builder. Each row
@@ -497,7 +538,12 @@ const CHART_OPTION_BUILDERS = {
   // see how the headline result moves under specification changes.
   rdd_robustness: payload => {
     const opt = buildMainRegressionOption(payload);
-    opt.title = { text: 'HS300 RDD 稳健性 · main / donut / placebo / polynomial（τ ± 95% CI）', left: 'center' };
+    opt.title = {
+      text: '沪深300 RDD 稳健性 · 主检验 / 甜甜圈 / 安慰剂 / 多项式（τ ± 95% 置信区间）',
+      subtext: 'RDD = 断点回归设计 ｜ τ（tau）= 断点处的处理效应估计量',
+      left: 'center',
+      subtextStyle: { fontSize: 11, color: '#5c6b77' },
+    };
     return opt;
   },
   event_counts: buildEventCountsOption,
@@ -547,7 +593,7 @@ function buildRddScatterOption(payload) {
   // toggles which bandwidth is shown.
   const fitSeriesNames = [];
   for (const fit of fits) {
-    const name = `bw=${fit.bandwidth} (τ=${(fit.tau * 100).toFixed(2)}%, p=${fit.p_value.toFixed(3)}, n=${fit.n_obs})`;
+    const name = `带宽=${fit.bandwidth}（τ（处理效应）=${(fit.tau * 100).toFixed(2)}%, p 值=${fit.p_value.toFixed(3)}, 样本量 n=${fit.n_obs}）`;
     fitSeriesNames.push(name);
     const isDefault = defaultBw != null && Math.abs(fit.bandwidth - defaultBw) < 1e-9;
     const color = fitColor(fit.bandwidth);
@@ -577,7 +623,7 @@ function buildRddScatterOption(payload) {
         symbol: 'none',
         silent: true,
         lineStyle: { color: '#9ba3ad', type: 'dashed', width: 1.5 },
-        label: { formatter: 'cutoff = ' + payload.cutoff },
+        label: { formatter: '阈值 = ' + payload.cutoff },
         data: [{ xAxis: payload.cutoff }],
       },
     });
@@ -593,7 +639,7 @@ function buildRddScatterOption(payload) {
     if (defaultBw == null) return null;
     const fit = fits.find(f => Math.abs(f.bandwidth - defaultBw) < 1e-9);
     if (!fit) return null;
-    return `bw=${fit.bandwidth} (τ=${(fit.tau * 100).toFixed(2)}%, p=${fit.p_value.toFixed(3)}, n=${fit.n_obs})`;
+    return `带宽=${fit.bandwidth}（τ（处理效应）=${(fit.tau * 100).toFixed(2)}%, p 值=${fit.p_value.toFixed(3)}, 样本量 n=${fit.n_obs}）`;
   })();
   for (const name of fitSeriesNames) {
     legendSelected[name] = name === defaultFitName;
@@ -601,21 +647,21 @@ function buildRddScatterOption(payload) {
 
   const subtitleText = (() => {
     if (defaultBw == null || fits.length === 0) {
-      return '点击图例切换 bandwidth · 默认隐藏其它带宽';
+      return '点击图例切换带宽 · 默认隐藏其它带宽';
     }
     const fit = fits.find(f => Math.abs(f.bandwidth - defaultBw) < 1e-9) || fits[0];
     return (
-      `默认 bandwidth=${fit.bandwidth} · τ=${(fit.tau * 100).toFixed(3)}%, ` +
-      `p=${fit.p_value.toFixed(3)}, n=${fit.n_obs} · 点击图例切换其它带宽`
+      `默认带宽=${fit.bandwidth} · τ（处理效应）=${(fit.tau * 100).toFixed(3)}%, ` +
+      `p 值=${fit.p_value.toFixed(3)}, 样本量 n=${fit.n_obs} · 点击图例切换其它带宽`
     );
   })();
 
   return {
     title: {
-      text: 'HS300 RDD 散点 · 运行变量 × CAR[-1,+1] · 多 bandwidth 拟合',
-      subtext: subtitleText,
+      text: '沪深300 RDD 散点 · 运行变量 × CAR[-1,+1] · 多带宽拟合',
+      subtext: 'RDD = 断点回归设计 ｜ 运行变量 = 决定是否纳入指数的排名距离\n' + subtitleText,
       left: 'center',
-      subtextStyle: { fontSize: 11, color: '#5c6b77' },
+      subtextStyle: { fontSize: 11, color: '#5c6b77', lineHeight: 16 },
     },
     tooltip: {
       trigger: 'item',
@@ -627,8 +673,8 @@ function buildRddScatterOption(payload) {
           const x = Array.isArray(params.value) ? params.value[0] : null;
           const y = Array.isArray(params.value) ? params.value[1] : null;
           const lines = [`<strong>RDD 拟合</strong>`, params.seriesName];
-          if (x != null) lines.push(`running_variable: ${x.toFixed(2)}`);
-          if (y != null) lines.push(`predicted CAR[-1,+1]: ${(y * 100).toFixed(3)}%`);
+          if (x != null) lines.push(`运行变量: ${x.toFixed(2)}`);
+          if (y != null) lines.push(`预测 CAR[-1,+1]: ${(y * 100).toFixed(3)}%`);
           return lines.join('<br>');
         }
         if (!params.value || params.value.length < 2) return '';
@@ -637,11 +683,11 @@ function buildRddScatterOption(payload) {
         const data = params.data || {};
         const lines = [
           `<strong>${params.seriesName}</strong>`,
-          `running_variable: ${x.toFixed(2)}`,
+          `运行变量: ${x.toFixed(2)}`,
           `CAR[-1,+1]: ${(y * 100).toFixed(3)}%`,
         ];
-        if (data.batch_id) lines.push(`batch: ${data.batch_id}`);
-        if (data.ticker) lines.push(`ticker: ${data.ticker}`);
+        if (data.batch_id) lines.push(`批次: ${data.batch_id}`);
+        if (data.ticker) lines.push(`股票代码: ${data.ticker}`);
         if (data.security_name) lines.push(`证券: ${data.security_name}`);
         return lines.join('<br>');
       },
@@ -656,7 +702,7 @@ function buildRddScatterOption(payload) {
     grid: { left: 60, right: 30, top: 70, bottom: 70 },
     xAxis: {
       type: 'value',
-      name: 'running_variable',
+      name: '运行变量',
       nameLocation: 'center',
       nameGap: 28,
       scale: true,
@@ -678,7 +724,12 @@ function buildRddScatterOption(payload) {
 
 function buildCmaMechanismHeatmapOption(payload) {
   return {
-    title: { text: 'CMA 机制系数 t 值热力图(no_fe spec)', left: 'center' },
+    title: {
+      text: '跨市场机制系数 t 值热力图（无固定效应）',
+      subtext: 't 值 = 系数 / 标准误，衡量统计显著程度 ｜ 颜色越深表示效应越强',
+      left: 'center',
+      subtextStyle: { fontSize: 11, color: '#5c6b77' },
+    },
     tooltip: {
       formatter: params => {
         const ann = payload.annotations.find(
@@ -687,11 +738,12 @@ function buildCmaMechanismHeatmapOption(payload) {
         if (!ann) return '';
         return `<strong>${payload.row_labels[ann.row]}</strong><br>` +
           `${payload.col_labels[ann.col]}<br>` +
-          `t = ${ann.t.toFixed(2)} ${ann.stars ?? ''}<br>` +
-          (ann.p_value != null ? `p = ${ann.p_value.toFixed(4)}` : '');
+          `t 值（系数/标准误）= ${ann.t.toFixed(2)} ${ann.stars ?? ''}<br>` +
+          (ann.p_value != null ? `p 值（显著性）= ${ann.p_value.toFixed(4)}<br>` : '') +
+          `<span style="color:#5c6b77;font-size:11px">*p<0.10 **p<0.05 ***p<0.01</span>`;
       },
     },
-    grid: { left: 140, right: 80, top: 50, bottom: 60 },
+    grid: { left: 140, right: 80, top: 60, bottom: 60 },
     xAxis: { type: 'category', data: payload.col_labels, splitArea: { show: true } },
     yAxis: { type: 'category', data: payload.row_labels, splitArea: { show: true } },
     visualMap: {
@@ -735,7 +787,7 @@ function buildCmaGapLengthDistributionOption(payload) {
     emphasis: { focus: 'series' },
   }));
   return {
-    title: { text: 'Announce → Effective 窗口长度分布(天)', left: 'center' },
+    title: { text: '公告日 → 生效日窗口长度分布（天）', left: 'center' },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
@@ -743,13 +795,13 @@ function buildCmaGapLengthDistributionOption(payload) {
         const days = params[0]?.axisValue ?? '';
         return `<strong>${days} 天</strong><br>` + params
           .filter(p => p.value > 0)
-          .map(p => `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:6px"></span>${p.seriesName}: ${p.value} events`)
+          .map(p => `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:6px"></span>${p.seriesName}: ${p.value} 个事件`)
           .join('<br>');
       },
     },
     legend: { bottom: 0, data: payload.series.map(s => s.name) },
     grid: { left: 60, right: 30, top: 50, bottom: 60 },
-    xAxis: { type: 'category', data: payload.lengths.map(String), name: 'gap_length_days' },
+    xAxis: { type: 'category', data: payload.lengths.map(String), name: '空窗期天数' },
     yAxis: { type: 'value', name: '事件数', splitLine: { lineStyle: { type: 'dashed' } } },
     series: ecSeries,
   };
@@ -772,14 +824,14 @@ function buildEventCountsOption(payload) {
     },
   }));
   return {
-    title: { text: '真实调入事件按公告年分布(CN vs US)', left: 'center' },
+    title: { text: '真实调入事件按公告年分布（中国 对比 美国）', left: 'center' },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
       formatter: params => {
         const year = params[0]?.axisValue ?? '';
         return `<strong>${year}</strong><br>` + params.map(p =>
-          `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:6px"></span>${p.seriesName}: ${p.value} events`
+          `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:6px"></span>${p.seriesName}: ${p.value} 个事件`
         ).join('<br>');
       },
     },

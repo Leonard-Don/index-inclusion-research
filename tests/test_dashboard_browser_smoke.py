@@ -250,6 +250,40 @@ def test_dashboard_browser_smoke() -> None:
         assert topbar_metrics["topbarHeight"] <= 100
         assert topbar_metrics["brandWidth"] <= 320
         assert topbar_metrics["navWidth"] >= 1080
+
+        compact_page = _new_dashboard_page(
+            browser, viewport={"width": 1280, "height": 720}
+        )
+        compact_page.goto(f"{base_url}/?mode=demo", wait_until="domcontentloaded")
+        compact_page.wait_for_load_state("networkidle")
+        compact_topbar_metrics = compact_page.evaluate(
+            """
+            () => {
+                const brandMark = document.querySelector(".brand-mark");
+                const topbar = document.querySelector(".topbar");
+                return {
+                    brandMarkHeight: brandMark?.getBoundingClientRect().height ?? 0,
+                    brandMarkScrollWidth: brandMark?.scrollWidth ?? 0,
+                    brandMarkClientWidth: brandMark?.clientWidth ?? 0,
+                    topbarHeight: topbar?.getBoundingClientRect().height ?? 0,
+                    bodyScrollWidth: document.documentElement.scrollWidth,
+                    viewportWidth: window.innerWidth,
+                };
+            }
+            """
+        )
+        assert compact_topbar_metrics["brandMarkHeight"] <= 30
+        assert (
+            compact_topbar_metrics["brandMarkScrollWidth"]
+            <= compact_topbar_metrics["brandMarkClientWidth"] + 1
+        )
+        assert compact_topbar_metrics["topbarHeight"] <= 80
+        assert (
+            compact_topbar_metrics["bodyScrollWidth"]
+            <= compact_topbar_metrics["viewportWidth"] + 1
+        )
+        compact_page.close()
+
         hero_metrics = page.evaluate(
             """
             () => {
@@ -540,9 +574,9 @@ def test_dashboard_browser_smoke() -> None:
             page,
             "#cross_market_asymmetry",
             "跨市场机制",
-            "美股 vs A 股不对称",
+            "美股 对比 A 股不对称",
         )
-        assert page.locator("[data-waypoint-title]").inner_text().strip() == "美股 vs A 股不对称"
+        assert page.locator("[data-waypoint-title]").inner_text().strip() == "美股 对比 A 股不对称"
         active_sections = [
             text.strip()
             for text in page.locator("[data-section-link].active").all_inner_texts()
@@ -1400,8 +1434,8 @@ def test_pap_status_chip_renders_with_baseline_diff() -> None:
 
 def test_rdd_chart_renders_bandwidth_sweep() -> None:
     """The HS300 RDD ECharts container should render with multiple bandwidth
-    fit lines (legend acts as bandwidth selector) and a subtitle reporting
-    τ/p/n at the default bandwidth."""
+    fit lines (legend acts as bandwidth selector) and a localized subtitle
+    reporting τ/p/n at the default bandwidth."""
 
     with (
         _running_dashboard_server() as base_url,
@@ -1452,12 +1486,12 @@ def test_rdd_chart_renders_bandwidth_sweep() -> None:
                 """
             )
 
-            assert "HS300 RDD" in chart_state["title_text"]
+            assert "沪深300 RDD" in chart_state["title_text"]
             # Subtitle records the default-bandwidth headline statistics.
-            assert "默认 bandwidth=0.06" in chart_state["subtitle"]
-            assert "τ=" in chart_state["subtitle"]
-            assert "p=" in chart_state["subtitle"]
-            assert "n=" in chart_state["subtitle"]
+            assert "默认带宽=0.06" in chart_state["subtitle"]
+            assert "τ（处理效应）=" in chart_state["subtitle"]
+            assert "p 值=" in chart_state["subtitle"]
+            assert "样本量 n=" in chart_state["subtitle"]
             assert float(chart_state["x_axis_min"]) > 299.0
             assert float(chart_state["x_axis_max"]) < 301.0
 
@@ -1470,10 +1504,10 @@ def test_rdd_chart_renders_bandwidth_sweep() -> None:
             assert scatter_series_count == 2
             assert line_series_count >= 4
 
-            # Legend should expose bandwidth-labeled entries; each looks like
-            # "bw=0.06 (τ=…%, p=…, n=…)".
+            # Legend should expose localized bandwidth-labeled entries; each
+            # looks like "带宽=0.06（τ（处理效应）=...%, p 值=..., 样本量 n=...）".
             bandwidth_labels = [
-                lbl for lbl in chart_state["legend_data"] if str(lbl).startswith("bw=")
+                lbl for lbl in chart_state["legend_data"] if str(lbl).startswith("带宽=")
             ]
             assert len(bandwidth_labels) >= 3, (
                 f"expected ≥3 bandwidth legend entries, got {bandwidth_labels}"
@@ -1482,7 +1516,7 @@ def test_rdd_chart_renders_bandwidth_sweep() -> None:
             # Default selection: scatter series visible, only the
             # default-bandwidth fit visible, other bandwidths off.
             default_bw_label = next(
-                (lbl for lbl in bandwidth_labels if "bw=0.06" in str(lbl)),
+                (lbl for lbl in bandwidth_labels if "带宽=0.06" in str(lbl)),
                 None,
             )
             assert default_bw_label is not None

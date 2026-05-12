@@ -88,7 +88,7 @@
       width: min(1440px, 100%);
       margin: 0 auto;
       display: grid;
-      grid-template-columns: minmax(260px, auto) minmax(0, 1fr);
+      grid-template-columns: minmax(280px, auto) minmax(0, 1fr);
       align-items: center;
       gap: 18px;
     }
@@ -100,8 +100,9 @@
     .brand-mark {
       font-family: "Songti SC", "STSong", "Noto Serif CJK SC", "Iowan Old Style", serif;
       font-size: 27px;
-      letter-spacing: -0.04em;
+      letter-spacing: 0;
       line-height: 1;
+      white-space: nowrap;
     }
     .brand-copy {
       color: var(--muted);
@@ -1774,7 +1775,7 @@
         padding: 10px 18px;
       }
       .topbar-inner {
-        grid-template-columns: minmax(228px, 236px) minmax(0, 1fr);
+        grid-template-columns: minmax(260px, 270px) minmax(0, 1fr);
         gap: 14px;
       }
       .brand {

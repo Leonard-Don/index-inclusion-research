@@ -236,7 +236,7 @@
     {% if verdict.key_label %}
     {% set key_label_text = {
       'US AUM ratio': 'US AUM 倍数',
-      'bootstrap p': 'bootstrap p 值',
+      'bootstrap p': '自举法 p 值',
       'regression p': '回归 p 值',
       'limit_coef p': '涨跌停系数 p 值',
       'heavy−light spread': '重权重−轻权重差'
@@ -251,7 +251,7 @@
         {%- endif -%}
       </span>
       {% if verdict.n_obs and verdict.n_obs > 0 %}
-      <span class="cma-verdict-keyn">n={{ verdict.n_obs }}</span>
+      <span class="cma-verdict-keyn">样本量 n={{ verdict.n_obs }}</span>
       {% endif %}
     </div>
     {% endif %}
@@ -287,7 +287,7 @@
 
 {% macro render_cma_section(mode, cma_section) -%}
 {% if cma_section %}
-<section class="section" id="cross_market_asymmetry" data-waypoint data-waypoint-kind="section" data-waypoint-label="美股 vs A 股不对称">
+<section class="section" id="cross_market_asymmetry" data-waypoint data-waypoint-kind="section" data-waypoint-label="美股 对比 A 股不对称">
   <header class="section-head">
     <div class="section-kicker">跨市场机制</div>
     <h2>{{ cma_section.title }}</h2>
@@ -419,7 +419,7 @@
   {% endif %}
 
   {% if mode != 'brief' and cma_section.gap_summary and cma_section.gap_summary.rows %}
-  {{ render_cma_generic_table(cma_section.gap_summary, '空窗期与生效日明细（CN vs US × 6 指标）') }}
+  {{ render_cma_generic_table(cma_section.gap_summary, '空窗期与生效日明细（中国 对比 美国 × 6 指标）') }}
   {% endif %}
 
   {% if mode == 'full' and cma_section.hypothesis_map and cma_section.hypothesis_map.rows %}
@@ -456,7 +456,7 @@
     {{ render_cma_collapsible_table(cma_section.detail_tables.hypothesis_verdicts, '假说裁决全集（H1–H7）') }}
     {{ render_cma_collapsible_table(cma_section.detail_tables.mechanism_panel, '机制回归面板（4 个象限 × 5 个结果变量 × 3 个规格）') }}
     {{ render_cma_collapsible_table(cma_section.detail_tables.h6_weight_explanation, 'H6 权重解释层（覆盖率 / 方向 / 规格 / 最终读法）') }}
-    {{ render_cma_collapsible_table(cma_section.detail_tables.h6_weight_robustness, 'H6 权重稳健性（分位 / OLS / sector FE / 分位数回归）') }}
+    {{ render_cma_collapsible_table(cma_section.detail_tables.h6_weight_robustness, 'H6 权重稳健性（分位 / OLS / 行业固定效应 / 分位数回归）') }}
     {{ render_cma_collapsible_table(cma_section.detail_tables.heterogeneity_size, '异质性 · 市值五分位') }}
     {{ render_cma_collapsible_table(cma_section.detail_tables.heterogeneity_liquidity, '异质性 · 流动性五分位') }}
     {{ render_cma_collapsible_table(cma_section.detail_tables.heterogeneity_sector, '异质性 · 行业') }}
