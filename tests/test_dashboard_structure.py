@@ -168,7 +168,7 @@ def test_home_dashboard_renders_single_frontend_sections() -> None:
     assert "交易机制" in html
     assert "展示版" in html
     assert "支撑文献" in html
-    assert "查看这篇速读" in html
+    assert "查阅文献速读" in html
     assert "识别对象" in html
     assert "挑战的假设" in html
     assert "争论推进" in html
@@ -308,8 +308,8 @@ def test_dashboard_static_assets_are_served() -> None:
     assert ".reading-progress" in css
     assert "#tracks" in css
     assert "scroll-margin-top: 84px;" in css
-    assert "text-wrap: wrap;" in css
-    assert "grid-template-columns: minmax(0, 0.94fr) minmax(340px, 1.06fr);" in css
+    assert "text-wrap: balance;" in css
+    assert "grid-template-columns: minmax(0, 0.98fr) minmax(360px, 1.02fr);" in css
     assert "#tracks > .section-head .section-side {" in css
     assert "#tracks > .section-head + .track {" in css
     assert "#tracks > .section-head + .track .track-meta {" in css
@@ -749,7 +749,7 @@ def test_paper_route_now_renders_brief_before_pdf() -> None:
     assert "文献链导航" in html
     assert "默认展开当前文献所在分组" in html
     assert "效应重估、价格发现或中国制度场景" in html
-    assert "按阵营最适合看争论如何推进" in html
+    assert "按阵营梳理便于把握争论推进脉络" in html
     assert "如果你想回看当前这条争论是从哪里起步的" in html
     assert '<details class="evolution-group"' in html
     assert "当前文献所在分组" in html

@@ -95,7 +95,7 @@
 {{ render_collapsible_table_group(
   "limits-artifact-index",
   "原始产物索引",
-  "列出后端结果、输入与维护产物的路径、类型、更新时间和前端状态；用于审计与自查，不进入主叙事。",
+  "列出后端结果、输入与维护产物的路径、类型、更新时间及前端状态；提供可追溯的审计与自查依据，作为研究过程的辅助参考。",
   limits_section.artifact_tables,
   "library-panels",
   "完整索引",
@@ -227,9 +227,9 @@
     </div>
     <p class="cma-verdict-tier-note" data-evidence-tier="{{ evidence_tier }}">
       {% if evidence_tier == 'core' %}
-      正文可引用：样本和口径可进入主文，结论仍以当前裁决为准。
+      正文可引用：样本覆盖与统计口径符合主文标准，最终结论以当前裁决为准。
       {% else %}
-      附录/探索性：样本或代理变量仍有限，适合提示机制，不宜写成主因果结论。
+      附录/探索性：受限于样本规模或代理变量，结论更适于提示机制，暂不宜作为主因果论断。
       {% endif %}
     </p>
     <p class="cma-verdict-summary">{{ cma_display_text(verdict.evidence_summary) }}</p>

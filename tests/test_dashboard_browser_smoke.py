@@ -215,7 +215,7 @@ def test_dashboard_browser_smoke() -> None:
 
         page.goto(f"{base_url}/?mode=demo", wait_until="domcontentloaded")
         page.wait_for_load_state("networkidle")
-        assert "用一页讲清指数纳入效应" in page.locator("h1").inner_text()
+        assert "全景展现指数纳入效应" in page.locator("h1").inner_text()
         assert "构成理论基础" in page.content()
         assert page.locator("a.skip-link").get_attribute("href") == "#main-content"
         assert (
@@ -725,7 +725,7 @@ def test_dashboard_browser_smoke() -> None:
         assert page.locator("a.skip-link").get_attribute("href") == "#main-content"
         assert "公开 alpha" in page.locator(".hero-summary").inner_text()
         assert (
-            "按阵营最适合看争论如何推进"
+            "按阵营梳理便于把握争论推进脉络"
             in page.locator(".evolution-nav-copy").inner_text()
         )
         assert page.get_by_role("link", name="回看上一环").is_visible()

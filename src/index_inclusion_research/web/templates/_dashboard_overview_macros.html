@@ -54,7 +54,7 @@
     <div>
       <div class="details-kicker">补充摘要</div>
       <div class="details-title">更多摘要指标（{{ hero_extra_metrics|length }} 项）</div>
-      <div class="details-copy">首屏保留文献规模与 RDD 证据等级，其余指标可在汇报或核对时展开。</div>
+      <div class="details-copy">首屏保留文献规模与 RDD 证据等级，其余指标可按需展开，供汇报或核对使用。</div>
     </div>
     <div class="details-toggle" data-details-toggle>展开查看</div>
   </summary>
@@ -128,7 +128,7 @@
       <div>
         <div class="details-kicker">更新记录</div>
         <div class="details-title">刷新时间与更新内容</div>
-        <div class="details-copy">先判断本次刷新是否成功，再按需查看具体产物。</div>
+        <div class="details-copy">确认刷新状态后，可按需查阅具体更新产物。</div>
       </div>
       <div class="details-toggle" data-details-toggle>展开细节</div>
     </summary>
@@ -195,9 +195,12 @@
   <div class="hero-copy">
     <div class="eyebrow">研究总览</div>
     <div>
-      <h1>用一页讲清指数纳入效应：文献脉络、真实样本与识别边界。</h1>
+      <h1 aria-label="全景展现指数纳入效应：文献脉络、真实样本与识别边界。">
+        <span class="hero-title-desktop" aria-hidden="true">全景展现指数纳入效应：<br class="hero-break">文献脉络、真实样本<br class="hero-break">与识别边界。</span>
+        <span class="hero-title-mobile" aria-hidden="true">全景展现指数<br>纳入效应：文献脉络<br>真实样本与识别边界。</span>
+      </h1>
       <div class="hero-lead">
-        看板按“现象-机制-识别”的顺序组织材料，帮助说明指数效应为什么会在不同市场、事件阶段和制度条件下被重新改写。
+        看板遵循“现象、机制、识别”的研究脉络组织材料，旨在阐明指数效应在不同市场、事件阶段与制度环境下的演化逻辑。
       </div>
       <div class="hero-summary-inline">{{ overview_summary }}</div>
     </div>
@@ -234,7 +237,7 @@
   <div class="utility-copy">
     <div class="utility-kicker">阅读控制</div>
     <div class="utility-title">选择阅读深度</div>
-    <div class="utility-text">先选汇报长度，再决定是否刷新结果或切换表格密度。</div>
+    <div class="utility-text">根据阅读需求选择汇报深度，并按需刷新数据结果或调整表格展示密度。</div>
   </div>
   <div class="utility-actions">
     <div class="utility-mode-stack">
@@ -253,7 +256,7 @@
         {% endfor %}
         {{ shared.render_refresh_form(url_for('refresh_dashboard', mode=mode), "overview", "刷新结果", "all", "正在刷新…") }}
       </nav>
-      <div class="utility-mode-note">3 分钟汇报抓结论；展示版讲主线；完整材料核对证据与边界。</div>
+      <div class="utility-mode-note">简版提炼核心结论（适于 3 分钟速读）；展示版梳理研究主线；完整版提供详实的证据核对与边界探讨。</div>
     </div>
     <div class="table-density-panel" data-table-density-panel>
       <div class="table-density-label">表格阅读</div>
@@ -261,7 +264,7 @@
         <button type="button" class="active" data-table-density-button="cozy" aria-pressed="true">舒展</button>
         <button type="button" data-table-density-button="compact" aria-pressed="false">紧凑</button>
       </div>
-      <div class="table-density-note">长表可横向滚动，首列已固定；核对数据时可切到紧凑视图。</div>
+      <div class="table-density-note">长表支持横向滚动并已固定首列；核对数据时建议切换至紧凑视图以提升阅读效率。</div>
     </div>
   </div>
 </section>
@@ -269,7 +272,7 @@
 
 {% macro render_core_findings_section(abstract_lead, abstract_points, highlights) -%}
 <section class="section">
-  {{ shared.render_section_head("核心发现", "核心结论", "先给出可直接用于汇报的判断，再回到下方表格与图表核对证据。", "阅读方式", "按现象、机制、识别的顺序读，能最快建立整套论证。") }}
+  {{ shared.render_section_head("核心发现", "核心结论", "提炼可直接用于汇报的核心结论，详实证据请参考下方图表。", "阅读提示", "建议按现象、机制、识别的逻辑顺序阅读，以快速构建完整的论证体系。") }}
   {{ shared.render_abstract_panel(abstract_lead, abstract_points) }}
   {{ shared.render_highlight_grid(highlights) }}
 </section>
@@ -308,7 +311,7 @@
 {% macro render_cta_strip(cta_copy, mode) -%}
 <section class="cta-strip">
   <div>
-    <h3>文献、样本、结果与边界都在同一界面里。</h3>
+    <h3>文献脉络、真实样本、研究结果与识别边界均汇聚于此。</h3>
     <p>{{ cta_copy }}</p>
   </div>
   {{ shared.render_refresh_form(url_for('refresh_dashboard', mode=mode), "overview", "刷新全部材料", "all", "正在全量刷新…") }}
@@ -325,7 +328,7 @@
     </div>
     <button type="button" class="chapter-drawer-close" data-waypoint-menu-close aria-label="关闭章节目录">关闭</button>
   </div>
-  <div class="chapter-drawer-copy">在窄屏上可直接跳到章节或研究主线，不必横向滑完整个顶部导航。</div>
+  <div class="chapter-drawer-copy">在窄屏视图下，可通过目录快速跳转至核心章节与研究主线。</div>
   <div class="chapter-drawer-progress">
     <span>阅读进度</span>
     <strong data-reading-progress-label>0%</strong>

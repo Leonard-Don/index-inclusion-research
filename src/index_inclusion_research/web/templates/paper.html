@@ -76,7 +76,7 @@
           <div class="section-kicker">核心解读</div>
           <h2>这篇论文贡献了什么</h2>
         </div>
-        <div class="section-intro">这一组卡片分别回答识别对象、挑战假设和争论推进，帮助判断它是在重估旧结论、改写价格发现，还是强调制度差异。</div>
+        <div class="section-intro">这一组卡片分别归纳文献的识别对象、挑战假设与争论推进，协助判断其核心贡献在于重估旧结论、改写价格发现，抑或强调制度差异。</div>
       </div>
       <div class="insight-grid">
         {% for card in current.summary_cards %}
@@ -98,7 +98,7 @@
           <div class="section-kicker">CMA 假说证据</div>
           <h2>这篇论文支持的机制假说</h2>
         </div>
-        <div class="section-intro">本论文被 CMA 体系下的 {{ current.verdict_citations|length }} 条机制假说引用为证据支撑。每条假说的当前裁决来自真实样本流水线，可点击看板链接查看完整裁决卡片。</div>
+        <div class="section-intro">本论文被 CMA 体系中的 {{ current.verdict_citations|length }} 项机制假说引用为实证依据。各项假说的当前裁决均源自真实样本流水线，可点击看板链接查阅完整裁决卡片。</div>
       </div>
       <ul class="paper-verdict-list">
         {% for cit in current.verdict_citations %}
@@ -137,7 +137,7 @@
           <div class="section-kicker">文献链</div>
           <h2>这篇论文在文献链中的位置</h2>
         </div>
-        <div class="section-intro">这里主要看它在整条争论里的位置，以及下一步该补哪篇，才能接上效应重估、价格发现或中国制度场景。</div>
+        <div class="section-intro">此处展现该文献在整体争论脉络中的位置，并提示后续阅读方向，以便更流畅地衔接效应重估、价格发现或中国制度场景的讨论。</div>
       </div>
       {% if current.sequence_cards %}
       <div class="timeline-track">
@@ -191,7 +191,7 @@
       {% if current.evolution_nav_cards %}
       <div class="evolution-nav">
         <h3>文献链导航</h3>
-        <div class="evolution-nav-copy">这 16 篇文献按不同视角重排。按阵营最适合看争论如何推进，按主线最适合补机制与识别，按立场最适合组织综述；默认展开当前文献所在分组。</div>
+        <div class="evolution-nav-copy">核心文献池支持多视角重组。按阵营梳理便于把握争论推进脉络，按主线梳理便于补充机制与识别细节，按立场梳理适于构建文献综述框架；默认展开当前文献所在分组。</div>
         <div class="evolution-switcher" role="toolbar" aria-label="文献导航视图">
           <button class="{% if evolution_view == 'camp' %}active{% endif %}" id="evolution-view-button-camp" type="button" data-view-target="camp" aria-pressed="{% if evolution_view == 'camp' %}true{% else %}false{% endif %}" aria-controls="evolution-view-camp">按阵营</button>
           <button class="{% if evolution_view == 'track' %}active{% endif %}" id="evolution-view-button-track" type="button" data-view-target="track" aria-pressed="{% if evolution_view == 'track' %}true{% else %}false{% endif %}" aria-controls="evolution-view-track">按主线</button>
@@ -245,7 +245,7 @@
           <div class="section-kicker">结构化信息</div>
           <h2>论文信息与项目解读</h2>
         </div>
-        <div class="section-intro">这里把展示和答辩最常用的信息压成两张表：一张交代论文基本信息，一张交代它在本项目中的作用。</div>
+        <div class="section-intro">此处将展示与答辩中的高频信息精炼为两张核心表格：分别呈现论文基础信息及其在本项目中的关键作用。</div>
       </div>
       <div class="table-grid">
         {% for label, html_table in current.rendered_tables %}
@@ -256,7 +256,7 @@
         </div>
         {% endfor %}
       </div>
-      <div class="note">需要核对原文时，可从上方 PDF 入口进入；本页先交代这篇论文在争论链里的位置，以及它在本项目中的作用。</div>
+      <div class="note">如需核对原文细节，可经由上方 PDF 入口查阅；本页侧重阐述该文献在争论链条中的站位及其对本项目的价值。</div>
     </section>
   </main>
   <script src="{{ url_for('static', filename='paper.js') }}" defer></script>

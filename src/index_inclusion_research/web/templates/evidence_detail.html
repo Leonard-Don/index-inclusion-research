@@ -33,7 +33,7 @@
         <article class="result-card evidence-summary-card">
           <div class="table-label">生成时间</div>
           <strong>{{ detail.generated_at }}</strong>
-          <p>来自最近一次证据刷新清单</p>
+          <p>源自最新证据刷新清单</p>
         </article>
         {% endif %}
         {% for card in detail.summary_cards %}
@@ -110,7 +110,7 @@
         </div>
         <div class="evidence-source-line">显示 {{ table.shown_rows }} / {{ table.total_rows }} 行</div>
         {% else %}
-        <div class="surface-empty">当前明细表没有可展示行。</div>
+        <div class="surface-empty">当前明细表暂无可展示的数据行。</div>
         {% endif %}
       </div>
     </section>
