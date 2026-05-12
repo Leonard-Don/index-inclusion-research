@@ -12,12 +12,14 @@ def test_nav_sections_for_modes() -> None:
         "overview",
         "design",
         "tracks",
+        "cross_market_asymmetry",
         "limits",
     ]
     assert [item["anchor"] for item in demo] == [
         "overview",
         "design",
         "tracks",
+        "cross_market_asymmetry",
         "framework",
         "supplement",
         "limits",
@@ -27,6 +29,7 @@ def test_nav_sections_for_modes() -> None:
         "overview",
         "design",
         "tracks",
+        "cross_market_asymmetry",
         "framework",
         "supplement",
         "robustness",

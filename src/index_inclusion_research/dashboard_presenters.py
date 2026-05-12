@@ -34,6 +34,7 @@ def nav_sections_for_mode(mode: ModeName) -> list[NavSection]:
         {"anchor": "overview", "label": "总览"},
         {"anchor": "design", "label": "样本设计"},
         {"anchor": "tracks", "label": "主线结果"},
+        {"anchor": "cross_market_asymmetry", "label": "跨市场机制"},
     ]
     if mode != "brief":
         items.extend(
@@ -51,7 +52,7 @@ def nav_sections_for_mode(mode: ModeName) -> list[NavSection]:
 
 
 def available_hashes_for_mode(mode: ModeName) -> list[str]:
-    hashes = ["#overview", "#design", "#tracks", "#limits", "#cross_market_asymmetry"]
+    hashes = ["#overview", "#design", "#tracks", "#cross_market_asymmetry", "#limits"]
     if mode != "brief":
         hashes.extend(["#framework", "#supplement", "#paper_audit"])
     if mode == "full":

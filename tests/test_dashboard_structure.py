@@ -490,6 +490,7 @@ def test_dashboard_template_uses_shared_section_and_figure_macros() -> None:
     assert "ui.render_utility_bar(" in dashboard_template
     assert "ui.render_overview_context(" in dashboard_template
     assert "ui.render_design_section(" in dashboard_template
+    assert "ui.render_cma_section(" in dashboard_template
     assert "ui.render_framework_section(" in dashboard_template
     assert "ui.render_supplement_section(" in dashboard_template
     assert "ui.render_robustness_section(" in dashboard_template
@@ -498,6 +499,9 @@ def test_dashboard_template_uses_shared_section_and_figure_macros() -> None:
     assert "ui.render_tracks_section(" in dashboard_template
     assert "ui.render_cta_strip(" in dashboard_template
     assert "ui.render_waypoint_navigation(" in dashboard_template
+    assert dashboard_template.index("ui.render_tracks_section(") < dashboard_template.index(
+        "ui.render_cma_section("
+    ) < dashboard_template.index("ui.render_framework_section(")
 
 
 def test_home_dashboard_keeps_mode_tabs_and_refresh_anchor_logic(monkeypatch) -> None:
@@ -506,6 +510,7 @@ def test_home_dashboard_keeps_mode_tabs_and_refresh_anchor_logic(monkeypatch) ->
     assert response.status_code == 200
     html = response.get_data(as_text=True)
     assert "data-section-link" in html
+    assert 'data-section-key="cross_market_asymmetry"' in html
     assert 'data-section-key="framework"' in html
     assert 'data-section-key="supplement"' in html
     assert 'data-section-key="robustness"' not in html
@@ -691,7 +696,7 @@ def test_home_dashboard_supports_three_minute_mode() -> None:
     assert 'data-section-key="framework"' not in html
     assert 'data-section-key="supplement"' not in html
     assert (
-        'data-allowed-hashes="#overview,#design,#tracks,#limits,#cross_market_asymmetry,#price_pressure_track,#demand_curve_track,#identification_china_track"'
+        'data-allowed-hashes="#overview,#design,#tracks,#cross_market_asymmetry,#limits,#price_pressure_track,#demand_curve_track,#identification_china_track"'
         in html
     )
     assert "这一模式把真实样本、三条主线与研究边界压缩到一页里" in html

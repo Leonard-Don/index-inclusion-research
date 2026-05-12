@@ -535,6 +535,20 @@ def test_dashboard_browser_smoke() -> None:
         assert tracks_landing_metrics["introHeight"] <= 40
         assert tracks_landing_metrics["sideHeight"] <= 90
 
+        page.get_by_role("link", name="跨市场机制").click()
+        _wait_for_section_state(
+            page,
+            "#cross_market_asymmetry",
+            "跨市场机制",
+            "美股 vs A 股不对称",
+        )
+        assert page.locator("[data-waypoint-title]").inner_text().strip() == "美股 vs A 股不对称"
+        active_sections = [
+            text.strip()
+            for text in page.locator("[data-section-link].active").all_inner_texts()
+        ]
+        assert "跨市场机制" in active_sections
+
         page.get_by_role("link", name="文献框架").click()
         _wait_for_section_state(page, "#framework", "文献框架")
         assert "open=demo-design-detail-tables" in page.url
@@ -777,7 +791,7 @@ def test_dashboard_bottom_scroll_does_not_snap_back_to_top() -> None:
                 () => {
                     return (
                         window.scrollY > window.innerHeight * 2 &&
-                        window.location.hash === '#cross_market_asymmetry'
+                        window.location.hash === '#paper_audit'
                     );
                 }
                 """
@@ -798,7 +812,7 @@ def test_dashboard_bottom_scroll_does_not_snap_back_to_top() -> None:
                 """
             )
 
-            assert bottom_state["hash"] == "#cross_market_asymmetry"
+            assert bottom_state["hash"] == "#paper_audit"
             assert bottom_state["stayedAwayFromTop"] is True, bottom_state
         finally:
             browser.close()
