@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 import index_inclusion_research.figures_tables as figures_tables
 import index_inclusion_research.outputs.reports as reports
@@ -21,145 +22,206 @@ from index_inclusion_research.outputs import (
     build_sample_scope_table,
     build_time_series_event_study_summary,
 )
-
-EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS = (
-    "market",
-    "event_phase",
-    "inclusion",
-    "window",
-    "window_slug",
-    "sample_filter",
-    "n_events",
-    "mean_car",
-    "std_car",
-    "se_car",
-    "ci_low_95",
-    "ci_high_95",
-    "t_stat",
-    "p_value",
+from index_inclusion_research.outputs.schema_registry import (
+    OUTPUT_TABLE_SCHEMAS,
+    empty_output_table,
+    output_table_columns,
 )
 
-EXPECTED_ASYMMETRY_SUMMARY_COLUMNS = (
-    "market",
-    "event_phase",
-    "n_additions",
-    "n_deletions",
-    "addition_car_m1_p1",
-    "deletion_car_m1_p1",
-    "asymmetry_car_m1_p1",
-    "addition_turnover_change",
-    "deletion_turnover_change",
-    "addition_volume_change",
-    "deletion_volume_change",
-    "addition_car_p0_p120",
-    "deletion_car_p0_p120",
-    "asymmetry_car_p0_p120",
-)
-
-EXPECTED_EVENT_COUNTS_BY_YEAR_COLUMNS = (
-    "market",
-    "announce_year",
-    "inclusion",
-    "n_events",
-    "n_tickers",
-    "n_batches",
-)
-
-EXPECTED_ROBUSTNESS_RETENTION_SUMMARY_COLUMNS = (
-    "market",
-    "event_phase",
-    "inclusion",
-    "n_events",
-    "short_window_slug",
-    "long_window_slug",
-    "short_mean_car",
-    "long_mean_car",
-    "car_reversal",
-    "retention_ratio",
-    "retention_ratio_valid",
-    "retention_note",
-    "sample_filter",
-)
-
-EXPECTED_ROBUSTNESS_REGRESSION_SUMMARY_COLUMNS = (
-    "market",
-    "event_phase",
-    "specification",
-    "dependent_variable",
-    "parameter",
-    "coefficient",
-    "std_error",
-    "t_stat",
-    "p_value",
-    "estimation",
-    "n_obs",
-    "r_squared",
-    "adj_r_squared",
-    "covariance",
-)
-
-EXPECTED_SAMPLE_FILTER_SUMMARY_COLUMNS = (
-    "sample_filter",
-    "n_treated_events",
-    "n_short_event_phase_windows",
-    "n_long_event_phase_windows",
-    "n_regression_comparisons",
-    "n_regression_rows",
-    "share_of_baseline",
-    "note",
-)
-
-EXPECTED_SAMPLE_SCOPE_TABLE_COLUMNS = (
-    "样本层",
-    "市场范围",
-    "事件数",
-    "事件相位窗口数",
-    "股票数",
-    "观测值",
-    "起始日期",
-    "结束日期",
-    "说明",
-)
-
-EXPECTED_DATA_SOURCE_TABLE_COLUMNS = (
-    "数据集",
-    "来源",
-    "市场范围",
-    "起始日期",
-    "结束日期",
-    "行数",
-    "股票数",
-    "事件数",
-    "备注",
-)
-
-EXPECTED_TIME_SERIES_EVENT_STUDY_COLUMNS = {
-    "market",
-    "inclusion",
-    "event_phase",
-    "announce_year",
-    "n_events",
-    "mean_car_m1_p1",
-    "se_car_m1_p1",
-    "ci_low_95_car_m1_p1",
-    "ci_high_95_car_m1_p1",
-    "mean_car_m3_p3",
-    "se_car_m3_p3",
-    "ci_low_95_car_m3_p3",
-    "ci_high_95_car_m3_p3",
-    "mean_car_m5_p5",
-    "se_car_m5_p5",
-    "ci_low_95_car_m5_p5",
-    "ci_high_95_car_m5_p5",
-    "mean_car_p0_p20",
-    "se_car_p0_p20",
-    "ci_low_95_car_p0_p20",
-    "ci_high_95_car_p0_p20",
-    "mean_car_p0_p120",
-    "se_car_p0_p120",
-    "ci_low_95_car_p0_p120",
-    "ci_high_95_car_p0_p120",
+EXPECTED_OUTPUT_TABLE_SCHEMAS = {
+    "data_sources": (
+        "数据集",
+        "来源",
+        "市场范围",
+        "起始日期",
+        "结束日期",
+        "行数",
+        "股票数",
+        "事件数",
+        "备注",
+    ),
+    "sample_scope": (
+        "样本层",
+        "市场范围",
+        "事件数",
+        "事件相位窗口数",
+        "股票数",
+        "观测值",
+        "起始日期",
+        "结束日期",
+        "说明",
+    ),
+    "identification_scope": (
+        "分析层",
+        "市场范围",
+        "样本基础",
+        "主要输出",
+        "证据等级",
+        "证据状态",
+        "当前口径",
+        "来源摘要",
+    ),
+    "event_counts_by_year": (
+        "market",
+        "announce_year",
+        "inclusion",
+        "n_events",
+        "n_tickers",
+        "n_batches",
+    ),
+    "time_series_event_study_summary": (
+        "market",
+        "inclusion",
+        "event_phase",
+        "announce_year",
+        "n_events",
+        "mean_car_m1_p1",
+        "se_car_m1_p1",
+        "ci_low_95_car_m1_p1",
+        "ci_high_95_car_m1_p1",
+        "mean_car_m3_p3",
+        "se_car_m3_p3",
+        "ci_low_95_car_m3_p3",
+        "ci_high_95_car_m3_p3",
+        "mean_car_m5_p5",
+        "se_car_m5_p5",
+        "ci_low_95_car_m5_p5",
+        "ci_high_95_car_m5_p5",
+        "mean_car_p0_p20",
+        "se_car_p0_p20",
+        "ci_low_95_car_p0_p20",
+        "ci_high_95_car_p0_p20",
+        "mean_car_p0_p120",
+        "se_car_p0_p120",
+        "ci_low_95_car_p0_p120",
+        "ci_high_95_car_p0_p120",
+    ),
+    "asymmetry_summary": (
+        "market",
+        "event_phase",
+        "n_additions",
+        "n_deletions",
+        "addition_car_m1_p1",
+        "deletion_car_m1_p1",
+        "asymmetry_car_m1_p1",
+        "addition_turnover_change",
+        "deletion_turnover_change",
+        "addition_volume_change",
+        "deletion_volume_change",
+        "addition_car_p0_p120",
+        "deletion_car_p0_p120",
+        "asymmetry_car_p0_p120",
+    ),
+    "sample_filter_summary": (
+        "sample_filter",
+        "n_treated_events",
+        "n_short_event_phase_windows",
+        "n_long_event_phase_windows",
+        "n_regression_comparisons",
+        "n_regression_rows",
+        "share_of_baseline",
+        "note",
+    ),
+    "robustness_event_study_summary": (
+        "market",
+        "event_phase",
+        "inclusion",
+        "window",
+        "window_slug",
+        "sample_filter",
+        "n_events",
+        "mean_car",
+        "std_car",
+        "se_car",
+        "ci_low_95",
+        "ci_high_95",
+        "t_stat",
+        "p_value",
+    ),
+    "robustness_regression_summary": (
+        "market",
+        "event_phase",
+        "specification",
+        "dependent_variable",
+        "parameter",
+        "coefficient",
+        "std_error",
+        "t_stat",
+        "p_value",
+        "estimation",
+        "n_obs",
+        "r_squared",
+        "adj_r_squared",
+        "covariance",
+    ),
+    "robustness_retention_summary": (
+        "market",
+        "event_phase",
+        "inclusion",
+        "n_events",
+        "short_window_slug",
+        "long_window_slug",
+        "short_mean_car",
+        "long_mean_car",
+        "car_reversal",
+        "retention_ratio",
+        "retention_ratio_valid",
+        "retention_note",
+        "sample_filter",
+    ),
 }
+
+EXPECTED_ROBUSTNESS_EVENT_STUDY_COLUMNS = EXPECTED_OUTPUT_TABLE_SCHEMAS["robustness_event_study_summary"]
+EXPECTED_ASYMMETRY_SUMMARY_COLUMNS = EXPECTED_OUTPUT_TABLE_SCHEMAS["asymmetry_summary"]
+EXPECTED_EVENT_COUNTS_BY_YEAR_COLUMNS = EXPECTED_OUTPUT_TABLE_SCHEMAS["event_counts_by_year"]
+EXPECTED_ROBUSTNESS_RETENTION_SUMMARY_COLUMNS = EXPECTED_OUTPUT_TABLE_SCHEMAS["robustness_retention_summary"]
+EXPECTED_ROBUSTNESS_REGRESSION_SUMMARY_COLUMNS = EXPECTED_OUTPUT_TABLE_SCHEMAS["robustness_regression_summary"]
+EXPECTED_SAMPLE_FILTER_SUMMARY_COLUMNS = EXPECTED_OUTPUT_TABLE_SCHEMAS["sample_filter_summary"]
+EXPECTED_SAMPLE_SCOPE_TABLE_COLUMNS = EXPECTED_OUTPUT_TABLE_SCHEMAS["sample_scope"]
+EXPECTED_IDENTIFICATION_SCOPE_TABLE_COLUMNS = EXPECTED_OUTPUT_TABLE_SCHEMAS["identification_scope"]
+EXPECTED_DATA_SOURCE_TABLE_COLUMNS = EXPECTED_OUTPUT_TABLE_SCHEMAS["data_sources"]
+EXPECTED_TIME_SERIES_EVENT_STUDY_COLUMNS = set(EXPECTED_OUTPUT_TABLE_SCHEMAS["time_series_event_study_summary"])
+HEADER_ONLY_OUTPUT_TABLE_NAMES = tuple(EXPECTED_OUTPUT_TABLE_SCHEMAS)
+
+HEADER_ONLY_OUTPUT_TABLE_CASES = (
+    ("data_sources", lambda: build_data_source_table(pd.DataFrame())),
+    ("sample_scope", lambda: build_sample_scope_table(pd.DataFrame(), pd.DataFrame())),
+    ("event_counts_by_year", lambda: build_event_counts_by_year_table(pd.DataFrame())),
+    ("time_series_event_study_summary", lambda: build_time_series_event_study_summary(pd.DataFrame())),
+    ("asymmetry_summary", lambda: build_asymmetry_summary(pd.DataFrame())),
+    ("sample_filter_summary", lambda: build_sample_filter_summary(pd.DataFrame())),
+    ("robustness_event_study_summary", lambda: build_robustness_event_study_summary(pd.DataFrame())),
+    ("robustness_regression_summary", lambda: build_robustness_regression_summary(pd.DataFrame())),
+    ("robustness_retention_summary", lambda: build_robustness_retention_summary(pd.DataFrame())),
+)
+
+
+def test_output_schema_registry_covers_current_header_only_tables() -> None:
+    assert dict(OUTPUT_TABLE_SCHEMAS) == EXPECTED_OUTPUT_TABLE_SCHEMAS
+
+
+@pytest.mark.parametrize(("table_name", "build_frame"), HEADER_ONLY_OUTPUT_TABLE_CASES)
+def test_output_schema_registry_matches_header_only_builders(table_name, build_frame) -> None:
+    frame = build_frame()
+    assert frame.empty
+    assert list(frame.columns) == list(output_table_columns(table_name))
+
+
+@pytest.mark.parametrize("table_name", HEADER_ONLY_OUTPUT_TABLE_NAMES)
+def test_output_schema_registry_builds_csv_readable_header_only_frames(
+    table_name: str,
+    tmp_path: Path,
+) -> None:
+    frame = empty_output_table(table_name)
+    assert frame.empty
+    assert list(frame.columns) == list(output_table_columns(table_name))
+    assert _should_save_dataframe(frame)
+
+    output_path = tmp_path / f"{table_name}.csv"
+    save_dataframe(frame, output_path)
+    reloaded = pd.read_csv(output_path)
+    assert reloaded.empty
+    assert list(reloaded.columns) == list(output_table_columns(table_name))
 
 
 def test_build_data_source_table_summarises_core_inputs() -> None:
@@ -253,6 +315,21 @@ def test_build_identification_scope_marks_demo_rdd_as_method_only() -> None:
     assert rdd_row["证据状态"] == "方法展示"
     assert "不应与正式实证结果混用" in rdd_row["当前口径"]
     assert rdd_row["来源摘要"] == "demo 伪排名样本"
+
+
+def test_build_identification_scope_populated_column_order_is_stable() -> None:
+    scope = build_identification_scope_table(
+        pd.DataFrame([{"market": "CN"}, {"market": "US"}]),
+        pd.DataFrame(
+            [
+                {"event_id": "e1", "event_phase": "announce"},
+                {"event_id": "e1", "event_phase": "effective"},
+            ]
+        ),
+    )
+
+    assert not scope.empty
+    assert list(scope.columns) == list(EXPECTED_IDENTIFICATION_SCOPE_TABLE_COLUMNS)
 
 
 def test_build_identification_scope_marks_missing_rdd_as_pending_formal_input() -> None:

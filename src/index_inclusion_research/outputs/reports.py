@@ -16,6 +16,12 @@ from index_inclusion_research.analysis import (
     winsorize_event_level_metrics,
 )
 from index_inclusion_research.literature import compute_retention_summary
+from index_inclusion_research.outputs.schema_registry import (
+    TIME_SERIES_EVENT_STUDY_GROUP_COLUMNS,
+    TIME_SERIES_EVENT_STUDY_VALUE_COLUMNS,
+    empty_output_table,
+    output_table_columns,
+)
 from index_inclusion_research.rdd_evidence import rdd_evidence_tier, rdd_source_label
 
 plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
@@ -122,17 +128,7 @@ def _summarise_event_sources(events: pd.DataFrame) -> str:
     return "；".join(sources)
 
 
-_DATA_SOURCE_TABLE_COLUMNS: tuple[str, ...] = (
-    "数据集",
-    "来源",
-    "市场范围",
-    "起始日期",
-    "结束日期",
-    "行数",
-    "股票数",
-    "事件数",
-    "备注",
-)
+_DATA_SOURCE_TABLE_COLUMNS: tuple[str, ...] = output_table_columns("data_sources")
 
 
 def _empty_data_source_table_frame() -> pd.DataFrame:
@@ -146,7 +142,7 @@ def _empty_data_source_table_frame() -> pd.DataFrame:
     populated-path columns lets a "no rows" run round-trip through the same
     downstream consumers as a populated run.
     """
-    return pd.DataFrame(columns=list(_DATA_SOURCE_TABLE_COLUMNS))
+    return empty_output_table("data_sources")
 
 
 def build_data_source_table(
@@ -266,21 +262,11 @@ def build_data_source_table(
     return pd.DataFrame(rows, columns=list(_DATA_SOURCE_TABLE_COLUMNS))
 
 
-_SAMPLE_SCOPE_TABLE_COLUMNS: tuple[str, ...] = (
-    "样本层",
-    "市场范围",
-    "事件数",
-    "事件相位窗口数",
-    "股票数",
-    "观测值",
-    "起始日期",
-    "结束日期",
-    "说明",
-)
+_SAMPLE_SCOPE_TABLE_COLUMNS: tuple[str, ...] = output_table_columns("sample_scope")
 
 
 def _empty_sample_scope_table_frame() -> pd.DataFrame:
-    return pd.DataFrame(columns=list(_SAMPLE_SCOPE_TABLE_COLUMNS))
+    return empty_output_table("sample_scope")
 
 
 def build_sample_scope_table(
@@ -371,6 +357,9 @@ def build_sample_scope_table(
     if not rows:
         return _empty_sample_scope_table_frame()
     return pd.DataFrame(rows, columns=list(_SAMPLE_SCOPE_TABLE_COLUMNS))
+
+
+_IDENTIFICATION_SCOPE_TABLE_COLUMNS: tuple[str, ...] = output_table_columns("identification_scope")
 
 
 def build_identification_scope_table(
@@ -469,7 +458,7 @@ def build_identification_scope_table(
             "来源摘要": rdd_source,
         },
     ]
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=list(_IDENTIFICATION_SCOPE_TABLE_COLUMNS))
 
 
 def plot_average_paths(average_paths: pd.DataFrame, output_dir: str | Path) -> None:
@@ -546,14 +535,7 @@ def export_descriptive_tables(
     return event_counts, panel_coverage
 
 
-_EVENT_COUNTS_BY_YEAR_COLUMNS: tuple[str, ...] = (
-    "market",
-    "announce_year",
-    "inclusion",
-    "n_events",
-    "n_tickers",
-    "n_batches",
-)
+_EVENT_COUNTS_BY_YEAR_COLUMNS: tuple[str, ...] = output_table_columns("event_counts_by_year")
 
 
 def _empty_event_counts_by_year_frame() -> pd.DataFrame:
@@ -567,7 +549,7 @@ def _empty_event_counts_by_year_frame() -> pd.DataFrame:
     Mirroring the populated-path columns lets a "no events" run round-trip
     through the same downstream consumers as a populated run.
     """
-    return pd.DataFrame(columns=list(_EVENT_COUNTS_BY_YEAR_COLUMNS))
+    return empty_output_table("event_counts_by_year")
 
 
 def build_event_counts_by_year_table(events: pd.DataFrame) -> pd.DataFrame:
@@ -588,19 +570,8 @@ def build_event_counts_by_year_table(events: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-_TIME_SERIES_EVENT_STUDY_GROUP_COLUMNS: tuple[str, ...] = (
-    "market",
-    "inclusion",
-    "event_phase",
-    "announce_year",
-)
-_TIME_SERIES_EVENT_STUDY_VALUE_COLUMNS: tuple[str, ...] = (
-    "car_m1_p1",
-    "car_m3_p3",
-    "car_m5_p5",
-    "car_p0_p20",
-    "car_p0_p120",
-)
+_TIME_SERIES_EVENT_STUDY_GROUP_COLUMNS: tuple[str, ...] = TIME_SERIES_EVENT_STUDY_GROUP_COLUMNS
+_TIME_SERIES_EVENT_STUDY_VALUE_COLUMNS: tuple[str, ...] = TIME_SERIES_EVENT_STUDY_VALUE_COLUMNS
 
 
 def _empty_time_series_event_study_summary_frame() -> pd.DataFrame:
@@ -615,17 +586,7 @@ def _empty_time_series_event_study_summary_frame() -> pd.DataFrame:
     lets a "no events" run round-trip through the same downstream consumers
     as a populated run.
     """
-    columns: list[str] = list(_TIME_SERIES_EVENT_STUDY_GROUP_COLUMNS) + ["n_events"]
-    for value_column in _TIME_SERIES_EVENT_STUDY_VALUE_COLUMNS:
-        columns.extend(
-            [
-                f"mean_{value_column}",
-                f"se_{value_column}",
-                f"ci_low_95_{value_column}",
-                f"ci_high_95_{value_column}",
-            ]
-        )
-    return pd.DataFrame(columns=columns)
+    return empty_output_table("time_series_event_study_summary")
 
 
 def build_time_series_event_study_summary(event_level: pd.DataFrame) -> pd.DataFrame:
@@ -660,22 +621,7 @@ def build_time_series_event_study_summary(event_level: pd.DataFrame) -> pd.DataF
     return summary
 
 
-_ASYMMETRY_SUMMARY_COLUMNS: tuple[str, ...] = (
-    "market",
-    "event_phase",
-    "n_additions",
-    "n_deletions",
-    "addition_car_m1_p1",
-    "deletion_car_m1_p1",
-    "asymmetry_car_m1_p1",
-    "addition_turnover_change",
-    "deletion_turnover_change",
-    "addition_volume_change",
-    "deletion_volume_change",
-    "addition_car_p0_p120",
-    "deletion_car_p0_p120",
-    "asymmetry_car_p0_p120",
-)
+_ASYMMETRY_SUMMARY_COLUMNS: tuple[str, ...] = output_table_columns("asymmetry_summary")
 
 
 def _empty_asymmetry_summary_frame() -> pd.DataFrame:
@@ -690,7 +636,7 @@ def _empty_asymmetry_summary_frame() -> pd.DataFrame:
     "no events" run round-trip through the same downstream consumers
     as a populated run.
     """
-    return pd.DataFrame(columns=list(_ASYMMETRY_SUMMARY_COLUMNS))
+    return empty_output_table("asymmetry_summary")
 
 
 def build_asymmetry_summary(
@@ -777,20 +723,11 @@ def _filter_nonoverlap_regression_dataset(dataset: pd.DataFrame, *, days: int = 
     return merged.loc[merged["_keep"].eq(True)].drop(columns="_keep").copy()
 
 
-_SAMPLE_FILTER_SUMMARY_COLUMNS: tuple[str, ...] = (
-    "sample_filter",
-    "n_treated_events",
-    "n_short_event_phase_windows",
-    "n_long_event_phase_windows",
-    "n_regression_comparisons",
-    "n_regression_rows",
-    "share_of_baseline",
-    "note",
-)
+_SAMPLE_FILTER_SUMMARY_COLUMNS: tuple[str, ...] = output_table_columns("sample_filter_summary")
 
 
 def _empty_sample_filter_summary_frame() -> pd.DataFrame:
-    return pd.DataFrame(columns=list(_SAMPLE_FILTER_SUMMARY_COLUMNS))
+    return empty_output_table("sample_filter_summary")
 
 
 def build_sample_filter_summary(
@@ -841,21 +778,8 @@ def build_sample_filter_summary(
     return pd.DataFrame(rows, columns=list(_SAMPLE_FILTER_SUMMARY_COLUMNS))
 
 
-_ROBUSTNESS_EVENT_STUDY_SUMMARY_COLUMNS: tuple[str, ...] = (
-    "market",
-    "event_phase",
-    "inclusion",
-    "window",
-    "window_slug",
-    "sample_filter",
-    "n_events",
-    "mean_car",
-    "std_car",
-    "se_car",
-    "ci_low_95",
-    "ci_high_95",
-    "t_stat",
-    "p_value",
+_ROBUSTNESS_EVENT_STUDY_SUMMARY_COLUMNS: tuple[str, ...] = output_table_columns(
+    "robustness_event_study_summary"
 )
 
 
@@ -871,7 +795,7 @@ def _empty_robustness_event_study_summary_frame() -> pd.DataFrame:
     "no events" run round-trip through the same downstream consumers as a
     populated run, mirroring the asymmetry summary fix (commit ``37e47e0``).
     """
-    return pd.DataFrame(columns=list(_ROBUSTNESS_EVENT_STUDY_SUMMARY_COLUMNS))
+    return empty_output_table("robustness_event_study_summary")
 
 
 def build_robustness_event_study_summary(
@@ -905,26 +829,13 @@ def build_robustness_event_study_summary(
     return pd.concat(frames, ignore_index=True)
 
 
-_ROBUSTNESS_REGRESSION_SUMMARY_COLUMNS = (
-    "market",
-    "event_phase",
-    "specification",
-    "dependent_variable",
-    "parameter",
-    "coefficient",
-    "std_error",
-    "t_stat",
-    "p_value",
-    "estimation",
-    "n_obs",
-    "r_squared",
-    "adj_r_squared",
-    "covariance",
+_ROBUSTNESS_REGRESSION_SUMMARY_COLUMNS: tuple[str, ...] = output_table_columns(
+    "robustness_regression_summary"
 )
 
 
 def _empty_robustness_regression_summary_frame() -> pd.DataFrame:
-    return pd.DataFrame(columns=list(_ROBUSTNESS_REGRESSION_SUMMARY_COLUMNS))
+    return empty_output_table("robustness_regression_summary")
 
 
 def build_robustness_regression_summary(
@@ -968,25 +879,13 @@ def build_robustness_regression_summary(
     return pd.concat(frames, ignore_index=True)
 
 
-_ROBUSTNESS_RETENTION_SUMMARY_COLUMNS = (
-    "market",
-    "event_phase",
-    "inclusion",
-    "n_events",
-    "short_window_slug",
-    "long_window_slug",
-    "short_mean_car",
-    "long_mean_car",
-    "car_reversal",
-    "retention_ratio",
-    "retention_ratio_valid",
-    "retention_note",
-    "sample_filter",
+_ROBUSTNESS_RETENTION_SUMMARY_COLUMNS: tuple[str, ...] = output_table_columns(
+    "robustness_retention_summary"
 )
 
 
 def _empty_robustness_retention_summary_frame() -> pd.DataFrame:
-    return pd.DataFrame(columns=list(_ROBUSTNESS_RETENTION_SUMMARY_COLUMNS))
+    return empty_output_table("robustness_retention_summary")
 
 
 def build_robustness_retention_summary(
