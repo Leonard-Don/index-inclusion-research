@@ -2,8 +2,8 @@
  * Interactive chart controller — initialises ECharts instances for
  * elements marked with ``[data-echart]``.
  *
- * Charts are lazily loaded via IntersectionObserver: the fetch + init
- * only fires once the container scrolls into view.
+ * Chart data is prefetched after the page becomes idle, while ECharts
+ * instances are still created lazily when their containers approach view.
  */
 
 import { DASHBOARD_THEME } from './echarts_theme.js';
@@ -851,6 +851,7 @@ function buildEventCountsOption(payload) {
 
 const instances = new Map();
 const retryTimers = new Map();
+const payloadPromises = new Map();
 const RETRY_DELAYS_MS = [800, 2000, 5000];
 
 function setChartState(container, state) {
@@ -862,6 +863,38 @@ function setChartState(container, state) {
 
 function chartPayloadHasContent(payload) {
   return !!(payload && (payload.series || payload.data || payload.rows));
+}
+
+function loadChartPayload(chartId) {
+  if (!payloadPromises.has(chartId)) {
+    const apiUrl = `/api/chart/${chartId}`;
+    const request = fetch(apiUrl)
+      .then(r => {
+        if (!r.ok) throw new Error(`Chart API ${r.status}`);
+        return r.json();
+      })
+      .catch(err => {
+        payloadPromises.delete(chartId);
+        throw err;
+      });
+    payloadPromises.set(chartId, request);
+  }
+  return payloadPromises.get(chartId);
+}
+
+function prefetchChartPayloads(containers) {
+  const chartIds = new Set();
+  containers.forEach(container => {
+    const chartId = container.dataset.echart;
+    if (chartId && CHART_OPTION_BUILDERS[chartId]) {
+      chartIds.add(chartId);
+    }
+  });
+  chartIds.forEach(chartId => {
+    loadChartPayload(chartId).catch(() => {
+      // The visible container will surface retry/error state if needed.
+    });
+  });
 }
 
 function clearRetryTimer(container) {
@@ -906,14 +939,9 @@ function initChart(container, attempt = 0) {
   if (!optionBuilder) return;
   if (instances.has(container)) return;
 
-  const apiUrl = `/api/chart/${chartId}`;
   setChartState(container, 'echart-loading');
 
-  fetch(apiUrl)
-    .then(r => {
-      if (!r.ok) throw new Error(`Chart API ${r.status}`);
-      return r.json();
-    })
+  loadChartPayload(chartId)
     .then(payload => {
       // empty / unrenderable payload — keep the static fallback img
       if (payload.error || !chartPayloadHasContent(payload)) {
@@ -976,6 +1004,13 @@ export function createInteractiveChartsController() {
       containers.forEach(el => observer.observe(el));
     } else {
       containers.forEach(el => initChart(el));
+    }
+
+    const prefetch = () => prefetchChartPayloads(containers);
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(prefetch, { timeout: 1200 });
+    } else {
+      window.setTimeout(prefetch, 0);
     }
 
     resizeHandler = handleResize;
