@@ -51,6 +51,16 @@ EXPECTED_OUTPUT_TABLE_SCHEMAS = {
         "结束日期",
         "说明",
     ),
+    "identification_scope": (
+        "分析层",
+        "市场范围",
+        "样本基础",
+        "主要输出",
+        "证据等级",
+        "证据状态",
+        "当前口径",
+        "来源摘要",
+    ),
     "event_counts_by_year": (
         "market",
         "announce_year",
@@ -168,8 +178,10 @@ EXPECTED_ROBUSTNESS_RETENTION_SUMMARY_COLUMNS = EXPECTED_OUTPUT_TABLE_SCHEMAS["r
 EXPECTED_ROBUSTNESS_REGRESSION_SUMMARY_COLUMNS = EXPECTED_OUTPUT_TABLE_SCHEMAS["robustness_regression_summary"]
 EXPECTED_SAMPLE_FILTER_SUMMARY_COLUMNS = EXPECTED_OUTPUT_TABLE_SCHEMAS["sample_filter_summary"]
 EXPECTED_SAMPLE_SCOPE_TABLE_COLUMNS = EXPECTED_OUTPUT_TABLE_SCHEMAS["sample_scope"]
+EXPECTED_IDENTIFICATION_SCOPE_TABLE_COLUMNS = EXPECTED_OUTPUT_TABLE_SCHEMAS["identification_scope"]
 EXPECTED_DATA_SOURCE_TABLE_COLUMNS = EXPECTED_OUTPUT_TABLE_SCHEMAS["data_sources"]
 EXPECTED_TIME_SERIES_EVENT_STUDY_COLUMNS = set(EXPECTED_OUTPUT_TABLE_SCHEMAS["time_series_event_study_summary"])
+HEADER_ONLY_OUTPUT_TABLE_NAMES = tuple(EXPECTED_OUTPUT_TABLE_SCHEMAS)
 
 HEADER_ONLY_OUTPUT_TABLE_CASES = (
     ("data_sources", lambda: build_data_source_table(pd.DataFrame())),
@@ -195,7 +207,7 @@ def test_output_schema_registry_matches_header_only_builders(table_name, build_f
     assert list(frame.columns) == list(output_table_columns(table_name))
 
 
-@pytest.mark.parametrize("table_name", [table_name for table_name, _ in HEADER_ONLY_OUTPUT_TABLE_CASES])
+@pytest.mark.parametrize("table_name", HEADER_ONLY_OUTPUT_TABLE_NAMES)
 def test_output_schema_registry_builds_csv_readable_header_only_frames(
     table_name: str,
     tmp_path: Path,
@@ -303,6 +315,21 @@ def test_build_identification_scope_marks_demo_rdd_as_method_only() -> None:
     assert rdd_row["证据状态"] == "方法展示"
     assert "不应与正式实证结果混用" in rdd_row["当前口径"]
     assert rdd_row["来源摘要"] == "demo 伪排名样本"
+
+
+def test_build_identification_scope_populated_column_order_is_stable() -> None:
+    scope = build_identification_scope_table(
+        pd.DataFrame([{"market": "CN"}, {"market": "US"}]),
+        pd.DataFrame(
+            [
+                {"event_id": "e1", "event_phase": "announce"},
+                {"event_id": "e1", "event_phase": "effective"},
+            ]
+        ),
+    )
+
+    assert not scope.empty
+    assert list(scope.columns) == list(EXPECTED_IDENTIFICATION_SCOPE_TABLE_COLUMNS)
 
 
 def test_build_identification_scope_marks_missing_rdd_as_pending_formal_input() -> None:

@@ -359,6 +359,9 @@ def build_sample_scope_table(
     return pd.DataFrame(rows, columns=list(_SAMPLE_SCOPE_TABLE_COLUMNS))
 
 
+_IDENTIFICATION_SCOPE_TABLE_COLUMNS: tuple[str, ...] = output_table_columns("identification_scope")
+
+
 def build_identification_scope_table(
     events: pd.DataFrame,
     panel: pd.DataFrame,
@@ -455,7 +458,7 @@ def build_identification_scope_table(
             "来源摘要": rdd_source,
         },
     ]
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=list(_IDENTIFICATION_SCOPE_TABLE_COLUMNS))
 
 
 def plot_average_paths(average_paths: pd.DataFrame, output_dir: str | Path) -> None:
