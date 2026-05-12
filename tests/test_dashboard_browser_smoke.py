@@ -215,7 +215,8 @@ def test_dashboard_browser_smoke() -> None:
 
         page.goto(f"{base_url}/?mode=demo", wait_until="domcontentloaded")
         page.wait_for_load_state("networkidle")
-        assert "16 篇文献" in page.locator("h1").inner_text()
+        assert "用一页讲清指数纳入效应" in page.locator("h1").inner_text()
+        assert "构成理论基础" in page.content()
         assert page.locator("a.skip-link").get_attribute("href") == "#main-content"
         assert (
             page.locator("[data-refresh-state-label]").inner_text().strip() == "已就绪"
@@ -821,7 +822,7 @@ def test_cross_market_section_renders_in_full_mode() -> None:
             assert section.count() == 1
             section.first.scroll_into_view_if_needed()
             assert (
-                "美股 vs A股 公告—生效事件集中度差异"
+                "美股 vs A 股公告—生效阶段的不对称集中度"
                 in section.locator("h2").first.inner_text()
             )
 
@@ -1026,7 +1027,7 @@ def test_evidence_detail_and_rdd_l3_workbench_pages_render() -> None:
 
             page.goto(f"{base_url}/rdd-l3", wait_until="domcontentloaded")
             page.wait_for_load_state("networkidle")
-            assert "官方候选导入工作台" in page.locator("h1").inner_text()
+            assert "正式候选样本工作台" in page.locator("h1").inner_text()
             assert page.locator("form[action='/rdd-l3/check']").count() == 1
             assert page.locator("form[action='/rdd-l3/import']").count() == 1
             assert page.locator("form[action='/rdd-l3/collection']").count() == 1
@@ -1322,7 +1323,7 @@ def test_data_sources_citation_table_renders_in_limits_section() -> None:
 
             html = page.content()
             assert "数据来源 · 引用清单" in html
-            assert "原始输出全集" in html
+            assert "原始产物索引" in html
             assert "results/real_event_study/event_level_metrics.csv" in html
             assert "data/raw/hs300_rdd_candidates.csv" in html
             assert "索引保留" in html

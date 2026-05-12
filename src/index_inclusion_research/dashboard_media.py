@@ -33,10 +33,12 @@ def split_figure_caption(caption: str) -> tuple[str, str]:
     lead = text
     focus = ""
 
-    if "图意：" in text:
-        intro, _, remainder = text.partition("图意：")
-        intro = intro.strip()
-        lead = remainder.strip()
+    for marker in ("图表含义：", "图意："):
+        if marker in text:
+            intro, _, remainder = text.partition(marker)
+            intro = intro.strip()
+            lead = remainder.strip()
+            break
 
     if "阅读重点：" in lead:
         lead, _, focus = lead.partition("阅读重点：")

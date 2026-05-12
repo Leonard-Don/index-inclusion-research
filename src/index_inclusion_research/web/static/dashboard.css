@@ -4126,7 +4126,7 @@
       color: var(--text-strong, #18212b);
     }
     .echart-loading::after {
-      content: "加载图表…";
+      content: "正在加载图表…";
       position: absolute;
       inset: 0;
       display: flex;

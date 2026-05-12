@@ -228,8 +228,8 @@ def test_home_dashboard_full_mode_marks_cma_evidence_tiers() -> None:
     html = response.get_data(as_text=True)
     assert 'data-filter-tier="core"' in html
     assert 'data-filter-tier="supplementary"' in html
-    assert "正文主表层级" in html
-    assert "附录层级" in html
+    assert "正文可引用" in html
+    assert "附录/探索性" in html
     assert html.count('data-evidence-tier="core"') >= 6
     assert html.count('data-evidence-tier="supplementary"') >= 8
     for hid in ("H1", "H5", "H7"):
@@ -289,7 +289,7 @@ def test_home_dashboard_demo_mode_collapses_secondary_material_and_marks_lazy_me
     assert "data-waypoint-top" in html
     assert "waypoint-next-action" in html
     assert "waypoint-secondary-action" in html
-    assert "样本设计补充表" in html
+    assert "样本设计补充明细" in html
     assert "展开文献" in html
     assert 'loading="lazy"' in html
     assert 'fetchpriority="high"' in html
@@ -721,13 +721,13 @@ def test_paper_route_now_renders_brief_before_pdf() -> None:
     html = response.get_data(as_text=True)
     assert 'href="/static/paper.css"' in html
     assert 'src="/static/paper.js"' in html
-    assert "<title>Lawrence Harris 等（1986）｜指数纳入效应研究界面</title>" in html
+    assert "<title>Lawrence Harris 等（1986）｜指数纳入效应研究看板</title>" in html
     assert "单篇文献速读" in html
     assert "核心解读" in html
     assert "文献链" in html
     assert "这篇论文在文献链中的位置" in html
     assert "结构化信息" in html
-    assert "论文信息与深度解读" in html
+    assert "论文信息与项目解读" in html
     assert "首页总览" in html
     assert "返回文献框架" in html
     assert "查看原文 PDF" in html
@@ -742,7 +742,7 @@ def test_paper_route_now_renders_brief_before_pdf() -> None:
     assert "继续下一环" in html
     assert "查看相关论文" in html
     assert "文献链导航" in html
-    assert "默认展开当前所在分组" in html
+    assert "默认展开当前文献所在分组" in html
     assert "效应重估、价格发现或中国制度场景" in html
     assert "按阵营最适合看争论如何推进" in html
     assert "如果你想回看当前这条争论是从哪里起步的" in html

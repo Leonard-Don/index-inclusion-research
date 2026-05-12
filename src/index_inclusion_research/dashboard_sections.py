@@ -346,7 +346,7 @@ def build_sample_design_section(
     primary_tables, detail_tables = split_items_by_tier(tables)
     figures = create_sample_design_figures()
     return {
-        "summary": "这一部分优先交代真实样本覆盖、短窗口口径与回归结果的总体轮廓，使后续主线解释建立在清晰的样本与识别设计之上。",
+        "summary": "这一部分优先交代真实样本覆盖、短窗口口径与回归结果轮廓，让后续主线解释建立在清晰的样本与识别设计之上。",
         "summary_cards": build_sample_design_cards(root, format_share=format_share, snapshot=snapshot),
         "figures": figures[:1] if demo_mode else figures,
         "detail_figures": figures[1:] if demo_mode else [],
@@ -379,7 +379,7 @@ def build_robustness_section(
     robustness_retention = current_snapshot.optional_csv("results", "real_tables", "robustness_retention_summary.csv")
     if robustness_events.empty or robustness_regressions.empty or sample_filters.empty or robustness_retention.empty:
         return {
-            "summary": "稳健性结果尚未生成。刷新数据后，完整材料模式会在这里展示区间估计、异常值处理和样本过滤三类检查。",
+            "summary": "稳健性结果尚未生成。刷新结果后，完整材料模式会在这里展示区间估计、异常值处理和样本过滤三类检查。",
             "summary_cards": [],
             "tables": [],
             "primary_tables": [],
@@ -390,7 +390,7 @@ def build_robustness_section(
                     waypoint_label="稳健性检查",
                     kicker="稳健性检查",
                     title="把主结论放回样本过滤、异常值处理与区间估计里重新检查。",
-                    intro="不增加新结论，只检查主结论是否依赖单一样本口径。",
+                    intro="不新增结论，只检查主结论是否依赖单一样本口径。",
                     side_label="检验目的",
                 ),
                 primary=build_table_primary_view(
@@ -398,14 +398,14 @@ def build_robustness_section(
                     title="核心稳健性表",
                     copy="样本过滤、事件研究和主回归三类稳健性表，最能判断主结论是否依赖单一样本口径。",
                     container="library-panels",
-                    collapsed_copy="展示版默认只露出最关键的一张稳健性表，其余主表收进折叠层，让稳健性仍然服务于主结论，而不是喧宾夺主。",
+                    collapsed_copy="展示版默认只露出最关键的一张稳健性表，其余主表按需展开，让稳健性继续服务于主结论。",
                 ),
                 detail=build_table_detail_view(
-                    full_title="补充稳健性表",
+                    full_title="补充稳健性明细",
                     full_copy="长期保留的稳健性结果继续保留，但作为对主结论边界的补充阅读，而不是首要判断依据。",
                     demo_key="demo-robustness-detail-tables",
-                    demo_title="稳健性补充表（0 张）",
-                    demo_copy="展示版默认只露出最关键的一张稳健性表，其余补充稳健性结果按需展开。",
+                    demo_title="稳健性补充明细（0 张）",
+                    demo_copy="展示版默认只露出最关键的一张稳健性表，其余稳健性明细按需展开。",
                 ),
             ),
         }
@@ -428,12 +428,12 @@ def build_robustness_section(
             "kicker": "路径不确定性",
             "title": "平均路径图已加入 95% 置信带",
             "meta": "短窗口与长窗口主表同步新增区间估计",
-            "copy": "这一步把“平均路径”从单纯均值线升级为带不确定性范围的图形，更适合在论文和答辩中解释哪些阶段的价格路径更稳、哪些阶段离散度更高。",
+            "copy": "这一步把“平均路径”从单纯均值线升级为带不确定性范围的图形，更适合在论文和答辩中解释哪些阶段价格路径更稳、哪些阶段离散度更高。",
             "foot": "图表文件名保持不变，因此现有前端引用不需要改链接。",
         },
         {
             "kicker": "重叠过滤",
-            "title": f'nonoverlap_120d 保留 {format_share(float(nonoverlap_row["share_of_baseline"]))} 事件相位窗口',
+            "title": f'nonoverlap_120d 保留 {format_share(float(nonoverlap_row["share_of_baseline"]))} 的事件相位窗口',
             "meta": f'基准样本 {int(baseline_row["n_short_event_phase_windows"]):,} -> 过滤后 {int(nonoverlap_row["n_short_event_phase_windows"]):,}',
             "copy": "通过剔除同一 ticker、同一事件阶段下相邻 120 日内重叠的事件窗口，检验核心结果是否依赖高频重复进入样本的事件。",
             "foot": str(nonoverlap_row["note"]),
@@ -449,7 +449,7 @@ def build_robustness_section(
             "kicker": "长期指标边界",
             "title": f"{len(invalid_retention):,} 组保留率因短窗口基数过小不作解释",
             "meta": "避免在分母过小的组合上过度解释长期保留率",
-            "copy": "长期保留分析继续保留，但当短窗口平均异常收益（CAR）绝对值过小、导致比率失真时，页面会明确标注“不可解释”，避免把机械比值误当成强结论。",
+            "copy": "长期保留分析继续保留；当短窗口平均异常收益（CAR）绝对值过小、导致比率失真时，页面会明确标注“不可解释”，避免把机械比值误当成强结论。",
             "foot": "默认阈值为 |短窗口平均异常收益（CAR）| < 0.5%。",
         },
     ]
@@ -482,7 +482,7 @@ def build_robustness_section(
     primary_tables, detail_tables = split_items_by_tier(tables)
 
     return {
-        "summary": "这一部分通过区间估计、异常值处理和重叠事件过滤，检验主结论是否依赖单一样本口径，从而把当前结果升级成更像论文证据链的默认输出。",
+        "summary": "这一部分通过区间估计、异常值处理和重叠事件过滤，检验主结论是否依赖单一样本口径，让当前结果更接近论文证据链的默认输出。",
         "summary_cards": summary_cards,
         "tables": tables,
         "primary_tables": primary_tables,
@@ -493,7 +493,7 @@ def build_robustness_section(
                 waypoint_label="稳健性检查",
                 kicker="稳健性检查",
                 title="把主结论放回样本过滤、异常值处理与区间估计里重新检查。",
-                intro="不增加新结论，只检查主结论是否依赖单一样本口径。",
+                intro="不新增结论，只检查主结论是否依赖单一样本口径。",
                 side_label="检验目的",
             ),
             primary=build_table_primary_view(
@@ -501,14 +501,14 @@ def build_robustness_section(
                 title="核心稳健性表",
                 copy="样本过滤、事件研究和主回归三类稳健性表，最能判断主结论是否依赖单一样本口径。",
                 container="library-panels",
-                collapsed_copy="展示版默认只露出最关键的一张稳健性表，其余主表收进折叠层，让稳健性仍然服务于主结论，而不是喧宾夺主。",
+                collapsed_copy="展示版默认只露出最关键的一张稳健性表，其余主表按需展开，让稳健性继续服务于主结论。",
             ),
             detail=build_table_detail_view(
-                full_title="补充稳健性表",
+                full_title="补充稳健性明细",
                 full_copy="长期保留的稳健性结果继续保留，但作为对主结论边界的补充阅读，而不是首要判断依据。",
                 demo_key="demo-robustness-detail-tables",
-                demo_title=f"稳健性补充表（{len(detail_tables)} 张）",
-                demo_copy="展示版默认只露出最关键的一张稳健性表，其余补充稳健性结果按需展开。",
+                demo_title=f"稳健性补充明细（{len(detail_tables)} 张）",
+                demo_copy="展示版默认只露出最关键的一张稳健性表，其余稳健性明细按需展开。",
             ),
         ),
     }
@@ -574,7 +574,7 @@ def build_limits_section(
         },
         {
             "kicker": "数据口径",
-            "title": "公开数据足以支撑课程论文，但并不等同官方成分股数据库",
+            "title": "公开数据足以支撑课程论文，但不等同官方成分股数据库",
             "meta": f"行业口径放宽占比 {format_share(sector_relaxed_rate)}",
             "copy": "当前项目优先使用公开可得数据构造价格、成交量、换手率与市值口径，因此适合课程论文、研究展示与方法演示，但不应被表述为交易所官方历史精确口径。",
             "foot": "这一边界主要影响对机制强度和匹配精度的解释，不会改变“不同市场与事件阶段存在明显异质性”这一一级结论。",
@@ -613,7 +613,7 @@ def build_limits_section(
     if not artifact_index.empty:
         artifact_tables = [
             {
-                "label": f"原始输出全集（{len(artifact_index)} 项）",
+                "label": f"原始产物索引（{len(artifact_index)} 项）",
                 "html": render_table(artifact_index, compact=True),
                 "layout_class": "wide",
                 "tier": "detail",
@@ -621,7 +621,7 @@ def build_limits_section(
         ]
 
     return {
-        "summary": "明确研究边界的目的，不是削弱结果，而是让结论与样本期、识别设计、数据来源保持一致，从而提升整套展示的可信度。",
+        "summary": "明确研究边界不是削弱结果，而是让结论与样本期、识别设计、数据来源保持一致，从而提升整套展示的可信度。",
         "summary_cards": summary_cards,
         "tables": tables,
         "primary_tables": primary_tables,
@@ -630,8 +630,8 @@ def build_limits_section(
         "section_view": build_table_suite_section_view(
             head=build_section_head_view(
                 section_id="limits",
-                waypoint_label="研究边界",
-                kicker="研究边界",
+                waypoint_label="边界说明",
+                kicker="边界说明",
                 title="把结论放回样本期、识别范围与数据口径中理解。",
                 intro="边界说明用于校准表述，不是削弱主结论。",
                 side_label="边界提示",
@@ -641,14 +641,14 @@ def build_limits_section(
                 title="边界摘要表",
                 copy="样本与数据范围表先建立边界，识别范围说明再补足细节，可以避免把边界说明误读成结论本身。",
                 container="library-panels",
-                collapsed_copy="展示版默认只露出最关键的边界摘要表，其余主表按需展开，结尾会更利落。",
+                collapsed_copy="展示版默认只露出最关键的边界摘要表，其余主表按需展开。",
             ),
             detail=build_table_detail_view(
                 full_title="补充说明表",
                 full_copy="这张表保留更完整的识别范围与口径说明，适合在写作或答疑时回到方法边界逐项核对。",
                 demo_key="demo-limits-detail-tables",
-                demo_title=f"研究边界补充表（{len(detail_tables)} 张）",
-                demo_copy="展示版默认只保留最关键的边界摘要，完整识别范围说明按需展开，结尾更利落。",
+                demo_title=f"研究边界补充明细（{len(detail_tables)} 张）",
+                demo_copy="展示版默认只保留最关键的边界摘要，完整识别范围说明按需展开。",
                 container="library-panels",
                 kicker="补充说明",
             ),
@@ -747,8 +747,8 @@ def build_paper_audit_section(
         "section_view": build_table_suite_section_view(
             head=build_section_head_view(
                 section_id="paper_audit",
-                waypoint_label="交付审计",
-                kicker="交付审计",
+                waypoint_label="论文交付",
+                kicker="论文交付",
                 title="每个论文主张都要能回到一份真实产物。",
                 intro="把写作结论、PAP 边界和交付包状态放在同一张审计表里。",
                 side_label="审计口径",
@@ -765,7 +765,7 @@ def build_paper_audit_section(
                 full_copy="这些路径就是答辩、写作和复现时需要回查的真实文件。",
                 demo_key="demo-paper-audit-detail-tables",
                 demo_title=f"交付审计证据路径（{len(detail_tables)} 张）",
-                demo_copy="展示版默认收起完整路径，真正要核对来源时再展开。",
+                demo_copy="展示版默认收起完整路径，需要核对来源时再展开。",
                 container="library-panels",
                 kicker="证据路径",
             ),

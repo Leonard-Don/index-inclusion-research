@@ -43,7 +43,7 @@ def test_build_sample_design_section_uses_real_inputs_and_demo_split() -> None:
     assert section["section_view"]["head"]["section_id"] == "design"
     assert section["section_view"]["detail_figures_title"] == "样本设计补充图表（1 张）"
     assert section["section_view"]["primary"]["key"] == "demo-design-primary-tables"
-    assert section["section_view"]["detail"]["demo_title"] == "样本设计补充表（2 张）"
+    assert section["section_view"]["detail"]["demo_title"] == "样本设计补充明细（2 张）"
 
 
 def test_build_robustness_section_returns_expected_table_blocks() -> None:
@@ -67,7 +67,7 @@ def test_build_robustness_section_returns_expected_table_blocks() -> None:
     assert section["section_view"]["head"]["section_id"] == "robustness"
     assert section["section_view"]["show_suite"] is True
     assert section["section_view"]["primary"]["key"] == "demo-robustness-primary-tables"
-    assert section["section_view"]["detail"]["demo_title"] == "稳健性补充表（1 张）"
+    assert section["section_view"]["detail"]["demo_title"] == "稳健性补充明细（1 张）"
 
 
 def test_build_limits_section_returns_scope_and_identification_tables() -> None:
@@ -85,11 +85,11 @@ def test_build_limits_section_returns_scope_and_identification_tables() -> None:
     assert "证据等级为" in section["summary_cards"][1]["foot"]
     assert [table["label"] for table in section["primary_tables"]] == ["样本与数据范围"]
     assert [table["label"] for table in section["detail_tables"]] == ["识别范围说明", "数据来源 · 引用清单"]
-    assert section["artifact_tables"][0]["label"].startswith("原始输出全集")
+    assert section["artifact_tables"][0]["label"].startswith("原始产物索引")
     assert section["section_view"]["head"]["section_id"] == "limits"
     assert section["section_view"]["show_suite"] is True
     assert section["section_view"]["primary"]["key"] == "demo-limits-primary-tables"
-    assert section["section_view"]["detail"]["demo_title"] == "研究边界补充表（2 张）"
+    assert section["section_view"]["detail"]["demo_title"] == "研究边界补充明细（2 张）"
 
 
 def test_build_limits_section_adds_project_relative_artifact_index() -> None:

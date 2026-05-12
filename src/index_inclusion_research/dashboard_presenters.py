@@ -32,7 +32,7 @@ from index_inclusion_research.dashboard_view_models import (
 def nav_sections_for_mode(mode: ModeName) -> list[NavSection]:
     items: list[NavSection] = [
         {"anchor": "overview", "label": "总览"},
-        {"anchor": "design", "label": "样本与设计"},
+        {"anchor": "design", "label": "样本设计"},
         {"anchor": "tracks", "label": "主线结果"},
     ]
     if mode != "brief":
@@ -44,9 +44,9 @@ def nav_sections_for_mode(mode: ModeName) -> list[NavSection]:
         )
     if mode == "full":
         items.append({"anchor": "robustness", "label": "稳健性检查"})
-    items.append({"anchor": "limits", "label": "研究边界"})
+    items.append({"anchor": "limits", "label": "边界说明"})
     if mode != "brief":
-        items.append({"anchor": "paper_audit", "label": "交付审计"})
+        items.append({"anchor": "paper_audit", "label": "论文交付"})
     return items
 
 
@@ -186,21 +186,21 @@ def _identification_summary_from_status(status_panel: StatusPanel | None) -> str
     signal_value = str(status_panel.get("signal_value", ""))
     if tone == "official":
         return (
-            f"这条主线把中国样本的事件研究、匹配回归与 RDD 识别放在同一结构中，也用来检查制度差异、选择偏差与套利约束会不会改写结论；当前中国 RDD 已处于 {signal_value}，"
+            f"这条主线把中国样本的事件研究、匹配回归与 RDD 识别放在同一结构中，用来检查制度差异、选择偏差与套利约束是否会改写结论；当前中国 RDD 已处于 {signal_value}，"
             "可以与事件研究和匹配回归并列进入正式证据链。"
         )
     if tone == "reconstructed":
         return (
-            f"这条主线把中国样本的事件研究、匹配回归与 RDD 识别放在同一结构中，也用来检查制度差异、选择偏差与套利约束会不会改写结论；当前中国 RDD 已处于 {signal_value}，"
+            f"这条主线把中国样本的事件研究、匹配回归与 RDD 识别放在同一结构中，用来检查制度差异、选择偏差与套利约束是否会改写结论；当前中国 RDD 已处于 {signal_value}，"
             "已进入公开数据版证据链，但必须明确标注为公开重建口径。"
         )
     if tone == "demo":
         return (
-            f"这条主线把中国样本的事件研究、匹配回归与 RDD 识别放在同一结构中，也用来检查制度差异、选择偏差与套利约束会不会改写结论；当前中国 RDD 仍处于 {signal_value}，"
+            f"这条主线把中国样本的事件研究、匹配回归与 RDD 识别放在同一结构中，用来检查制度差异、选择偏差与套利约束是否会改写结论；当前中国 RDD 仍处于 {signal_value}，"
             "展示重点是识别框架、字段契约与结果链路，而不是正式证据。"
         )
     return (
-        f"这条主线把中国样本的事件研究、匹配回归与 RDD 识别放在同一结构中，也用来检查制度差异、选择偏差与套利约束会不会改写结论；当前中国 RDD 仍处于 {signal_value}，"
+        f"这条主线把中国样本的事件研究、匹配回归与 RDD 识别放在同一结构中，用来检查制度差异、选择偏差与套利约束是否会改写结论；当前中国 RDD 仍处于 {signal_value}，"
         "还没有进入正式或公开重建证据链。"
     )
 
@@ -272,12 +272,12 @@ def prepare_track_display(
     status_panel: StatusPanel | None = None,
 ) -> TrackDisplaySection:
     curated_summary = {
-        "price_pressure_track": "这条主线集中展示短窗口 CAR、公告日与生效日差异、按年份变化，以及交易活跃度。当前样本和新增文献都更支持“短期冲击仍在、但公开 alpha 已被提前交易压缩”的判断；中国 A 股更值得关注的是执行阶段与长期窗口中的调入/调出分化。",
-        "demand_curve_track": "这条主线关注价格冲击是否只在短期出现，还是会在更长窗口中部分保留。重点比较长期保留率、长窗口异常收益（CAR）以及短长窗口之间的差异，并结合更外生的权重冲击与套利约束理解哪些保留更可信。",
+        "price_pressure_track": "这条主线集中展示短窗口 CAR、公告日与生效日差异、按年份变化以及交易活跃度。当前样本和新增文献都更支持“短期冲击仍在、但公开 alpha 已被提前交易压缩”的判断；中国 A 股更值得关注执行阶段与长期窗口中的调入/调出分化。",
+        "demand_curve_track": "这条主线关注价格冲击是否只在短期出现，还是会在更长窗口中部分保留。重点比较长期保留率、长窗口异常收益（CAR）和短长窗口差异，并结合更外生的权重冲击与套利约束判断哪些保留更可信。",
         "identification_china_track": _identification_summary_from_status(status_panel),
     }
     takeaways = {
-        "price_pressure_track": "当前证据更支持“美股可见 alpha 缩窄但短期冲击未消失”，而不是简单地把现代指数效应概括成完全失效。",
+        "price_pressure_track": "当前证据更支持“美股可见 alpha 缩窄但短期冲击未消失”，不能简单把现代指数效应概括成完全失效。",
         "demand_curve_track": "价格回吐与长期保留可以并存；更外生的权重冲击和更强的市场摩擦下，需求曲线效应往往更容易留下可见痕迹。",
         "identification_china_track": _identification_takeaway_from_status(
             status_panel
@@ -359,15 +359,15 @@ def prepare_framework_display(
         primary=build_table_primary_view(
             key="demo-framework-primary-tables",
             title="核心摘要表",
-            copy="阵营概览最适合先建立全貌，再回到演进表和表达框架。",
+            copy="先用阵营概览建立全貌，再回到演进表和表达框架补细节。",
             container="library-panels",
             collapsed_copy="展示版默认先显示阵营概览，其余主表按需展开。",
         ),
         detail=build_table_detail_view(
-            full_title="补充细表",
+            full_title="补充明细表",
             full_copy="这些表格保留完整演进顺序与表达框架，适合在问答或写作时回到更细的组织方式。",
             demo_key="demo-framework-detail-tables",
-            demo_title=f"文献框架补充表（{len(detail_tables)} 张）",
+            demo_title=f"文献框架补充明细（{len(detail_tables)} 张）",
             demo_copy="展示版默认收起演进顺序和表达框架，减少首页长度。",
         ),
     )
@@ -409,15 +409,15 @@ def prepare_supplement_display(
         primary=build_table_primary_view(
             key="demo-supplement-primary-tables",
             title="核心摘要表",
-            copy="事件时钟和机制链最适合先建立框架，再把实证结果放回交易逻辑。",
+            copy="先用事件时钟和机制链建立框架，再把实证结果放回交易逻辑。",
             container="library-panels",
             collapsed_copy="展示版默认先显示事件时钟和机制链，其余主表按需展开。",
         ),
         detail=build_table_detail_view(
-            full_title="补充细表",
+            full_title="补充明细表",
             full_copy="这里保留冲击估算和表达框架，用于把机制解释进一步转成执行语言或课堂展示语言。",
             demo_key="demo-supplement-detail-tables",
-            demo_title=f"机制补充表（{len(detail_tables)} 张）",
+            demo_title=f"机制补充明细（{len(detail_tables)} 张）",
             demo_copy="展示版默认收起冲击估算和表达框架，先保留主结果。",
         ),
     )
@@ -433,7 +433,7 @@ def track_notes_for_analysis(analysis_id: str) -> list[TrackNote]:
             },
             {
                 "name": "阅读顺序",
-                "copy": "重点看短窗口异常收益（CAR）、按年份展开的变化，以及成交量、换手率、波动率和事件可预测性。",
+                "copy": "重点看短窗口异常收益（CAR）、年份变化、成交量、换手率、波动率和事件可预测性。",
             },
             {
                 "name": "样本特征",
@@ -444,7 +444,7 @@ def track_notes_for_analysis(analysis_id: str) -> list[TrackNote]:
         return [
             {
                 "name": "主问题",
-                "copy": "这条主线判断上涨是短暂冲击，还是会在更长窗口中部分保留。",
+                "copy": "这条主线判断上涨只是短暂冲击，还是会在更长窗口中部分保留。",
             },
             {
                 "name": "阅读顺序",
@@ -458,7 +458,7 @@ def track_notes_for_analysis(analysis_id: str) -> list[TrackNote]:
     return [
         {
             "name": "主问题",
-            "copy": "这条主线处理识别问题，回答制度背景、选择偏差和套利约束会不会改变结论。",
+            "copy": "这条主线处理识别问题，回答制度背景、选择偏差和套利约束是否会改变结论。",
         },
         {
             "name": "阅读顺序",
@@ -475,7 +475,7 @@ def overview_notes() -> list[NoteItem]:
     return [
         {
             "title": "文献层",
-            "copy": "16 篇文献既可按反方、中性、正方阅读，也可按五大阵营把效应弱化、价格发现和中国制度差异串成一条研究链。",
+            "copy": "16 篇文献既可按反方、中性、正方阅读，也可按五大阵营串起效应弱化、价格发现和中国制度差异。",
         },
         {
             "title": "实证层",
@@ -518,7 +518,7 @@ def overview_notes_for_mode(mode: ModeName) -> list[NoteItem]:
 def overview_summary() -> str:
     return (
         "首页把文献脉络、真实结果与识别设计放在同一叙述里，"
-        "方便把“效应被重估而非简单消失”这件事连续讲清楚。"
+        "用于连续讲清“效应被重估，而不是简单消失”。"
     )
 
 

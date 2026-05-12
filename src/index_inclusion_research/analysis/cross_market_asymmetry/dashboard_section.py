@@ -16,20 +16,20 @@ SectionMode = Literal["brief", "demo", "full"]
 
 SECTION_ID = "cross_market_asymmetry"
 SECTION_COPY: dict[str, object] = {
-    "title": "美股 vs A股 公告—生效事件集中度差异",
+    "title": "美股 vs A 股公告—生效阶段的不对称集中度",
     "subtitle": "CN vs US announce/effective concentration",
     "lead": (
-        "A 股在公告日拉价、生效日拉量；美股在公告日两样都拉、生效日反向抽回——"
-        "这是跨市场不对称的核心现象。"
+        "A 股更集中在公告日拉价、生效日放量；美股则在公告日价格和量能同时反应、生效日出现抽回。"
+        "这就是跨市场不对称的核心现象。"
     ),
     "brief_summary": (
-        "4 象限（CN/US × announce/effective）在 CAR 与微结构两条通道上"
+        "四象限（CN/US × 公告日/生效日）在 CAR 与微结构两条通道上"
         "呈现互补的集中度差异。"
     ),
     "conclusion_bullets": [
         "价格集中：公告日是两市场共同的 CAR 显著点；生效日 CAR 在两市场均未显著。",
-        "量能集中：A 股在生效日出现换手 / 成交量正、波动压低的需求签名；美股反向抽回。",
-        "异质性集中：不对称在小市值 / 低流动性 cell 更显著（参见 M4 矩阵）。",
+        "量能集中：A 股在生效日出现换手率与成交量上行、波动率回落的需求签名；美股则反向抽回。",
+        "异质性集中：不对称在小市值 / 低流动性分组更明显（参见 M4 矩阵）。",
     ],
 }
 
@@ -273,7 +273,7 @@ def _build_evidence_coverage_payload(
                 "status": "pass" if pending == 0 else "warn",
                 "status_label": dashboard_formatting.display_status_label("pass" if pending == 0 else "warn"),
                 "value": f"待补数据 {pending}",
-                "detail": "当前 H1-H7 已生成裁决行",
+                    "detail": "当前 H1-H7 已生成完整裁决行",
             }
         )
     return {"available": bool(rows), "rows": rows}

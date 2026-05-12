@@ -77,7 +77,7 @@ export function createDetailsSurface(ctx, tableSurface) {
     if (!toggle.dataset.closedLabel) {
       toggle.dataset.closedLabel = toggle.textContent.trim();
     }
-    toggle.textContent = panel.open ? "收起内容" : toggle.dataset.closedLabel;
+    toggle.textContent = panel.open ? "收起细节" : toggle.dataset.closedLabel;
   }
 
   function initializeDetailsPanels(onDetailsStateChange) {

@@ -50,7 +50,7 @@ def _price_pressure_figure_entry(path: Path, to_relative: RelativePathBuilder) -
         path,
         to_relative=to_relative,
         label="短窗口 CAR 时间变化图",
-        caption="图意：按公告年份追踪调入事件的 CAR[-1,+1]。阅读重点：观察美股公告日效应是否随时间减弱，以及中国样本是否呈现不同的阶段性变化。",
+        caption="图表含义：按公告年份追踪调入事件的 CAR[-1,+1]。阅读重点：观察美股公告日效应是否随时间减弱，以及中国样本是否呈现不同的阶段性变化。",
         layout_class="wide",
     )
     entry["echart_id"] = "price_pressure"
@@ -185,7 +185,7 @@ def create_identification_figures(
         cached_entry = build_figure_entry(
             figure_path,
             to_relative=to_relative,
-            caption="中国样本 RDD 主图。图意：以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。阅读重点：聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
+            caption="中国样本 RDD 主图。图表含义：以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。阅读重点：聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
         )
         cached_entry["echart_id"] = "rdd_scatter"
         return _assemble_identification_figures(
@@ -214,7 +214,7 @@ def create_identification_figures(
     rdd_entry = build_figure_entry(
         figure_path,
         to_relative=to_relative,
-        caption="中国样本 RDD 主图。图意：以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。阅读重点：聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
+        caption="中国样本 RDD 主图。图表含义：以公告日 CAR[-1,+1] 为例展示断点两侧分箱均值与局部拟合线。阅读重点：聚焦 0 附近是否存在离散跳跃，而不是只看两侧散点的总体波动。",
     )
     rdd_entry["echart_id"] = "rdd_scatter"
 
@@ -518,7 +518,7 @@ def _l3_coverage_figure_entry(
 
 def _l3_coverage_caption(n_batches: int, span_years: float) -> str:
     return (
-        f"L3 候选样本批次覆盖。图意：当前 {n_batches} / {_L3_COVERAGE_TARGET_BATCHES} 个批次，"
+        f"L3 候选样本批次覆盖。图表含义：当前 {n_batches} / {_L3_COVERAGE_TARGET_BATCHES} 个批次，"
         f"跨度 {span_years:.1f} / {_L3_COVERAGE_TARGET_YEARS} 年；阴影区域是论文级因果声明的目标窗口。"
         "阅读重点：每个批次都要同时拥有调入与备选对照才能进入 L3 主表，2014-2019 缺口需通过外部档案补齐。"
     )
@@ -534,7 +534,7 @@ def _sample_design_figure_entries(target_dir: Path, to_relative: RelativePathBui
             heatmap_path,
             to_relative=to_relative,
             label="真实样本短窗口 CAR 热力图",
-            caption="图意：把三组短窗口 CAR 压缩到同一张热力图中。阅读重点：优先比较美国公告日和中国生效日单元格的方向、幅度与显著性差异。",
+            caption="图表含义：把三组短窗口 CAR 压缩到同一张热力图中。阅读重点：优先比较美国公告日和中国生效日单元格的方向、幅度与显著性差异。",
             layout_class="wide",
         )
     heatmap_entry["echart_id"] = "car_heatmap"
@@ -542,21 +542,21 @@ def _sample_design_figure_entries(target_dir: Path, to_relative: RelativePathBui
         main_path,
         to_relative=to_relative,
         label="主回归处理组系数图",
-        caption="图意：展示主回归中处理组变量系数与 95% 置信区间。阅读重点：比较不同市场、不同事件阶段的方向是否一致，以及置信区间是否跨越 0。",
+        caption="图表含义：展示主回归中处理组变量系数与 95% 置信区间。阅读重点：比较不同市场、不同事件阶段的方向是否一致，以及置信区间是否跨越 0。",
     )
     main_entry["echart_id"] = "main_regression"
     mechanism_entry = build_figure_entry(
         mechanism_path,
         to_relative=to_relative,
         label="机制回归系数图",
-        caption="图意：把换手率、成交量与波动率三类机制回归放在同一张图中。阅读重点：观察中国 A 股与美国在公告日和生效日的机制方向是否一致。",
+        caption="图表含义：把换手率、成交量与波动率三类机制回归放在同一张图中。阅读重点：观察中国 A 股与美国在公告日和生效日的机制方向是否一致。",
     )
     mechanism_entry["echart_id"] = "mechanism_regression"
     timeline_entry = build_figure_entry(
         timeline_path,
         to_relative=to_relative,
         label="真实调入调出事件时间线",
-        caption="图意：按市场与事件阶段展开所有真实调入/调出事件。阅读重点：观察样本是否集中于少数批次，以及公告日与生效日是否在时间轴上形成清晰层次。",
+        caption="图表含义：按市场与事件阶段展开所有真实调入/调出事件。阅读重点：观察样本是否集中于少数批次，以及公告日与生效日是否在时间轴上形成清晰层次。",
         layout_class="wide",
     )
     timeline_entry["echart_id"] = "event_counts"
@@ -569,7 +569,7 @@ def _sample_design_figure_entries(target_dir: Path, to_relative: RelativePathBui
             match_path,
             to_relative=to_relative,
             label="匹配诊断图",
-            caption="图意：同时展示匹配状态分布与匹配质量指标。阅读重点：先看匹配成功率，再看三对照构造与行业口径放宽占比，从而判断对照组设计是否稳定。",
+            caption="图表含义：同时展示匹配状态分布与匹配质量指标。阅读重点：先看匹配成功率，再看三对照构造与行业口径放宽占比，从而判断对照组设计是否稳定。",
             layout_class="wide",
         ),
     ]

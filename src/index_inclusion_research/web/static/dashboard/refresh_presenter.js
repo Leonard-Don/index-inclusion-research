@@ -2,7 +2,7 @@ export function refreshRuntimeCopy(ctx, payload) {
   const status = (payload && payload.status) || "idle";
   const message =
     (payload && payload.message) ||
-    "页面已就绪，刷新完成后会自动同步本次更新。";
+    "页面已就绪，刷新完成后会自动同步最新结果。";
   const durationSeconds = payload && payload.duration_seconds;
   if (status === "running" && durationSeconds != null) {
     return `${message} 已运行 ${ctx.formatDuration(durationSeconds)}。`;
@@ -47,7 +47,7 @@ export function refreshSnapshotSourceText(payload) {
 export function refreshContractSummaryText(payload) {
   const status = (payload && payload.status) || "idle";
   if (status === "running") {
-    return "待完成后校验";
+    return "刷新完成后校验";
   }
   return (payload && payload.contract_status_label) || "—";
 }
@@ -193,7 +193,7 @@ export function applyRefreshStateToDom(
       return;
     }
     if (running && !accepted) {
-      button.textContent = "已有刷新在进行";
+      button.textContent = "刷新已在进行";
       return;
     }
     button.textContent = button.dataset.defaultLabel;
