@@ -177,8 +177,8 @@ def test_build_result_health_guides_l3_collection_package_when_reconstructed_sam
     package_check = {item["label"]: item for item in health_with_package["health_checks"]}["RDD L3 正式样本"]
     assert package_check["status"] == "warning"
     assert "L3 采集包已就绪" in package_check["copy"]
-    assert "collection_plan.md" in package_check["copy"]
-    assert "boundary_reference.csv" in package_check["copy"]
+    assert "collection_plan.md" not in package_check["copy"]
+    assert "boundary_reference.csv" not in package_check["copy"]
     assert "index-inclusion-prepare-hs300-rdd" in package_check["command"]
 
 
@@ -375,7 +375,7 @@ def test_set_refresh_succeeded_records_contract_sync_status() -> None:
     )
 
     assert refresh_state["contract_status_label"] == "缺少结果状态文件"
-    assert "results/real_tables/results_manifest.csv" in refresh_state["contract_status_copy"]
+    assert "结构化结果状态文件" in refresh_state["contract_status_copy"]
     assert refresh_state["message"] == "“全部材料”刷新完成，最新结果已同步。"
     assert refresh_state["artifact_summary_label"] == "本次未发现新的核心产物"
     assert "结果状态：缺少结果状态文件" in refresh_state["artifact_summary_copy"]

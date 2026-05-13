@@ -143,7 +143,7 @@ def test_identification_status_panel_handles_missing_and_real_modes() -> None:
     assert panel["meta"][2]["label"] == "覆盖说明"
     assert "index-inclusion-prepare-hs300-rdd" in panel["meta"][4]["value"]
     assert "index-inclusion-reconstruct-hs300-rdd" in panel["meta"][4]["value"]
-    assert "data/raw/hs300_rdd_candidates.template.csv" in panel["meta"][6]["value"]
+    assert "候选名单模板" in panel["meta"][6]["value"]
 
     real_panel = dashboard_metrics.build_identification_status_panel(
         {
@@ -189,7 +189,7 @@ def test_identification_status_panel_includes_candidate_audit_copy_when_availabl
     assert "demo 伪排名样本" in panel["meta"][0]["value"]
     assert "2 个候选批次" in panel["meta"][2]["value"]
     assert "index-inclusion-reconstruct-hs300-rdd" in panel["meta"][4]["value"]
-    assert "candidate_batch_audit.csv" in panel["meta"][6]["value"]
+    assert "候选样本审计" in panel["meta"][6]["value"]
 
 
 def test_identification_status_panel_marks_reconstructed_mode_as_public_proxy() -> None:
@@ -242,7 +242,7 @@ def test_identification_status_panel_surfaces_manifest_mismatch_copy() -> None:
     )
 
     assert panel is not None
-    assert "results/real_tables/results_manifest.csv" in panel["meta"][1]["value"]
+    assert "结构化结果状态" in panel["meta"][1]["value"]
     assert "来源摘要" in panel["meta"][1]["value"]
     assert "覆盖说明" in panel["meta"][1]["value"]
 

@@ -36,18 +36,6 @@ from index_inclusion_research.results_snapshot import ResultsSnapshot
 ARTIFACT_INDEX_SUFFIXES = {".csv", ".json", ".md", ".pdf", ".png", ".tex", ".xlsx"}
 
 
-def _project_relative_display_path(value: object, *, root: Path) -> str:
-    label = str(value)
-    root_label = root.resolve().as_posix()
-    normalized = label.replace("\\", "/")
-    if normalized.startswith(f"{root_label}/"):
-        return normalized[len(root_label) + 1 :]
-    marker = "/index-inclusion-research/"
-    if marker in normalized:
-        return normalized.split(marker, maxsplit=1)[1]
-    return label
-
-
 DISPLAYED_ARTIFACT_PATHS = {
     "results/real_figures/sample_event_timeline.png",
     "results/real_figures/sample_car_heatmap.png",
@@ -146,6 +134,61 @@ def _artifact_group(relative_path: str) -> str:
     return "项目文件"
 
 
+ARTIFACT_DISPLAY_NAMES = {
+    "sample_event_timeline.png": "样本事件时间线",
+    "sample_car_heatmap.png": "样本 CAR 热力图",
+    "main_regression_coefficients.png": "主回归系数图",
+    "mechanism_regression_coefficients.png": "机制回归系数图",
+    "match_diagnostics_overview.png": "匹配诊断图",
+    "price_pressure_time_series.png": "价格压力时间序列图",
+    "cma_ar_path_comparison.png": "跨市场 AR 路径图",
+    "cma_gap_decomposition.png": "空窗期分解图",
+    "cma_mechanism_heatmap.png": "机制热力图",
+    "cma_heterogeneity_matrix_size.png": "异质性矩阵图",
+    "cma_time_series_rolling.png": "滚动时间序列图",
+    "cma_gap_length_distribution.png": "空窗期分布图",
+    "car_m1_p1_rdd_main.png": "RDD 主规格图",
+    "l3_coverage_timeline.png": "L3 覆盖时间线",
+    "rdd_robustness_forest.png": "RDD 稳健性森林图",
+    "sample_scope.csv": "样本范围表",
+    "data_sources.csv": "数据来源表",
+    "event_counts_by_year.csv": "年度事件分布表",
+    "event_study_summary.csv": "事件研究摘要",
+    "time_series_event_study_summary.csv": "时间变化事件研究表",
+    "long_window_event_study_summary.csv": "长窗口事件研究表",
+    "retention_summary.csv": "长期保留摘要",
+    "asymmetry_summary.csv": "调入调出非对称性表",
+    "sample_filter_summary.csv": "样本过滤摘要",
+    "robustness_event_study_summary.csv": "事件研究稳健性表",
+    "robustness_regression_summary.csv": "回归稳健性表",
+    "robustness_retention_summary.csv": "长期保留稳健性表",
+    "identification_scope.csv": "识别范围说明",
+    "results_manifest.csv": "结果状态清单",
+    "research_summary.md": "研究摘要",
+    "cma_hypothesis_verdicts.csv": "CMA 假说裁决表",
+    "cma_mechanism_panel.csv": "CMA 机制面板",
+    "evidence_refresh_manifest.json": "证据刷新清单",
+    "match_diagnostics.csv": "匹配诊断表",
+    "regression_coefficients.csv": "回归系数表",
+    "mechanism_summary.csv": "机制摘要",
+    "did_summary.csv": "DID 摘要",
+    "rdd_summary.csv": "RDD 摘要",
+    "rdd_status.csv": "RDD 状态",
+    "rdd_robustness.csv": "RDD 稳健性表",
+}
+
+
+def _artifact_display_name(relative_path: object) -> str:
+    label = str(relative_path)
+    name = Path(label.replace("\\", "/")).name
+    return ARTIFACT_DISPLAY_NAMES.get(name, name.rsplit(".", 1)[0].replace("_", " "))
+
+
+def _artifact_display_item(relative_path: object) -> str:
+    label = str(relative_path)
+    return f"{_artifact_group(label)} · {_artifact_display_name(label)}"
+
+
 def _artifact_frontend_status(relative_path: str) -> str:
     if relative_path in DISPLAYED_ARTIFACT_PATHS:
         return "已在主页面呈现"
@@ -184,7 +227,7 @@ def build_artifact_index_table(root: Path) -> pd.DataFrame:
         stat = path.stat()
         rows.append(
             {
-                "路径": relative_path,
+                "产物": _artifact_display_name(relative_path),
                 "分组": _artifact_group(relative_path),
                 "类型": path.suffix.lower().lstrip(".").upper(),
                 "前端状态": _artifact_frontend_status(relative_path),
@@ -194,7 +237,7 @@ def build_artifact_index_table(root: Path) -> pd.DataFrame:
         )
     return pd.DataFrame(
         rows,
-        columns=["路径", "分组", "类型", "前端状态", "大小", "更新时间"],
+        columns=["产物", "分组", "类型", "前端状态", "大小", "更新时间"],
     )
 
 
@@ -592,14 +635,9 @@ def build_limits_section(
         ]
     )
 
-    # data_sources.csv stores absolute paths from the pipeline run; rewrite
-    # to project-relative for display so the citation table doesn't leak
-    # the contributor's home directory.
     citation_table = data_sources.copy()
-    if not citation_table.empty and "文件" in citation_table.columns:
-        citation_table["文件"] = citation_table["文件"].astype(str).apply(
-            lambda value: _project_relative_display_path(value, root=root)
-        )
+    if not citation_table.empty:
+        citation_table = citation_table.drop(columns=["文件"], errors="ignore")
 
     tables = attach_display_tiers(
         [
@@ -704,7 +742,7 @@ def build_paper_audit_section(
                 {
                     "检查项": display_text(result.name),
                     "状态": status_label.get(result.status, result.status),
-                    "证据路径": artifact,
+                    "证据材料": _artifact_display_item(artifact),
                     "用途": display_text(result.claim),
                 }
             )
@@ -713,14 +751,14 @@ def build_paper_audit_section(
                 {
                     "检查项": display_text(result.name),
                     "状态": status_label.get(result.status, result.status),
-                    "证据路径": display_text(detail),
+                    "证据材料": display_text(detail),
                     "用途": "审计细节 / 缺口提示",
                 }
             )
 
     artifact_table = pd.DataFrame(
         artifact_rows,
-        columns=["检查项", "状态", "证据路径", "用途"],
+        columns=["检查项", "状态", "证据材料", "用途"],
     )
     tables = attach_display_tiers(
         [
@@ -731,7 +769,7 @@ def build_paper_audit_section(
                 "tier": "primary",
             },
             {
-                "label": "主张证据路径",
+                "label": "主张证据材料",
                 "html": render_table(artifact_table, compact=True),
                 "layout_class": "wide",
                 "tier": "detail",
@@ -761,18 +799,18 @@ def build_paper_audit_section(
             primary=build_table_primary_view(
                 key="demo-paper-audit-primary-tables",
                 title="主张审计摘要",
-                copy="先看每个写作主张是否通过，再按需展开证据路径和缺口细节。",
+                copy="先看每个写作主张是否通过，再按需展开证据材料和缺口细节。",
                 container="library-panels",
-                collapsed_copy="展示版默认只露出审计摘要，完整证据路径按需展开。",
+                collapsed_copy="展示版默认只露出审计摘要，完整证据材料按需展开。",
             ),
             detail=build_table_detail_view(
-                full_title="证据路径明细",
-                full_copy="这些路径就是答辩、写作和复现时需要回查的真实文件。",
+                full_title="证据材料明细",
+                full_copy="这些材料就是答辩、写作和复现时需要回查的真实产物。",
                 demo_key="demo-paper-audit-detail-tables",
-                demo_title=f"交付审计证据路径（{len(detail_tables)} 张）",
-                demo_copy="展示版默认收起完整路径，需要核对来源时再展开。",
+                demo_title=f"交付审计证据材料（{len(detail_tables)} 张）",
+                demo_copy="展示版默认收起完整材料，需要核对来源时再展开。",
                 container="library-panels",
-                kicker="证据路径",
+                kicker="证据材料",
             ),
         ),
     }

@@ -135,6 +135,8 @@ class SnapshotMeta(TypedDict):
 
 class RefreshArtifact(TypedDict):
     path: str
+    label: str
+    group: str
     modified_at: str
 
 

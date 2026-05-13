@@ -36,12 +36,8 @@ export function refreshDurationText(ctx, payload) {
 }
 
 export function refreshSnapshotSourceText(payload) {
-  const sourcePath = (payload && payload.snapshot_source_path) || "";
   const sourceCount = Number((payload && payload.snapshot_source_count) || 0);
-  if (!sourcePath) {
-    return sourceCount > 0 ? `${sourceCount} 个核心文件` : "—";
-  }
-  return `${sourcePath} · ${sourceCount} 个核心文件`;
+  return sourceCount > 0 ? `${sourceCount} 个核心结果文件` : "—";
 }
 
 export function refreshContractSummaryText(payload) {
@@ -88,11 +84,12 @@ export function renderRefreshArtifacts(ctx, payload) {
   artifacts.forEach((artifact) => {
     const item = document.createElement("li");
     item.className = "refresh-status-artifact-item";
-    const path = document.createElement("span");
-    path.textContent = artifact && artifact.path ? artifact.path : "";
+    const label = document.createElement("span");
+    label.textContent =
+      (artifact && (artifact.label || artifact.group)) || "核心产物";
     const time = document.createElement("time");
     time.textContent = artifact && artifact.modified_at ? artifact.modified_at : "";
-    item.append(path, time);
+    item.append(label, time);
     ctx.refreshArtifactList.append(item);
   });
   ctx.refreshArtifactList.hidden = artifacts.length === 0;

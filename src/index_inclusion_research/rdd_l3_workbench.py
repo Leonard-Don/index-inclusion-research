@@ -48,6 +48,32 @@ def _relative_label(path: Path, *, root: Path = ROOT) -> str:
         return str(path)
 
 
+_PATH_DISPLAY_LABELS = {
+    "official_candidate_draft.csv": "线上候选草稿",
+    "hs300_rdd_candidates.csv": "正式候选样本",
+    "hs300_rdd_candidates.reconstructed.csv": "公开重建样本",
+    "candidate_batch_audit.csv": "候选样本审计",
+    "import_summary.md": "导入摘要",
+    "collection_plan.md": "采集计划",
+    "batch_collection_checklist.csv": "批次采集清单",
+    "formal_candidate_template.csv": "正式样本模板",
+    "boundary_reference.csv": "边界参考表",
+    "online_year_coverage.csv": "线上年份覆盖诊断",
+    "online_source_audit.csv": "线上来源审计",
+    "online_manual_gap_worklist.csv": "线上补录缺口清单",
+    "online_gap_source_hints.csv": "线上缺口来源入口",
+    "online_search_diagnostics.csv": "线上搜索诊断",
+    "online_collection_report.md": "线上采集报告",
+    "online_collection_manifest.json": "线上采集清单",
+    "online_collection_gap_report.csv": "线上采集缺口报告",
+    "evidence_refresh_manifest.json": "证据刷新清单",
+}
+
+
+def _path_display_label(path: Path) -> str:
+    return _PATH_DISPLAY_LABELS.get(path.name, path.stem.replace("_", " "))
+
+
 def _sheet_value(value: str | int | None) -> str | int | None:
     if value is None:
         return None
@@ -115,10 +141,57 @@ def _select_columns(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
 
 def _path_payload(path: Path, *, root: Path = ROOT) -> dict[str, object]:
     return {
-        "label": _relative_label(path, root=root),
+        "label": _path_display_label(path),
         "exists": path.exists(),
         "href": f"/files/{_relative_label(path, root=root)}" if path.exists() else "",
     }
+
+
+def _pathless_prepare_command(command: str) -> str:
+    if "index-inclusion-prepare-hs300-rdd" not in command:
+        return command
+    suffix = " --check-only" if "--check-only" in command else ""
+    if "--force" in command:
+        suffix = " --force"
+    return f"index-inclusion-prepare-hs300-rdd{suffix}"
+
+
+def _pathless_preflight_report(report: dict[str, object]) -> dict[str, object]:
+    checks = []
+    for raw_check in report.get("checks", []):
+        check = dict(raw_check) if isinstance(raw_check, dict) else {}
+        copy = str(check.get("copy", ""))
+        next_step = str(check.get("next_step", ""))
+        copy = copy.replace("输入文件路径指向公开重建候选样本", "输入材料指向公开重建候选样本")
+        if "本次输出为" in copy and "RDD L3 默认读取" in copy:
+            copy = "本次输出不是默认正式候选样本；正式接入前请切换到默认写入口。"
+        if "index-inclusion-prepare-hs300-rdd" in next_step:
+            prefix = next_step.split("index-inclusion-prepare-hs300-rdd", maxsplit=1)[0]
+            next_step = f"{prefix}{_pathless_prepare_command(next_step)}"
+        check["copy"] = copy
+        check["next_step"] = next_step
+        checks.append(check)
+    next_commands = [
+        _pathless_prepare_command(str(command))
+        for command in report.get("next_commands", [])
+    ]
+    return {
+        **report,
+        "checks": checks,
+        "next_commands": next_commands,
+    }
+
+
+def _display_value(value: object) -> object:
+    return dashboard_formatting.display_value_label(value)
+
+
+def _display_status_payload(status: dict[str, Any]) -> dict[str, Any]:
+    display = dict(status)
+    for key in ("message", "coverage_note", "source_label", "note", "source_file", "input_file", "audit_file"):
+        if key in display:
+            display[key] = _display_value(display.get(key))
+    return display
 
 
 def _read_csv(path: Path) -> pd.DataFrame:
@@ -175,9 +248,10 @@ def build_candidate_preflight(
         audit_summary=audit_summary,
         check_only=check_only,
     )
+    preflight_report = _pathless_preflight_report(preflight_report)
     return {
         "input_path": str(input_path),
-        "input_label": _relative_label(input_path),
+        "input_label": "候选名单上传件",
         "metadata": metadata,
         "audit_summary": audit_summary,
         "preflight": preflight_report,
@@ -204,7 +278,7 @@ def build_candidate_preflight_result(
     except Exception as exc:  # noqa: BLE001
         return {
             "input_path": str(input_path),
-            "input_label": _relative_label(Path(input_path)),
+            "input_label": "候选名单上传件",
             "preflight": {
                 "status": "blocked",
                 "status_label": "暂不可接入 L3",
@@ -252,10 +326,10 @@ def import_official_candidates(
         validated,
     )
     if reconstructed_reason and Path(output_path).resolve() == DEFAULT_OUTPUT.resolve():
-        raise ValueError("公开重建样本不能写入正式 L3 候选路径。")
+        raise ValueError("公开重建样本不能写入正式 L3 候选样本。")
     for path in (output_path, audit_path, summary_path):
         if path.exists() and not force:
-            raise FileExistsError(f"文件已存在，请启用覆盖: {path}")
+            raise FileExistsError(f"{_path_display_label(path)}已存在，请启用覆盖。")
     save_dataframe(validated, output_path)
     save_dataframe(audit, audit_path)
     summary_path.parent.mkdir(parents=True, exist_ok=True)
@@ -602,7 +676,7 @@ def refresh_collection_package(
     input_path = root / "data" / "raw" / "hs300_rdd_candidates.reconstructed.csv"
     output_dir = root / "results" / "literature" / "hs300_rdd_l3_collection"
     if not input_path.exists():
-        raise FileNotFoundError(f"缺少公开重建参考样本：{_relative_label(input_path, root=root)}")
+        raise FileNotFoundError("缺少公开重建参考样本。")
     outputs = hs300_rdd_l3_collection.write_collection_package(
         input_path=input_path,
         output_dir=output_dir,
@@ -690,7 +764,7 @@ def build_rdd_l3_workbench_context(
     error: str = "",
 ) -> dict[str, Any]:
     root = Path(root)
-    status = dict(load_rdd_status(root))
+    status = _display_status_payload(dict(load_rdd_status(root)))
     import_dir = root / "results" / "literature" / "hs300_rdd_import"
     import_paths = [
         root / "data" / "raw" / "hs300_rdd_candidates.csv",
@@ -713,8 +787,8 @@ def build_rdd_l3_workbench_context(
         "commands": [
             "index-inclusion-plan-hs300-rdd-l3 --force",
             "index-inclusion-collect-hs300-rdd-l3 --force",
-            "index-inclusion-prepare-hs300-rdd --input /path/to/raw_candidates.xlsx --sheet 0 --check-only",
-            "index-inclusion-prepare-hs300-rdd --input /path/to/raw_candidates.xlsx --sheet 0 --output data/raw/hs300_rdd_candidates.csv --force",
+            "index-inclusion-prepare-hs300-rdd --check-only",
+            "index-inclusion-prepare-hs300-rdd --force",
             "index-inclusion-hs300-rdd",
         ],
     }

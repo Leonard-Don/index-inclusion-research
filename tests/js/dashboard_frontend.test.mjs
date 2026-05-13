@@ -342,7 +342,7 @@ test("refresh presenter helpers render stable labels and runtime copy", () => {
       snapshot_source_path: "results/real_tables/results_manifest.csv",
       snapshot_source_count: 3,
     }),
-    "results/real_tables/results_manifest.csv · 3 个核心文件",
+    "3 个核心结果文件",
   );
   assert.equal(refreshSnapshotSourceText({ snapshot_source_count: 0 }), "—");
 });

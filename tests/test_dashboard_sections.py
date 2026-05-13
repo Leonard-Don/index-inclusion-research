@@ -110,10 +110,11 @@ def test_build_limits_section_adds_project_relative_artifact_index() -> None:
 
     assert len(section["artifact_tables"]) == 1
     artifact_index = captured_tables[-1]
-    assert list(artifact_index.columns) == ["路径", "分组", "类型", "前端状态", "大小", "更新时间"]
-    assert "/Users/" not in "\n".join(artifact_index["路径"].astype(str).tolist())
-    assert "results/real_event_study/event_level_metrics.csv" in set(artifact_index["路径"])
-    assert "data/raw/hs300_rdd_candidates.csv" in set(artifact_index["路径"])
+    assert list(artifact_index.columns) == ["产物", "分组", "类型", "前端状态", "大小", "更新时间"]
+    artifact_names = artifact_index["产物"].astype(str).tolist()
+    assert "/Users/" not in "\n".join(artifact_names)
+    assert not any(name.startswith(("results/", "data/")) for name in artifact_names)
+    assert "结果状态清单" in set(artifact_names)
     assert "索引保留" in " ".join(artifact_index["前端状态"].astype(str).unique())
 
 
@@ -161,4 +162,4 @@ def test_build_paper_audit_section_maps_claims_to_tables() -> None:
     assert section["summary_cards"]
     assert section["section_view"]["head"]["section_id"] == "paper_audit"
     assert [table["label"] for table in section["primary_tables"]] == ["交付审计摘要"]
-    assert [table["label"] for table in section["detail_tables"]] == ["主张证据路径"]
+    assert [table["label"] for table in section["detail_tables"]] == ["主张证据材料"]
