@@ -273,12 +273,12 @@ def prepare_track_display(
     status_panel: StatusPanel | None = None,
 ) -> TrackDisplaySection:
     curated_summary = {
-        "price_pressure_track": "这条主线集中展示短窗口 CAR、公告日与生效日差异、按年份变化以及交易活跃度。当前样本和新增文献都更支持“短期冲击仍在、但公开 alpha 已被提前交易压缩”的判断；中国 A 股更值得关注执行阶段与长期窗口中的调入/调出分化。",
+        "price_pressure_track": "这条主线集中展示短窗口 CAR、公告日与生效日差异、按年份变化以及交易活跃度。当前样本和新增文献都更支持“短期冲击仍在、但公开超额收益已被提前交易压缩”的判断；中国 A 股更值得关注执行阶段与长期窗口中的调入/调出分化。",
         "demand_curve_track": "这条主线关注价格冲击是否只在短期出现，还是会在更长窗口中部分保留。重点比较长期保留率、长窗口异常收益（CAR）和短长窗口差异，并结合更外生的权重冲击与套利约束判断哪些保留更可信。",
         "identification_china_track": _identification_summary_from_status(status_panel),
     }
     takeaways = {
-        "price_pressure_track": "当前证据更支持“美股可见 alpha 缩窄但短期冲击未消失”，不能简单把现代指数效应概括成完全失效。",
+        "price_pressure_track": "当前证据更支持“美股可见超额收益缩窄但短期冲击未消失”，不能简单把现代指数效应概括成完全失效。",
         "demand_curve_track": "价格回吐与长期保留可以并存；更外生的权重冲击和更强的市场摩擦下，需求曲线效应往往更容易留下可见痕迹。",
         "identification_china_track": _identification_takeaway_from_status(
             status_panel
@@ -438,7 +438,7 @@ def track_notes_for_analysis(analysis_id: str) -> list[TrackNote]:
             },
             {
                 "name": "样本特征",
-                "copy": "扩展样本与近年文献都显示，美股公告日仍有短期效应，但公开 alpha 已被更成熟的套利压缩；中国 A 股更值得看执行阶段与长期窗口分化。",
+                "copy": "扩展样本与近年文献都显示，美股公告日仍有短期效应，但公开超额收益已被更成熟的套利压缩；中国 A 股更值得看执行阶段与长期窗口分化。",
             },
         ]
     if analysis_id == "demand_curve_track":
@@ -488,7 +488,7 @@ def overview_notes() -> list[NoteItem]:
         },
         {
             "title": "机制层",
-            "copy": "补充部分展示事件时钟、机制链与冲击估算，用于解释公开 alpha 如何被提前交易和换手成本重新分配。",
+            "copy": "补充部分展示事件时钟、机制链与冲击估算，用于解释公开超额收益如何被提前交易和换手成本重新分配。",
         },
     ]
 
@@ -547,7 +547,7 @@ def abstract_points() -> list[AbstractPoint]:
     return [
         {
             "title": "现象层",
-            "copy": "现代美股公告日仍有最稳定的短期正向证据，但可见 alpha 已被提前交易与样本迁移明显压缩；中国 A 股则更多体现为生效阶段和长期窗口中的不对称分化。",
+            "copy": "现代美股公告日仍有最稳定的短期正向证据，但可见超额收益已被提前交易与样本迁移明显压缩；中国 A 股则更多体现为生效阶段和长期窗口中的不对称分化。",
         },
         {
             "title": "机制层",

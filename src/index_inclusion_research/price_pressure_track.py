@@ -13,7 +13,7 @@ def run_analysis(verbose: bool = True) -> RawAnalysisResult:
     result["id"] = "price_pressure_track"
     result["title"] = "短期价格压力与效应减弱"
     result["description"] = "以反方文献和早期事件研究证据为底，检验短窗口 CAR、交易冲击与效应减弱。"
-    result["subtitle"] = "Price Pressure & Disappearing Effect"
+    result["subtitle"] = "价格压力与效应消失"
     return result
 
 

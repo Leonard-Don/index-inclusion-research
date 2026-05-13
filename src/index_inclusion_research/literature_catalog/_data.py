@@ -33,17 +33,17 @@ PDF_ROOT = _resolve_pdf_root()
 TRACK_LABELS = {
     "短期价格压力": {
         "title": "短期价格压力与效应减弱",
-        "subtitle": "Price Pressure & Disappearing Effect",
+        "subtitle": "价格压力与效应消失",
         "description": "用反方文献和早期事件研究文献检验短窗口价格冲击、成交量放大和效应减弱问题。",
     },
     "需求曲线效应": {
         "title": "需求曲线与长期保留",
-        "subtitle": "Demand Curves & Long-run Retention",
+        "subtitle": "需求曲线与长期保留",
         "description": "用正方和机制文献检验股票需求曲线是否向下倾斜，以及价格效应是否只部分回吐。",
     },
     "沪深300论文复现": {
         "title": "制度识别与中国市场证据",
-        "subtitle": "Identification & China Evidence",
+        "subtitle": "识别策略与中国证据",
         "description": "用中性和中国市场文献组织识别策略、对照组设计与断点回归扩展证据。",
     },
 }
@@ -140,7 +140,7 @@ DEEP_ANALYSIS = {
     "greenwood_sammon_2022": {
         "identification_target": "S&P 500 指数效应的年代变化",
         "challenged_assumption": "经典美股指数效应在不同时代都同样强",
-        "deep_contribution": "S&P 500 纳入异常收益从 1980 年代 3.4%、1990 年代 7.6% 降到近十年 0.8%，剔除端从大幅负值降到 2010–2020 的 −0.6%；机制未必消失，但可见 alpha 已被成熟套利显著压缩。",
+        "deep_contribution": "S&P 500 纳入异常收益从 1980 年代 3.4%、1990 年代 7.6% 降到近十年 0.8%，剔除端从大幅负值降到 2010–2020 的 −0.6%；机制未必消失，但可见超额收益已被成熟套利显著压缩。",
     },
     "chang_hong_liskovich_2014": {
         "identification_target": "Russell 断点附近纯指数化冲击的价格效应",

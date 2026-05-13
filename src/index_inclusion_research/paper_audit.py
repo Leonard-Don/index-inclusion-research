@@ -83,7 +83,7 @@ def _fail_missing(
 
 
 def audit_main_event_study(root: Path = ROOT, *, require_bundle: bool = True) -> AuditResult:
-    claim = "正文主结论：CN / US inclusion 的公告日 CAR[-1,+1] 显著为正，生效日不是机械跳涨主轴。"
+    claim = "正文主结论：中国 A 股与美国调入样本的公告日 CAR[-1,+1] 显著为正，生效日不是机械跳涨主轴。"
     required: tuple[Path, ...] = (
         root / "docs" / "research_delivery_package.md",
         root / "docs" / "paper_outline.md",
@@ -172,7 +172,7 @@ def audit_main_event_study(root: Path = ROOT, *, require_bundle: bool = True) ->
 
 
 def audit_patell_bmp(root: Path = ROOT, *, require_bundle: bool = True) -> AuditResult:
-    claim = "方法稳健性：Patell/BMP 标准化异常收益仍支持公告日 inclusion effect。"
+    claim = "方法稳健性：Patell/BMP 标准化异常收益仍支持公告日调入效应。"
     required: tuple[Path, ...] = (
         root / "results" / "real_event_study" / "patell_bmp_summary.csv",
         root / "docs" / "limitations.md",
@@ -259,7 +259,7 @@ def audit_patell_bmp(root: Path = ROOT, *, require_bundle: bool = True) -> Audit
 
 
 def audit_cma_core(root: Path = ROOT, *, require_bundle: bool = True) -> AuditResult:
-    claim = "机制主表：正文只引用 evidence_tier=core 的 H1 / H5 / H7，supplementary 走附录。"
+    claim = "机制主表：正文只引用“正文可引用”的 H1 / H5 / H7，其余机制假说放入附录/探索性证据。"
     required: tuple[Path, ...] = (
         root / "results" / "real_tables" / "cma_hypothesis_verdicts.csv",
         root / "results" / "real_tables" / "cma_hypothesis_verdicts.tex",
@@ -334,7 +334,7 @@ def audit_cma_core(root: Path = ROOT, *, require_bundle: bool = True) -> AuditRe
 
 
 def audit_rdd_appendix(root: Path = ROOT, *, require_bundle: bool = True) -> AuditResult:
-    claim = "HS300 RDD：作为附录 / preliminary 识别补充，不能在 L3 ≥10 年前进主表。"
+    claim = "沪深300 RDD：作为附录/探索性的识别补充，不能在 L3 ≥10 年前进入主表。"
     required: tuple[Path, ...] = (
         root / "results" / "literature" / "hs300_rdd" / "rdd_status.csv",
         root / "results" / "literature" / "hs300_rdd" / "rdd_robustness.csv",
@@ -388,8 +388,8 @@ def audit_rdd_appendix(root: Path = ROOT, *, require_bundle: bool = True) -> Aud
     expected_kinds = {"main", "donut", "placebo", "polynomial"}
     missing_kinds = expected_kinds - kinds
     details = [
-        f"RDD L3 rows={rows}, batches={batches}, tier={first.get('evidence_tier', '')}",
-        f"McCrary rows={len(mccrary)}",
+        f"RDD L3 样本行数={rows}，批次数={batches}，证据层级={first.get('evidence_tier', '')}",
+        f"McCrary 检验行数={len(mccrary)}",
     ]
     if missing_kinds:
         return AuditResult(
@@ -423,7 +423,7 @@ def audit_rdd_appendix(root: Path = ROOT, *, require_bundle: bool = True) -> Aud
 
 
 def audit_pap_limitations(root: Path = ROOT, *, require_bundle: bool = True) -> AuditResult:
-    claim = "写作边界：PAP、limitations、verdict diff 与当前 verdicts 保持同一套口径。"
+    claim = "写作边界：PAP、局限说明、裁决差异与当前裁决保持同一套口径。"
     required: tuple[Path, ...] = (
         root / "docs" / "pre_registration.md",
         root / "docs" / "limitations.md",
@@ -460,9 +460,9 @@ def audit_pap_limitations(root: Path = ROOT, *, require_bundle: bool = True) -> 
         )
     drift_state = str(pap.get("drift_state", ""))
     details = (
-        f"baseline={pap.get('baseline_date', '')}",
-        f"drift_state={drift_state}",
-        f"summary={pap.get('summary_label', '')}",
+        f"基线日期={pap.get('baseline_date', '')}",
+        f"漂移状态={drift_state}",
+        f"摘要={pap.get('summary_label', '')}",
     )
     if drift_state == "drift":
         return AuditResult(

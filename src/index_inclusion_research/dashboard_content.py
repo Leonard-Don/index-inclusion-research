@@ -155,11 +155,11 @@ def paper_brief_title(record: PaperBriefRecord) -> str:
 
 def _paper_reading_lens(*, project_module: str, camp: str) -> str:
     if camp == "市场摩擦与效应重估":
-        return "放到今天的阅读里，更重要的是看公开 alpha 如何被提前交易、换手成本和套利资金重新分配。"
+        return "放到今天的阅读里，更重要的是看公开超额收益如何被提前交易、换手成本和套利资金重新分配。"
     if camp == "方法革命":
         return "放到今天的阅读里，更重要的是看它如何把识别强度、样本选择和价格发现一起拉进争论。"
     if project_module == "短期价格压力":
-        return "放到今天的阅读里，更适合把它和提前定价、效应弱化以及公开 alpha 压缩连起来理解。"
+        return "放到今天的阅读里，更适合把它和提前定价、效应弱化以及公开超额收益压缩连起来理解。"
     if project_module == "需求曲线效应":
         return "放到今天的阅读里，更适合看哪些冲击会在更外生的权重变化和更强市场摩擦下留下长期痕迹。"
     return "放到今天的阅读里，更适合把它当作独立制度场景的证据，看制度差异、套利约束和识别设计如何共同改写结论。"

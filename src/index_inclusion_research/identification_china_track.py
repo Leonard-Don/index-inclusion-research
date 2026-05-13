@@ -54,7 +54,7 @@ def run_analysis(verbose: bool = True) -> RawAnalysisResult:
         "id": "identification_china_track",
         "title": "制度识别与中国市场证据",
         "description": "以中国市场正向证据与识别方法论文献为底，整合匹配对照组、DID 风格分析和 RDD 扩展。",
-        "subtitle": "Identification & China Evidence",
+        "subtitle": "识别策略与中国证据",
         "summary_text": summary_text,
         "tables": combined_tables,
         "figures": combined_figures,

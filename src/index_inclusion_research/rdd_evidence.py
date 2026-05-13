@@ -85,7 +85,7 @@ def rdd_coverage_note(
         if treated is not None or controls is not None:
             parts.append(f"调入 {treated or 0} / 对照 {controls or 0}")
         if crossings is not None:
-            parts.append(f"{crossings} 个批次覆盖 cutoff 两侧")
+            parts.append(f"{crossings} 个批次覆盖断点两侧")
         return "；".join(parts) + "。"
     if error:
         return f"最近一次校验失败：{error}。"

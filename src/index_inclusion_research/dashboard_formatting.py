@@ -265,6 +265,19 @@ COLUMN_LABELS = {
     "has_treated_and_control": "是否有处理/对照",
     "gap_length_days": "空窗期天数",
     "count": "数量",
+    "dim": "分组维度",
+    "bucket": "分组",
+    "announce_car": "公告日 CAR",
+    "effective_car": "生效日 CAR",
+    "gap_drift": "空窗期漂移",
+    "asymmetry_index": "不对称指数",
+    "relative_day": "相对事件日",
+    "ar_mean": "平均 AR",
+    "ar_se": "AR 标准误",
+    "ar_t": "AR t 值",
+    "car_mean": "平均 CAR",
+    "car_se": "CAR 标准误",
+    "car_t": "CAR t 值",
     "name": "检查项",
     "message": "检查说明",
     "fix": "修复建议",
@@ -290,7 +303,7 @@ STATUS_LABELS = {
     "no_candidates": "未形成候选",
     "real": "正式样本",
     "reconstructed": "公开重建样本",
-    "demo": "Demo 样本",
+    "demo": "演示样本",
 }
 
 VALUE_LABELS = {
@@ -354,7 +367,7 @@ VALUE_LABELS = {
     "no_candidates": "未形成候选",
     "real": "正式样本",
     "reconstructed": "公开重建样本",
-    "demo": "Demo 样本",
+    "demo": "演示样本",
     "parsed_additions_missing_controls": "已解析调入但缺少对照名单",
     "unparsed_attachment": "附件未解析",
     "official_adjustment_addition": "官方调整调入",
@@ -373,6 +386,26 @@ VALUE_LABELS = {
     "All 21 paper references across 7 hypotheses resolve.": "7 条假说中的 21 条文献引用均可解析。",
     "pap limitations claim": "PAP 与局限说明口径",
     "pap_limitations_claim": "PAP 与局限说明口径",
+    "main_event_study_claim": "正文主结论审计",
+    "patell_bmp_claim": "Patell/BMP 稳健性审计",
+    "cma_core_claim": "跨市场机制主表审计",
+    "rdd_appendix_claim": "沪深300 RDD 附录审计",
+    "paper_bundle_claim": "论文交付包审计",
+    "CN and US announce inclusion rows are positive and significant, and paper bundle copies are present.": (
+        "中国 A 股与美国公告日调入行均为正且显著，论文交付包副本已齐备。"
+    ),
+    "Patell/BMP announce inclusion rows are available for both markets and copied into the paper bundle.": (
+        "两个市场的公告日调入 Patell/BMP 稳健性行均已生成，并已复制到论文交付包。"
+    ),
+    "Core mechanism set matches PAP (H1/H5/H7), with paper bundle and narrative copies present.": (
+        "正文机制集合与 PAP 一致（H1/H5/H7），论文表格与叙事副本已齐备。"
+    ),
+    "RDD appendix artifacts, robustness panel, McCrary output, and preliminary wording are present.": (
+        "RDD 附录产物、稳健性面板、McCrary 输出和“附录/探索性”表述均已齐备。"
+    ),
+    "Paper bundle contains the expected tables, figures, RDD files, narrative docs, and PAP snapshot.": (
+        "论文交付包已包含预期表格、图表、RDD 文件、叙事文档与 PAP 快照。"
+    ),
     "hypothesis_paper_ids_resolve": "假说文献引用解析",
     "verdicts_csv_health": "裁决 CSV 健康度",
     "results_snapshot_contract": "结果快照契约",
@@ -381,7 +414,13 @@ VALUE_LABELS = {
 }
 
 TEXT_REPLACEMENTS: tuple[tuple[str, str], ...] = (
-    ("US AUM ratio", "US AUM 倍数"),
+    ("US AUM ratio", "美股 AUM 倍数"),
+    ("US AUM", "美国被动资金规模"),
+    ("CN / US", "中国 A 股 / 美国"),
+    ("CN ", "中国 A 股 "),
+    ("US ", "美国 "),
+    (" CN", " 中国 A 股"),
+    (" US", " 美国"),
     ("matched events=", "匹配事件="),
     ("matched=", "匹配事件="),
     ("unique tickers=", "股票数="),
@@ -389,7 +428,29 @@ TEXT_REPLACEMENTS: tuple[tuple[str, str], ...] = (
     ("heavy announce_jump=", "重权重公告跳涨="),
     ("light=", "轻权重="),
     ("announce_jump", "公告日跳涨"),
+    ("announce-day", "公告日"),
+    ("announce inclusion", "公告日调入"),
+    ("announce", "公告日"),
+    ("effective rolling CAR", "生效日滚动 CAR"),
+    ("effective", "生效日"),
+    ("inclusion effect", "调入效应"),
+    ("inclusion", "调入"),
     ("weight_proxy", "权重代理"),
+    ("channel concentration", "通道集中度"),
+    ("both-sig", "双通道显著"),
+    ("turnover", "换手率"),
+    ("volume", "成交量"),
+    ("sector×phase/treatment", "行业×事件阶段/处理组"),
+    ("eligible sectors", "可用行业"),
+    ("joint p", "联合 p 值"),
+    ("top=", "最强项="),
+    ("max=", "最大值="),
+    ("min=", "最小值="),
+    ("Materials", "材料"),
+    ("Real Estate", "房地产"),
+    ("Industrials", "工业"),
+    ("limit_coef", "涨跌停系数"),
+    ("asymmetry_index", "不对称指数"),
     ("spread=", "差值="),
     ("robustness:", "稳健性："),
     ("ols_weight coef=", "OLS 权重系数="),
@@ -399,6 +460,8 @@ TEXT_REPLACEMENTS: tuple[tuple[str, str], ...] = (
     ("best=", "最佳规格="),
     ("over=", "超阈值="),
     ("pending=", "待补充数据="),
+    ("· core ·", "· 正文可引用 ·"),
+    ("· supplementary ·", "· 附录/探索性 ·"),
     ("verdict-diff", "裁决差异"),
     ("verdicts CSV", "裁决 CSV"),
     ("current verdicts", "当前裁决"),
@@ -411,6 +474,25 @@ TEXT_REPLACEMENTS: tuple[tuple[str, str], ...] = (
     ("best spec", "最佳规格"),
     ("default spec", "默认规格"),
     ("spec count", "规格数"),
+    ("paper bundle copies are present", "论文交付包副本已齐备"),
+    ("paper bundle", "论文交付包"),
+    ("Paper bundle", "论文交付包"),
+    ("tables, figures, RDD files, narrative docs, and PAP snapshot", "表格、图表、RDD 文件、叙事文档和 PAP 快照"),
+    ("preliminary", "附录/探索性"),
+    ("limitations", "局限说明"),
+    ("evidence_tier=core", "正文可引用"),
+    ("supplementary", "附录/探索性"),
+    ("verdict diff", "裁决差异"),
+    ("verdicts", "裁决"),
+    ("verdict", "裁决"),
+    ("rows=", "行数="),
+    ("batches=", "批次="),
+    ("tier=", "证据层级="),
+    ("baseline=", "基线日期="),
+    ("drift_state=frozen", "漂移状态=已锁定"),
+    ("frozen", "已锁定"),
+    ("summary=", "摘要="),
+    ("alpha", "超额收益"),
 )
 
 
@@ -514,7 +596,7 @@ def format_pct(value: float) -> str:
 
 
 def format_p_value(value: float) -> str:
-    return f"p={value:.3f}"
+    return f"p 值={value:.3f}"
 
 
 def format_share(value: float) -> str:

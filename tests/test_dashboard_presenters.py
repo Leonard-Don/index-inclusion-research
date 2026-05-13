@@ -90,7 +90,7 @@ def test_prepare_track_display_splits_tables_and_keeps_demo_note() -> None:
     assert len(display["primary_tables"]) == 2
     assert display["detail_tables"] == []
     assert display["display_support_papers"] == section["support_papers"]
-    assert "公开 alpha" in display["display_summary"]
+    assert "公开超额收益" in display["display_summary"]
     assert "短期冲击未消失" in display["takeaway"]
     assert display["track_view"]["meta"]["refresh_button_label"] == "只刷新本主线"
     assert (

@@ -134,8 +134,8 @@ def test_load_paper_detail_result_builds_navigation_and_actions() -> None:
     assert result["hero_aside_title"]
     assert any(item["label"] == "研究主线" for item in result["hero_meta_items"])
     assert any(card["title"] for card in result["summary_cards"])
-    assert "公开 alpha" in result["summary_paragraphs"][2]
-    assert "公开 alpha" in result["hero_aside_copy"]
+    assert "公开超额收益" in result["summary_paragraphs"][2]
+    assert "公开超额收益" in result["hero_aside_copy"]
     assert "价格发现" in result["summary_cards"][0]["copy"]
     assert "重新改写" in result["summary_cards"][1]["copy"]
     assert prev_card["copy"].startswith("如果你想回看")

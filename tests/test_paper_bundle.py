@@ -47,7 +47,7 @@ def _seed_minimal_project(root: Path) -> None:
     )
     (rdd_dir / "rdd_status.csv").write_text(
         "candidate_rows,candidate_batches,as_of_date,coverage_note\n"
-        "356,11,2020-11-27 至 2025-11-28,11 个批次覆盖 cutoff 两侧。\n",
+        "356,11,2020-11-27 至 2025-11-28,11 个批次覆盖断点两侧。\n",
         encoding="utf-8",
     )
     (rdd_dir / "figures").mkdir()
