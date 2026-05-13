@@ -398,7 +398,7 @@ TEXT_REPLACEMENTS: tuple[tuple[str, str], ...] = (
     (" vs ", " 对比 "),
     ("best=", "最佳规格="),
     ("over=", "超阈值="),
-    ("pending=", "待补数据="),
+    ("pending=", "待补充数据="),
     ("verdict-diff", "裁决差异"),
     ("verdicts CSV", "裁决 CSV"),
     ("current verdicts", "当前裁决"),

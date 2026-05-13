@@ -80,7 +80,7 @@ export function createSensitivityThresholdController(options = {}) {
     if (pAttr === "") {
       strip.setAttribute("data-sensitivity", "na");
       if (iconEl) iconEl.textContent = "·";
-      if (textEl) textEl.textContent = "头条指标不是 p 值，不参与阈值切换";
+      if (textEl) textEl.textContent = "关键指标不是 p 值，不参与阈值切换";
       return;
     }
     const p = parseFloat(pAttr);
@@ -96,8 +96,8 @@ export function createSensitivityThresholdController(options = {}) {
     if (iconEl) iconEl.textContent = sig ? "✓" : "—";
     if (textEl) {
       textEl.textContent = sig
-        ? `在 p<${thresholdLabel} 下显著(p=${p.toFixed(3)})`
-        : `在 p<${thresholdLabel} 下不显著(p=${p.toFixed(3)})`;
+        ? `在 p<${thresholdLabel} 下显著（p=${p.toFixed(3)}）`
+        : `在 p<${thresholdLabel} 下不显著（p=${p.toFixed(3)}）`;
     }
   }
 

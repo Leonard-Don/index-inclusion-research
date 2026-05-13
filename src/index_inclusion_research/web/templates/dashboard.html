@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>指数纳入研究展板</title>
+  <title>指数纳入效应研究看板</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}?v={{ asset_version }}">
   {% if use_echarts_test_stub %}
   <script src="{{ url_for('static', filename='dashboard/echarts_test_stub.js') }}?v={{ asset_version }}"></script>
@@ -13,7 +13,7 @@
   {% endif %}
 </head>
 <body data-refresh-status-url="{{ refresh_status_url }}" data-table-density="cozy">
-  <a class="skip-link" href="#main-content">跳到主内容</a>
+  <a class="skip-link" href="#main-content">跳到研究内容</a>
   {{ ui.render_topbar(nav_sections) }}
   <div class="reading-progress" data-reading-progress role="progressbar" aria-label="阅读进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
     <div class="reading-progress-bar" data-reading-progress-bar></div>
@@ -25,6 +25,7 @@
     {{ ui.render_overview_context(track_sections, overview_notes) }}
     {{ ui.render_design_section(mode, design_section) }}
     {{ ui.render_tracks_section(track_sections, mode) }}
+    {{ ui.render_cma_section(mode, cma_section) }}
 
     {% if mode != "brief" %}
     {{ ui.render_framework_section(mode, framework_section) }}
@@ -38,8 +39,6 @@
     {{ ui.render_limits_section(mode, limits_section) }}
 
     {{ ui.render_paper_audit_section(mode, paper_audit_section) }}
-
-    {{ ui.render_cma_section(mode, cma_section) }}
 
     {{ ui.render_cta_strip(cta_copy, mode) }}
   </main>

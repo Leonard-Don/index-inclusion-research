@@ -18,7 +18,7 @@ def run_dashboard_app(flask_app, argv: list[str] | None = None) -> None:
     print(f"正在启动文献分析界面：http://{display_host}:{args.port}")
     if args.host == "127.0.0.1":
         print(f"建议优先使用 http://localhost:{args.port} 打开界面；Firefox 对 localhost 的兼容性更稳定。")
-    flask_app.run(host=args.host, port=args.port, debug=False)
+    flask_app.run(host=args.host, port=args.port, debug=False, threaded=True)
 
 
 def main(argv: list[str] | None = None) -> None:

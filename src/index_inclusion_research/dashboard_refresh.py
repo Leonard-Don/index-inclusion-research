@@ -33,7 +33,7 @@ from index_inclusion_research.dashboard_types import (
 def default_refresh_state() -> RefreshState:
     return {
         "status": "idle",
-        "message": "页面已就绪，刷新完成后会自动同步本次更新。",
+        "message": "页面已就绪，刷新完成后会自动同步最新结果。",
         "scope_label": "全部材料",
         "scope_key": "all",
         "started_at": "",
@@ -74,7 +74,7 @@ def dashboard_snapshot_sources(root: Path) -> list[Path]:
 def default_result_health() -> ResultHealth:
     return {
         "health_status_label": "未校验",
-        "health_status_copy": "当前 payload 未附带结果健康检查。",
+        "health_status_copy": "当前状态未附带结果健康检查。",
         "health_checks": [],
         "health_commands": [],
     }
@@ -209,7 +209,7 @@ def build_result_health(
             "index-inclusion-make-figures-tables",
         ),
         (
-            "结果状态 manifest",
+            "结果状态清单",
             root / "results" / "real_tables" / "results_manifest.csv",
             "index-inclusion-make-figures-tables",
         ),
@@ -239,11 +239,11 @@ def build_result_health(
             checks.append(_health_check(label, "missing", f"未找到 {relative}。", command))
 
     if contract_check is None:
-        checks.append(_health_check("RDD/manifest 契约", "warning", "本次状态未附带 RDD 契约检查。"))
+        checks.append(_health_check("RDD/结果清单契约", "warning", "本次状态未附带 RDD 契约检查。"))
     elif not contract_check["manifest_exists"]:
         checks.append(
             _health_check(
-                "RDD/manifest 契约",
+                "RDD/结果清单契约",
                 "missing",
                 f"未找到 {contract_check['manifest_path']}，无法确认 RDD 状态是否同步。",
                 "index-inclusion-make-figures-tables",
@@ -253,14 +253,14 @@ def build_result_health(
         mismatch_labels = "、".join(_contract_field_label(field) for field in contract_check["mismatched_fields"])
         checks.append(
             _health_check(
-                "RDD/manifest 契约",
+                "RDD/结果清单契约",
                 "warning",
-                f"manifest 与 live RDD 状态在 {mismatch_labels} 上不一致。",
+                f"结果清单与当前 RDD 状态在 {mismatch_labels} 上不一致。",
                 "index-inclusion-make-figures-tables && index-inclusion-generate-research-report && index-inclusion-cma",
             )
         )
     else:
-        checks.append(_health_check("RDD/manifest 契约", "ok", "manifest 与当前 RDD 识别状态一致。"))
+        checks.append(_health_check("RDD/结果清单契约", "ok", "结果清单与当前 RDD 识别状态一致。"))
 
     checks.append(_rdd_l3_candidate_health(root, to_relative=to_relative, contract_check=contract_check))
 
@@ -272,12 +272,12 @@ def build_result_health(
                 _health_check(
                     "RDD 状态新鲜度",
                     "warning",
-                    f"rdd_status.csv 的生成时间为 {live_generated}，manifest 仍记录 {manifest_generated}。",
+                    f"rdd_status.csv 的生成时间为 {live_generated}，结果清单仍记录 {manifest_generated}。",
                     "index-inclusion-make-figures-tables && index-inclusion-generate-research-report && index-inclusion-cma",
                 )
             )
         elif live_generated:
-            checks.append(_health_check("RDD 状态新鲜度", "ok", f"manifest 已记录最新 RDD 生成时间：{live_generated}。"))
+            checks.append(_health_check("RDD 状态新鲜度", "ok", f"结果清单已记录最新 RDD 生成时间：{live_generated}。"))
 
     verdict_path = root / "results" / "real_tables" / "cma_hypothesis_verdicts.csv"
     if verdict_path.exists():
@@ -550,7 +550,7 @@ def refresh_status_payload(
     accepted: bool = True,
 ) -> RefreshStatusPayload:
     status = state.get("status", "idle")
-    message = str(state.get("message", "") or "页面已就绪，刷新完成后会自动同步本次更新。")
+    message = str(state.get("message", "") or "页面已就绪，刷新完成后会自动同步最新结果。")
     scope_label = str(state.get("scope_label", "全部材料") or "全部材料")
     scope_key = str(state.get("scope_key", "all") or "all")
     error = str(state.get("error", "") or "")
@@ -629,7 +629,7 @@ def set_refresh_succeeded(
                 "status": "succeeded",
                 "scope_label": scope_label,
                 "scope_key": scope_key,
-                "message": f'“{scope_label}”刷新完成，本次更新已同步。',
+                "message": f'“{scope_label}”刷新完成，最新结果已同步。',
                 "finished_at": finished_at,
                 "finished_ts": finished_ts,
                 "error": "",
@@ -724,7 +724,7 @@ def queue_refresh_job(
                 "status": "running",
                 "scope_label": scope_label,
                 "scope_key": scope_key,
-                "message": f'正在刷新“{scope_label}”，完成后会自动同步本次更新。',
+                "message": f'正在刷新“{scope_label}”，完成后会自动同步最新结果。',
                 "started_at": started_at,
                 "started_ts": started_ts,
                 "finished_at": "",

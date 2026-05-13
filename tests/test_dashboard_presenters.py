@@ -12,12 +12,14 @@ def test_nav_sections_for_modes() -> None:
         "overview",
         "design",
         "tracks",
+        "cross_market_asymmetry",
         "limits",
     ]
     assert [item["anchor"] for item in demo] == [
         "overview",
         "design",
         "tracks",
+        "cross_market_asymmetry",
         "framework",
         "supplement",
         "limits",
@@ -27,6 +29,7 @@ def test_nav_sections_for_modes() -> None:
         "overview",
         "design",
         "tracks",
+        "cross_market_asymmetry",
         "framework",
         "supplement",
         "robustness",
@@ -94,7 +97,7 @@ def test_prepare_track_display_splits_tables_and_keeps_demo_note() -> None:
         display["track_view"]["primary"]["key"]
         == "demo-price_pressure_track-primary-tables"
     )
-    assert display["track_view"]["detail"]["demo_title"] == "本主线补充细表（0 张）"
+    assert display["track_view"]["detail"]["demo_title"] == "本主线补充明细（0 张）"
     assert display["track_view"]["support_demo_title"] == "支撑文献（1 篇）"
 
 
@@ -165,7 +168,7 @@ def test_prepare_framework_display_orders_tables() -> None:
     assert display["summary_cards"][0]["title"] == "卡片"
     assert display["section_view"]["head"]["section_id"] == "framework"
     assert display["section_view"]["primary"]["key"] == "demo-framework-primary-tables"
-    assert display["section_view"]["detail"]["demo_title"] == "文献框架补充表（2 张）"
+    assert display["section_view"]["detail"]["demo_title"] == "文献框架补充明细（2 张）"
 
 
 def test_prepare_supplement_display_assigns_section_view_contract() -> None:
@@ -195,4 +198,4 @@ def test_prepare_supplement_display_assigns_section_view_contract() -> None:
     ]
     assert display["section_view"]["head"]["section_id"] == "supplement"
     assert display["section_view"]["primary"]["key"] == "demo-supplement-primary-tables"
-    assert display["section_view"]["detail"]["demo_title"] == "机制补充表（3 张）"
+    assert display["section_view"]["detail"]["demo_title"] == "机制补充明细（3 张）"

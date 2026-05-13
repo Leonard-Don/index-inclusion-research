@@ -57,7 +57,7 @@ def build_table_detail_view(
     demo_title: str,
     demo_copy: str,
     container: str = "library-panels",
-    kicker: str = "补充细表",
+    kicker: str = "补充明细",
     toggle_label: str = "按需展开",
 ) -> TableDetailView:
     return {
@@ -95,15 +95,15 @@ def build_sample_design_view(
     return {
         "head": build_section_head_view(
             section_id="design",
-            waypoint_label="样本与设计",
-            kicker="样本与设计",
+            waypoint_label="样本设计",
+            kicker="样本设计",
             title="先交代样本结构，再进入结果解释。",
-            intro="先用样本覆盖、事件窗口和识别结构把地基讲清。",
+            intro="先用样本覆盖、事件窗口和识别结构把证据地基讲清。",
             side_label="阅读焦点",
         ),
         "detail_figures_key": "demo-design-detail-figures",
         "detail_figures_title": f"样本设计补充图表（{detail_figures_count} 张）",
-        "detail_figures_copy": "默认收起其余样本图表，按需展开。",
+        "detail_figures_copy": "默认收起其余样本图表，需要核对时再展开。",
         "primary": build_table_primary_view(
             key="demo-design-primary-tables",
             title="核心摘要表",
@@ -112,20 +112,20 @@ def build_sample_design_view(
             collapsed_copy="默认先显示样本范围总表，其余主表按需展开。",
         ),
         "detail": build_table_detail_view(
-            full_title="补充细表",
+            full_title="补充明细表",
             full_copy="这些表用于补充年份分布、数据来源与样本细节，适合在问答或写作时回查。",
             demo_key="demo-design-detail-tables",
-            demo_title=f"样本设计补充表（{detail_tables_count} 张）",
-            demo_copy="默认收起年份分布和来源细表，问答时再开。",
+            demo_title=f"样本设计补充明细（{detail_tables_count} 张）",
+            demo_copy="默认收起年份分布和来源明细，问答或核对时再展开。",
             container="library-panels",
         ),
-        "brief_mode_hint": "3 分钟汇报只保留样本摘要；完整图表可切到展示版或完整材料。",
+        "brief_mode_hint": "3 分钟汇报只保留样本摘要与主判断；完整图表可切到展示版或完整材料。",
     }
 
 
 def build_track_meta_view() -> TrackMetaView:
     return {
-        "takeaway_label": "先看结论",
+        "takeaway_label": "先看判断",
         "summary_label": "一句话背景",
         "refresh_button_label": "只刷新本主线",
         "refresh_running_label": "主线刷新中…",
@@ -151,11 +151,11 @@ def build_track_section_view(
             collapsed_copy="默认先放一张主表，其余主表按需展开。",
         ),
         "detail": build_table_detail_view(
-            full_title="补充细表",
+            full_title="补充明细表",
             full_copy="这些表保留更细的变量拆解和辅助比较，用于支撑主结论。",
             demo_key=f"demo-{anchor}-detail-tables",
-            demo_title=f"{title}补充细表（{detail_tables_count} 张）",
-            demo_copy="展示版默认收起补充细表，避免主线被细节打断。",
+            demo_title=f"{title}补充明细（{detail_tables_count} 张）",
+            demo_copy="展示版默认收起补充明细，避免主线被细节打断。",
             container="result-grid",
         ),
         "support_band_title": "支撑文献",

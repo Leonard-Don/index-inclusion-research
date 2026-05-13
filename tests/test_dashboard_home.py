@@ -79,7 +79,7 @@ def test_build_overview_metrics_uses_real_event_count() -> None:
     assert metrics[3]["value"] == str(int(event_counts["n_events"].sum()))
     assert metrics[3]["label"] == "个真实调入/调出事件，构成默认样本"
     assert metrics[4]["value"] == "L2"
-    assert metrics[4]["label"] == "中国 RDD 当前为公开重建样本"
+    assert metrics[4]["label"] == "中国 RDD 当前为公开重建样本口径"
     assert metrics[4]["tone"] == "reconstructed"
     assert "公开重建候选样本文件" in metrics[4]["meta"]
 
@@ -102,9 +102,9 @@ def test_build_highlights_keeps_current_cn_effective_discussion() -> None:
             "validation_error": "",
         },
     )
-    strongest = next(item for item in highlights if item["label"] == "最强结论")
+    strongest = next(item for item in highlights if item["label"] == "最稳定证据")
     discussion = next(item for item in highlights if item["label"] == "最值得讨论")
-    method = next(item for item in highlights if item["label"] == "方法含义")
+    method = next(item for item in highlights if item["label"] == "识别含义")
 
     assert (
         strongest["headline"]
@@ -121,7 +121,7 @@ def test_build_highlights_keeps_current_cn_effective_discussion() -> None:
     assert "制度摩擦更强" in discussion["copy"]
     assert method["headline"] == "中国 RDD 已进入公开数据版证据链。"
     assert "公开重建口径" in method["copy"]
-    assert "制度差异、套利约束和价格发现如何改变结论" in method["copy"]
+    assert "制度差异、套利约束和价格发现" in method["copy"]
     assert "来源：公开重建候选样本文件" in method["copy"]
 
 

@@ -316,7 +316,7 @@ def _load_candidate_file(*, allow_demo: bool, strict_validation: bool) -> tuple[
         return _load_validated_candidate_source(
             REAL_INPUT,
             mode="real",
-            success_message=f"当前正在使用你提供的真实候选排名文件：`{REAL_INPUT.name}`。",
+            success_message=f"当前使用已导入的正式候选排名文件：{REAL_INPUT.name}。",
             failure_prefix="真实候选样本文件校验失败",
             strict_validation=strict_validation,
         )
@@ -325,7 +325,7 @@ def _load_candidate_file(*, allow_demo: bool, strict_validation: bool) -> tuple[
         return _load_validated_candidate_source(
             RECONSTRUCTED_INPUT,
             mode="reconstructed",
-            success_message=f"当前正在使用公开数据重建的候选样本文件：`{RECONSTRUCTED_INPUT.name}`。公开重建样本可进入公开数据版证据链，但不应表述为中证官方历史候选排名表。",
+            success_message=f"当前使用公开数据重建的候选样本文件：{RECONSTRUCTED_INPUT.name}。公开重建样本可进入公开数据版证据链，但不应表述为中证官方历史候选排名表。",
             failure_prefix="公开重建候选样本文件校验失败",
             strict_validation=strict_validation,
         )
@@ -333,12 +333,12 @@ def _load_candidate_file(*, allow_demo: bool, strict_validation: bool) -> tuple[
     if allow_demo:
         demo_frame = pd.read_csv(DEMO_INPUT, low_memory=False) if DEMO_INPUT.exists() else _generate_demo_candidates()
         validated_demo = _validate_candidate_frame(_normalize_demo_frame(demo_frame))
-        return validated_demo, "demo", "当前处于显式 `--demo` 模式，仅用于方法展示，不进入正式证据链。"
+        return validated_demo, "demo", "当前处于显式 --demo 模式，仅用于方法展示，不进入正式证据链。"
 
     return (
         pd.DataFrame(),
         "missing",
-        "等待正式或公开重建候选样本文件：`data/raw/hs300_rdd_candidates.csv` 或 `data/raw/hs300_rdd_candidates.reconstructed.csv`。当前中国主线的正式证据仅来自事件研究与匹配回归。",
+        "等待正式或公开重建候选样本文件：data/raw/hs300_rdd_candidates.csv 或 data/raw/hs300_rdd_candidates.reconstructed.csv。当前中国主线的正式证据仅来自事件研究与匹配回归。",
     )
 
 

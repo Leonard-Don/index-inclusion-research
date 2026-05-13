@@ -78,25 +78,25 @@ def build_figure_caption(
         parts = stem.split("_")
         market = column_labels.get(parts[0].upper(), parts[0].upper()) if len(parts) >= 1 else "样本"
         phase = column_labels.get(parts[1], parts[1]) if len(parts) >= 2 else "事件阶段"
-        caption = f"图意：展示 {market}{phase} 的累计异常收益路径。阅读重点：比较事件日前后的斜率变化，以及 0 日之后价格是否继续累积或出现回吐。"
+        caption = f"图表含义：展示 {market}{phase} 的累计异常收益路径。阅读重点：比较事件日前后的斜率变化，以及 0 日之后价格是否继续累积或出现回吐。"
     elif stem.endswith("_rdd_bins"):
         outcome = stem.removesuffix("_rdd_bins")
         outcome_label = column_labels.get(outcome, outcome)
-        caption = f"图意：展示 {outcome_label} 在断点两侧的分箱均值。阅读重点：观察 0 附近是否出现明显跳跃，以及左右两侧样本均值是否系统分离。"
+        caption = f"图表含义：展示 {outcome_label} 在断点两侧的分箱均值。阅读重点：观察 0 附近是否出现明显跳跃，以及左右两侧样本均值是否系统分离。"
     elif stem.endswith("_rdd_main"):
         outcome = stem.removesuffix("_rdd_main")
         outcome_label = column_labels.get(outcome, outcome)
-        caption = f"中国样本 RDD 主图。图意：展示 {outcome_label} 的断点回归主图。阅读重点：同时观察断点两侧的分箱均值与拟合线，在 0 附近判断是否存在结构性跳跃。"
+        caption = f"中国样本 RDD 主图。图表含义：展示 {outcome_label} 的断点回归主图。阅读重点：同时观察断点两侧的分箱均值与拟合线，在 0 附近判断是否存在结构性跳跃。"
     elif stem == "sample_event_timeline":
-        caption = "图意：展示真实调入/调出事件在时间轴上的分布。阅读重点：判断样本是否集中在少数批次，以及公告日和生效日是否在时间上形成清晰分层。"
+        caption = "图表含义：展示真实调入/调出事件在时间轴上的分布。阅读重点：判断样本是否集中在少数批次，以及公告日和生效日是否在时间上形成清晰分层。"
     elif stem == "sample_car_heatmap":
-        caption = "图意：把短窗口 CAR 在市场与事件阶段两个维度上压缩成一张总览图。阅读重点：优先比较美国公告日与中国生效日所在单元格的方向、幅度和显著性。"
+        caption = "图表含义：把短窗口 CAR 在市场与事件阶段两个维度上压缩成一张总览图。阅读重点：优先比较美国公告日与中国生效日所在单元格的方向、幅度和显著性。"
     elif stem == "main_regression_coefficients":
-        caption = "图意：展示主回归中处理组变量的估计系数与置信区间。阅读重点：比较不同市场、不同事件阶段下系数的方向与显著性，而不只看点估计大小。"
+        caption = "图表含义：展示主回归中处理组变量的估计系数与置信区间。阅读重点：比较不同市场、不同事件阶段下系数的方向与显著性，而不只看点估计大小。"
     elif stem == "mechanism_regression_coefficients":
-        caption = "图意：展示机制回归中处理组变量对换手率、成交量和波动率的影响。阅读重点：比较中国 A 股与美国在公告日、生效日的机制方向是否一致。"
+        caption = "图表含义：展示机制回归中处理组变量对换手率、成交量和波动率的影响。阅读重点：比较中国 A 股与美国在公告日、生效日的机制方向是否一致。"
     elif stem == "match_diagnostics_overview":
-        caption = "图意：同时展示匹配状态分布与匹配质量指标。阅读重点：先看匹配成功率，再看三对照构造和行业口径放宽占比，以判断对照组设计的稳定性。"
+        caption = "图表含义：同时展示匹配状态分布与匹配质量指标。阅读重点：先看匹配成功率，再看三对照构造和行业口径放宽占比，以判断对照组设计的稳定性。"
     else:
         caption = format_figure_caption(path, column_labels)
     if prefix:

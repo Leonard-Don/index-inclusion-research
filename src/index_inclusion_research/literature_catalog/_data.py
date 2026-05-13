@@ -258,7 +258,7 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         project_module="需求曲线效应",
         relevance_note="与 Shleifer 一起支撑需求曲线向下倾斜。",
         core_logic="即使没有成分股纳入/剔除，只要指数权重发生机械调整，价格依然会出现难以回吐的变化，更接近纯资金冲击导致的长期重估。",
-        one_line_role="用更干净的权重冲击实锤需求曲线向下倾斜。",
+        one_line_role="通过更接近外生的权重调整，提供需求曲线向下倾斜的经验证据。",
         practical_use="适用于说明即使不发生基本面变化，纯权重冲击也可能推高价格。",
         pdf_path=PDF_ROOT
         / "pro"
@@ -292,7 +292,7 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         project_module="需求曲线效应",
         relevance_note="适合做机制桥梁，把事件效应和需求曲线讨论连起来。",
         core_logic="建模 + S&P 500 截面实证：替代品越不完美（套利风险越高）、被动资金冲击越大，纳入时的价格跳跃越大；从理论和数据两端说明套利约束会让需求曲线向下倾斜的偏差持续存在。",
-        one_line_role="解释为什么价格压力不会秒回归的套利约束文献。",
+        one_line_role="解释套利约束为何可能延缓价格压力回归。",
         practical_use="适用于在机制部分连接“供需冲击”与“价格偏差为何持续”这两层解释，也可直接引用其 S&P 500 截面实证结论。",
         pdf_path=PDF_ROOT / "mid" / "Wurgler_Zhuravskaya_2002_working_paper.pdf",
     ),
@@ -360,7 +360,7 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         project_module="沪深300论文复现",
         relevance_note="适合支撑“识别设计比简单事件研究更重要”的方法论段落。",
         core_logic="指数化不一定破坏定价效率，在某些更受套利约束的股票上反而可能提升价格发现速度。",
-        one_line_role="把争论从“涨不涨”推进到“指数化如何改变价格发现”的文献。",
+        one_line_role="将研究焦点从短期价格反应扩展到指数化如何改变价格发现。",
         practical_use="适用于从更高层次讨论指数化是否影响市场效率，而不局限于纳入日涨跌。",
         pdf_path=PDF_ROOT
         / "mid"
@@ -396,7 +396,7 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         project_module="短期价格压力",
         relevance_note="最适合放在“指数效应正在消失”这句的核心引用位置。",
         core_logic="随着套利者和事件驱动资金越来越成熟，美股经典指数纳入效应已经从高点大幅衰减。",
-        one_line_role="给“美股指数效应正在消失”定调的最新前沿文献。",
+        one_line_role="系统记录美股指数效应随时间减弱的近期代表性证据。",
         practical_use="适用于讨论策略拥挤、套利压缩与 Alpha 衰减。",
         pdf_path=PDF_ROOT
         / "con"
@@ -414,7 +414,7 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         project_module="沪深300论文复现",
         relevance_note="适合把 RDD 与指数效应机制结合起来写。",
         core_logic="利用 Russell 指数按市值排名的天然门槛构造断点回归，剔除大部分基本面噪音，更干净地识别纯指数化冲击。",
-        one_line_role="RDD 识别指数效应的方法论开山鼻祖。",
+        one_line_role="将断点回归用于识别指数化价格效应的代表性方法论文献。",
         practical_use="适合作为断点回归识别指数效应的核心方法论依据。",
         pdf_path=PDF_ROOT
         / "pro"
@@ -442,7 +442,7 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         camp="中国A股主战场",
         title="指数效应存在吗？——来自“沪深300”断点回归的证据",
         authors="姚东旻; 张日升; 李嘉晟",
-        year_label="待补",
+        year_label="年份待核验",
         market_focus="中国 / 沪深300",
         method_focus="断点回归, DID",
         project_module="沪深300论文复现",
@@ -491,6 +491,9 @@ def _compact_author_label(authors: str) -> str:
 def _paper_citation(paper: LiteraturePaper) -> str:
     compact_authors = _compact_author_label(paper.authors)
     year = paper.year_label
+    if "待核验" in str(year):
+        compact_authors = compact_authors.replace(" 等", "等")
+        return f"{compact_authors}｜{year}"
     return f"{compact_authors}（{year}）"
 
 

@@ -1,15 +1,15 @@
     :root {
       color-scheme: light;
-      --bg: #f5efe5;
-      --bg-2: #fbf7f1;
-      --paper: rgba(255, 251, 244, 0.78);
+      --bg: #f5f6f2;
+      --bg-2: #fbfbf8;
+      --paper: rgba(255, 255, 252, 0.88);
       --ink: #18212b;
       --muted: #5f6b78;
       --line: rgba(24, 33, 43, 0.12);
       --accent: #0f5c6e;
       --accent-2: #a63b28;
       --accent-3: #b88a2d;
-      --shadow: 0 28px 80px rgba(33, 27, 18, 0.10);
+      --shadow: 0 22px 56px rgba(24, 33, 43, 0.08);
       --radius: 24px;
       --table-font-size: 14px;
       --table-cell-padding-y: 12px;
@@ -31,10 +31,8 @@
       color: var(--ink);
       font-family: "PingFang SC", "Hiragino Sans GB", "Source Han Sans SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
       background:
-        radial-gradient(circle at 12% 12%, rgba(15,92,110,0.14), transparent 26%),
-        radial-gradient(circle at 88% 10%, rgba(166,59,40,0.12), transparent 22%),
-        radial-gradient(circle at 82% 44%, rgba(184,138,45,0.10), transparent 20%),
-        linear-gradient(180deg, #f8f2e9 0%, #f5efe5 42%, #f0e7d9 100%);
+        linear-gradient(115deg, rgba(251, 251, 248, 0.98) 0%, rgba(244, 247, 243, 0.96) 48%, rgba(236, 242, 240, 0.98) 100%),
+        linear-gradient(180deg, #fbfbf8 0%, var(--bg) 48%, #edf1ee 100%);
       overflow-x: hidden;
     }
     body[data-waypoint-menu-open="true"] {
@@ -81,14 +79,15 @@
       z-index: 20;
       padding: 14px 20px;
       backdrop-filter: blur(18px);
-      background: rgba(245, 239, 229, 0.80);
+      background: rgba(251, 251, 248, 0.90);
       border-bottom: 1px solid rgba(24, 33, 43, 0.08);
+      box-shadow: 0 10px 30px rgba(24, 33, 43, 0.05);
     }
     .topbar-inner {
       width: min(1440px, 100%);
       margin: 0 auto;
       display: grid;
-      grid-template-columns: minmax(260px, auto) minmax(0, 1fr);
+      grid-template-columns: max-content minmax(0, 1fr);
       align-items: center;
       gap: 18px;
     }
@@ -100,8 +99,9 @@
     .brand-mark {
       font-family: "Songti SC", "STSong", "Noto Serif CJK SC", "Iowan Old Style", serif;
       font-size: 27px;
-      letter-spacing: -0.04em;
+      letter-spacing: 0;
       line-height: 1;
+      white-space: nowrap;
     }
     .brand-copy {
       color: var(--muted);
@@ -163,9 +163,9 @@
       color: #1d2a37;
       font-size: 15px;
       font-weight: 700;
-      letter-spacing: -0.01em;
+      letter-spacing: 0;
       line-height: 1.2;
-      text-wrap: balance;
+      text-wrap: pretty;
     }
     .nav-inline-label {
       color: var(--muted);
@@ -512,9 +512,9 @@
     .hero {
       min-height: min(500px, calc(100svh - 88px));
       display: grid;
-      grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.92fr);
+      grid-template-columns: minmax(0, 0.82fr) minmax(560px, 1.18fr);
       align-items: start;
-      gap: 18px;
+      gap: 22px;
       padding: 22px 0 4px;
     }
     .hero-copy {
@@ -532,11 +532,18 @@
     .hero h1 {
       margin: 0;
       font-family: "Songti SC", "STSong", "Noto Serif CJK SC", "Iowan Old Style", serif;
-      font-size: clamp(36px, 4.3vw, 56px);
+      font-size: clamp(31px, 3vw, 42px);
       line-height: 1.08;
-      letter-spacing: -0.055em;
-      max-width: 16ch;
-      text-wrap: wrap;
+      letter-spacing: 0;
+      max-width: 760px;
+      text-wrap: pretty;
+    }
+    .hero-title-desktop {
+      display: block;
+      white-space: nowrap;
+    }
+    .hero-title-mobile {
+      display: none;
     }
     .hero-lead {
       max-width: 56ch;
@@ -644,21 +651,20 @@
     .hero-side {
       position: relative;
       min-height: 0;
-      border-radius: 30px;
+      border-radius: 24px;
       overflow: hidden;
       background:
-        linear-gradient(160deg, rgba(15,92,110,0.92), rgba(10,58,76,0.94) 36%, rgba(24,33,43,0.98) 100%);
-      box-shadow: var(--shadow);
-      border: 1px solid rgba(255,255,255,0.18);
+        linear-gradient(150deg, rgba(18,64,78,0.96), rgba(28,50,62,0.98) 42%, rgba(24,33,43,0.99) 100%);
+      box-shadow: 0 28px 64px rgba(18, 31, 40, 0.18);
+      border: 1px solid rgba(255,255,255,0.16);
     }
     .hero-side::before {
       content: "";
       position: absolute;
       inset: 0;
       background:
-        radial-gradient(circle at 16% 20%, rgba(255,255,255,0.18), transparent 24%),
-        radial-gradient(circle at 70% 18%, rgba(255,255,255,0.14), transparent 18%),
-        radial-gradient(circle at 74% 72%, rgba(184,138,45,0.30), transparent 24%),
+        linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px) 0 0 / 52px 52px,
+        linear-gradient(180deg, rgba(255,255,255,0.04) 1px, transparent 1px) 0 0 / 52px 52px,
         linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.04) 100%);
       pointer-events: none;
     }
@@ -726,7 +732,7 @@
       font-size: clamp(28px, 4vw, 44px);
       line-height: 1;
       color: rgb(var(--kpi-accent));
-      letter-spacing: -0.04em;
+      letter-spacing: 0;
       font-variant-numeric: tabular-nums;
     }
     .kpi .label {
@@ -913,7 +919,7 @@
       font-size: 15px;
       font-weight: 700;
       line-height: 1.45;
-      letter-spacing: -0.01em;
+      letter-spacing: 0;
       color: #1e2e3d;
     }
     .utility-text {
@@ -1001,7 +1007,7 @@
       font-family: "Songti SC", "STSong", "Noto Serif CJK SC", "Iowan Old Style", serif;
       font-size: clamp(32px, 4vw, 54px);
       line-height: 1.02;
-      letter-spacing: -0.05em;
+      letter-spacing: 0;
       text-wrap: balance;
     }
     .section-intro {
@@ -1043,7 +1049,7 @@
       font-size: clamp(22px, 2.1vw, 30px);
       line-height: 1.5;
       color: #203040;
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
     }
     .abstract-points {
       display: grid;
@@ -1091,7 +1097,7 @@
       font-family: "Songti SC", "STSong", "Noto Serif CJK SC", "Iowan Old Style", serif;
       font-size: 28px;
       line-height: 1.08;
-      letter-spacing: -0.04em;
+      letter-spacing: 0;
       margin-bottom: 12px;
     }
     .highlight .copy {
@@ -1142,7 +1148,7 @@
       font-family: "Songti SC", "STSong", "Noto Serif CJK SC", "Iowan Old Style", serif;
       font-size: clamp(24px, 2.7vw, 38px);
       line-height: 0.98;
-      letter-spacing: -0.045em;
+      letter-spacing: 0;
       text-wrap: balance;
     }
     .track-index {
@@ -1233,7 +1239,7 @@
       margin: 0;
       font-size: 18px;
       font-weight: 700;
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
     }
     .support-head p {
       margin: 0;
@@ -1384,7 +1390,7 @@
       color: #1d2a37;
       font-size: 16px;
       font-weight: 700;
-      letter-spacing: -0.01em;
+      letter-spacing: 0;
     }
     .details-copy {
       margin-top: 6px;
@@ -1435,10 +1441,8 @@
       max-width: 52ch;
     }
     .track .details-panel-compact:not([open]) .details-copy {
-      display: -webkit-box;
-      -webkit-line-clamp: 1;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      display: block;
+      overflow: visible;
     }
     .track .details-panel-compact .details-toggle {
       flex: 0 0 auto;
@@ -1492,7 +1496,7 @@
       margin: 0;
       font-size: 17px;
       font-weight: 700;
-      letter-spacing: -0.01em;
+      letter-spacing: 0;
     }
     .result-group-head p {
       margin: 0;
@@ -1527,7 +1531,7 @@
       line-height: 1.05;
       color: #1d2a37;
       margin-bottom: 6px;
-      letter-spacing: -0.03em;
+      letter-spacing: 0;
       font-variant-numeric: tabular-nums;
     }
     .insight-copy {
@@ -1610,7 +1614,7 @@
       font-family: "Songti SC", "STSong", "Noto Serif CJK SC", "Iowan Old Style", serif;
       font-size: clamp(20px, 2.1vw, 28px);
       line-height: 1.08;
-      letter-spacing: -0.03em;
+      letter-spacing: 0;
       text-wrap: balance;
     }
     .status-pill {
@@ -1640,7 +1644,7 @@
       font-family: "Songti SC", "STSong", "Noto Serif CJK SC", "Iowan Old Style", serif;
       font-size: clamp(24px, 2.4vw, 34px);
       line-height: 1.08;
-      letter-spacing: -0.035em;
+      letter-spacing: 0;
       color: #233443;
       text-wrap: balance;
     }
@@ -1689,9 +1693,10 @@
     }
     .result-card {
       padding: 18px;
-      border-radius: 22px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.56), rgba(255,255,255,0.26));
-      border: 1px solid rgba(24,33,43,0.08);
+      border-radius: 16px;
+      background: rgba(255,255,252,0.88);
+      border: 1px solid rgba(24,33,43,0.09);
+      box-shadow: 0 12px 28px rgba(24,33,43,0.045);
       min-width: 0;
     }
     .result-card.primary {
@@ -1715,8 +1720,8 @@
     }
     .figure-media-shell {
       padding: 14px;
-      border-radius: 20px;
-      background: linear-gradient(180deg, rgba(250,247,242,0.96), rgba(244,238,230,0.84));
+      border-radius: 16px;
+      background: rgba(255,255,255,0.94);
       border: 1px solid rgba(24,33,43,0.06);
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.65);
     }
@@ -1724,7 +1729,7 @@
       width: 100%;
       display: block;
       height: auto;
-      border-radius: 18px;
+      border-radius: 14px;
       border: 1px solid rgba(24,33,43,0.08);
       background: white;
     }
@@ -1774,7 +1779,7 @@
         padding: 10px 18px;
       }
       .topbar-inner {
-        grid-template-columns: minmax(228px, 236px) minmax(0, 1fr);
+        grid-template-columns: max-content minmax(0, 1fr);
         gap: 14px;
       }
       .brand {
@@ -1800,8 +1805,8 @@
       }
       .hero {
         min-height: min(438px, calc(100svh - 138px));
-        grid-template-columns: minmax(0, 0.94fr) minmax(340px, 1.06fr);
-        gap: 14px;
+        grid-template-columns: minmax(0, 0.82fr) minmax(560px, 1.18fr);
+        gap: 22px;
         padding: 12px 0 0;
       }
       .hero-copy {
@@ -1813,9 +1818,9 @@
         margin-bottom: 8px;
       }
       .hero h1 {
-        font-size: clamp(34px, 3.85vw, 50px);
-        line-height: 1.03;
-        max-width: 17ch;
+        font-size: clamp(30px, 2.75vw, 38px);
+        line-height: 1.10;
+        max-width: 760px;
       }
       .hero-lead {
         max-width: 50ch;
@@ -1964,10 +1969,11 @@
         gap: 16px;
         margin-bottom: 6px;
       }
-      .utility-bar + .section > .section-head .section-intro {
+      .utility-bar + .section > .section-head .section-intro,
+      #tracks > .section-head .section-intro {
         max-width: 38ch;
         font-size: 13px;
-        line-height: 1.48;
+        line-height: 1.32;
       }
       .utility-bar + .section > .section-head .section-side {
         gap: 5px;
@@ -2131,10 +2137,8 @@
         line-height: 1.46;
       }
       #design .details-panel:not([open]) .details-copy {
-        display: -webkit-box;
-        -webkit-line-clamp: 1;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
+        display: block;
+        overflow: visible;
       }
       #design .details-panel .details-toggle {
         flex: 0 0 auto;
@@ -2187,8 +2191,8 @@
       }
       #tracks > .section-head .section-intro {
         max-width: 38ch;
-        font-size: 14px;
-        line-height: 1.54;
+        font-size: 13px;
+        line-height: 1.32;
       }
       #tracks > .section-head .section-side {
         gap: 6px;
@@ -2266,7 +2270,7 @@
       .track-meta {
         gap: 14px;
         padding-bottom: 8px;
-        grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
+        grid-template-columns: minmax(0, 0.98fr) minmax(360px, 1.02fr);
       }
       .track > .insight-strip {
         margin-top: 0;
@@ -2300,7 +2304,7 @@
       #tracks > .section-head + .track .figure-feature img {
         width: auto;
         max-width: 100%;
-        max-height: 308px;
+        max-height: none;
         margin: 0 auto;
         border-radius: 14px;
       }
@@ -2347,7 +2351,7 @@
       #tracks > .section-head + .track .thumb img {
         width: auto;
         max-width: 100%;
-        max-height: 356px;
+        max-height: none;
         margin: 0 auto;
         border-radius: 14px;
       }
@@ -2393,7 +2397,7 @@
       margin: 0;
       font-size: 18px;
       font-weight: 700;
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
     }
     .surface-note {
       color: var(--muted);
@@ -2461,20 +2465,14 @@
     .figure-caption {
       color: var(--muted);
       font-size: 13px;
-      line-height: 1.48;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      line-height: 1.56;
+      overflow-wrap: anywhere;
     }
     .figure-focus {
       color: #2b3a46;
       font-size: 12px;
-      line-height: 1.42;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      line-height: 1.52;
+      overflow-wrap: anywhere;
     }
     .surface-empty {
       min-height: 320px;
@@ -2542,10 +2540,7 @@
       color: var(--muted);
       font-size: 13px;
       line-height: 1.55;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      overflow-wrap: anywhere;
       min-width: 0;
     }
     .surface-pad-thumbs {
@@ -2582,10 +2577,7 @@
     .track-surface-meta .stat-copy {
       font-size: 13px;
       line-height: 1.46;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      overflow-wrap: anywhere;
     }
     .track-surface-thumbs .thumb-grid-track {
       gap: 14px;
@@ -2704,8 +2696,8 @@
     }
     .library-panels {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-      gap: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
+      gap: 20px;
       align-items: start;
       min-width: 0;
     }
@@ -3601,7 +3593,7 @@
       font-family: "Songti SC", "STSong", "Noto Serif CJK SC", "Iowan Old Style", serif;
       font-size: clamp(28px, 3vw, 42px);
       line-height: 1.08;
-      letter-spacing: -0.04em;
+      letter-spacing: 0;
       text-wrap: balance;
     }
     .cta-strip p {
@@ -3624,15 +3616,15 @@
       right: 14px;
       bottom: 14px;
       z-index: 18;
-      width: min(208px, calc(100vw - 28px));
-      padding: 10px 11px;
-      border-radius: 18px;
-      background: rgba(24,33,43,0.88);
+      width: min(176px, calc(100vw - 28px));
+      padding: 8px 9px;
+      border-radius: 14px;
+      background: rgba(24,33,43,0.80);
       color: white;
       box-shadow: 0 14px 32px rgba(24,33,43,0.22);
       border: 1px solid rgba(255,255,255,0.12);
       display: grid;
-      gap: 10px;
+      gap: 7px;
       opacity: 0;
       transform: translateY(18px);
       pointer-events: none;
@@ -3659,14 +3651,11 @@
     .waypoint-dock-title {
       font-family: "Songti SC", "STSong", "Noto Serif CJK SC", "Iowan Old Style", serif;
       margin-top: 3px;
-      font-size: 15px;
-      line-height: 1.14;
-      letter-spacing: -0.03em;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      max-width: 10ch;
+      font-size: 13px;
+      line-height: 1.18;
+      letter-spacing: 0;
+      max-width: 14ch;
+      overflow-wrap: anywhere;
     }
     .waypoint-progress {
       display: grid;
@@ -3692,10 +3681,10 @@
       border: 1px solid rgba(255,255,255,0.16);
       background: rgba(255,255,255,0.10);
       color: white;
-      min-height: 34px;
-      padding: 7px 9px;
+      min-height: 30px;
+      padding: 6px 8px;
       border-radius: 999px;
-      font-size: 9.5px;
+      font-size: 9px;
       font-weight: 700;
       cursor: pointer;
       transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
@@ -3768,7 +3757,7 @@
       font-family: "Songti SC", "STSong", "Noto Serif CJK SC", "Iowan Old Style", serif;
       font-size: 30px;
       line-height: 1.06;
-      letter-spacing: -0.04em;
+      letter-spacing: 0;
     }
     .chapter-drawer-close {
       border: 1px solid rgba(24,33,43,0.10);
@@ -3868,6 +3857,7 @@
       .brand { display: block; }
       .brand-mark {
         font-size: 24px;
+        white-space: normal;
       }
       .brand-copy {
         display: none;
@@ -3917,8 +3907,14 @@
       }
       .hero h1 {
         max-width: none;
-        font-size: clamp(22px, 9.8vw, 40px);
-        line-height: 1.02;
+        font-size: clamp(24px, 7.5vw, 31px);
+        line-height: 1.10;
+      }
+      .hero-title-desktop {
+        display: none;
+      }
+      .hero-title-mobile {
+        display: block;
       }
       .hero-lead {
         margin-top: 8px;
@@ -4061,8 +4057,8 @@
     }
     .echart-container {
       width: 100%;
-      height: 420px;
-      min-height: 320px;
+      height: 560px;
+      min-height: 460px;
       border-radius: 18px;
       background: rgba(255, 255, 255, 0.56);
       border: 1px solid rgba(24, 33, 43, 0.08);
@@ -4073,7 +4069,7 @@
       box-shadow: 0 4px 24px rgba(15, 92, 110, 0.08);
     }
     .echart-container-wide {
-      height: 480px;
+      height: 620px;
     }
     /* Track-panel feature lead chart: match the feature img footprint
        (panelsHeight test caps the whole .track-panels at ≤1080px). */
@@ -4082,8 +4078,8 @@
     }
     .figure-feature .echart-container,
     .figure-feature .echart-container-wide {
-      height: 360px;
-      min-height: 320px;
+      height: 396px;
+      min-height: 360px;
     }
 
     /* PAP (pre-analysis plan) drift indicator — inline pill that sits
@@ -4172,14 +4168,93 @@
     .echart-fallback[hidden] {
       display: none;
     }
+    .cma-detail-table {
+      padding: 20px;
+      background: rgba(255, 255, 252, 0.96);
+    }
+    .cma-detail-table .table-label {
+      margin: 0 0 12px;
+      font-size: 16px;
+      line-height: 1.4;
+      color: #18212b;
+    }
+    .cma-detail-table .table-wrap {
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    }
+    .cma-detail-table table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 13px;
+      line-height: 1.48;
+      color: #1d2a37;
+      font-variant-numeric: tabular-nums;
+    }
+    .cma-detail-table th,
+    .cma-detail-table td {
+      padding: 10px 12px;
+      text-align: left;
+      white-space: nowrap;
+      border-bottom: 1px solid rgba(24, 33, 43, 0.075);
+    }
+    .cma-detail-table th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #eef5f4;
+      color: #203040;
+      font-weight: 700;
+      box-shadow: inset 0 -1px 0 rgba(24, 33, 43, 0.08);
+    }
+    .cma-detail-table tbody tr:nth-child(even) td {
+      background: rgba(246, 248, 246, 0.86);
+    }
+    .cma-detail-table tbody tr:hover td {
+      background: rgba(226, 239, 242, 0.92);
+    }
+    .cma-detail-table tbody td:first-child {
+      background: #fff;
+    }
+    .cma-detail-table tbody tr:nth-child(even) td:first-child {
+      background: rgba(246, 248, 246, 0.98);
+    }
+    .cma-detail-table tbody tr:hover td:first-child {
+      background: rgba(226, 239, 242, 0.98);
+    }
+    .cma-detail-table td:first-child,
+    .cma-detail-table th:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 3;
+      background: inherit;
+      box-shadow: 12px 0 18px -18px rgba(24, 33, 43, 0.36);
+    }
+    .cma-detail-table th:first-child {
+      background: #eef5f4;
+      z-index: 4;
+    }
+    @media (max-width: 1280px) {
+      .waypoint-dock {
+        display: none;
+      }
+    }
     .cma-figures {
       align-items: stretch;
+      grid-template-columns: 1fr;
     }
     .cma-figure {
-      overflow: hidden;
+      overflow: visible;
     }
     .cma-figure .echart-panel {
       margin-top: 0;
+    }
+    .cma-figure .echart-container,
+    .cma-figure .echart-container-wide {
+      height: 640px;
+      min-height: 540px;
     }
     .cma-figure .echart-fallback {
       margin-top: 12px;
@@ -4190,9 +4265,10 @@
     }
     .cma-figure img {
       display: block;
-      width: 100%;
+      width: min(100%, 1120px);
       max-width: 100%;
       height: auto;
+      margin: 0 auto;
       border-radius: 14px;
       background: #fff;
     }
@@ -4205,15 +4281,15 @@
     }
     @media (max-width: 740px) {
       .echart-container {
-        height: 320px;
-        min-height: 260px;
+        height: 380px;
+        min-height: 320px;
       }
       .echart-container-wide {
-        height: 360px;
+        height: 420px;
       }
       .thumb-echart-container {
-        height: 260px;
-        min-height: 220px;
+        height: 320px;
+        min-height: 280px;
       }
     }
 
