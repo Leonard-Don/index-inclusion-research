@@ -71,7 +71,8 @@
           <label>来源<input type="text" name="source" placeholder="正式来源名称"></label>
           <label>来源 URL<input type="url" name="source_url" placeholder="https://"></label>
           <label class="rdd-confirm"><input type="checkbox" name="confirm_import" value="1" required> 本人确认：此为官方公告或手工摘录的原始候选名单，并非基于公开数据重建的模拟样本。</label>
-          <button type="submit">写入并刷新 RDD 状态</button>
+          <p class="form-help">将写入正式候选样本文件，并重新生成 RDD 状态与候选审计结果。</p>
+          <button type="submit">导入候选名单并更新 RDD 状态</button>
         </form>
       </div>
     </section>
@@ -311,7 +312,7 @@
         </div>
         <div class="evidence-source-line">显示 {{ table.shown_rows }} / {{ table.total_rows }} 行</div>
         {% else %}
-        <div class="surface-empty">暂无线上诊断记录；请运行 `index-inclusion-collect-hs300-rdd-l3 --force` 或点击上方刷新按钮。</div>
+        <div class="surface-empty">暂无线上诊断记录；请运行 index-inclusion-collect-hs300-rdd-l3 --force 或点击上方刷新按钮。</div>
         {% endif %}
       </div>
     </section>

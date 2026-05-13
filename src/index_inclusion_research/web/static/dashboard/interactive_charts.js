@@ -178,15 +178,15 @@ function buildPricePressureOption(payload) {
       },
     },
     legend: {
-      bottom: 0,
+      bottom: 14,
       data: payload.series.map(s => s.name),
     },
-    grid: { left: 60, right: 30, top: 50, bottom: 40 },
+    grid: { left: 60, right: 30, top: 62, bottom: 104, containLabel: true },
     xAxis: {
       type: 'value',
       name: '公告年份',
       nameLocation: 'center',
-      nameGap: 28,
+      nameGap: 42,
       axisLabel: { formatter: v => String(v) },
       min: payload.years?.[0],
       max: payload.years?.[payload.years.length - 1],
@@ -298,8 +298,8 @@ function buildGapDecompositionOption(payload) {
         ).join('<br>');
       },
     },
-    legend: { bottom: 0, data: payload.series.map(s => s.name) },
-    grid: { left: 60, right: 30, top: 50, bottom: 60 },
+    legend: { bottom: 16, data: payload.series.map(s => s.name) },
+    grid: { left: 60, right: 34, top: 72, bottom: 102, containLabel: true },
     xAxis: { type: 'category', data: payload.markets },
     yAxis: {
       type: 'value',
@@ -468,7 +468,7 @@ function buildMainRegressionOption(payload) {
           `<span style="color:#5c6b77;font-size:11px">*p<0.10 **p<0.05 ***p<0.01</span>`;
       },
     },
-    grid: { left: 140, right: 30, top: 60, bottom: 60 },
+    grid: { left: 150, right: 42, top: 70, bottom: 76, containLabel: true },
     xAxis: {
       type: 'value',
       name: '处理组系数',
@@ -743,9 +743,19 @@ function buildCmaMechanismHeatmapOption(payload) {
           `<span style="color:#5c6b77;font-size:11px">*p<0.10 **p<0.05 ***p<0.01</span>`;
       },
     },
-    grid: { left: 140, right: 80, top: 60, bottom: 60 },
-    xAxis: { type: 'category', data: payload.col_labels, splitArea: { show: true } },
-    yAxis: { type: 'category', data: payload.row_labels, splitArea: { show: true } },
+    grid: { left: 170, right: 118, top: 76, bottom: 76, containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: payload.col_labels,
+      splitArea: { show: true },
+      axisLabel: { interval: 0, fontSize: 12 },
+    },
+    yAxis: {
+      type: 'category',
+      data: payload.row_labels,
+      splitArea: { show: true },
+      axisLabel: { width: 120, overflow: 'break', lineHeight: 16 },
+    },
     visualMap: {
       min: -payload.vmax,
       max: payload.vmax,

@@ -12,8 +12,10 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 import pytest
+from bs4 import BeautifulSoup
 
 from index_inclusion_research.chart_data import CHART_BUILDERS
+from index_inclusion_research.dashboard_app import app
 
 pytestmark = pytest.mark.browser_smoke
 
@@ -1593,20 +1595,12 @@ def test_cross_market_section_hides_figures_in_brief_mode() -> None:
     """Brief mode should render the CMA section header but not show figures
     or the hypothesis map."""
 
-    with (
-        _running_dashboard_server() as base_url,
-        playwright_sync_api.sync_playwright() as playwright,
-    ):
-        browser = _launch_chromium(playwright)
-        try:
-            page = _new_dashboard_page(browser, viewport={"width": 1440, "height": 960})
-            page.goto(f"{base_url}/?mode=brief", wait_until="domcontentloaded")
-            page.wait_for_load_state("networkidle")
+    response = app.test_client().get("/?mode=brief")
+    assert response.status_code == 200
+    soup = BeautifulSoup(response.get_data(as_text=True), "html.parser")
 
-            section = page.locator("section#cross_market_asymmetry")
-            assert section.count() == 1
-            assert section.locator("figure.cma-figure").count() == 0
-            assert section.locator(".cma-hypothesis").count() == 0
-            assert section.locator(".cma-verdict-card").count() == 0
-        finally:
-            browser.close()
+    section = soup.select_one("section#cross_market_asymmetry")
+    assert section is not None
+    assert section.select("figure.cma-figure") == []
+    assert section.select(".cma-hypothesis") == []
+    assert section.select(".cma-verdict-card") == []

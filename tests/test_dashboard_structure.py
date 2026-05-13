@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+from bs4 import BeautifulSoup
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -785,6 +786,63 @@ def test_paper_static_assets_are_served() -> None:
     js = js_response.get_data(as_text=True)
     assert 'document.querySelectorAll("[data-view-target]")' in js
     assert "panel.classList.toggle" in js
+
+
+def _visible_text(html: str) -> str:
+    soup = BeautifulSoup(html, "html.parser")
+    for node in soup(["script", "style", "svg"]):
+        node.decompose()
+    return " ".join(soup.stripped_strings)
+
+
+def test_frontend_copy_replaces_internal_placeholders_and_overstrong_paper_language() -> None:
+    client = dashboard.app.test_client()
+
+    home = _visible_text(client.get("/?mode=full").get_data(as_text=True))
+    yao = _visible_text(client.get("/paper/yao_zhang_li_hs300").get_data(as_text=True))
+    kaul = _visible_text(client.get("/paper/kaul_mehrotra_morck_2000").get_data(as_text=True))
+    wurgler = _visible_text(client.get("/paper/wurgler_zhuravskaya_2002").get_data(as_text=True))
+    greenwood = _visible_text(client.get("/paper/greenwood_sammon_2022").get_data(as_text=True))
+    chang = _visible_text(client.get("/paper/chang_hong_liskovich_2014").get_data(as_text=True))
+    combined = "\n".join([home, yao, kaul, wurgler, greenwood, chang])
+
+    assert "姚东旻 等（待补）" not in combined
+    assert "年份：待补" not in combined
+    assert "待补数据" not in combined
+    assert "实锤" not in combined
+    assert "开山鼻祖" not in combined
+    assert "不会秒回归" not in combined
+    assert "定调的最新前沿" not in combined
+    assert "涨不涨" not in combined
+    assert "姚东旻等｜年份待核验" in combined
+    assert "通过更接近外生的权重调整，提供需求曲线向下倾斜的经验证据。" in combined
+    assert "解释套利约束为何可能延缓价格压力回归。" in combined
+    assert "系统记录美股指数效应随时间减弱的近期代表性证据。" in combined
+    assert "将断点回归用于识别指数化价格效应的代表性方法论文献。" in combined
+
+
+def test_frontend_copy_uses_clear_ctas_and_formats_public_tables() -> None:
+    client = dashboard.app.test_client()
+
+    home = _visible_text(client.get("/?mode=full").get_data(as_text=True))
+    rdd_workbench_html = client.get("/rdd-l3").get_data(as_text=True)
+    rdd_workbench = _visible_text(rdd_workbench_html)
+    aum = _visible_text(client.get("/evidence/H2_passive_aum").get_data(as_text=True))
+
+    assert "刷新当前结果快照" in home
+    assert "重新生成全部研究材料" in home
+    assert "刷新结果" not in home
+    assert "刷新全部材料" not in home
+    assert "导入候选名单并更新 RDD 状态" in rdd_workbench
+    assert "写入并刷新 RDD 状态" not in rdd_workbench
+    assert "将写入正式候选样本文件，并重新生成 RDD 状态与候选审计结果。" in rdd_workbench
+    assert "请运行 `index-inclusion-collect-hs300-rdd-l3 --force`" not in rdd_workbench
+    assert "请运行 index-inclusion-collect-hs300-rdd-l3 --force" in rdd_workbench
+    assert "你提供的" not in home + rdd_workbench
+    assert "4.104722" not in aum
+    assert "13.373188" not in aum
+    assert "4.10" in aum
+    assert "13.37" in aum
 
 
 def test_legacy_secondary_routes_redirect_to_single_frontend_anchors() -> None:

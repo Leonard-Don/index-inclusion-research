@@ -196,7 +196,7 @@
     <div class="eyebrow">研究总览</div>
     <div>
       <h1 aria-label="全景展现指数纳入效应：文献脉络、真实样本与识别边界。">
-        <span class="hero-title-desktop" aria-hidden="true">全景展现指数纳入效应：<br class="hero-break">文献脉络、真实样本<br class="hero-break">与识别边界。</span>
+        <span class="hero-title-desktop" aria-hidden="true">全景展现指数纳入效应：<br class="hero-break">文献脉络、真实样本与识别边界。</span>
         <span class="hero-title-mobile" aria-hidden="true">全景展现指数<br>纳入效应：文献脉络<br>真实样本与识别边界。</span>
       </h1>
       <div class="hero-lead">
@@ -254,7 +254,7 @@
           {% if item.active %}aria-current="page"{% endif %}
         >{{ item.label }}</a>
         {% endfor %}
-        {{ shared.render_refresh_form(url_for('refresh_dashboard', mode=mode), "overview", "刷新结果", "all", "正在刷新…") }}
+        {{ shared.render_refresh_form(url_for('refresh_dashboard', mode=mode), "overview", "刷新当前结果快照", "all", "正在刷新当前结果快照…") }}
       </nav>
       <div class="utility-mode-note">简版提炼核心结论（适于 3 分钟速读）；展示版梳理研究主线；完整版提供详实的证据核对与边界探讨。</div>
     </div>
@@ -314,7 +314,7 @@
     <h3>文献脉络、真实样本、研究结果与识别边界均汇聚于此。</h3>
     <p>{{ cta_copy }}</p>
   </div>
-  {{ shared.render_refresh_form(url_for('refresh_dashboard', mode=mode), "overview", "刷新全部材料", "all", "正在全量刷新…") }}
+  {{ shared.render_refresh_form(url_for('refresh_dashboard', mode=mode), "overview", "重新生成全部研究材料", "all", "正在重新生成全部研究材料…") }}
 </section>
 {%- endmacro %}
 

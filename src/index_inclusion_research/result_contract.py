@@ -38,6 +38,15 @@ def _optional_text(value) -> str:
     return str(value)
 
 
+def _ui_text(value: object) -> str:
+    text = _optional_text(value)
+    return (
+        text.replace("当前正在使用你提供的真实候选排名文件", "当前使用已导入的正式候选排名文件")
+        .replace("当前正在使用公开数据重建的候选样本文件", "当前使用公开数据重建的候选样本文件")
+        .replace("`", "")
+    )
+
+
 def _rdd_status_mode(value: object) -> RddStatusMode:
     mode = str(value or "missing")
     if mode in {"real", "reconstructed", "demo", "missing"}:
@@ -90,8 +99,8 @@ def load_rdd_status(
                 "as_of_date": _optional_text(row.get("as_of_date")),
                 "batch_label": _optional_text(row.get("batch_label")),
                 "coverage_note": coverage_note,
-                "message": str(row.get("message", "等待真实候选样本文件。")),
-                "note": str(row.get("note", "等待正式候选样本、公开重建样本，或修复文件校验错误后，RDD 才能进入 L2/L3 证据等级。")),
+                "message": _ui_text(row.get("message", "等待真实候选样本文件。")),
+                "note": _ui_text(row.get("note", "等待正式候选样本、公开重建样本，或修复文件校验错误后，RDD 才能进入 L2/L3 证据等级。")),
                 "input_file": input_file,
                 "audit_file": _optional_text(row.get("audit_file")),
                 "candidate_rows": candidate_rows,
@@ -128,7 +137,7 @@ def load_rdd_status(
                 "crossing_batches": None,
                 "validation_error": "",
             }
-        if "当前正在使用公开数据重建的候选样本文件" in summary_text:
+        if "当前正在使用公开数据重建的候选样本文件" in summary_text or "当前使用公开数据重建的候选样本文件" in summary_text:
             return {
                 "mode": "reconstructed",
                 "evidence_tier": rdd_evidence_tier("reconstructed"),
@@ -151,7 +160,7 @@ def load_rdd_status(
                 "crossing_batches": None,
                 "validation_error": "",
             }
-        if "当前正在使用你提供的真实候选排名文件" in summary_text:
+        if "当前正在使用你提供的真实候选排名文件" in summary_text or "当前使用已导入的正式候选排名文件" in summary_text:
             return {
                 "mode": "real",
                 "evidence_tier": rdd_evidence_tier("real"),
@@ -163,7 +172,7 @@ def load_rdd_status(
                 "as_of_date": "",
                 "batch_label": "",
                 "coverage_note": rdd_coverage_note("real"),
-                "message": "当前正在使用你提供的真实候选排名文件。",
+                "message": "当前使用已导入的正式候选排名文件。",
                 "note": "基于真实候选排名变量，可作为更强识别证据。",
                 "input_file": "",
                 "audit_file": "",

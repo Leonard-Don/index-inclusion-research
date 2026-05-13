@@ -376,7 +376,11 @@ def _build_verdict_coverage(tables_dir: Path, *, root: Path = ROOT) -> dict[str,
         )
     order = ["支持", "部分支持", "证据不足", "待补数据"]
     counts = verdicts["verdict"].astype(str).value_counts().to_dict()
-    value = "；".join(f"{label} {int(counts.get(label, 0))}" for label in order)
+    display_labels = {"待补数据": "待补充数据"}
+    value = "；".join(
+        f"{display_labels.get(label, label)} {int(counts.get(label, 0))}"
+        for label in order
+    )
     pending = int(counts.get("待补数据", 0))
     return _coverage_row(
         "CMA_verdicts",

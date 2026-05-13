@@ -109,7 +109,7 @@
             <div class="paper-verdict-meta">
               <span class="paper-verdict-track">主线：{{ cit.track_label }}</span>
               {% if cit.verdict %}
-              <span class="paper-verdict-tier" data-verdict="{{ cit.verdict }}">当前证据裁决：<strong>{{ cit.verdict }}</strong></span>
+              <span class="paper-verdict-tier" data-verdict="{{ cit.verdict }}">当前证据裁决：<strong>{{ '待补充数据' if cit.verdict == '待补数据' else cit.verdict }}</strong></span>
               {% endif %}
               {% if cit.key_label and cit.key_value == cit.key_value %}
               {% set key_label_text = {

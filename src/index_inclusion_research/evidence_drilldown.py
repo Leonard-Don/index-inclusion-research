@@ -73,9 +73,18 @@ def _records(frame: pd.DataFrame, *, limit: int = 80) -> list[dict[str, Any]]:
     ]
 
 
+def _display_cell(column: str, value: Any) -> Any:
+    if column in {"aum_trillion", "latest_aum_trillion"}:
+        try:
+            return f"{float(value):.2f}"
+        except (TypeError, ValueError):
+            return dashboard_formatting.display_value_label(value)
+    return dashboard_formatting.display_value_label(value)
+
+
 def _display_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [
-        {column: dashboard_formatting.display_value_label(value) for column, value in row.items()}
+        {column: _display_cell(column, value) for column, value in row.items()}
         for row in records
     ]
 

@@ -47,7 +47,9 @@ def test_run_dashboard_app_prints_localhost_tip_and_forwards_host_port(capsys) -
     captured = capsys.readouterr().out
     assert "http://localhost:5013" in captured
     assert "Firefox 对 localhost 的兼容性更稳定" in captured
-    assert calls == [{"host": "127.0.0.1", "port": 5013, "debug": False}]
+    assert calls == [
+        {"host": "127.0.0.1", "port": 5013, "debug": False, "threaded": True}
+    ]
 
 
 def test_project_metadata_declares_flask_and_console_scripts() -> None:

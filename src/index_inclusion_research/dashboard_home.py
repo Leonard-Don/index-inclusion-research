@@ -187,7 +187,7 @@ def build_highlights(
             "但还需要正式候选样本或公开重建样本，才能进入可读的边界证据。"
         )
     provenance_summary = rdd_provenance_summary(current_rdd_status)
-    method_copy = f"{method_copy} 这也对应新增文献把争论从“涨不涨”推进到“制度差异、套利约束和价格发现如何改变结论”。"
+    method_copy = f"{method_copy} 这也对应新增文献将研究焦点从短期价格反应扩展到制度差异、套利约束和价格发现。"
     if provenance_summary:
         method_copy = f"{method_copy} 当前来源为 {provenance_summary}。"
     return [

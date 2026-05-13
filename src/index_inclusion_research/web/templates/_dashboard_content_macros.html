@@ -19,7 +19,8 @@
   | replace(' vs ', ' 对比 ')
   | replace('best=', '最佳规格=')
   | replace('over=', '超阈值=')
-  | replace('pending=', '待补数据=')
+  | replace('pending=', '待补充数据=')
+  | replace('待补数据', '待补充数据')
   | replace('verdict-diff', '裁决差异')
   | replace('verdicts CSV', '裁决 CSV')
   | replace('current verdicts', '当前裁决')
@@ -165,8 +166,8 @@
     <a class="cma-evidence-card" data-status="{{ row.status }}" href="{{ url_for('show_evidence_detail', item=row.item) }}">
       <span class="cma-evidence-status">{{ row.status_label or row.status }}</span>
       <h3>{{ row.label or row.item }}</h3>
-      <strong>{{ row.value }}</strong>
-      {% if row.detail %}<p>{{ row.detail }}</p>{% endif %}
+      <strong>{{ cma_display_text(row.value) }}</strong>
+      {% if row.detail %}<p>{{ cma_display_text(row.detail) }}</p>{% endif %}
       <span class="cma-evidence-link-label">查看明细</span>
     </a>
     {% endfor %}
@@ -184,7 +185,7 @@
   <button type="button" class="cma-verdict-filter-chip is-active" data-filter="all">全部</button>
   {% for tier in ['支持', '部分支持', '证据不足', '待补数据'] %}
     {% if tier in verdict_tiers_present %}
-    <button type="button" class="cma-verdict-filter-chip" data-filter="{{ tier }}" data-verdict="{{ tier }}">{{ tier }}</button>
+    <button type="button" class="cma-verdict-filter-chip" data-filter="{{ tier }}">{{ '待补充数据' if tier == '待补数据' else tier }}</button>
     {% endif %}
   {% endfor %}
 </nav>
@@ -217,7 +218,7 @@
         <h3>{{ verdict.name_cn }}</h3>
       </div>
       <div class="cma-verdict-badges">
-        <span class="cma-verdict-badge">{{ verdict.verdict }}</span>
+        <span class="cma-verdict-badge">{{ '待补充数据' if verdict.verdict == '待补数据' else verdict.verdict }}</span>
         {% if evidence_tier == 'core' %}
         <span class="cma-evidence-tier-badge" data-evidence-tier="core">正文可引用</span>
         {% else %}
@@ -380,10 +381,10 @@
         <span class="cma-track-hypotheses">{{ row.hypotheses }}</span>
       </header>
       <div class="cma-track-counts">
-        {% for label, key in [('支持', '支持'), ('部分支持', '部分支持'), ('证据不足', '证据不足'), ('待补数据', '待补数据')] %}
+        {% for label, key in [('支持', '支持'), ('部分支持', '部分支持'), ('证据不足', '证据不足'), ('待补充数据', '待补数据')] %}
           {% set count = row.get(key, 0) %}
           {% if count and count > 0 %}
-          <span class="cma-track-count" data-verdict="{{ label }}">
+          <span class="cma-track-count" data-verdict="{{ key }}">
             <span class="cma-track-count-num">{{ count }}</span>
             <span class="cma-track-count-label">{{ label }}</span>
           </span>
@@ -408,7 +409,7 @@
       </div>
       <div class="echart-fallback">
       {% endif %}
-      <img src="{{ url_for('serve_result_file', subpath=src) }}" alt="{{ name }}" loading="lazy" decoding="async">
+      <img src="{{ url_for('serve_result_file', subpath=src) }}" alt="{{ name }}" loading="eager" decoding="async">
       {% if chart_id %}
       </div>
       {% endif %}

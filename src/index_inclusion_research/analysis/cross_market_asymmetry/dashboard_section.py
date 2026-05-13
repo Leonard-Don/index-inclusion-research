@@ -272,7 +272,7 @@ def _build_evidence_coverage_payload(
                 "label": "CMA 假说裁决",
                 "status": "pass" if pending == 0 else "warn",
                 "status_label": dashboard_formatting.display_status_label("pass" if pending == 0 else "warn"),
-                "value": f"待补数据 {pending}",
+                "value": f"待补充数据 {pending}",
                     "detail": "当前 H1-H7 已生成完整裁决行",
             }
         )
