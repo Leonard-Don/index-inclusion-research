@@ -52,6 +52,23 @@ export function refreshContractSummaryText(payload) {
   return (payload && payload.contract_status_label) || "—";
 }
 
+export function statusToneFromLabel(label) {
+  const text = String(label || "");
+  if (!text || text === "—") {
+    return "neutral";
+  }
+  if (text.includes("良好") || text.includes("已同步") || text.includes("已完成")) {
+    return "ok";
+  }
+  if (text.includes("缺项") || text.includes("缺失") || text.includes("失败")) {
+    return "missing";
+  }
+  if (text.includes("需关注") || text.includes("待同步") || text.includes("校验")) {
+    return "warning";
+  }
+  return "neutral";
+}
+
 export function renderRefreshArtifacts(ctx, payload) {
   if (!ctx.refreshArtifacts || !ctx.refreshArtifactList) {
     return;
@@ -87,8 +104,9 @@ export function renderRefreshArtifacts(ctx, payload) {
 
 export function renderRefreshHealth(ctx, payload) {
   if (ctx.refreshHealthSummary) {
-    ctx.refreshHealthSummary.textContent =
-      (payload && payload.health_status_label) || "—";
+    const healthLabel = (payload && payload.health_status_label) || "—";
+    ctx.refreshHealthSummary.textContent = healthLabel;
+    ctx.refreshHealthSummary.dataset.statusTone = statusToneFromLabel(healthLabel);
   }
   if (!ctx.refreshHealth || !ctx.refreshHealthList) {
     return;
@@ -148,6 +166,9 @@ export function applyRefreshStateToDom(
   if (ctx.refreshSnapshotCopy && payload && payload.snapshot_copy) {
     ctx.refreshSnapshotCopy.textContent = payload.snapshot_copy;
   }
+  if (ctx.refreshSnapshotCopyDetail) {
+    ctx.refreshSnapshotCopyDetail.textContent = (payload && payload.snapshot_copy) || "—";
+  }
   if (ctx.refreshScopeLabel) {
     ctx.refreshScopeLabel.textContent = (payload && payload.scope_label) || "全部材料";
   }
@@ -168,7 +189,12 @@ export function applyRefreshStateToDom(
       (payload && payload.artifact_summary_label) || "—";
   }
   if (ctx.refreshContractSummary) {
-    ctx.refreshContractSummary.textContent = refreshContractSummaryText(payload);
+    const contractLabel = refreshContractSummaryText(payload);
+    ctx.refreshContractSummary.textContent = contractLabel;
+    ctx.refreshContractSummary.dataset.statusTone = statusToneFromLabel(contractLabel);
+  }
+  if (ctx.refreshContractCopyDetail) {
+    ctx.refreshContractCopyDetail.textContent = (payload && payload.contract_status_copy) || "—";
   }
   renderRefreshArtifacts(ctx, payload);
   renderRefreshHealth(ctx, payload);
