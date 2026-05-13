@@ -2,15 +2,52 @@
 
 {% macro cma_display_text(text) -%}
 {{ (text or '')
-  | replace('US AUM ratio', 'US AUM 倍数')
+  | replace('US sector spread', '美股行业分化差值')
+  | replace('CN/US', '中国 A 股 / 美国')
+  | replace('US AUM ratio', '美股 AUM 倍数')
+  | replace('US AUM', '美国被动资金规模')
+  | replace('CN / US', '中国 A 股 / 美国')
+  | replace('CN ', '中国 A 股 ')
+  | replace('US ', '美国 ')
+  | replace(' CN', ' 中国 A 股')
+  | replace(' US', ' 美国')
   | replace('matched events=', '匹配事件=')
   | replace('matched=', '匹配事件=')
   | replace('unique tickers=', '股票数=')
   | replace('median weight=', '权重中位数=')
   | replace('heavy announce_jump=', '重权重公告跳涨=')
   | replace('light=', '轻权重=')
+  | replace('pre_announce_runup', '公告前预跑')
+  | replace('pre-runup', '公告前预跑')
+  | replace('diff=', '差值=')
+  | replace('bootstrap p', '自举法 p 值')
+  | replace('CI95=', '95% 置信区间=')
   | replace('announce_jump', '公告日跳涨')
+  | replace('effective_jump', '生效日跳涨')
+  | replace('post_effective_reversal', '生效后回吐')
+  | replace('announce-day', '公告日')
+  | replace('announce inclusion', '公告日调入')
+  | replace('announce', '公告日')
+  | replace('effective rolling CAR', '生效日滚动 CAR')
+  | replace('effective', '生效日')
+  | replace('inclusion effect', '调入效应')
+  | replace('inclusion', '调入')
   | replace('weight_proxy', '权重代理')
+  | replace('channel concentration', '通道集中度')
+  | replace('both-sig', '双通道显著')
+  | replace('turnover', '换手率')
+  | replace('volume', '成交量')
+  | replace('sector×phase/treatment', '行业×事件阶段/处理组')
+  | replace('eligible sectors', '可用行业')
+  | replace('joint p', '联合 p 值')
+  | replace('top=', '最强项=')
+  | replace('max=', '最大值=')
+  | replace('min=', '最小值=')
+  | replace('Materials', '材料')
+  | replace('Real Estate', '房地产')
+  | replace('Industrials', '工业')
+  | replace('limit_coef', '涨跌停系数')
+  | replace('asymmetry_index', '不对称指数')
   | replace('spread=', '差值=')
   | replace('robustness:', '稳健性：')
   | replace('ols_weight coef=', 'OLS 权重系数=')
@@ -131,7 +168,7 @@
           <td>
             {% if value is number %}
               {% if value is integer %}{{ value }}{% else %}{{ '%.4f'|format(value) }}{% endif %}
-            {% elif value is none %}—{% else %}{{ value }}{% endif %}
+            {% elif value is none %}—{% else %}{{ cma_display_text(value) }}{% endif %}
           </td>
           {% endfor %}
         </tr>
@@ -236,11 +273,12 @@
     <p class="cma-verdict-summary">{{ cma_display_text(verdict.evidence_summary) }}</p>
     {% if verdict.key_label %}
     {% set key_label_text = {
-      'US AUM ratio': 'US AUM 倍数',
+      'US AUM ratio': '美股 AUM 倍数',
       'bootstrap p': '自举法 p 值',
       'regression p': '回归 p 值',
       'limit_coef p': '涨跌停系数 p 值',
-      'heavy−light spread': '重权重−轻权重差'
+      'heavy−light spread': '重权重−轻权重差',
+      'US sector spread': '美股行业分化差值'
     }.get(verdict.key_label, verdict.key_label) %}
     <div class="cma-verdict-keymetric" data-key="{{ verdict.key_label }}">
       <span class="cma-verdict-keylabel">{{ key_label_text }}</span>
@@ -409,6 +447,7 @@
       </div>
       <div class="echart-fallback">
       {% endif %}
+      <div class="figure-media-badge">{{ name }}</div>
       <img src="{{ url_for('serve_result_file', subpath=src) }}" alt="{{ name }}" loading="eager" decoding="async">
       {% if chart_id %}
       </div>
@@ -618,6 +657,7 @@
     <div class="echart-fallback">
     {% endif %}
     <div class="figure-media-shell">
+      <div class="figure-media-badge">{{ figure.label or '图表预览' }}</div>
       <img
         src="{{ url_for('serve_result_file', subpath=figure.path) }}"
         alt="{{ figure.caption }}"
@@ -659,6 +699,7 @@
         </div>
         {% else %}
         <div class="figure-media-shell figure-media-shell-feature">
+          <div class="figure-media-badge">{{ lead_figure.label or '主图预览' }}</div>
           <img src="{{ url_for('serve_result_file', subpath=lead_figure.path) }}" alt="{{ lead_figure.caption }}" {% if lead_figure.width and lead_figure.height %}width="{{ lead_figure.width }}" height="{{ lead_figure.height }}"{% endif %} loading="lazy" decoding="async">
         </div>
         {% endif %}
@@ -709,6 +750,7 @@
             </div>
             <div class="echart-fallback">
             {% endif %}
+            <div class="figure-media-badge">{{ figure.label or ('补充图表 ' ~ loop.index) }}</div>
             <img src="{{ url_for('serve_result_file', subpath=figure.path) }}" alt="{{ figure.caption }}" {% if figure.width and figure.height %}width="{{ figure.width }}" height="{{ figure.height }}"{% endif %} loading="lazy" decoding="async">
             {% if figure.echart_id %}
             </div>

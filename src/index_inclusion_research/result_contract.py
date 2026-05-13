@@ -43,6 +43,11 @@ def _ui_text(value: object) -> str:
     return (
         text.replace("当前正在使用你提供的真实候选排名文件", "当前使用已导入的正式候选排名文件")
         .replace("当前正在使用公开数据重建的候选样本文件", "当前使用公开数据重建的候选样本文件")
+        .replace("batch_id", "批次 ID")
+        .replace("announce_date", "公告日")
+        .replace("running_variable", "运行变量")
+        .replace("cutoff", "断点")
+        .replace("inclusion", "调入标记")
         .replace("`", "")
     )
 
@@ -88,6 +93,7 @@ def load_rdd_status(
                 crossing_batches=crossing_batches,
                 validation_error=validation_error,
             )
+            coverage_note = _ui_text(coverage_note)
             return {
                 "mode": mode,
                 "evidence_tier": evidence_tier,

@@ -16,14 +16,14 @@ SectionMode = Literal["brief", "demo", "full"]
 
 SECTION_ID = "cross_market_asymmetry"
 SECTION_COPY: dict[str, object] = {
-    "title": "美股 vs A 股公告—生效阶段的不对称集中度",
-    "subtitle": "CN vs US announce/effective concentration",
+    "title": "美股对比 A 股：公告日至生效阶段的不对称集中度",
+    "subtitle": "中国 对比 美国公告—生效阶段集中度",
     "lead": (
         "A 股更集中在公告日拉价、生效日放量；美股则在公告日价格和量能同时反应、生效日出现抽回。"
         "这就是跨市场不对称的核心现象。"
     ),
     "brief_summary": (
-        "四象限（CN/US × 公告日/生效日）在 CAR 与微结构两条通道上"
+        "四象限（中国 A 股 / 美国 × 公告日 / 生效日）在 CAR 与微结构两条通道上"
         "呈现互补的集中度差异。"
     ),
     "conclusion_bullets": [
@@ -47,11 +47,21 @@ FULL_FIGURES = BRIEF_FIGURES + (
 
 
 FIGURE_ECHART_IDS: dict[str, str] = {
+    "cma_ar_path_comparison.png": "car_path",
     "cma_gap_decomposition.png": "gap_decomposition",
     "cma_heterogeneity_matrix_size.png": "heterogeneity_size",
     "cma_time_series_rolling.png": "time_series_rolling",
     "cma_mechanism_heatmap.png": "cma_mechanism_heatmap",
     "cma_gap_length_distribution.png": "cma_gap_length_distribution",
+}
+
+FIGURE_LABELS: dict[str, str] = {
+    "cma_ar_path_comparison.png": "日度异常收益路径（中国 A 股 / 美国 × 公告日 / 生效日）",
+    "cma_gap_decomposition.png": "公告日至生效日的分段拆解",
+    "cma_mechanism_heatmap.png": "机制变量热力图",
+    "cma_heterogeneity_matrix_size.png": "市值分组异质性矩阵",
+    "cma_time_series_rolling.png": "五年滚动 CAR 时序",
+    "cma_gap_length_distribution.png": "公告日至生效日间隔分布",
 }
 
 
@@ -158,9 +168,14 @@ def build_cross_market_section(
         figure_names = FULL_FIGURES
 
     figures = {
-        name: str(figures_dir / name)
+        FIGURE_LABELS.get(name, name): str(figures_dir / name)
         for name in figure_names
         if (figures_dir / name).exists()
+    }
+    figure_echart_ids = {
+        FIGURE_LABELS.get(name, name): chart_id
+        for name, chart_id in FIGURE_ECHART_IDS.items()
+        if name in figure_names and (figures_dir / name).exists()
     }
 
     detail_tables: dict[str, dict[str, object]] = {}
@@ -197,11 +212,7 @@ def build_cross_market_section(
             "rows": gap_summary.to_dict(orient="records") if mode != "brief" else [],
         },
         "figures": figures,
-        "figure_echart_ids": {
-            name: chart_id
-            for name, chart_id in FIGURE_ECHART_IDS.items()
-            if name in figures
-        },
+        "figure_echart_ids": figure_echart_ids,
         "hypothesis_map": {
             "columns": list(hypothesis_map.columns),
             "rows": hypothesis_map.to_dict(orient="records") if mode == "full" else [],

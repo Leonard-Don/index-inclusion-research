@@ -233,7 +233,7 @@ _RDD_SECONDARY_OUTCOMES: tuple[tuple[str, str, str, str], ...] = (
         "car_m3_p3_rdd_bins.png",
         "RDD 稳健性 · CAR[-3,+3]",
         (
-            "RDD 稳健性副图：把 outcome 换成 CAR[-3,+3] 看断点是否依然存在。"
+            "RDD 稳健性副图：把结果变量换成 CAR[-3,+3]，观察断点是否依然存在。"
             "阅读重点：分箱均值在 0 附近的跳跃方向应与主图 CAR[-1,+1] 一致；"
             "若幅度衰减说明效应集中在更短窗口。"
         ),
@@ -243,7 +243,7 @@ _RDD_SECONDARY_OUTCOMES: tuple[tuple[str, str, str, str], ...] = (
         "turnover_change_rdd_bins.png",
         "RDD 稳健性 · 换手变化",
         (
-            "RDD 稳健性副图：outcome=换手率变化。"
+            "RDD 稳健性副图：结果变量为换手率变化。"
             "阅读重点：处理组在 0 右侧应有正向集中（被动需求），"
             "若同时出现 CAR 跳跃和换手集中，价格压力解释更稳。"
         ),
@@ -253,7 +253,7 @@ _RDD_SECONDARY_OUTCOMES: tuple[tuple[str, str, str, str], ...] = (
         "volume_change_rdd_bins.png",
         "RDD 稳健性 · 成交量变化",
         (
-            "RDD 稳健性副图：outcome=成交量变化。"
+            "RDD 稳健性副图：结果变量为成交量变化。"
             "阅读重点：和换手率副图同方向看；"
             "成交量集中度通常是事件需求冲击的最直接信号。"
         ),
@@ -339,10 +339,17 @@ def _rdd_robustness_figure_entry(
         return cached
 
     spec_kind_order = ["main", "donut", "placebo", "polynomial"]
+    spec_label_map = {
+        "main": "主规格",
+        "donut": "剔除断点邻域",
+        "placebo": "安慰剂断点",
+        "polynomial": "多项式设定",
+    }
     df = df.assign(
         _kind_rank=df["spec_kind"].map(
             lambda k: spec_kind_order.index(k) if k in spec_kind_order else 99
-        )
+        ),
+        _spec_label=df["spec_kind"].map(spec_label_map).fillna(df["spec"]),
     ).sort_values(["_kind_rank", "spec"], ascending=[False, False])
 
     color_map = {
@@ -375,9 +382,9 @@ def _rdd_robustness_figure_entry(
     )
     ax.axvline(0, color="#9ba3ad", linestyle="--", linewidth=1.0)
     ax.set_yticks(y)
-    ax.set_yticklabels(df["spec"].tolist(), fontsize=10)
+    ax.set_yticklabels(df["_spec_label"].tolist(), fontsize=10)
     ax.set_xlabel("τ (RDD 处理效应)")
-    ax.set_title("HS300 RDD 稳健性 · car_m1_p1 ± 1.96·SE", fontsize=14, pad=10)
+    ax.set_title("沪深300 RDD 稳健性 · CAR[-1,+1] ± 1.96·标准误", fontsize=14, pad=10)
     ax.grid(axis="x", alpha=0.18)
     ax.tick_params(axis="x", labelsize=9)
     fig.tight_layout()
@@ -399,16 +406,16 @@ def _rdd_robustness_caption(df: pd.DataFrame) -> str:
     main = df.loc[df["spec_kind"] == "main"].head(1)
     if main.empty:
         return (
-            "RDD 稳健性面板：把 main 局部线性的 τ 与 donut / placebo / polynomial "
-            "比较。阅读重点：placebo τ 应靠近 0；donut 与 polynomial 是 main 设定的偏离度。"
+            "RDD 稳健性面板：比较主规格局部线性、剔除断点邻域、安慰剂断点和多项式设定下的 τ。"
+            "阅读重点：安慰剂断点的 τ 应靠近 0；其他规格与主规格的偏离越小，结论越稳。"
         )
     tau = float(main.iloc[0]["tau"])
     p = float(main.iloc[0]["p_value"])
     n = int(main.iloc[0]["n_obs"])
     return (
-        f"RDD 稳健性面板：main 局部线性 τ={tau * 100:.2f}% (p={p:.3f}, n={n})。"
-        "阅读重点：placebo cutoff 的 τ 应靠近 0（识别合理的反向证据）；"
-        "donut 与 polynomial 偏离 main 越大，主结果对设定越敏感。"
+        f"RDD 稳健性面板：主规格局部线性 τ={tau * 100:.2f}%（p 值={p:.3f}，样本量={n}）。"
+        "阅读重点：安慰剂断点的 τ 应靠近 0（识别合理的反向证据）；"
+        "剔除断点邻域和多项式设定偏离主规格越大，主结果对设定越敏感。"
     )
 
 
@@ -478,8 +485,8 @@ def _l3_coverage_figure_entry(
     inclusions = summary["n_inclusion"].to_numpy(dtype=float)
     reserves = summary["n_reserve"].to_numpy(dtype=float)
     bar_width = 120  # days
-    ax.bar(dates, inclusions, width=bar_width, color="#0f5c6e", label="官方调入 (treated)")
-    ax.bar(dates, reserves, width=bar_width, bottom=inclusions, color="#d7b49e", label="备选对照 (control)")
+    ax.bar(dates, inclusions, width=bar_width, color="#0f5c6e", label="官方调入（处理组）")
+    ax.bar(dates, reserves, width=bar_width, bottom=inclusions, color="#d7b49e", label="备选对照")
 
     threshold_x_start = pd.Timestamp(latest) - pd.DateOffset(years=_L3_COVERAGE_TARGET_YEARS)
     threshold_x_end = pd.Timestamp(latest)

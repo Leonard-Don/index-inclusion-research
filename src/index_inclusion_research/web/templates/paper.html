@@ -95,10 +95,10 @@
     <section class="section">
       <div class="section-head">
         <div>
-          <div class="section-kicker">CMA 假说证据</div>
+          <div class="section-kicker">跨市场假说证据</div>
           <h2>这篇论文支持的机制假说</h2>
         </div>
-        <div class="section-intro">本论文被 CMA 体系中的 {{ current.verdict_citations|length }} 项机制假说引用为实证依据。各项假说的当前裁决均源自真实样本流水线，可点击看板链接查阅完整裁决卡片。</div>
+        <div class="section-intro">本论文被跨市场不对称分析体系中的 {{ current.verdict_citations|length }} 项机制假说引用为实证依据。各项假说的当前裁决均源自真实样本流水线，可点击看板链接查阅完整裁决卡片。</div>
       </div>
       <ul class="paper-verdict-list">
         {% for cit in current.verdict_citations %}
@@ -113,8 +113,8 @@
               {% endif %}
               {% if cit.key_label and cit.key_value == cit.key_value %}
               {% set key_label_text = {
-                'US AUM ratio': 'US AUM 倍数',
-                'bootstrap p': 'bootstrap p 值',
+                'US AUM ratio': '美股 AUM 倍数',
+                'bootstrap p': '自举法 p 值',
                 'regression p': '回归 p 值',
                 'limit_coef p': '涨跌停系数 p 值',
                 'heavy−light spread': '重权重−轻权重差'

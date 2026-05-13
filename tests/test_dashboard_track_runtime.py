@@ -59,7 +59,7 @@ def test_apply_live_rdd_status_updates_evidence_tier_column(monkeypatch) -> None
             "generated_at": "2026-04-18T10:00:00+08:00",
             "as_of_date": "2024-05-31",
             "batch_label": "2024-05-31",
-            "coverage_note": "311 条候选；1 个批次；1 个批次覆盖 cutoff 两侧。",
+            "coverage_note": "311 条候选；1 个批次；1 个批次覆盖断点两侧。",
             "message": "",
             "note": "public proxy",
             "input_file": "",

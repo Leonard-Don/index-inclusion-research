@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from index_inclusion_research import dashboard_formatting
 from index_inclusion_research.dashboard_types import (
     CsvFrameReader,
     DashboardSection,
@@ -667,26 +668,30 @@ def build_paper_audit_section(
     summary = summarize_audit(audit_results)
     status_label = {"pass": "通过", "warn": "需关注", "fail": "阻断"}
 
+    def display_text(value: object) -> str:
+        translated = dashboard_formatting.display_value_label(value)
+        return "" if translated is None else str(translated)
+
     summary_cards: list[SummaryCard] = []
     for result in audit_results:
         summary_cards.append(
             {
                 "kicker": status_label.get(result.status, result.status),
-                "title": result.name.replace("_", " "),
-                "meta": result.message,
-                "copy": result.claim,
-                "foot": result.fix or f"已映射 {len(result.artifacts)} 个证据产物。",
+                "title": display_text(result.name),
+                "meta": display_text(result.message),
+                "copy": display_text(result.claim),
+                "foot": display_text(result.fix) or f"已映射 {len(result.artifacts)} 个证据产物。",
             }
         )
 
     summary_table = pd.DataFrame(
         [
             {
-                "检查项": result.name,
+                "检查项": display_text(result.name),
                 "状态": status_label.get(result.status, result.status),
-                "主张": result.claim,
-                "结果": result.message,
-                "修复建议": result.fix,
+                "主张": display_text(result.claim),
+                "结果": display_text(result.message),
+                "修复建议": display_text(result.fix),
             }
             for result in audit_results
         ]
@@ -697,18 +702,18 @@ def build_paper_audit_section(
         for artifact in result.artifacts:
             artifact_rows.append(
                 {
-                    "检查项": result.name,
+                    "检查项": display_text(result.name),
                     "状态": status_label.get(result.status, result.status),
                     "证据路径": artifact,
-                    "用途": result.claim,
+                    "用途": display_text(result.claim),
                 }
             )
         for detail in result.details:
             artifact_rows.append(
                 {
-                    "检查项": result.name,
+                    "检查项": display_text(result.name),
                     "状态": status_label.get(result.status, result.status),
-                    "证据路径": detail,
+                    "证据路径": display_text(detail),
                     "用途": "审计细节 / 缺口提示",
                 }
             )

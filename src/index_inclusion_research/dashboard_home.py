@@ -194,7 +194,7 @@ def build_highlights(
         {
             "label": "最稳定证据",
             "headline": "美股公告日仍有稳定短期正向效应，但更像被压缩后的公开信号。",
-            "copy": f"美国公告日 CAR[-1,+1] 均值为 {us_announce['mean_car']:.2%}，p 值为 {us_announce['p_value']:.4f}，仍是整套结果里最稳定的短期正向证据；更合理的解释是短期冲击仍在，但可见 alpha 已被更成熟的提前交易显著压缩。",
+            "copy": f"美国公告日 CAR[-1,+1] 均值为 {us_announce['mean_car']:.2%}，p 值为 {us_announce['p_value']:.4f}，仍是整套结果里最稳定的短期正向证据；更合理的解释是短期冲击仍在，但可见超额收益已被更成熟的提前交易显著压缩。",
         },
         {
             "label": "最值得讨论",

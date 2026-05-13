@@ -460,7 +460,7 @@ def build_identification_status_panel(
         sample_overview = (
             f"当前已识别 {rdd_status['candidate_batches']} 个候选批次、"
             f"{rdd_status['treated_rows']} 个调入样本和 {rdd_status['control_rows']} 个对照候选；"
-            f"其中 {rdd_status['crossing_batches']} 个批次已经覆盖 cutoff 两侧。"
+            f"其中 {rdd_status['crossing_batches']} 个批次已经覆盖断点两侧。"
         )
     elif mode == "real":
         sample_overview = "正式候选样本文件已通过校验；当前中国主线可以把事件研究、匹配回归与 RDD 并列纳入正式证据链。"
@@ -482,7 +482,7 @@ def build_identification_status_panel(
         )
     contract_copy = (
         "模板文件为 data/raw/hs300_rdd_candidates.template.csv；"
-        "必需列已固定为 batch_id、announce_date、running_variable、cutoff、inclusion 等字段。"
+        "必需列已固定为批次 ID、公告日、运行变量、断点、调入标记等字段。"
     )
     if rdd_status.get("audit_file"):
         contract_copy = (

@@ -725,7 +725,7 @@ def test_dashboard_browser_smoke() -> None:
         )
         page.wait_for_load_state("networkidle")
         assert page.locator("a.skip-link").get_attribute("href") == "#main-content"
-        assert "公开 alpha" in page.locator(".hero-summary").inner_text()
+        assert "公开超额收益" in page.locator(".hero-summary").inner_text()
         assert (
             "按阵营梳理便于把握争论推进脉络"
             in page.locator(".evolution-nav-copy").inner_text()
