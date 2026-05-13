@@ -6,8 +6,8 @@
 
 export const DASHBOARD_THEME = {
   color: [
-    '#a63b28', '#0f5c6e', '#c36a2d', '#1f7a8c',
-    '#d7b49e', '#9cc7cf', '#5c6b77', '#92a0aa',
+    '#a63b28', '#0f5c6e', '#b95f2c', '#1f7a8c',
+    '#8f7030', '#367c89', '#5c6b77', '#92a0aa',
   ],
   backgroundColor: 'transparent',
   textStyle: { fontFamily: "'Songti SC', 'STHeiti', 'Arial Unicode MS', system-ui, sans-serif" },
