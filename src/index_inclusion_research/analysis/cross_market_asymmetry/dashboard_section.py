@@ -87,7 +87,7 @@ def _frame_to_payload(frame: pd.DataFrame) -> dict[str, object]:
     if rows:
         payload["display_rows"] = [
             {
-                column: dashboard_formatting.display_value_label(value)
+                column: dashboard_formatting.format_display_cell(value, column)
                 for column, value in row.items()
             }
             for row in rows
@@ -242,6 +242,30 @@ def _build_evidence_coverage_payload(
     hypothesis_verdicts: pd.DataFrame,
     mode: str,
 ) -> dict[str, object]:
+    def _verdict_distribution_counts() -> tuple[int, int]:
+        if hypothesis_verdicts.empty or "verdict" not in hypothesis_verdicts.columns:
+            return 0, 0
+        verdict_values = hypothesis_verdicts["verdict"].astype(str)
+        support = int(verdict_values.isin(["支持", "部分支持"]).sum())
+        insufficient = int(verdict_values.isin(["证据不足", "待补数据"]).sum())
+        return support, insufficient
+
+    def _verdict_distribution_text() -> str:
+        support, insufficient = _verdict_distribution_counts()
+        if not support and not insufficient:
+            return "裁决行待生成"
+        return f"{support} 项支持，{insufficient} 项证据不足"
+
+    def _status_copy(status: object) -> str:
+        status_text = str(status)
+        if status_text == "pass":
+            return "数据可用"
+        if status_text in {"warn", "pending"}:
+            return "证据待核验"
+        if status_text in {"fail", "missing", "error"}:
+            return "数据缺失"
+        return dashboard_formatting.display_status_label(status)
+
     if mode == "brief":
         return {"available": False, "rows": []}
     manifest_path = tables_dir / "evidence_refresh_manifest.json"
@@ -250,10 +274,24 @@ def _build_evidence_coverage_payload(
             payload = json.loads(manifest_path.read_text(encoding="utf-8"))
             payload_rows = payload.get("coverage", [])
             if isinstance(payload_rows, list) and payload_rows:
+                rows = [
+                    dict(row)
+                    for row in payload_rows
+                    if isinstance(row, Mapping)
+                ]
+                for row in rows:
+                    if row.get("item") == "CMA_verdicts":
+                        _, insufficient = _verdict_distribution_counts()
+                        row["status"] = "warn" if insufficient else row.get("status", "pass")
+                        row["status_label"] = "假说裁决"
+                        row["value"] = _verdict_distribution_text()
+                        row["detail"] = "H1-H7 的裁决分布，不代表所有假说都通过。"
+                    else:
+                        row["status_label"] = _status_copy(row.get("status", ""))
                 return {
                     "available": True,
                     "generated_at": str(payload.get("generated_at", "")),
-                    "rows": payload_rows,
+                    "rows": rows,
                 }
         except (OSError, ValueError, TypeError):
             pass
@@ -270,21 +308,21 @@ def _build_evidence_coverage_payload(
                     "item": "H6_weight_change",
                     "label": "H6 权重变化",
                     "status": str(row.get("status", "warn")),
-                    "status_label": dashboard_formatting.display_status_label(row.get("status", "warn")),
+                    "status_label": _status_copy(row.get("status", "warn")),
                     "value": f"匹配 {int(row.get('n_obs', 0) or 0)} 个事件",
                     "detail": str(row.get("detail", "")).replace("matched events=", "匹配事件="),
                 }
             )
     if not hypothesis_verdicts.empty and "verdict" in hypothesis_verdicts.columns:
-        pending = int((hypothesis_verdicts["verdict"].astype(str) == "待补数据").sum())
+        _, insufficient = _verdict_distribution_counts()
         rows.append(
             {
                 "item": "CMA_verdicts",
                 "label": "CMA 假说裁决",
-                "status": "pass" if pending == 0 else "warn",
-                "status_label": dashboard_formatting.display_status_label("pass" if pending == 0 else "warn"),
-                "value": f"待补充数据 {pending}",
-                    "detail": "当前 H1-H7 已生成完整裁决行",
+                "status": "warn" if insufficient else "pass",
+                "status_label": "假说裁决已生成",
+                "value": _verdict_distribution_text(),
+                "detail": "这里统计的是 H1-H7 的假说裁决分布，不代表所有假说都通过。",
             }
         )
     return {"available": bool(rows), "rows": rows}

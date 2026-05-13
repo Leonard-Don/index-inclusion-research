@@ -174,9 +174,11 @@
           {% for col in payload.columns %}
           {% set value = row[col] %}
           <td>
-            {% if value is number %}
-              {% if value is integer %}{{ value }}{% else %}{{ '%.4f'|format(value) }}{% endif %}
-            {% elif value is none %}—{% else %}{{ cma_display_text(value) }}{% endif %}
+            {% if value is number or value is none %}
+              {{ value|display_cell(col) }}
+            {% else %}
+              {{ cma_display_text(value) }}
+            {% endif %}
           </td>
           {% endfor %}
         </tr>
@@ -226,7 +228,7 @@
 {% set verdict_tiers_present = payload.rows | map(attribute='verdict') | list | unique | list %}
 {% set evidence_tiers_present = payload.rows | map(attribute='evidence_tier') | list | unique | list %}
   <nav class="cma-verdict-filter" data-active="all" aria-label="按裁决结果筛选假说卡片">
-  <span class="cma-verdict-filter-label">裁决筛选</span>
+  <span class="cma-verdict-filter-label">假说裁决</span>
   <button type="button" class="cma-verdict-filter-chip is-active" data-filter="all">全部</button>
   {% for tier in ['支持', '部分支持', '证据不足', '待补数据'] %}
     {% if tier in verdict_tiers_present %}
@@ -291,11 +293,7 @@
     <div class="cma-verdict-keymetric" data-key="{{ verdict.key_label }}">
       <span class="cma-verdict-keylabel">{{ key_label_text }}</span>
       <span class="cma-verdict-keyvalue">
-        {%- if verdict.key_value is number and verdict.key_value == verdict.key_value -%}
-          {{ '%.3f'|format(verdict.key_value) }}
-        {%- else -%}
-          —
-        {%- endif -%}
+        {{ verdict.key_value|display_cell(verdict.key_label) }}
       </span>
       {% if verdict.n_obs and verdict.n_obs > 0 %}
       <span class="cma-verdict-keyn">样本量 n={{ verdict.n_obs }}</span>
@@ -308,9 +306,9 @@
         {%- if not p_is_num -%}
           关键指标不是 p 值，不参与阈值切换
         {%- elif p_sig_at_default -%}
-          在 p&lt;0.10 下显著(p={{ '%.3f'|format(verdict.p_value) }})
+          在 p&lt;0.10 下显著(p={{ verdict.p_value|display_cell('p_value') }})
         {%- else -%}
-          在 p&lt;0.10 下不显著(p={{ '%.3f'|format(verdict.p_value) }})
+          在 p&lt;0.10 下不显著(p={{ verdict.p_value|display_cell('p_value') }})
         {%- endif -%}
       </span>
     </div>
@@ -362,11 +360,11 @@
         <tbody>
           {% for row in cma_section.quadrant_table.rows %}
           <tr>
-            <td>{{ {'CN': '中国 A股', 'US': '美国'}.get(row.market, row.market) }}</td>
+            <td>{{ {'CN': '中国 A 股', 'US': '美国'}.get(row.market, row.market) }}</td>
             <td>{{ {'announce': '公告日', 'effective': '生效日'}.get(row.event_phase, row.event_phase) }}</td>
-            <td>{{ '%.4f'|format(row.car_mean) if row.car_mean is not none else '—' }}</td>
-            <td>{{ '%.2f'|format(row.car_t) if row.car_t is not none else '—' }}</td>
-            <td>{{ row.n_events }}</td>
+            <td>{{ row.car_mean|display_cell('car_mean') }}</td>
+            <td>{{ row.car_t|display_cell('car_t') }}</td>
+            <td>{{ row.n_events|display_cell('n_events') }}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -521,10 +519,11 @@
 {%- endmacro %}
 
 {% macro render_table_cards(items, container_class) -%}
-<div class="{{ container_class }}">
+  <div class="{{ container_class }}">
   {% for item in items %}
   <div class="result-card {{ item.layout_class }} {{ item.tier }}">
     <div class="table-label">{{ item.label }}</div>
+    <div class="table-conclusion">本表结论：先看核心指标的方向、显著性和样本量；完整字段用于复核口径。</div>
     <div class="table-wrap">{{ item.html|safe }}</div>
     <div class="table-scroll-note" data-table-scroll-note hidden>支持左右滚动，首列已固定</div>
   </div>
@@ -679,7 +678,7 @@
     {% endif %}
     <div class="figure-copy-panel">
       <div class="figure-copy-block">
-        <div class="figure-copy-kicker">图表含义</div>
+        <div class="figure-copy-kicker">一句话结论</div>
         <div class="figure-caption">{{ figure.caption_lead if figure.caption_lead else figure.caption }}</div>
       </div>
       {% if figure.caption_focus %}
@@ -713,7 +712,7 @@
         {% endif %}
         <div class="figure-copy-panel figure-copy-panel-feature">
           <div class="figure-copy-block">
-            <div class="figure-copy-kicker">图表含义</div>
+            <div class="figure-copy-kicker">一句话结论</div>
             <div class="figure-caption">{{ lead_figure.caption_lead if lead_figure.caption_lead else lead_figure.caption }}</div>
           </div>
           {% if lead_figure.caption_focus %}
@@ -791,10 +790,12 @@
       <div class="track-summary-label">{{ view.meta.summary_label }}</div>
       <div class="track-summary">{{ section.display_summary }}</div>
     </div>
+    {% if mode != "brief" %}
     <div class="track-actions">
       {{ shared.render_refresh_form(url_for('run_analysis', analysis_id=section.anchor, mode=mode), section.anchor, view.meta.refresh_button_label, section.anchor, view.meta.refresh_running_label) }}
       <div class="track-actions-copy">{{ view.meta.refresh_help_copy }}</div>
     </div>
+    {% endif %}
   </div>
 </div>
 {%- endmacro %}

@@ -444,6 +444,40 @@ def test_section_exposes_evidence_coverage_from_manifest(tmp_path):
 
     assert section["evidence_coverage"]["available"] is True
     assert section["evidence_coverage"]["rows"][0]["item"] == "H6_weight_change"
+    assert section["evidence_coverage"]["rows"][0]["status_label"] == "数据可用"
+
+
+def test_section_evidence_coverage_summarizes_cma_verdict_distribution(tmp_path):
+    tables = tmp_path / "tables"
+    figures = tmp_path / "figures"
+    _seed_tables(tables)
+    (tables / "evidence_refresh_manifest.json").write_text(
+        json.dumps(
+            {
+                "coverage": [
+                    {
+                        "item": "CMA_verdicts",
+                        "label": "CMA 假说裁决",
+                        "status": "pass",
+                        "status_label": "通过",
+                        "value": "全部通过",
+                        "detail": "fixture",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    section = build_cross_market_section(
+        tables_dir=tables, figures_dir=figures, mode="full"
+    )
+
+    row = section["evidence_coverage"]["rows"][0]
+    assert row["status_label"] == "假说裁决"
+    assert "项支持" in row["value"]
+    assert "证据不足" in row["value"]
+    assert "不代表所有假说都通过" in row["detail"]
 
 
 def test_section_demo_mode_has_empty_detail_tables(tmp_path):

@@ -153,6 +153,28 @@ def paper_brief_title(record: PaperBriefRecord) -> str:
     return f"{compact_author_label(str(record.get('authors', '')))}（{record.get('year_label', '')}）"
 
 
+ACADEMIC_TEXT_REPLACEMENTS: tuple[tuple[str, str], ...] = (
+    ("创世之战", "经典基准争论"),
+    ("中国A股主战场", "中国 A 股制度场景"),
+    ("中国 A 股主战场", "中国 A 股制度场景"),
+    ("开山鼻祖", "奠基性文献"),
+    ("开山作", "奠基性文献"),
+    ("继续下一环", "继续阅读下一篇"),
+    ("回看上一环", "回看上一篇"),
+    ("上一环", "上一篇"),
+    ("下一环", "下一篇"),
+    ("A股", "A 股"),
+    ("CSI300", "CSI 300"),
+)
+
+
+def academic_display_text(value: object) -> str:
+    text = str(value)
+    for old, new in ACADEMIC_TEXT_REPLACEMENTS:
+        text = text.replace(old, new)
+    return text
+
+
 def _paper_reading_lens(*, project_module: str, camp: str) -> str:
     if camp == "市场摩擦与效应重估":
         return "放到今天的阅读里，更重要的是看公开超额收益如何被提前交易、换手成本和套利资金重新分配。"
@@ -223,18 +245,18 @@ def _sequence_card_copy(
 ) -> str:
     if position == "prev":
         if target_camp == current_camp:
-            intro = "如果你想回看当前这条争论是从哪里起步的，这一篇最适合作为上一环。"
+            intro = "如果你想回看当前这条争论是从哪里起步的，这一篇最适合作为上一篇。"
         elif target_project_module == current_project_module:
-            intro = "如果你想回看同一主线里更早的解释框架，这一篇最适合作为上一环。"
+            intro = "如果你想回看同一主线里更早的解释框架，这一篇最适合作为上一篇。"
         else:
-            intro = "如果你想回看当前结论之前的另一条参照路径，这一篇最适合作为上一环。"
+            intro = "如果你想回看当前结论之前的另一条参照路径，这一篇最适合作为上一篇。"
     elif position == "next":
         if target_camp == current_camp:
-            intro = "如果你想继续看这一阵营如何把争论往后推进，这一篇最适合作为下一环。"
+            intro = "如果你想继续看这一阵营如何把争论往后推进，这一篇最适合作为下一篇。"
         elif target_project_module == current_project_module:
-            intro = "如果你想继续补齐同一主线里的下一步解释，这一篇最适合作为下一环。"
+            intro = "如果你想继续补齐同一主线里的下一步解释，这一篇最适合作为下一篇。"
         else:
-            intro = "如果你想继续看结论如何被别的主线或制度场景改写，这一篇最适合作为下一环。"
+            intro = "如果你想继续看结论如何被别的主线或制度场景改写，这一篇最适合作为下一篇。"
     else:
         intro = "你现在就位于这条争论链的当前节点。"
     return f"{intro} {deep_contribution}"
@@ -242,9 +264,9 @@ def _sequence_card_copy(
 
 def _sequence_card_action_label(position: str) -> str:
     if position == "prev":
-        return "回看上一环"
+        return "回看上一篇"
     if position == "next":
-        return "继续下一环"
+        return "继续阅读下一篇"
     return "查看这篇论文"
 
 
@@ -496,7 +518,7 @@ def _build_paper_info_frames(
         [
             {"项目": "作者", "内容": paper.authors},
             {"项目": "年份", "内容": paper.year_label},
-            {"项目": "阵营", "内容": record.get("阵营", "")},
+            {"项目": "阵营", "内容": academic_display_text(record.get("阵营", ""))},
             {"项目": "立场", "内容": record.get("立场", "")},
             {"项目": "市场 / 指数", "内容": record.get("市场 / 指数", "")},
             {"项目": "方法 / 关键词", "内容": record.get("方法 / 关键词", "")},
@@ -511,9 +533,9 @@ def _build_paper_info_frames(
         [
             {"分析维度": "识别对象", "内容": record.get("识别对象", "")},
             {"分析维度": "挑战的假设", "内容": record.get("挑战的假设", "")},
-            {"分析维度": "一句话定位", "内容": record.get("一句话定位", "")},
-            {"分析维度": "争论推进", "内容": record.get("争论推进", "")},
-            {"分析维度": "研究中的作用", "内容": record.get("研究中的作用", "")},
+            {"分析维度": "一句话定位", "内容": academic_display_text(record.get("一句话定位", ""))},
+            {"分析维度": "争论推进", "内容": academic_display_text(record.get("争论推进", ""))},
+            {"分析维度": "研究中的作用", "内容": academic_display_text(record.get("研究中的作用", ""))},
         ]
     )
     return info_frame, deep_frame
@@ -531,7 +553,7 @@ def _build_paper_summary_view(
         {
             "kicker": "识别对象",
             "title": str(record.get("识别对象", "")),
-            "meta": f"{record.get('阵营', '')} · {record.get('立场', '')}",
+            "meta": f"{academic_display_text(record.get('阵营', ''))} · {record.get('立场', '')}",
             "copy": "这篇论文真正试图识别的核心问题，可以帮助区分它是在讨论短期冲击、长期保留、价格发现、制度差异，还是识别设计本身。",
         },
         {
@@ -542,20 +564,20 @@ def _build_paper_summary_view(
         },
         {
             "kicker": "争论推进",
-            "title": str(record.get("一句话定位", "")),
+            "title": academic_display_text(record.get("一句话定位", "")),
             "meta": "它把文献往前推了哪一步",
-            "copy": str(record.get("争论推进", "")),
+            "copy": academic_display_text(record.get("争论推进", "")),
         },
         {
             "kicker": "本文用途",
             "title": display_project_module,
             "meta": "在整条研究里的位置",
-            "copy": str(record.get("研究中的作用", "")),
+            "copy": academic_display_text(record.get("研究中的作用", "")),
         },
     ]
     summary_paragraphs = [
         f"{short_authors}（{paper.year_label}）对应的原始论文题目为《{paper.title}》。",
-        f"这篇论文位于“{record.get('阵营', '')}”阵营，在这套研究里主要服务于“{display_project_module}”这条主线。",
+        f"这篇论文位于“{academic_display_text(record.get('阵营', ''))}”阵营，在这套研究里主要服务于“{display_project_module}”这条主线。",
         _paper_reading_lens(
             project_module=paper.project_module,
             camp=str(current_catalog_record.get("camp", "")),
@@ -586,20 +608,20 @@ def _make_sequence_card(
         "kicker": _SEQUENCE_KICKER[position],
         "title": title_override or paper_brief_title(row),
         "year_label": str(row.get("year_label", "")),
-        "camp": str(row.get("camp", "")),
+        "camp": academic_display_text(row.get("camp", "")),
         "track_label": project_module_display(
             str(row.get("project_module", "")),
             project_module_display_map=project_module_display_map,
         ),
-        "meta": f"{row.get('camp', '')} · {row.get('method_focus', '')}",
-        "copy": _sequence_card_copy(
+        "meta": f"{academic_display_text(row.get('camp', ''))} · {row.get('method_focus', '')}",
+        "copy": academic_display_text(_sequence_card_copy(
             position=position,
             current_project_module=paper.project_module,
             current_camp=current_camp,
             target_project_module=str(row.get("project_module", "")),
             target_camp=str(row.get("camp", "")),
             deep_contribution=str(row.get("deep_contribution", "")),
-        ),
+        )),
         "href": "" if is_current else f"/paper/{row.get('paper_id')}",
         "is_current": is_current,
     }
@@ -683,19 +705,19 @@ def _build_paper_recommended_cards(
             ),
             "title": paper_brief_title(rec),
             "year_label": str(rec.get("year_label", "")),
-            "camp": str(rec.get("camp", "")),
+            "camp": academic_display_text(rec.get("camp", "")),
             "meta": (
-                f"{rec.get('camp', '')} · "
+                f"{academic_display_text(rec.get('camp', ''))} · "
                 f"{project_module_display(str(rec.get('project_module', '')), project_module_display_map=project_module_display_map)}"
                 f" · {rec.get('method_focus', '')}"
             ),
-            "copy": _recommended_card_copy(
+            "copy": academic_display_text(_recommended_card_copy(
                 current_project_module=paper.project_module,
                 current_camp=str(current_catalog_record.get("camp", "")),
                 recommended_project_module=str(rec.get("project_module", "")),
                 recommended_camp=str(rec.get("camp", "")),
                 deep_contribution=str(rec.get("deep_contribution", "")),
-            ),
+            )),
             "href": f"/paper/{rec.get('paper_id')}",
         }
         for rec in recommended
@@ -714,14 +736,14 @@ def _build_paper_evolution_nav(
             "kicker": f"{idx + 1:02d} · {row['stance']}",
             "title": paper_brief_title(_catalog_record(row)),
             "year_label": str(row["year_label"]),
-            "camp": str(row["camp"]),
+            "camp": academic_display_text(row["camp"]),
             "stance": str(row["stance"]),
             "project_module": str(row["project_module"]),
             "track_label": project_module_display(
                 str(row["project_module"]),
                 project_module_display_map=project_module_display_map,
             ),
-            "copy": str(row["one_line_role"]),
+            "copy": academic_display_text(row["one_line_role"]),
             "href": f"/paper/{row['paper_id']}",
             "is_current": str(row["paper_id"]) == paper_id,
         }
@@ -850,7 +872,7 @@ def load_paper_detail_result(
     verdict_citations = _build_paper_verdict_citations(paper_id)
     hero_meta_items: list[MetaItem] = [
         {"label": "年份", "value": paper.year_label},
-        {"label": "阵营", "value": str(record.get("阵营", ""))},
+        {"label": "阵营", "value": academic_display_text(record.get("阵营", ""))},
         {"label": "立场", "value": str(record.get("立场", ""))},
         {"label": "研究主线", "value": display_project_module},
     ]
@@ -859,11 +881,11 @@ def load_paper_detail_result(
         "id": f"paper_{paper_id}",
         "title": f"{short_authors}（{paper.year_label}）",
         "description": paper.title,
-        "subtitle": f"{record.get('阵营', '')} · {record.get('方法 / 关键词', '')}",
-        "hero_aside_title": str(record.get("一句话定位", "")),
+        "subtitle": f"{academic_display_text(record.get('阵营', ''))} · {record.get('方法 / 关键词', '')}",
+        "hero_aside_title": academic_display_text(record.get("一句话定位", "")),
         "hero_meta_items": hero_meta_items,
         "hero_aside_copy": (
-            f"{record.get('研究中的作用', '')} "
+            f"{academic_display_text(record.get('研究中的作用', ''))} "
             f"{_paper_reading_lens(project_module=paper.project_module, camp=str(current_catalog_record.get('camp', '')))}"
         ).strip(),
         "summary_text": summary_text,
@@ -878,6 +900,7 @@ def load_paper_detail_result(
         "evolution_nav_cards": evolution_nav_cards,
         "evolution_nav_views": evolution_nav_views,
         "verdict_citations": verdict_citations,
+        "acronym_note": "缩写说明：RDD 是断点回归设计；CAR 是累积异常收益；PAP 是预分析计划；CMA 是跨市场不对称机制分析；CSI 300 指沪深300指数。",
         "figure_paths": [],
         "primary_actions": [
             {
