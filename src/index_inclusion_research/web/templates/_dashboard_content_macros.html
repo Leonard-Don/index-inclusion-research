@@ -19,7 +19,8 @@
   | replace(' vs ', ' 对比 ')
   | replace('best=', '最佳规格=')
   | replace('over=', '超阈值=')
-  | replace('pending=', '待补数据=')
+  | replace('pending=', '待补充数据=')
+  | replace('待补数据', '待补充数据')
   | replace('verdict-diff', '裁决差异')
   | replace('verdicts CSV', '裁决 CSV')
   | replace('current verdicts', '当前裁决')
@@ -94,12 +95,12 @@
 {% if mode == "full" and limits_section.artifact_tables %}
 {{ render_collapsible_table_group(
   "limits-artifact-index",
-  "原始输出全集",
-  "列出后端结果、输入与维护产物的相对路径、类型、更新时间和前端状态；用于审计与自查，不进入主叙事。",
+  "原始产物索引",
+  "列出后端结果、输入与维护产物的路径、类型、更新时间及前端状态；提供可追溯的审计与自查依据，作为研究过程的辅助参考。",
   limits_section.artifact_tables,
   "library-panels",
-  "产物索引",
-  "展开索引"
+  "完整索引",
+  "查看索引"
 ) }}
 {% endif %}
 {%- endmacro %}
@@ -142,7 +143,7 @@
 {% endif %}
 {%- endmacro %}
 
-{% macro render_cma_collapsible_table(payload, label, summary_text='展开查看明细') -%}
+{% macro render_cma_collapsible_table(payload, label, summary_text='查看明细') -%}
 {% if payload and payload.rows %}
 <details class="cma-collapsible">
   <summary>{{ label }} · {{ summary_text }}（{{ payload.rows|length }} 行）</summary>
@@ -165,8 +166,8 @@
     <a class="cma-evidence-card" data-status="{{ row.status }}" href="{{ url_for('show_evidence_detail', item=row.item) }}">
       <span class="cma-evidence-status">{{ row.status_label or row.status }}</span>
       <h3>{{ row.label or row.item }}</h3>
-      <strong>{{ row.value }}</strong>
-      {% if row.detail %}<p>{{ row.detail }}</p>{% endif %}
+      <strong>{{ cma_display_text(row.value) }}</strong>
+      {% if row.detail %}<p>{{ cma_display_text(row.detail) }}</p>{% endif %}
       <span class="cma-evidence-link-label">查看明细</span>
     </a>
     {% endfor %}
@@ -180,17 +181,17 @@
 {% set verdict_tiers_present = payload.rows | map(attribute='verdict') | list | unique | list %}
 {% set evidence_tiers_present = payload.rows | map(attribute='evidence_tier') | list | unique | list %}
   <nav class="cma-verdict-filter" data-active="all" aria-label="按裁决结果筛选假说卡片">
-  <span class="cma-verdict-filter-label">筛选</span>
+  <span class="cma-verdict-filter-label">裁决筛选</span>
   <button type="button" class="cma-verdict-filter-chip is-active" data-filter="all">全部</button>
   {% for tier in ['支持', '部分支持', '证据不足', '待补数据'] %}
     {% if tier in verdict_tiers_present %}
-    <button type="button" class="cma-verdict-filter-chip" data-filter="{{ tier }}" data-verdict="{{ tier }}">{{ tier }}</button>
+    <button type="button" class="cma-verdict-filter-chip" data-filter="{{ tier }}">{{ '待补充数据' if tier == '待补数据' else tier }}</button>
     {% endif %}
   {% endfor %}
 </nav>
   <nav class="cma-verdict-filter cma-evidence-tier-filter" data-active="all" aria-label="按正文或附录证据层级筛选假说卡片">
   <span class="cma-verdict-filter-label">证据层级</span>
-  <button type="button" class="cma-verdict-filter-chip is-active" data-filter-tier="all">全部层级</button>
+  <button type="button" class="cma-verdict-filter-chip is-active" data-filter-tier="all">全部证据</button>
   {% if 'core' in evidence_tiers_present %}
   <button type="button" class="cma-verdict-filter-chip" data-filter-tier="core" data-evidence-tier="core">正文可引用</button>
   {% endif %}
@@ -199,11 +200,11 @@
   {% endif %}
 </nav>
 <nav class="cma-sensitivity-threshold-filter" data-active="0.10" aria-label="切换 p 值显著性阈值，实时刷新 H1 / H4 / H5 卡片上的显著性指示">
-  <span class="cma-sensitivity-threshold-label">p 阈值</span>
+  <span class="cma-sensitivity-threshold-label">显著性阈值</span>
   {% for t in ['0.01', '0.05', '0.10', '0.15', '0.20'] %}
   <button type="button" class="cma-sensitivity-threshold-chip{% if t == '0.10' %} is-active{% endif %}" data-threshold="{{ t }}">{{ t }}</button>
   {% endfor %}
-  <span class="cma-sensitivity-threshold-hint">仅影响 H1 / H4 / H5（由单一 p 值决定裁决）</span>
+  <span class="cma-sensitivity-threshold-hint">仅重算由单一 p 值决定的 H1 / H4 / H5</span>
 </nav>
 <div class="cma-verdict-grid" data-sensitivity-threshold="0.10">
   {% for verdict in payload.rows %}
@@ -217,7 +218,7 @@
         <h3>{{ verdict.name_cn }}</h3>
       </div>
       <div class="cma-verdict-badges">
-        <span class="cma-verdict-badge">{{ verdict.verdict }}</span>
+        <span class="cma-verdict-badge">{{ '待补充数据' if verdict.verdict == '待补数据' else verdict.verdict }}</span>
         {% if evidence_tier == 'core' %}
         <span class="cma-evidence-tier-badge" data-evidence-tier="core">正文可引用</span>
         {% else %}
@@ -227,16 +228,16 @@
     </div>
     <p class="cma-verdict-tier-note" data-evidence-tier="{{ evidence_tier }}">
       {% if evidence_tier == 'core' %}
-      正文主表层级：样本与口径可进入主文，结论仍按当前裁决读取。
+      正文可引用：样本覆盖与统计口径符合主文标准，最终结论以当前裁决为准。
       {% else %}
-      附录层级：样本或代理变量仍有限，适合做机制提示，不宜写成主因果结论。
+      附录/探索性：受限于样本规模或代理变量，结论更适于提示机制，暂不宜作为主因果论断。
       {% endif %}
     </p>
     <p class="cma-verdict-summary">{{ cma_display_text(verdict.evidence_summary) }}</p>
     {% if verdict.key_label %}
     {% set key_label_text = {
       'US AUM ratio': 'US AUM 倍数',
-      'bootstrap p': 'bootstrap p 值',
+      'bootstrap p': '自举法 p 值',
       'regression p': '回归 p 值',
       'limit_coef p': '涨跌停系数 p 值',
       'heavy−light spread': '重权重−轻权重差'
@@ -251,7 +252,7 @@
         {%- endif -%}
       </span>
       {% if verdict.n_obs and verdict.n_obs > 0 %}
-      <span class="cma-verdict-keyn">n={{ verdict.n_obs }}</span>
+      <span class="cma-verdict-keyn">样本量 n={{ verdict.n_obs }}</span>
       {% endif %}
     </div>
     {% endif %}
@@ -259,7 +260,7 @@
       <span class="cma-verdict-sensitivity-icon">{% if not p_is_num %}·{% elif p_sig_at_default %}✓{% else %}—{% endif %}</span>
       <span class="cma-verdict-sensitivity-text">
         {%- if not p_is_num -%}
-          头条指标不是 p 值，不参与阈值切换
+          关键指标不是 p 值，不参与阈值切换
         {%- elif p_sig_at_default -%}
           在 p&lt;0.10 下显著(p={{ '%.3f'|format(verdict.p_value) }})
         {%- else -%}
@@ -270,7 +271,7 @@
     <p class="cma-verdict-metric">{{ cma_display_text(verdict.metric_snapshot) }}</p>
     {% if verdict.paper_ids and verdict.paper_count and verdict.paper_count > 0 %}
     <div class="cma-verdict-papers">
-      <span class="cma-verdict-papers-label">支持文献 ({{ verdict.paper_count }})</span>
+      <span class="cma-verdict-papers-label">关联文献（{{ verdict.paper_count }}）</span>
       {% for pid in verdict.paper_ids.split(' | ') %}
       <a class="cma-verdict-paper-chip" href="/paper/{{ pid }}">{{ pid }}</a>
       {% endfor %}
@@ -287,9 +288,9 @@
 
 {% macro render_cma_section(mode, cma_section) -%}
 {% if cma_section %}
-<section class="section" id="cross_market_asymmetry" data-waypoint data-waypoint-kind="section" data-waypoint-label="美股 vs A股 不对称">
+<section class="section" id="cross_market_asymmetry" data-waypoint data-waypoint-kind="section" data-waypoint-label="美股 对比 A 股不对称">
   <header class="section-head">
-    <div class="section-kicker">跨市场对比</div>
+    <div class="section-kicker">跨市场机制</div>
     <h2>{{ cma_section.title }}</h2>
     <p class="section-intro">{{ cma_section.lead }}</p>
   </header>
@@ -302,7 +303,7 @@
 
   {% if cma_section.quadrant_table and cma_section.quadrant_table.rows %}
   <div class="result-card primary">
-    <div class="table-label">4 象限 CAR[-1,+1] 摘要</div>
+    <div class="table-label">四象限 CAR[-1,+1] 摘要</div>
     <div class="table-wrap">
       <table class="cma-quadrant-table">
         <thead>
@@ -350,14 +351,14 @@
   {% set has_diff = diff.changed_count or diff.added_count or diff.removed_count %}
   <aside class="cma-verdict-diff" data-has-diff="{{ '1' if has_diff else '0' }}">
     <div class="cma-verdict-diff-head">
-      <span class="cma-verdict-diff-kicker">上一次跑相比</span>
+      <span class="cma-verdict-diff-kicker">与上次刷新相比</span>
       {% if has_diff %}
-        <strong>{{ diff.changed_count }} 项变更</strong>
+        <strong>{{ diff.changed_count }} 项裁决变化</strong>
         {% if diff.added_count %}<span class="cma-verdict-diff-meta">+{{ diff.added_count }} 新增</span>{% endif %}
         {% if diff.removed_count %}<span class="cma-verdict-diff-meta">-{{ diff.removed_count }} 移除</span>{% endif %}
         <span class="cma-verdict-diff-meta">{{ diff.unchanged_count }} 不变</span>
       {% else %}
-        <strong>所有裁决不变</strong>
+        <strong>裁决保持一致</strong>
         <span class="cma-verdict-diff-meta">{{ diff.unchanged_count }} 项保持</span>
       {% endif %}
     </div>
@@ -375,15 +376,15 @@
     {% for row in cma_section.track_summary.rows %}
     <button type="button" class="cma-track-card" data-filter-track="{{ row.track }}" aria-label="筛选到{{ row.track_label }}">
       <header>
-        <span class="cma-track-kicker">研究主线 · 点击筛选</span>
+        <span class="cma-track-kicker">研究主线 · 点选筛选</span>
         <h3>{{ row.track_label }}</h3>
         <span class="cma-track-hypotheses">{{ row.hypotheses }}</span>
       </header>
       <div class="cma-track-counts">
-        {% for label, key in [('支持', '支持'), ('部分支持', '部分支持'), ('证据不足', '证据不足'), ('待补数据', '待补数据')] %}
+        {% for label, key in [('支持', '支持'), ('部分支持', '部分支持'), ('证据不足', '证据不足'), ('待补充数据', '待补数据')] %}
           {% set count = row.get(key, 0) %}
           {% if count and count > 0 %}
-          <span class="cma-track-count" data-verdict="{{ label }}">
+          <span class="cma-track-count" data-verdict="{{ key }}">
             <span class="cma-track-count-num">{{ count }}</span>
             <span class="cma-track-count-label">{{ label }}</span>
           </span>
@@ -408,7 +409,7 @@
       </div>
       <div class="echart-fallback">
       {% endif %}
-      <img src="{{ url_for('serve_result_file', subpath=src) }}" alt="{{ name }}" loading="lazy" decoding="async">
+      <img src="{{ url_for('serve_result_file', subpath=src) }}" alt="{{ name }}" loading="eager" decoding="async">
       {% if chart_id %}
       </div>
       {% endif %}
@@ -419,7 +420,7 @@
   {% endif %}
 
   {% if mode != 'brief' and cma_section.gap_summary and cma_section.gap_summary.rows %}
-  {{ render_cma_generic_table(cma_section.gap_summary, '空窗期与生效日明细（CN vs US × 6 指标）') }}
+  {{ render_cma_generic_table(cma_section.gap_summary, '空窗期与生效日明细（中国 对比 美国 × 6 指标）') }}
   {% endif %}
 
   {% if mode == 'full' and cma_section.hypothesis_map and cma_section.hypothesis_map.rows %}
@@ -452,19 +453,19 @@
 
   {% if mode == 'full' and cma_section.detail_tables %}
   <div class="cma-detail-stack">
-    {{ render_cma_collapsible_table(cma_section.detail_tables.window_summary_all, '窗口摘要全集（6 窗口 × 4 象限）') }}
+    {{ render_cma_collapsible_table(cma_section.detail_tables.window_summary_all, '窗口摘要全集（6 个窗口 × 4 个象限）') }}
     {{ render_cma_collapsible_table(cma_section.detail_tables.hypothesis_verdicts, '假说裁决全集（H1–H7）') }}
-    {{ render_cma_collapsible_table(cma_section.detail_tables.mechanism_panel, '机制回归面板（4 象限 × 5 outcome × 3 规格）') }}
-    {{ render_cma_collapsible_table(cma_section.detail_tables.h6_weight_explanation, 'H6 权重解释层（coverage / 方向 / 规格 / final read）') }}
-    {{ render_cma_collapsible_table(cma_section.detail_tables.h6_weight_robustness, 'H6 权重稳健性（分位 / OLS / sector FE / 分位数回归）') }}
+    {{ render_cma_collapsible_table(cma_section.detail_tables.mechanism_panel, '机制回归面板（4 个象限 × 5 个结果变量 × 3 个规格）') }}
+    {{ render_cma_collapsible_table(cma_section.detail_tables.h6_weight_explanation, 'H6 权重解释层（覆盖率 / 方向 / 规格 / 最终读法）') }}
+    {{ render_cma_collapsible_table(cma_section.detail_tables.h6_weight_robustness, 'H6 权重稳健性（分位 / OLS / 行业固定效应 / 分位数回归）') }}
     {{ render_cma_collapsible_table(cma_section.detail_tables.heterogeneity_size, '异质性 · 市值五分位') }}
     {{ render_cma_collapsible_table(cma_section.detail_tables.heterogeneity_liquidity, '异质性 · 流动性五分位') }}
     {{ render_cma_collapsible_table(cma_section.detail_tables.heterogeneity_sector, '异质性 · 行业') }}
-    {{ render_cma_collapsible_table(cma_section.detail_tables.h7_sector_interaction, 'H7 行业交互回归（sector × phase / treatment）') }}
+    {{ render_cma_collapsible_table(cma_section.detail_tables.h7_sector_interaction, 'H7 行业交互回归（行业 × 事件阶段 / 处理组）') }}
     {{ render_cma_collapsible_table(cma_section.detail_tables.heterogeneity_gap_bucket, '异质性 · 空窗期分桶') }}
     {{ render_cma_collapsible_table(cma_section.detail_tables.time_series_rolling, '滚动时序 CAR') }}
-    {{ render_cma_collapsible_table(cma_section.detail_tables.time_series_break, '结构变点 pre/post') }}
-    {{ render_cma_collapsible_table(cma_section.detail_tables.ar_path, '日度 AR 路径（每个 (market, event_phase, day) 一行）') }}
+    {{ render_cma_collapsible_table(cma_section.detail_tables.time_series_break, '结构变点前后对比') }}
+    {{ render_cma_collapsible_table(cma_section.detail_tables.ar_path, '日度 AR 路径（每个市场 / 事件阶段 / 日期一行）') }}
     {{ render_cma_collapsible_table(cma_section.detail_tables.car_path, '日度 CAR 路径') }}
   </div>
   {% endif %}
@@ -590,7 +591,7 @@
 {% endif %}
 {%- endmacro %}
 
-{% macro render_collapsible_table_group(key, title, copy, items, container_class='library-panels', kicker='补充细表', toggle_label='按需展开') -%}
+{% macro render_collapsible_table_group(key, title, copy, items, container_class='library-panels', kicker='补充明细', toggle_label='按需展开') -%}
 {% if items %}
 {% call shared.render_details_panel(key, kicker, title, copy, toggle_label, "details-panel-compact") %}
   {{ render_table_cards(items, container_class) }}
@@ -630,7 +631,7 @@
     {% endif %}
     <div class="figure-copy-panel">
       <div class="figure-copy-block">
-        <div class="figure-copy-kicker">图意</div>
+        <div class="figure-copy-kicker">图表含义</div>
         <div class="figure-caption">{{ figure.caption_lead if figure.caption_lead else figure.caption }}</div>
       </div>
       {% if figure.caption_focus %}
@@ -663,7 +664,7 @@
         {% endif %}
         <div class="figure-copy-panel figure-copy-panel-feature">
           <div class="figure-copy-block">
-            <div class="figure-copy-kicker">图意</div>
+            <div class="figure-copy-kicker">图表含义</div>
             <div class="figure-caption">{{ lead_figure.caption_lead if lead_figure.caption_lead else lead_figure.caption }}</div>
           </div>
           {% if lead_figure.caption_focus %}
@@ -675,7 +676,7 @@
         </div>
       </div>
       {% else %}
-      <div class="surface-empty">当前这条主线暂无可展示图表。</div>
+      <div class="surface-empty">这条主线暂未生成可展示图表。</div>
       {% endif %}
     </div>
   </div>
@@ -714,7 +715,7 @@
             {% endif %}
           </div>
           <div class="thumb-copy">
-            <div class="thumb-kicker">补充图 {{ loop.index }}</div>
+            <div class="thumb-kicker">补充图表 {{ loop.index }}</div>
             <div class="thumb-caption">{{ figure.caption_lead if figure.caption_lead else figure.caption }}</div>
           </div>
         </div>
@@ -807,7 +808,7 @@
 
 {% macro render_tracks_section(track_sections, mode) -%}
 <section class="section" id="tracks" data-waypoint data-waypoint-kind="section" data-waypoint-label="主线结果">
-  {{ shared.render_section_head("研究主线", "三条主线，分别回答三个核心问题。", "分别对应短期冲击、长期保留和识别强度。", "组织方式", "每条主线都先给判断，再补图表、表格和来源材料。") }}
+  {{ shared.render_section_head("研究主线", "三条主线，分别回答三个核心问题。", "短期冲击、长期保留、识别证据三条线并行阅读。", "组织方式", "每条主线都先给判断，再补图表、表格和来源材料。") }}
   {% for section in track_sections %}
   {{ render_track_section(section, loop.index, mode) }}
   {% endfor %}

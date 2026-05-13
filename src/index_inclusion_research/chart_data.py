@@ -534,9 +534,9 @@ def build_event_counts_chart_data(root: Path) -> dict:
 
 _MECHANISM_OUTCOME_LABELS = {
     "car_1_1": "CAR[-1,+1]",
-    "turnover_change": "Turnover Δ",
-    "volume_change": "Volume Δ",
-    "volatility_change": "Volatility Δ",
+    "turnover_change": "换手率变化",
+    "volume_change": "成交量变化",
+    "volatility_change": "波动率变化",
     "price_limit_hit_share": "涨跌停命中率",
 }
 

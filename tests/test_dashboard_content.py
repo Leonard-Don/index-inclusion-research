@@ -82,7 +82,7 @@ def test_load_paper_detail_result_builds_navigation_and_actions() -> None:
 
     assert result is not None
     assert result["title"] == "Lawrence Harris 等（1986）"
-    assert [label for label, _ in result["rendered_tables"]] == ["论文信息", "深度解读"]
+    assert [label for label, _ in result["rendered_tables"]] == ["论文信息", "项目解读"]
     assert any(
         card["kicker"] == "当前这篇" and card["is_current"]
         for card in result["sequence_cards"]

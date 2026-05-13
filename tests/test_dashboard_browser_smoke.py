@@ -12,8 +12,10 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 import pytest
+from bs4 import BeautifulSoup
 
 from index_inclusion_research.chart_data import CHART_BUILDERS
+from index_inclusion_research.dashboard_app import app
 
 pytestmark = pytest.mark.browser_smoke
 
@@ -215,7 +217,8 @@ def test_dashboard_browser_smoke() -> None:
 
         page.goto(f"{base_url}/?mode=demo", wait_until="domcontentloaded")
         page.wait_for_load_state("networkidle")
-        assert "16 篇文献" in page.locator("h1").inner_text()
+        assert "全景展现指数纳入效应" in page.locator("h1").inner_text()
+        assert "构成理论基础" in page.content()
         assert page.locator("a.skip-link").get_attribute("href") == "#main-content"
         assert (
             page.locator("[data-refresh-state-label]").inner_text().strip() == "已就绪"
@@ -249,6 +252,40 @@ def test_dashboard_browser_smoke() -> None:
         assert topbar_metrics["topbarHeight"] <= 100
         assert topbar_metrics["brandWidth"] <= 320
         assert topbar_metrics["navWidth"] >= 1080
+
+        compact_page = _new_dashboard_page(
+            browser, viewport={"width": 1280, "height": 720}
+        )
+        compact_page.goto(f"{base_url}/?mode=demo", wait_until="domcontentloaded")
+        compact_page.wait_for_load_state("networkidle")
+        compact_topbar_metrics = compact_page.evaluate(
+            """
+            () => {
+                const brandMark = document.querySelector(".brand-mark");
+                const topbar = document.querySelector(".topbar");
+                return {
+                    brandMarkHeight: brandMark?.getBoundingClientRect().height ?? 0,
+                    brandMarkScrollWidth: brandMark?.scrollWidth ?? 0,
+                    brandMarkClientWidth: brandMark?.clientWidth ?? 0,
+                    topbarHeight: topbar?.getBoundingClientRect().height ?? 0,
+                    bodyScrollWidth: document.documentElement.scrollWidth,
+                    viewportWidth: window.innerWidth,
+                };
+            }
+            """
+        )
+        assert compact_topbar_metrics["brandMarkHeight"] <= 30
+        assert (
+            compact_topbar_metrics["brandMarkScrollWidth"]
+            <= compact_topbar_metrics["brandMarkClientWidth"] + 1
+        )
+        assert compact_topbar_metrics["topbarHeight"] <= 80
+        assert (
+            compact_topbar_metrics["bodyScrollWidth"]
+            <= compact_topbar_metrics["viewportWidth"] + 1
+        )
+        compact_page.close()
+
         hero_metrics = page.evaluate(
             """
             () => {
@@ -534,6 +571,20 @@ def test_dashboard_browser_smoke() -> None:
         assert tracks_landing_metrics["introHeight"] <= 40
         assert tracks_landing_metrics["sideHeight"] <= 90
 
+        page.get_by_role("link", name="跨市场机制").click()
+        _wait_for_section_state(
+            page,
+            "#cross_market_asymmetry",
+            "跨市场机制",
+            "美股 对比 A 股不对称",
+        )
+        assert page.locator("[data-waypoint-title]").inner_text().strip() == "美股 对比 A 股不对称"
+        active_sections = [
+            text.strip()
+            for text in page.locator("[data-section-link].active").all_inner_texts()
+        ]
+        assert "跨市场机制" in active_sections
+
         page.get_by_role("link", name="文献框架").click()
         _wait_for_section_state(page, "#framework", "文献框架")
         assert "open=demo-design-detail-tables" in page.url
@@ -676,7 +727,7 @@ def test_dashboard_browser_smoke() -> None:
         assert page.locator("a.skip-link").get_attribute("href") == "#main-content"
         assert "公开 alpha" in page.locator(".hero-summary").inner_text()
         assert (
-            "按阵营最适合看争论如何推进"
+            "按阵营梳理便于把握争论推进脉络"
             in page.locator(".evolution-nav-copy").inner_text()
         )
         assert page.get_by_role("link", name="回看上一环").is_visible()
@@ -776,7 +827,7 @@ def test_dashboard_bottom_scroll_does_not_snap_back_to_top() -> None:
                 () => {
                     return (
                         window.scrollY > window.innerHeight * 2 &&
-                        window.location.hash === '#cross_market_asymmetry'
+                        window.location.hash === '#paper_audit'
                     );
                 }
                 """
@@ -797,7 +848,7 @@ def test_dashboard_bottom_scroll_does_not_snap_back_to_top() -> None:
                 """
             )
 
-            assert bottom_state["hash"] == "#cross_market_asymmetry"
+            assert bottom_state["hash"] == "#paper_audit"
             assert bottom_state["stayedAwayFromTop"] is True, bottom_state
         finally:
             browser.close()
@@ -821,7 +872,7 @@ def test_cross_market_section_renders_in_full_mode() -> None:
             assert section.count() == 1
             section.first.scroll_into_view_if_needed()
             assert (
-                "美股 vs A股 公告—生效事件集中度差异"
+                "美股 vs A 股公告—生效阶段的不对称集中度"
                 in section.locator("h2").first.inner_text()
             )
 
@@ -1026,7 +1077,7 @@ def test_evidence_detail_and_rdd_l3_workbench_pages_render() -> None:
 
             page.goto(f"{base_url}/rdd-l3", wait_until="domcontentloaded")
             page.wait_for_load_state("networkidle")
-            assert "官方候选导入工作台" in page.locator("h1").inner_text()
+            assert "正式候选样本工作台" in page.locator("h1").inner_text()
             assert page.locator("form[action='/rdd-l3/check']").count() == 1
             assert page.locator("form[action='/rdd-l3/import']").count() == 1
             assert page.locator("form[action='/rdd-l3/collection']").count() == 1
@@ -1322,7 +1373,7 @@ def test_data_sources_citation_table_renders_in_limits_section() -> None:
 
             html = page.content()
             assert "数据来源 · 引用清单" in html
-            assert "原始输出全集" in html
+            assert "原始产物索引" in html
             assert "results/real_event_study/event_level_metrics.csv" in html
             assert "data/raw/hs300_rdd_candidates.csv" in html
             assert "索引保留" in html
@@ -1385,8 +1436,8 @@ def test_pap_status_chip_renders_with_baseline_diff() -> None:
 
 def test_rdd_chart_renders_bandwidth_sweep() -> None:
     """The HS300 RDD ECharts container should render with multiple bandwidth
-    fit lines (legend acts as bandwidth selector) and a subtitle reporting
-    τ/p/n at the default bandwidth."""
+    fit lines (legend acts as bandwidth selector) and a localized subtitle
+    reporting τ/p/n at the default bandwidth."""
 
     with (
         _running_dashboard_server() as base_url,
@@ -1437,12 +1488,12 @@ def test_rdd_chart_renders_bandwidth_sweep() -> None:
                 """
             )
 
-            assert "HS300 RDD" in chart_state["title_text"]
+            assert "沪深300 RDD" in chart_state["title_text"]
             # Subtitle records the default-bandwidth headline statistics.
-            assert "默认 bandwidth=0.06" in chart_state["subtitle"]
-            assert "τ=" in chart_state["subtitle"]
-            assert "p=" in chart_state["subtitle"]
-            assert "n=" in chart_state["subtitle"]
+            assert "默认带宽=0.06" in chart_state["subtitle"]
+            assert "τ（处理效应）=" in chart_state["subtitle"]
+            assert "p 值=" in chart_state["subtitle"]
+            assert "样本量 n=" in chart_state["subtitle"]
             assert float(chart_state["x_axis_min"]) > 299.0
             assert float(chart_state["x_axis_max"]) < 301.0
 
@@ -1455,10 +1506,10 @@ def test_rdd_chart_renders_bandwidth_sweep() -> None:
             assert scatter_series_count == 2
             assert line_series_count >= 4
 
-            # Legend should expose bandwidth-labeled entries; each looks like
-            # "bw=0.06 (τ=…%, p=…, n=…)".
+            # Legend should expose localized bandwidth-labeled entries; each
+            # looks like "带宽=0.06（τ（处理效应）=...%, p 值=..., 样本量 n=...）".
             bandwidth_labels = [
-                lbl for lbl in chart_state["legend_data"] if str(lbl).startswith("bw=")
+                lbl for lbl in chart_state["legend_data"] if str(lbl).startswith("带宽=")
             ]
             assert len(bandwidth_labels) >= 3, (
                 f"expected ≥3 bandwidth legend entries, got {bandwidth_labels}"
@@ -1467,7 +1518,7 @@ def test_rdd_chart_renders_bandwidth_sweep() -> None:
             # Default selection: scatter series visible, only the
             # default-bandwidth fit visible, other bandwidths off.
             default_bw_label = next(
-                (lbl for lbl in bandwidth_labels if "bw=0.06" in str(lbl)),
+                (lbl for lbl in bandwidth_labels if "带宽=0.06" in str(lbl)),
                 None,
             )
             assert default_bw_label is not None
@@ -1544,20 +1595,12 @@ def test_cross_market_section_hides_figures_in_brief_mode() -> None:
     """Brief mode should render the CMA section header but not show figures
     or the hypothesis map."""
 
-    with (
-        _running_dashboard_server() as base_url,
-        playwright_sync_api.sync_playwright() as playwright,
-    ):
-        browser = _launch_chromium(playwright)
-        try:
-            page = _new_dashboard_page(browser, viewport={"width": 1440, "height": 960})
-            page.goto(f"{base_url}/?mode=brief", wait_until="domcontentloaded")
-            page.wait_for_load_state("networkidle")
+    response = app.test_client().get("/?mode=brief")
+    assert response.status_code == 200
+    soup = BeautifulSoup(response.get_data(as_text=True), "html.parser")
 
-            section = page.locator("section#cross_market_asymmetry")
-            assert section.count() == 1
-            assert section.locator("figure.cma-figure").count() == 0
-            assert section.locator(".cma-hypothesis").count() == 0
-            assert section.locator(".cma-verdict-card").count() == 0
-        finally:
-            browser.close()
+    section = soup.select_one("section#cross_market_asymmetry")
+    assert section is not None
+    assert section.select("figure.cma-figure") == []
+    assert section.select(".cma-hypothesis") == []
+    assert section.select(".cma-verdict-card") == []

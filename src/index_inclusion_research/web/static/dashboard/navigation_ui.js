@@ -56,12 +56,12 @@ export function updateWaypointDock(ctx, waypoints, currentWaypoint, scrollY) {
   if (ctx.waypointCopy) {
     ctx.waypointCopy.textContent =
       item && item.kind === "track"
-        ? "当前停留在某条研究主线内部，切换展示模式、刷新或继续滚动时都会尽量保留这里的位置。"
-        : "章节导航会跟着滚动自动同步，长页面里可以直接从这里继续往前或回到顶部。";
+        ? "当前停留在某条研究主线内部，切换展示模式、刷新或继续滚动时会尽量保留当前位置。"
+        : "章节导航会随滚动同步，长页面里可以直接继续下一节或回到顶部。";
   }
   if (ctx.waypointPrevButton) {
     ctx.waypointPrevButton.disabled = !previous;
-    ctx.waypointPrevButton.title = previous ? `上一节：${waypointTitleText(previous)}` : "已经到顶部";
+    ctx.waypointPrevButton.title = previous ? `上一节：${waypointTitleText(previous)}` : "已经在顶部";
   }
   if (ctx.waypointNextButton) {
     ctx.waypointNextButton.disabled = !next;

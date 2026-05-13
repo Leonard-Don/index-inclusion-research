@@ -871,7 +871,7 @@ def load_paper_detail_result(
         "summary_cards": summary_cards,
         "rendered_tables": [
             ("论文信息", render_table(info_frame, compact=True)),
-            ("深度解读", render_table(deep_frame, compact=True)),
+            ("项目解读", render_table(deep_frame, compact=True)),
         ],
         "sequence_cards": sequence_cards,
         "recommended_cards": recommended_cards,

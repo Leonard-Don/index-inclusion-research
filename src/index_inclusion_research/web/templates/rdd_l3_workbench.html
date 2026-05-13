@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>HS300 RDD L3 官方候选导入工作台</title>
+  <title>HS300 RDD L3 正式候选样本工作台</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
 </head>
 <body data-table-density="cozy">
-  <a class="skip-link" href="#main-content">跳到主内容</a>
+  <a class="skip-link" href="#main-content">跳到工作台内容</a>
   <main id="main-content" class="shell evidence-page rdd-l3-page" tabindex="-1">
     <nav class="evidence-topbar" aria-label="RDD 工作台导航">
       <a href="{{ url_for('home', mode='full', _anchor='cross_market_asymmetry') }}">首页总览</a>
@@ -18,7 +18,7 @@
       <div class="section-head">
         <div>
           <div class="section-kicker">HS300 RDD L3</div>
-          <h1>官方候选导入工作台</h1>
+          <h1>正式候选样本工作台</h1>
         </div>
         <div class="section-intro">{{ status.message }}</div>
       </div>
@@ -50,19 +50,19 @@
     <section class="section evidence-section-compact">
       <div class="rdd-workbench-grid">
         <form class="result-card rdd-upload-form" action="{{ url_for('check_rdd_l3_candidates') }}" method="post" enctype="multipart/form-data">
-          <div class="table-label">预检候选文件</div>
+          <div class="table-label">候选文件预检</div>
           <label>候选名单文件<input type="file" name="candidate_file" accept=".csv,.tsv,.xlsx,.xls" required></label>
           <label>Excel 工作表<input type="text" name="sheet" placeholder="0 或工作表名"></label>
           <label>批次 ID<input type="text" name="batch_id" placeholder="缺省时自动识别"></label>
           <label>公告日<input type="date" name="announce_date"></label>
           <label>生效日<input type="date" name="effective_date"></label>
-          <label>来源<input type="text" name="source" placeholder="中证指数公告 / 人工摘录"></label>
+          <label>来源<input type="text" name="source" placeholder="中证指数公告 / 手工摘录"></label>
           <label>来源 URL<input type="url" name="source_url" placeholder="https://"></label>
           <button type="submit">运行 L3 预检</button>
         </form>
 
         <form class="result-card rdd-upload-form" action="{{ url_for('import_rdd_l3_candidates') }}" method="post" enctype="multipart/form-data">
-          <div class="table-label">正式写入 L3</div>
+          <div class="table-label">写入正式 L3 样本</div>
           <label>官方候选名单文件<input type="file" name="candidate_file" accept=".csv,.tsv,.xlsx,.xls" required></label>
           <label>Excel 工作表<input type="text" name="sheet" placeholder="0 或工作表名"></label>
           <label>批次 ID<input type="text" name="batch_id"></label>
@@ -70,8 +70,9 @@
           <label>生效日<input type="date" name="effective_date"></label>
           <label>来源<input type="text" name="source" placeholder="正式来源名称"></label>
           <label>来源 URL<input type="url" name="source_url" placeholder="https://"></label>
-          <label class="rdd-confirm"><input type="checkbox" name="confirm_import" value="1" required> 我确认这是官方或人工摘录的原始候选排名表，不是公开重建样本。</label>
-          <button type="submit">写入并刷新 RDD 状态</button>
+          <label class="rdd-confirm"><input type="checkbox" name="confirm_import" value="1" required> 本人确认：此为官方公告或手工摘录的原始候选名单，并非基于公开数据重建的模拟样本。</label>
+          <p class="form-help">将写入正式候选样本文件，并重新生成 RDD 状态与候选审计结果。</p>
+          <button type="submit">导入候选名单并更新 RDD 状态</button>
         </form>
       </div>
     </section>
@@ -117,7 +118,7 @@
         </div>
         <div class="evidence-source-line">显示 {{ block.shown_rows }} / {{ block.total_rows }} 行</div>
         {% else %}
-        <div class="surface-empty">当前没有可展示行。</div>
+        <div class="surface-empty">预检通过后会在这里展示候选样本行。</div>
         {% endif %}
       </div>
     </section>
@@ -139,7 +140,7 @@
           {% if import_result.refresh %}
           {% for path in import_result.refresh.manifest_paths %}
           <article class="evidence-path-card" data-exists="{{ '1' if path.exists else '0' }}">
-            <div class="table-label">manifest</div>
+            <div class="table-label">刷新清单</div>
             <a href="{{ path.href }}">{{ path.label }}</a>
           </article>
           {% endfor %}
@@ -152,7 +153,7 @@
     <section class="section evidence-section-compact">
       <div class="rdd-workbench-grid">
         <div class="result-card">
-          <div class="table-label">采集包</div>
+          <div class="table-label">L3 采集包</div>
           <div class="rdd-collection-status" data-status="{{ collection_status.status }}">
             <strong>{{ collection_status.status_label }}</strong>
             <span>
@@ -165,7 +166,7 @@
           </div>
           <form class="rdd-inline-form" action="{{ url_for('refresh_rdd_l3_collection') }}" method="post">
             <label>每侧边界行数<input type="number" name="boundary_window" min="1" max="80" value="15"></label>
-            <button type="submit">刷新采集包</button>
+            <button type="submit">刷新 L3 采集包</button>
           </form>
           <div class="evidence-path-grid evidence-path-grid-single">
             {% for path in collection_status.paths %}
@@ -176,7 +177,7 @@
           </div>
         </div>
         <div class="result-card">
-          <div class="table-label">关键命令</div>
+          <div class="table-label">可复现命令</div>
           <div class="rdd-command-list">
             {% for command in commands %}
             <code>{{ command }}</code>
@@ -191,7 +192,7 @@
       <div class="result-card">
         <div class="table-label">采集包刷新结果</div>
         <h2>{{ collection_result.candidate_batches }} 个批次 / {{ collection_result.candidate_rows }} 行参考样本</h2>
-        <p class="evidence-source-line">边界参考 {{ collection_result.boundary_reference_rows }} 行；这些文件只用于正式名单采集核对，不会把 L2 running_variable 提升成 L3。</p>
+        <p class="evidence-source-line">边界参考 {{ collection_result.boundary_reference_rows }} 行；此数据仅用于正式名单的采集比对，不会将 L2 级别的运行变量（running_variable）自动提升至 L3 级别。</p>
         <div class="evidence-path-grid">
           {% for path in collection_result.written_paths %}
           <article class="evidence-path-card" data-exists="{{ '1' if path.exists else '0' }}">
@@ -221,8 +222,8 @@
         <form class="rdd-inline-form" action="{{ url_for('refresh_rdd_l3_online_collection') }}" method="post">
           <label>起始公告日<input type="date" name="since"></label>
           <label>结束公告日<input type="date" name="until"></label>
-          <label>每个搜索词返回<input type="number" name="notice_rows" min="1" max="300" value="80"></label>
-          <label>最多公告数<input type="number" name="max_notices" min="1" max="300" placeholder="不限制"></label>
+          <label>每个搜索词返回条数<input type="number" name="notice_rows" min="1" max="300" value="80"></label>
+          <label>最多解析公告数<input type="number" name="max_notices" min="1" max="300" placeholder="不限制"></label>
           <label>补充搜索词<textarea name="search_term" rows="2" placeholder="一行一个历史标题口径"></textarea></label>
           <button type="submit">刷新线上诊断</button>
         </form>
@@ -311,7 +312,7 @@
         </div>
         <div class="evidence-source-line">显示 {{ table.shown_rows }} / {{ table.total_rows }} 行</div>
         {% else %}
-        <div class="surface-empty">当前没有线上诊断行；先运行 `index-inclusion-collect-hs300-rdd-l3 --force`。</div>
+        <div class="surface-empty">暂无线上诊断记录；请运行 index-inclusion-collect-hs300-rdd-l3 --force 或点击上方刷新按钮。</div>
         {% endif %}
       </div>
     </section>
@@ -347,7 +348,7 @@
         </div>
         <div class="evidence-source-line">显示 {{ table.shown_rows }} / {{ table.total_rows }} 行</div>
         {% else %}
-        <div class="surface-empty">当前没有可展示行；先刷新采集包。</div>
+        <div class="surface-empty">暂无采集包明细；请先刷新 L3 采集包。</div>
         {% endif %}
       </div>
     </section>

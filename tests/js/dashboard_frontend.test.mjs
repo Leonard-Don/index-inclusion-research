@@ -403,7 +403,7 @@ test("surface details keeps query state, storage state, and callbacks aligned", 
       });
 
       assert.equal(panel.open, true);
-      assert.equal(toggle.textContent, "收起内容");
+      assert.equal(toggle.textContent, "收起细节");
       assert.equal(input.value, "alpha");
       assert.equal(surface.shouldCarryDetailsState(), true);
       assert.equal(surface.detailsValueForNavigation(), "alpha");

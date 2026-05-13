@@ -80,7 +80,7 @@
 
 {% macro render_mode_hint(copy) -%}
 <div class="section-side">
-  <div class="section-side-label">模式提示</div>
+  <div class="section-side-label">阅读提示</div>
   <div class="section-side-copy">{{ copy }}</div>
 </div>
 {%- endmacro %}
@@ -114,7 +114,7 @@
       <div class="support-role">{{ paper.one_line_role }}</div>
     </div>
     {% if paper.pdf_href %}
-    <a class="support-link" href="{{ paper.pdf_href }}" target="_blank" rel="noopener noreferrer">查看这篇速读</a>
+    <a class="support-link" href="{{ paper.pdf_href }}" target="_blank" rel="noopener noreferrer">查阅文献速读</a>
     {% endif %}
   </div>
   <div class="support-deep-grid">

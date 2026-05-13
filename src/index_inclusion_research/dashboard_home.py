@@ -68,7 +68,7 @@ def _overview_rdd_metric(rdd_status: RddStatus) -> OverviewMetric:
         return {
             "value": str(rdd_status.get("evidence_tier", ""))
             or rdd_evidence_tier(rdd_status["mode"]),
-            "label": "中国 RDD 已进入正式边界样本",
+            "label": "中国 RDD 已进入正式边界样本口径",
             "tone": "official",
             "meta": meta,
         }
@@ -76,7 +76,7 @@ def _overview_rdd_metric(rdd_status: RddStatus) -> OverviewMetric:
         return {
             "value": str(rdd_status.get("evidence_tier", ""))
             or rdd_evidence_tier(rdd_status["mode"]),
-            "label": "中国 RDD 当前为公开重建样本",
+            "label": "中国 RDD 当前为公开重建样本口径",
             "tone": "reconstructed",
             "meta": meta,
         }
@@ -84,14 +84,14 @@ def _overview_rdd_metric(rdd_status: RddStatus) -> OverviewMetric:
         return {
             "value": str(rdd_status.get("evidence_tier", ""))
             or rdd_evidence_tier(rdd_status["mode"]),
-            "label": "中国 RDD 当前仅为方法展示",
+            "label": "中国 RDD 当前仅作方法展示",
             "tone": "demo",
             "meta": meta,
         }
     return {
         "value": str(rdd_status.get("evidence_tier", ""))
         or rdd_evidence_tier(rdd_status["mode"]),
-        "label": "中国 RDD 仍待补正式样本",
+        "label": "中国 RDD 仍待补正式候选样本",
         "tone": "missing",
         "meta": meta,
     }
@@ -109,8 +109,8 @@ def build_overview_metrics(
     current_rdd_status = rdd_status if rdd_status is not None else dashboard_loaders.load_rdd_status(root)
     return [
         {"value": "16", "label": "篇核心文献，构成理论基础"},
-        {"value": "3", "label": "条研究主线，对应主要实证模块"},
-        {"value": "5", "label": "个研究阵营，构成文献演进框架"},
+        {"value": "3", "label": "条研究主线，对应三组实证问题"},
+        {"value": "5", "label": "个研究阵营，串起文献演进"},
         {"value": str(total_events), "label": "个真实调入/调出事件，构成默认样本"},
         _overview_rdd_metric(current_rdd_status),
     ]
@@ -153,7 +153,7 @@ def build_highlights(
     if float(cn_effective["p_value"]) < 0.05:
         cn_discussion = (
             f"中国 A 股在生效日 CAR[-1,+1] 平均值为 {cn_effective['mean_car']:.2%}，"
-            "且统计显著，说明 A 股不能机械套用美股的经典指数纳入叙事，更像一个制度摩擦更强的独立场景。"
+            "且统计显著，说明 A 股不能机械套用美股经典指数纳入叙事，更像一个制度摩擦更强的独立场景。"
         )
     else:
         cn_discussion = (
@@ -166,7 +166,7 @@ def build_highlights(
         method_headline = "中国 RDD 已进入正式边界样本口径。"
         method_copy = (
             "正式候选样本通过校验后，RDD 可以作为边界识别证据，"
-            "和事件研究、匹配回归一起进入主结论体系。"
+            "与事件研究、匹配回归一起进入主结论体系。"
         )
     elif current_rdd_status["mode"] == "reconstructed":
         method_headline = "中国 RDD 已进入公开数据版证据链。"
@@ -178,7 +178,7 @@ def build_highlights(
         method_headline = "中国 RDD 当前仍停留在方法展示层。"
         method_copy = (
             "事件研究说明现象，匹配回归帮助控制样本差异；RDD 当前只用于展示识别结构、"
-            "字段契约和运行链路，还没有进入正式证据链。"
+            "字段契约和运行链路，还不进入正式证据链。"
         )
     else:
         method_headline = "中国 RDD 当前仍待补正式样本。"
@@ -187,14 +187,14 @@ def build_highlights(
             "但还需要正式候选样本或公开重建样本，才能进入可读的边界证据。"
         )
     provenance_summary = rdd_provenance_summary(current_rdd_status)
-    method_copy = f"{method_copy} 这也对应新增文献把争论从“涨不涨”推进到“制度差异、套利约束和价格发现如何改变结论”。"
+    method_copy = f"{method_copy} 这也对应新增文献将研究焦点从短期价格反应扩展到制度差异、套利约束和价格发现。"
     if provenance_summary:
         method_copy = f"{method_copy} 当前来源为 {provenance_summary}。"
     return [
         {
-            "label": "最强结论",
+            "label": "最稳定证据",
             "headline": "美股公告日仍有稳定短期正向效应，但更像被压缩后的公开信号。",
-            "copy": f"美国公告日 CAR[-1,+1] 均值为 {us_announce['mean_car']:.2%}，p 值为 {us_announce['p_value']:.4f}，仍是整套结果里最稳的短期正向证据；更合理的解释是短期冲击仍在，但可见 alpha 已被更成熟的提前交易显著压缩。",
+            "copy": f"美国公告日 CAR[-1,+1] 均值为 {us_announce['mean_car']:.2%}，p 值为 {us_announce['p_value']:.4f}，仍是整套结果里最稳定的短期正向证据；更合理的解释是短期冲击仍在，但可见 alpha 已被更成熟的提前交易显著压缩。",
         },
         {
             "label": "最值得讨论",
@@ -202,7 +202,7 @@ def build_highlights(
             "copy": cn_discussion,
         },
         {
-            "label": "方法含义",
+            "label": "识别含义",
             "headline": method_headline,
             "copy": method_copy.replace("当前首页展示的不再只是方法框架。", "")
             .replace("当前来源为 ", "来源：")

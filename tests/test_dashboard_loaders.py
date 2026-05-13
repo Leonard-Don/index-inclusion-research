@@ -292,7 +292,7 @@ def test_build_rdd_contract_check_reports_mismatched_fields(tmp_path: Path) -> N
 
 def test_split_figure_caption_separates_lead_and_focus() -> None:
     lead, focus = dashboard_media.split_figure_caption(
-        "中国样本 RDD 主图。图意：展示断点回归主图。阅读重点：观察 0 附近是否跳跃。"
+        "中国样本 RDD 主图。图表含义：展示断点回归主图。阅读重点：观察 0 附近是否跳跃。"
     )
 
     assert lead == "中国样本 RDD 主图。展示断点回归主图。"
