@@ -70,6 +70,9 @@
 {%- endmacro %}
 
 {% macro render_refresh_status_panel(refresh_meta, pap_meta=none) -%}
+{% set contract_tone = "ok" if refresh_meta.contract_status_label == "结果状态已同步" else ("neutral" if not refresh_meta.contract_status_label else "warning") %}
+{% set health_label = refresh_meta.health_status_label or "" %}
+{% set health_tone = "ok" if "良好" in health_label else ("missing" if "缺项" in health_label else ("neutral" if not health_label else "warning")) %}
 <div class="refresh-status hero-status" data-refresh-panel data-state="{{ refresh_meta.status }}">
   <div class="refresh-status-head">
     <div>
@@ -92,17 +95,17 @@
   <div class="refresh-status-note" data-refresh-note aria-live="polite" role="status">{{ refresh_meta.message }}</div>
   <div class="refresh-status-summary-strip">
     <div class="refresh-status-summary-copy">
-      <span class="refresh-status-summary-label">本次更新</span>
+      <span class="refresh-status-summary-label">状态总览</span>
       <strong class="refresh-status-summary-value" data-refresh-artifact-summary-inline>{{ refresh_meta.artifact_summary_label or "—" }}</strong>
     </div>
-    <div class="refresh-status-summary-pill" data-refresh-contract-summary>
+    <div class="refresh-status-summary-pill" data-refresh-contract-summary data-status-tone="{{ contract_tone }}">
       {% if refresh_meta.status == "running" %}
       待完成后校验
       {% else %}
       {{ refresh_meta.contract_status_label or "—" }}
       {% endif %}
     </div>
-    <div class="refresh-status-summary-pill" data-refresh-health-summary>
+    <div class="refresh-status-summary-pill" data-refresh-health-summary data-status-tone="{{ health_tone }}">
       {{ refresh_meta.health_status_label or "—" }}
     </div>
     {{ render_pap_status_pill(pap_meta) }}
@@ -134,6 +137,14 @@
     </summary>
     <div class="details-panel-body">
       <div class="refresh-status-grid">
+        <div class="refresh-status-meta-card refresh-status-meta-card-wide">
+          <div class="refresh-status-meta-label">快照说明</div>
+          <div class="refresh-status-meta-copy" data-refresh-snapshot-copy-detail>{{ refresh_meta.snapshot_copy or "—" }}</div>
+        </div>
+        <div class="refresh-status-meta-card refresh-status-meta-card-wide">
+          <div class="refresh-status-meta-label">契约说明</div>
+          <div class="refresh-status-meta-copy" data-refresh-contract-copy-detail>{{ refresh_meta.contract_status_copy or "—" }}</div>
+        </div>
         <div class="refresh-status-meta-card">
           <div class="refresh-status-meta-label">开始时间</div>
           <div class="refresh-status-meta-value" data-refresh-started-at>{{ refresh_meta.started_at or "—" }}</div>

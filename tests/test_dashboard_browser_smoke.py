@@ -872,7 +872,7 @@ def test_cross_market_section_renders_in_full_mode() -> None:
             assert section.count() == 1
             section.first.scroll_into_view_if_needed()
             assert (
-                "美股 vs A 股公告—生效阶段的不对称集中度"
+                "美股对比 A 股：公告日至生效阶段的不对称集中度"
                 in section.locator("h2").first.inner_text()
             )
 
@@ -1229,7 +1229,7 @@ def test_rdd_robustness_forest_plot_appears_in_identification_track() -> None:
             assert "稳健性面板" in alt
             # Headline τ + p surfaced in caption so reviewers see at a
             # glance whether main spec is the strongest.
-            assert "main" in alt and "局部线性" in alt
+            assert "主规格" in alt and "局部线性" in alt
 
             interactive_forest = section.locator('[data-echart="rdd_robustness"]')
             assert interactive_forest.count() == 1

@@ -187,6 +187,7 @@ COLUMN_LABELS = {
     "verdict": "裁决",
     "confidence": "置信口径",
     "evidence_summary": "证据摘要",
+    "evidence_refs": "证据来源",
     "metric_snapshot": "指标快照",
     "next_step": "下一步",
     "key_label": "关键指标",

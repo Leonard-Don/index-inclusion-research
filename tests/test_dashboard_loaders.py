@@ -195,7 +195,7 @@ def test_load_rdd_status_reads_status_csv_audit_and_validation_fields(tmp_path: 
     assert status["source_kind"] == "missing"
     assert status["source_file"] == "data/raw/hs300_rdd_candidates.csv"
     assert status["generated_at"] == "2026-04-18T10:00:00+08:00"
-    assert status["coverage_note"] == "最近一次校验失败：running_variable 缺失。"
+    assert status["coverage_note"] == "最近一次校验失败：缺少运行变量。"
     assert status["audit_file"] == "results/literature/hs300_rdd/candidate_batch_audit.csv"
     assert status["candidate_rows"] == 2
     assert status["candidate_batches"] == 1

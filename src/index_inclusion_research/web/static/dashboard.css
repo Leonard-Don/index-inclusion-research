@@ -22,7 +22,10 @@
       --table-compact-cell-padding-x: 11px;
     }
     * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 0;
+    }
     a,
     button,
     summary {
@@ -302,6 +305,21 @@
       font-weight: 700;
       line-height: 1;
       white-space: nowrap;
+    }
+    .refresh-status-summary-pill[data-status-tone="ok"] {
+      background: rgba(15,92,110,0.14);
+      color: var(--accent);
+      border: 1px solid rgba(15,92,110,0.14);
+    }
+    .refresh-status-summary-pill[data-status-tone="warning"] {
+      background: rgba(184,138,45,0.15);
+      color: #7c5a19;
+      border: 1px solid rgba(184,138,45,0.18);
+    }
+    .refresh-status-summary-pill[data-status-tone="missing"] {
+      background: rgba(166,59,40,0.14);
+      color: var(--accent-2);
+      border: 1px solid rgba(166,59,40,0.18);
     }
     .refresh-status-grid {
       display: grid;
@@ -987,10 +1005,10 @@
     .section {
       padding-top: 58px;
       padding-right: 0;
-      scroll-margin-top: 92px;
+      scroll-margin-top: 112px;
     }
     [data-waypoint] {
-      scroll-margin-top: 104px;
+      scroll-margin-top: 128px;
     }
     .section-head {
       display: grid;
@@ -3878,6 +3896,9 @@
       .result-group-head p { text-align: left; max-width: none; }
     }
     @media (max-width: 760px) {
+      html {
+        scroll-padding-top: 0;
+      }
       .shell { padding: 0 14px 44px; }
       .topbar { padding: 12px 14px; }
       .topbar-inner { grid-template-columns: 1fr; gap: 12px; }
@@ -3926,6 +3947,17 @@
       }
       .nav-modes { justify-content: flex-start; }
       .refresh-status { justify-items: start; text-align: left; }
+      .hero-status > .refresh-status-copy,
+      .hero-status-inline,
+      .refresh-status-summary-copy {
+        display: none;
+      }
+      .refresh-status-summary-strip {
+        gap: 7px;
+      }
+      [data-waypoint] {
+        scroll-margin-top: 104px;
+      }
       .table-density-panel { justify-items: start; text-align: left; }
       .table-density-switch { justify-content: flex-start; }
       .hero {

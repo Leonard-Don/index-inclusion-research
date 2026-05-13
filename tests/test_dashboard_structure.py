@@ -174,7 +174,7 @@ def test_home_dashboard_renders_single_frontend_sections() -> None:
     assert "挑战的假设" in html
     assert "争论推进" in html
     assert "最近结果" in html
-    assert "本次更新" in html
+    assert "状态总览" in html
     assert "最近结果概览" in html
     assert "更新明细" in html
     assert "识别层级" in html

@@ -69,6 +69,16 @@ export function createNavigationController(ctx, surface) {
     );
   }
 
+  function currentHashStillAnchored(threshold = 184) {
+    const hash = currentHash();
+    const target = hash ? document.querySelector(hash) : null;
+    if (!target) {
+      return false;
+    }
+    const top = target.getBoundingClientRect().top;
+    return top >= -threshold && top <= threshold;
+  }
+
   function scrollToHash(hash) {
     const target = hash ? document.querySelector(hash) : null;
     if (!target) {
@@ -98,6 +108,10 @@ export function createNavigationController(ctx, surface) {
       }
     }
     if (candidate && candidate.hash !== currentHash()) {
+      if (currentHashStillAnchored()) {
+        updateWaypointDock();
+        return;
+      }
       liveHash = candidate.hash;
       history.replaceState(
         null,
