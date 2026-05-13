@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 from pandas.api.types import is_object_dtype, is_string_dtype
@@ -532,14 +533,99 @@ def display_status_label(status: object) -> str:
     return STATUS_LABELS.get(str(status), str(status))
 
 
-def display_value_label(value: object) -> object:
+def _is_missing_value(value: object) -> bool:
     if value is None:
-        return None
+        return True
     try:
-        if pd.isna(value):  # type: ignore[call-overload]
-            return None
+        return bool(pd.isna(value))  # type: ignore[call-overload]
     except (TypeError, ValueError):
-        pass
+        return False
+
+
+def _looks_like_p_value(column: object | None) -> bool:
+    if column is None:
+        return False
+    text = str(column).lower()
+    return "p_value" in text or text in {"p", "p值", "p 值"} or " p" in text or "p " in text
+
+
+def _looks_like_year(column: object | None) -> bool:
+    if column is None:
+        return False
+    text = str(column).lower()
+    return text in {"year", "年份", "announce_year", "first_year", "last_year"}
+
+
+def _looks_like_count(column: object | None) -> bool:
+    if column is None:
+        return False
+    text = str(column).lower()
+    count_tokens = (
+        "n_",
+        "rows",
+        "count",
+        "events",
+        "obs",
+        "批次",
+        "行数",
+        "数量",
+        "样本量",
+        "事件数",
+    )
+    year_tokens = {"year", "年份", "announce_year", "first_year", "last_year"}
+    return text not in year_tokens and any(token in text for token in count_tokens)
+
+
+def _looks_like_ratio(column: object | None) -> bool:
+    if column is None:
+        return False
+    text = str(column).lower()
+    ratio_tokens = ("ratio", "rate", "share", "coverage", "占比", "覆盖率", "比例", "率", "保留率")
+    return any(token in text for token in ratio_tokens)
+
+
+def format_display_number(value: object, column: object | None = None) -> str:
+    """Format numeric cells for UI tables without mutating source data."""
+
+    if _is_missing_value(value):
+        return "—"
+    if isinstance(value, bool):
+        return "是" if value else "否"
+    try:
+        number = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return str(value)
+    if pd.isna(number):
+        return "—"
+    if _looks_like_p_value(column):
+        if number < 0.0001:
+            return "&lt;0.0001"
+        return f"{number:.4f}" if number < 0.01 else f"{number:.3f}"
+    if _looks_like_year(column):
+        return str(int(round(number))) if float(number).is_integer() else f"{number:.0f}"
+    if _looks_like_ratio(column) and abs(number) <= 1:
+        return f"{number:.2%}"
+    if float(number).is_integer() or _looks_like_count(column):
+        return f"{int(round(number)):,}"
+    return f"{number:,.2f}"
+
+
+def format_display_cell(value: Any, column: object | None = None) -> str:
+    if _is_missing_value(value):
+        return "—"
+    if isinstance(value, bool):
+        return "是" if value else "否"
+    if isinstance(value, int | float):
+        return format_display_number(value, column)
+    display = display_value_label(value)
+    if display is None:
+        return "—"
+    return str(display)
+
+
+def display_value_label(value: object) -> object:
+    if _is_missing_value(value):
+        return None
     if isinstance(value, bool):
         return "是" if value else "否"
     text = str(value)
@@ -572,14 +658,15 @@ def render_table(frame: pd.DataFrame, compact: bool = False) -> str:
         if display[column].dtype == bool:
             display[column] = display[column].map({True: "是", False: "否"})
         if is_object_dtype(display[column]) or is_string_dtype(display[column]):
-            display[column] = display[column].map(display_value_label)
+            display[column] = display[column].map(lambda value, col=column: format_display_cell(value, col))
+        else:
+            display[column] = display[column].map(lambda value, col=column: format_display_cell(value, col))
     return display.to_html(
         index=False,
         classes=classes,
         border=0,
         justify="left",
         escape=False,
-        float_format=lambda v: f"{v:0.4f}",
     )
 
 

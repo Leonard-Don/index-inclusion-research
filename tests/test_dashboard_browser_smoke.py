@@ -730,8 +730,8 @@ def test_dashboard_browser_smoke() -> None:
             "按阵营梳理便于把握争论推进脉络"
             in page.locator(".evolution-nav-copy").inner_text()
         )
-        assert page.get_by_role("link", name="回看上一环").is_visible()
-        assert page.get_by_role("link", name="继续下一环").is_visible()
+        assert page.get_by_role("link", name="回看上一篇").is_visible()
+        assert page.get_by_role("link", name="继续阅读下一篇").is_visible()
         assert (
             page.get_by_role("button", name="按主线").get_attribute("aria-pressed")
             == "true"

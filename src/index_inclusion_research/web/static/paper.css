@@ -158,6 +158,29 @@ a {
   text-underline-offset: 0.18em;
 }
 
+.paper-sticky-toc {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 10px 0;
+  background: rgba(245, 242, 236, 0.92);
+  backdrop-filter: blur(12px);
+}
+
+.paper-sticky-toc a {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(0, 95, 115, 0.08);
+  border: 1px solid rgba(0, 95, 115, 0.12);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .hero {
   background: var(--paper);
   border: 1px solid var(--line);
@@ -253,6 +276,41 @@ a {
   font-size: 17px;
   font-weight: 700;
   line-height: 1.6;
+}
+
+.hero-summary .acronym-note {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(0, 95, 115, 0.07);
+  border: 1px solid rgba(0, 95, 115, 0.14);
+  color: #314252;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.table-conclusion {
+  margin: 8px 0 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(0, 95, 115, 0.06);
+  border: 1px solid rgba(0, 95, 115, 0.10);
+  color: #405163;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.back-to-top {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 16;
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  box-shadow: 0 12px 28px rgba(31, 42, 55, 0.18);
 }
 
 .hero-aside {
@@ -1019,6 +1077,18 @@ table.dataframe tbody tr:hover td:first-child {
   .evolution-link .eyebrow {
     font-size: 12px;
   }
+}
+.hero-kicker,
+.hero-aside-kicker,
+.hero-fact-label,
+.kicker,
+.mini-kicker,
+.group-meta,
+.table-density-label,
+.table-density-note,
+.evolution-link .eyebrow,
+.paper-verdict-link {
+  font-size: max(12px, 1em);
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

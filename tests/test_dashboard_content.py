@@ -141,8 +141,9 @@ def test_load_paper_detail_result_builds_navigation_and_actions() -> None:
     assert prev_card["copy"].startswith("如果你想回看")
     assert next_card["copy"].startswith("如果你想继续")
     assert current_card["copy"].startswith("你现在就位于这条争论链的当前节点。")
-    assert prev_card["action_label"] == "回看上一环"
-    assert next_card["action_label"] == "继续下一环"
+    assert prev_card["action_label"] == "回看上一篇"
+    assert next_card["action_label"] == "继续阅读下一篇"
+    assert "RDD 是断点回归设计" in result["acronym_note"]
 
 
 def test_load_paper_detail_result_returns_none_for_unknown_paper() -> None:

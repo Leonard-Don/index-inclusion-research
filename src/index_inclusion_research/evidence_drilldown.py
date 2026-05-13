@@ -105,11 +105,8 @@ def _records(frame: pd.DataFrame, *, limit: int = 80) -> list[dict[str, Any]]:
 
 def _display_cell(column: str, value: Any) -> Any:
     if column in {"aum_trillion", "latest_aum_trillion"}:
-        try:
-            return f"{float(value):.2f}"
-        except (TypeError, ValueError):
-            return dashboard_formatting.display_value_label(value)
-    return dashboard_formatting.display_value_label(value)
+        return dashboard_formatting.format_display_cell(value, column)
+    return dashboard_formatting.format_display_cell(value, column)
 
 
 def _display_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -373,6 +370,26 @@ def _detail_verdicts(detail: dict[str, Any], *, root: Path) -> None:
     _add_source(detail, path, root=root)
     verdicts = _read_csv(path)
     if not verdicts.empty and "verdict" in verdicts.columns:
+        verdict_values = verdicts["verdict"].astype(str)
+        support = int(verdict_values.isin(["支持", "部分支持"]).sum())
+        insufficient = int(verdict_values.isin(["证据不足", "待补数据"]).sum())
+        detail["value"] = f"{support} 项支持，{insufficient} 项证据不足"
+        detail["status_label"] = "假说裁决"
+        detail["detail"] = "H1-H7 是假说裁决分布；支持、证据不足与待补数据需要分开解读。"
+        detail["summary_cards"].extend(
+            [
+                {
+                    "label": "支持/部分支持",
+                    "value": str(support),
+                    "detail": "可进入正文或附录讨论的机制信号。",
+                },
+                {
+                    "label": "证据不足/待补数据",
+                    "value": str(insufficient),
+                    "detail": "不能表述为已经通过的假说。",
+                },
+            ]
+        )
         distribution = (
             verdicts["verdict"].astype(str).value_counts().rename_axis("verdict").reset_index(name="count")
         )

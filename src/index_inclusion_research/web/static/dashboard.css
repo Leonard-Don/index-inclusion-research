@@ -4354,6 +4354,265 @@
       }
     }
 
+    .brief-script-card {
+      display: grid;
+      gap: 16px;
+      margin: 12px 0 22px;
+      padding: 18px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.68);
+      border: 1px solid rgba(15, 92, 110, 0.16);
+      box-shadow: 0 14px 34px rgba(24, 33, 43, 0.08);
+    }
+    .brief-script-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .brief-script-head h2 {
+      margin: 4px 0 0;
+      font-size: clamp(22px, 2vw, 30px);
+      line-height: 1.18;
+      color: #172430;
+    }
+    .brief-script-head a,
+    .copy-inline,
+    .copy-path-button {
+      border: 1px solid rgba(15, 92, 110, 0.20);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.76);
+      color: #0f5c6e;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 7px 10px;
+      cursor: pointer;
+    }
+    .brief-script-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .brief-script-grid article {
+      min-width: 0;
+      display: grid;
+      gap: 7px;
+      padding: 13px;
+      border-radius: 10px;
+      background: rgba(15, 92, 110, 0.06);
+      border: 1px solid rgba(15, 92, 110, 0.12);
+    }
+    .brief-script-grid span,
+    .high-impact-label {
+      color: #a63b28;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+    }
+    .brief-script-grid strong {
+      color: #172430;
+      font-size: 15px;
+    }
+    .brief-script-grid p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+    }
+    .hero-status-inline-brief {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .evidence-page-toc {
+      position: sticky;
+      top: 86px;
+      z-index: 8;
+      margin-top: 12px;
+    }
+    .evidence-toc-card {
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid rgba(15, 92, 110, 0.12);
+    }
+    .evidence-toc-card nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .evidence-toc-card a {
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: rgba(15, 92, 110, 0.08);
+      color: #0f5c6e;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .evidence-verdict-card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+      margin: 12px 0;
+    }
+    .evidence-verdict-card {
+      min-width: 0;
+      padding: 13px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.64);
+      border: 1px solid rgba(15, 92, 110, 0.14);
+    }
+    .evidence-verdict-card[data-verdict="支持"],
+    .evidence-verdict-card[data-verdict="部分支持"] {
+      border-color: rgba(46, 119, 89, 0.36);
+    }
+    .evidence-verdict-card[data-verdict="证据不足"],
+    .evidence-verdict-card[data-verdict="待补数据"] {
+      border-color: rgba(184, 138, 45, 0.42);
+      background: rgba(184, 138, 45, 0.08);
+    }
+    .evidence-verdict-id {
+      color: #7b6344;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+    }
+    .evidence-verdict-card h3 {
+      margin: 5px 0 8px;
+      font-size: 16px;
+      line-height: 1.3;
+      color: #172430;
+    }
+    .evidence-verdict-card p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+    .table-conclusion {
+      margin: 8px 0 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(15, 92, 110, 0.06);
+      border: 1px solid rgba(15, 92, 110, 0.10);
+      color: #405163;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .back-to-top {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 16;
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: #0f5c6e;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 900;
+      box-shadow: 0 12px 28px rgba(24, 33, 43, 0.18);
+    }
+    .rdd-stepper {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      list-style: none;
+      margin: 16px 0;
+      padding: 0;
+    }
+    .rdd-stepper li {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 6px 10px;
+      align-items: start;
+      padding: 12px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.58);
+      border: 1px solid rgba(15, 92, 110, 0.13);
+    }
+    .rdd-stepper li.active {
+      border-color: rgba(15, 92, 110, 0.34);
+      background: rgba(15, 92, 110, 0.08);
+    }
+    .rdd-stepper span {
+      width: 26px;
+      height: 26px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 999px;
+      background: #0f5c6e;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .rdd-stepper strong {
+      color: #172430;
+      font-size: 14px;
+    }
+    .rdd-stepper p {
+      grid-column: 2;
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .rdd-impact-warning {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(166, 59, 40, 0.26);
+      background: rgba(166, 59, 40, 0.10);
+      color: #8d3325;
+      font-size: 12px;
+      line-height: 1.5;
+      font-weight: 800;
+    }
+    .rdd-upload-form button.danger-action {
+      background: #a63b28;
+    }
+    .rdd-command-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+    .copy-path-button {
+      justify-self: start;
+      margin-top: 8px;
+      color: #5c6b77;
+      border-color: rgba(92, 107, 119, 0.22);
+    }
+    @media (max-width: 900px) {
+      .brief-script-grid,
+      .rdd-stepper {
+        grid-template-columns: 1fr;
+      }
+      .evidence-page-toc {
+        position: static;
+      }
+    }
+    .section-kicker,
+    .table-label,
+    .details-kicker,
+    .summary-kicker,
+    .cma-evidence-status,
+    .cma-verdict-id,
+    .cma-evidence-tier-badge,
+    .cma-verdict-filter-label,
+    .cma-sensitivity-threshold-label,
+    .chapter-drawer-kicker,
+    .refresh-status-label,
+    .refresh-status-summary-label,
+    .refresh-status-meta-label,
+    .refresh-status-artifacts-label,
+    .table-density-label,
+    .topbar-current-kicker,
+    .nav-inline-label {
+      font-size: max(12px, 1em);
+    }
+
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
       *, *::before, *::after {

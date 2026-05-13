@@ -13,6 +13,7 @@
       <a href="{{ url_for('home', mode='full', _anchor='cross_market_asymmetry') }}">首页总览</a>
       <a href="{{ url_for('show_rdd_l3_workbench') }}">RDD L3 工作台</a>
       <a href="{{ url_for('evidence_api', item=detail.item) }}">查看 JSON</a>
+      <a href="#evidence-tables">跳到表格</a>
     </nav>
 
     <section class="section evidence-hero">
@@ -25,7 +26,7 @@
       </div>
       <div class="evidence-summary-grid">
         <article class="result-card evidence-summary-card" data-status="{{ detail.status }}">
-          <div class="table-label">状态</div>
+          <div class="table-label">{% if detail.item == 'CMA_verdicts' %}假说裁决{% else %}数据状态{% endif %}</div>
           <strong>{{ detail.status_label or detail.status }}</strong>
           <p>{{ detail.value }}</p>
         </article>
@@ -48,13 +49,17 @@
 
     {% if detail.source_paths %}
     <section class="section evidence-section-compact">
-      <div class="section-head">
-        <div>
-          <div class="section-kicker">证据来源</div>
-          <h2>来源材料</h2>
-        </div>
-      </div>
-      <div class="evidence-path-grid">
+      <details id="source-review" class="details-panel evidence-source-details" data-details-key="evidence-source-paths">
+        <summary>
+          <div>
+            <div class="details-kicker">复核路径</div>
+            <div class="details-title">来源材料与开发者详情</div>
+            <div class="details-copy">默认收起内部文件入口；需要复核证据来源时再展开。</div>
+          </div>
+          <div class="details-toggle" data-details-toggle>展开路径</div>
+        </summary>
+        <div class="details-panel-body">
+          <div class="evidence-path-grid">
         {% for path in detail.source_paths %}
         <article class="result-card evidence-path-card" data-exists="{{ '1' if path.exists else '0' }}">
           <div class="table-label">{{ '已找到' if path.exists else '缺失' }}</div>
@@ -65,7 +70,9 @@
           {% endif %}
         </article>
         {% endfor %}
-      </div>
+          </div>
+        </div>
+      </details>
     </section>
     {% endif %}
 
@@ -79,12 +86,47 @@
     </section>
     {% endif %}
 
+    <section class="section evidence-section-compact evidence-page-toc" aria-label="本页目录">
+      <div class="result-card evidence-toc-card">
+        <div class="table-label">本页目录</div>
+        <nav>
+          <a href="#main-content">摘要</a>
+          <a href="#evidence-tables">证据表格</a>
+          {% if detail.source_paths %}<a href="#source-review">复核路径</a>{% endif %}
+        </nav>
+      </div>
+    </section>
+
+    <div id="evidence-tables"></div>
     {% for table in detail.tables %}
     <section class="section evidence-section-compact">
       <div class="result-card evidence-detail-table">
         <div class="table-label">{{ table.title }}</div>
-        {% if table.source_path %}<div class="evidence-source-line">{{ table.source_path }}</div>{% endif %}
+        {% if table.source_path %}<div class="evidence-source-line">复核来源：{{ table.source_path }}</div>{% endif %}
         {% if table.rows %}
+        {% if table.key == 'hypothesis_verdicts' %}
+        <div class="evidence-verdict-card-grid">
+          {% for row in table.display_rows %}
+          <article class="evidence-verdict-card" data-verdict="{{ row.verdict }}">
+            <div class="evidence-verdict-id">{{ row.hid }}</div>
+            <h3>{{ row.name_cn }}</h3>
+            <p><strong>假说裁决：</strong>{{ row.verdict }}</p>
+            {% if row.evidence_tier %}<p><strong>写作层级：</strong>{{ row.evidence_tier }}</p>{% endif %}
+            {% if row.evidence_summary %}<p>{{ row.evidence_summary }}</p>{% endif %}
+          </article>
+          {% endfor %}
+        </div>
+        <details class="details-panel evidence-full-table-details" data-details-key="evidence-{{ table.key }}">
+          <summary>
+            <div>
+              <div class="details-kicker">完整表格</div>
+              <div class="details-title">展开 H1-H7 裁决明细</div>
+              <div class="details-copy">卡片用于默认阅读，完整字段保留给复核与导出比对。</div>
+            </div>
+            <div class="details-toggle" data-details-toggle>展开表格</div>
+          </summary>
+          <div class="details-panel-body">
+        {% endif %}
         <div class="table-wrap">
           <table>
             <thead>
@@ -98,9 +140,7 @@
                 {% for col in table.columns %}
                 <td>
                   {% set value = row[col] %}
-                  {% if value is number %}
-                    {% if value is integer %}{{ value }}{% else %}{{ '%.4f'|format(value) }}{% endif %}
-                  {% elif value is none %}—{% else %}{{ value }}{% endif %}
+                  {{ value|display_cell(col) }}
                 </td>
                 {% endfor %}
               </tr>
@@ -108,6 +148,10 @@
             </tbody>
           </table>
         </div>
+        {% if table.key == 'hypothesis_verdicts' %}
+          </div>
+        </details>
+        {% endif %}
         <div class="evidence-source-line">显示 {{ table.shown_rows }} / {{ table.total_rows }} 行</div>
         {% else %}
         <div class="surface-empty">当前明细表暂无可展示的数据行。</div>
@@ -115,6 +159,7 @@
       </div>
     </section>
     {% endfor %}
+    <a class="back-to-top" href="#main-content" aria-label="返回页面顶部">返回顶部</a>
   </main>
 </body>
 </html>

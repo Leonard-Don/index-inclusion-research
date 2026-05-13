@@ -15,6 +15,7 @@
         <a href="{{ url_for('home') }}">首页总览</a>
         <a href="{{ url_for('home', _anchor='framework') }}">文献框架</a>
         <a href="{{ url_for('home', _anchor='supplement') }}">机制补充</a>
+        <a href="#paper-structure">本页目录</a>
       </nav>
       <div class="table-density-panel" data-table-density-panel>
         <div class="table-density-label">表格阅读</div>
@@ -25,6 +26,14 @@
         <div class="table-density-note">长表可横向滚动，首列已固定。</div>
       </div>
     </div>
+
+    <nav id="paper-structure" class="paper-sticky-toc" aria-label="单篇文献页目录">
+      <a href="#main-content">开头定位</a>
+      <a href="#paper-contribution">核心解读</a>
+      {% if current.verdict_citations %}<a href="#paper-verdicts">机制假说</a>{% endif %}
+      <a href="#paper-chain">文献链</a>
+      <a href="#paper-tables">结构化信息</a>
+    </nav>
 
     <section class="hero">
       <div class="hero-grid">
@@ -48,6 +57,9 @@
             {% for paragraph in current.summary_paragraphs %}
             <p class="{% if loop.first %}summary-title{% endif %}">{{ paragraph }}</p>
             {% endfor %}
+            {% if current.acronym_note %}
+            <p class="acronym-note">{{ current.acronym_note }}</p>
+            {% endif %}
           </div>
           {% elif current.summary_text %}
           <div class="hero-summary"><p>{{ current.summary_text }}</p></div>
@@ -70,7 +82,7 @@
     </section>
 
     {% if current.summary_cards %}
-    <section class="section">
+    <section class="section" id="paper-contribution">
       <div class="section-head">
         <div>
           <div class="section-kicker">核心解读</div>
@@ -92,7 +104,7 @@
     {% endif %}
 
     {% if current.verdict_citations %}
-    <section class="section">
+    <section class="section" id="paper-verdicts">
       <div class="section-head">
         <div>
           <div class="section-kicker">跨市场假说证据</div>
@@ -119,7 +131,7 @@
                 'limit_coef p': '涨跌停系数 p 值',
                 'heavy−light spread': '重权重−轻权重差'
               }.get(cit.key_label, cit.key_label) %}
-              <span class="paper-verdict-key">{{ key_label_text }} = {{ '%.3f'|format(cit.key_value) }}{% if cit.n_obs and cit.n_obs > 0 %} (n={{ cit.n_obs }}){% endif %}</span>
+              <span class="paper-verdict-key">{{ key_label_text }} = {{ cit.key_value|display_cell(cit.key_label) }}{% if cit.n_obs and cit.n_obs > 0 %} (n={{ cit.n_obs|display_cell('n_obs') }}){% endif %}</span>
               {% endif %}
             </div>
           </div>
@@ -131,7 +143,7 @@
     {% endif %}
 
     {% if current.sequence_cards or current.recommended_cards %}
-    <section class="section">
+    <section class="section" id="paper-chain">
       <div class="section-head">
         <div>
           <div class="section-kicker">文献链</div>
@@ -239,7 +251,7 @@
     </section>
     {% endif %}
 
-    <section class="section">
+    <section class="section" id="paper-tables">
       <div class="section-head">
         <div>
           <div class="section-kicker">结构化信息</div>
@@ -251,6 +263,7 @@
         {% for label, html_table in current.rendered_tables %}
         <div class="table-card {% if loop.first %}primary{% endif %}">
           <h3>{{ label }}</h3>
+          <div class="table-conclusion">本表结论：优先核对论文定位、识别对象与项目用途；更多原文细节通过 PDF 复核。</div>
           <div class="table-wrap">{{ html_table|safe }}</div>
           <div class="table-scroll-note" data-table-scroll-note hidden>可左右滚动，首列已固定</div>
         </div>
@@ -258,6 +271,7 @@
       </div>
       <div class="note">如需核对原文细节，可经由上方 PDF 入口查阅；本页侧重阐述该文献在争论链条中的站位及其对本项目的价值。</div>
     </section>
+    <a class="back-to-top" href="#main-content" aria-label="返回页面顶部">返回顶部</a>
   </main>
   <script src="{{ url_for('static', filename='paper.js') }}" defer></script>
 </body>

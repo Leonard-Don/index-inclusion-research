@@ -36,6 +36,38 @@ def test_render_table_applies_column_and_value_labels() -> None:
     assert "是" in html
 
 
+def test_render_table_formats_numbers_for_dashboard_reading() -> None:
+    frame = pd.DataFrame(
+        [
+            {
+                "n_obs": 1234.0,
+                "p_value": 0.012345,
+                "tiny_p_value": 0.00001,
+                "mean_car": 0.123456,
+                "share_of_baseline": 1.0,
+                "coverage": 0.0,
+                "retention_ratio": 1.0,
+                "year": 2026.0,
+                "missing": float("nan"),
+            }
+        ]
+    )
+
+    html = dashboard_formatting.render_table(frame, compact=True)
+
+    assert "1,234" in html
+    assert "0.012" in html
+    assert "&lt;0.0001" in html
+    assert "<td><0.0001</td>" not in html
+    assert "0.12" in html
+    assert "100.00%" in html
+    assert "0.00%" in html
+    assert "2026" in html
+    assert "2,026" not in html
+    assert ">nan<" not in html.lower()
+    assert "—" in html
+
+
 def test_build_figure_caption_uses_dashboard_labels() -> None:
     caption = dashboard_formatting.build_figure_caption(
         Path("results/real_figures/sample_event_timeline.png"),

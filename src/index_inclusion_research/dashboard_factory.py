@@ -5,7 +5,7 @@ from pathlib import Path
 
 from flask import Flask
 
-from index_inclusion_research import dashboard_config
+from index_inclusion_research import dashboard_config, dashboard_formatting
 from index_inclusion_research.chart_data import build_chart_data
 from index_inclusion_research.dashboard_refresh_coordinator import (
     DashboardRefreshCoordinator,
@@ -96,12 +96,14 @@ def create_dashboard_app(
     static_folder: str,
     static_url_path: str = "/static",
 ) -> Flask:
-    return Flask(
+    app = Flask(
         import_name,
         template_folder=template_folder,
         static_folder=static_folder,
         static_url_path=static_url_path,
     )
+    app.jinja_env.filters["display_cell"] = dashboard_formatting.format_display_cell
+    return app
 
 
 def build_dashboard_shell(

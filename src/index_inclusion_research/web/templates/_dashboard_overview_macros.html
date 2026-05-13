@@ -69,7 +69,7 @@
 {% endif %}
 {%- endmacro %}
 
-{% macro render_refresh_status_panel(refresh_meta, pap_meta=none) -%}
+{% macro render_refresh_status_panel(refresh_meta, pap_meta=none, mode='demo') -%}
 {% set contract_tone = "ok" if refresh_meta.contract_status_label == "结果状态已同步" else ("neutral" if not refresh_meta.contract_status_label else "warning") %}
 {% set health_label = refresh_meta.health_status_label or "" %}
 {% set health_tone = "ok" if "良好" in health_label else ("missing" if "缺项" in health_label else ("neutral" if not health_label else "warning")) %}
@@ -110,6 +110,7 @@
     </div>
     {{ render_pap_status_pill(pap_meta) }}
   </div>
+  {% if mode != 'brief' %}
   <div class="hero-status-inline">
     <div class="hero-status-inline-item">
       <span>更新范围</span>
@@ -126,12 +127,25 @@
       </strong>
     </div>
   </div>
+  {% else %}
+  <div class="hero-status-inline hero-status-inline-brief">
+    <div class="hero-status-inline-item">
+      <span>流水线状态</span>
+      <strong data-refresh-scope-label>{{ refresh_meta.scope_label }}</strong>
+    </div>
+    <div class="hero-status-inline-item">
+      <span>数据状态</span>
+      <strong data-refresh-snapshot-source>核心结果已就绪</strong>
+    </div>
+  </div>
+  {% endif %}
+  {% if mode != 'brief' %}
   <details class="details-panel hero-details" data-details-key="hero_refresh_status">
     <summary>
       <div>
-        <div class="details-kicker">更新记录</div>
-        <div class="details-title">刷新时间与更新内容</div>
-        <div class="details-copy">确认刷新状态后，可按需查阅具体更新产物。</div>
+        <div class="details-kicker">复核路径 / 开发者详情</div>
+        <div class="details-title">刷新时间、契约说明与更新内容</div>
+        <div class="details-copy">默认收起内部产物细节；需要复核路径、刷新状态或开发者诊断时再展开。</div>
       </div>
       <div class="details-toggle" data-details-toggle>展开细节</div>
     </summary>
@@ -198,10 +212,45 @@
       </div>
     </div>
   </details>
+  {% endif %}
 </div>
 {%- endmacro %}
 
-{% macro render_hero_section(overview_summary, overview_metrics, refresh_meta, pap_meta=none) -%}
+{% macro render_brief_script_path(overview_summary) -%}
+<section class="brief-script-card" aria-label="三分钟汇报路径">
+  <div class="brief-script-head">
+    <div>
+      <div class="section-kicker">00:00-03:00 讲稿路径</div>
+      <h2>3 分钟只讲结论、三条证据、边界和关键数字。</h2>
+    </div>
+    <a href="#tracks">进入证据主线</a>
+  </div>
+  <div class="brief-script-grid">
+    <article>
+      <span>00:00-00:35</span>
+      <strong>先给结论</strong>
+      <p>{{ overview_summary }}</p>
+    </article>
+    <article>
+      <span>00:35-01:45</span>
+      <strong>三条证据</strong>
+      <p>美股公告日短期正向效应仍在；中国 A 股生效阶段更像制度摩擦场景；RDD 负责提示边界识别等级。</p>
+    </article>
+    <article>
+      <span>01:45-02:30</span>
+      <strong>边界说明</strong>
+      <p>事件研究和匹配回归说明现象，RDD/CMA 只在证据等级足够时进入主结论；证据不足的假说不能说成通过。</p>
+    </article>
+    <article>
+      <span>02:30-03:00</span>
+      <strong>关键数字</strong>
+      <p>优先引用首页 KPI、短窗口 CAR、CMA 假说分布与 RDD 证据层级；细表、路径和刷新记录留到复核环节。</p>
+    </article>
+  </div>
+</section>
+{%- endmacro %}
+
+{% macro render_hero_section(overview_summary, overview_metrics, refresh_meta, pap_meta=none, mode='demo') -%}
 <section class="hero" id="overview" data-waypoint data-waypoint-kind="section" data-waypoint-label="总览">
   <div class="hero-copy">
     <div class="eyebrow">研究总览</div>
@@ -219,10 +268,13 @@
   <div class="hero-side">
     <div class="hero-side-inner">
       {{ render_hero_metrics(overview_metrics) }}
-      {{ render_refresh_status_panel(refresh_meta, pap_meta) }}
+      {{ render_refresh_status_panel(refresh_meta, pap_meta, mode) }}
     </div>
   </div>
 </section>
+{% if mode == 'brief' %}
+{{ render_brief_script_path(overview_summary) }}
+{% endif %}
 {%- endmacro %}
 
 {% macro render_pap_status_pill(pap_meta) -%}
@@ -248,7 +300,13 @@
   <div class="utility-copy">
     <div class="utility-kicker">阅读控制</div>
     <div class="utility-title">选择阅读深度</div>
-    <div class="utility-text">根据阅读需求选择汇报深度，并按需刷新数据结果或调整表格展示密度。</div>
+    <div class="utility-text">
+      {% if mode == 'brief' %}
+      当前为 3 分钟汇报模式，只保留可直接讲述的结论路径。
+      {% else %}
+      根据阅读需求选择汇报深度，并按需刷新数据结果或调整表格展示密度。
+      {% endif %}
+    </div>
   </div>
   <div class="utility-actions">
     <div class="utility-mode-stack">
@@ -262,13 +320,16 @@
           data-allowed-hashes="{{ item.allowed_hashes|join(',') }}"
           class="{% if item.active %}active{% endif %}"
           href="{{ item.href }}"
-          {% if item.active %}aria-current="page"{% endif %}
+        {% if item.active %}aria-current="page"{% endif %}
         >{{ item.label }}</a>
         {% endfor %}
+        {% if mode != 'brief' %}
         {{ shared.render_refresh_form(url_for('refresh_dashboard', mode=mode), "overview", "刷新当前结果快照", "all", "正在刷新当前结果快照…") }}
+        {% endif %}
       </nav>
       <div class="utility-mode-note">简版提炼核心结论（适于 3 分钟速读）；展示版梳理研究主线；完整版提供详实的证据核对与边界探讨。</div>
     </div>
+    {% if mode != 'brief' %}
     <div class="table-density-panel" data-table-density-panel>
       <div class="table-density-label">表格阅读</div>
       <div class="table-density-switch" role="toolbar" aria-label="表格密度切换">
@@ -277,6 +338,7 @@
       </div>
       <div class="table-density-note">长表支持横向滚动并已固定首列；核对数据时建议切换至紧凑视图以提升阅读效率。</div>
     </div>
+    {% endif %}
   </div>
 </section>
 {%- endmacro %}
@@ -325,7 +387,9 @@
     <h3>文献脉络、真实样本、研究结果与识别边界均汇聚于此。</h3>
     <p>{{ cta_copy }}</p>
   </div>
+  {% if mode != 'brief' %}
   {{ shared.render_refresh_form(url_for('refresh_dashboard', mode=mode), "overview", "重新生成全部研究材料", "all", "正在重新生成全部研究材料…") }}
+  {% endif %}
 </section>
 {%- endmacro %}
 

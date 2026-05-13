@@ -745,8 +745,8 @@ def test_paper_route_now_renders_brief_before_pdf() -> None:
     assert "后一篇" in html
     assert "当前这篇" in html
     assert "同主线延伸" in html or "同阵营延伸" in html or "跨主线参照" in html
-    assert "回看上一环" in html
-    assert "继续下一环" in html
+    assert "回看上一篇" in html
+    assert "继续阅读下一篇" in html
     assert "查看相关论文" in html
     assert "文献链导航" in html
     assert "默认展开当前文献所在分组" in html
@@ -834,9 +834,10 @@ def test_frontend_copy_uses_clear_ctas_and_formats_public_tables() -> None:
     assert "重新生成全部研究材料" in home
     assert "刷新结果" not in home
     assert "刷新全部材料" not in home
-    assert "导入候选名单并更新 RDD 状态" in rdd_workbench
+    assert "确认写入正式样本并刷新 RDD" in rdd_workbench
     assert "写入并刷新 RDD 状态" not in rdd_workbench
-    assert "将写入正式候选样本文件，并重新生成 RDD 状态与候选审计结果。" in rdd_workbench
+    assert "高影响写入" in rdd_workbench
+    assert "将更新正式候选样本文件，并重新生成 RDD 状态与候选审计结果。" in rdd_workbench
     assert "请运行 `index-inclusion-collect-hs300-rdd-l3 --force`" not in rdd_workbench
     assert "请运行 index-inclusion-collect-hs300-rdd-l3 --force" in rdd_workbench
     assert "你提供的" not in home + rdd_workbench
