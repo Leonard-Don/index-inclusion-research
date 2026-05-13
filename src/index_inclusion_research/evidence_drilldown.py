@@ -25,6 +25,36 @@ def _relative_label(path: Path, *, root: Path) -> str:
         return str(path)
 
 
+_SOURCE_LABELS = {
+    "cma_hypothesis_verdicts.csv": "CMA 假说裁决表",
+    "cma_gap_event_level.csv": "CMA 缺口事件层",
+    "cma_mechanism_panel.csv": "CMA 机制面板",
+    "cma_h6_weight_explanation.csv": "H6 权重解释表",
+    "cma_h6_weight_robustness.csv": "H6 权重稳健性表",
+    "cma_h7_sector_interaction.csv": "H7 行业交互回归",
+    "evidence_refresh_manifest.json": "证据刷新清单",
+    "hs300_rdd_candidates.csv": "正式候选样本",
+    "hs300_rdd_candidates.reconstructed.csv": "公开重建样本",
+    "hs300_weight_change.csv": "沪深300权重变化",
+    "match_balance.csv": "默认匹配平衡",
+    "match_robustness_balance.csv": "匹配稳健性平衡表",
+    "match_robustness_grid.csv": "匹配稳健性规格表",
+    "match_robustness_summary.md": "匹配稳健性摘要",
+    "passive_aum.csv": "被动资金规模数据",
+    "candidate_batch_audit.csv": "候选样本批次审计",
+    "real_events.csv": "真实事件样本",
+    "real_matched_events.csv": "已匹配事件样本",
+    "real_metadata.csv": "A股行业元数据",
+    "real_prices.csv": "真实价格历史",
+    "rdd_status.csv": "RDD 状态",
+    "results_manifest.csv": "结果状态清单",
+}
+
+
+def _source_label(path: Path) -> str:
+    return _SOURCE_LABELS.get(path.name, path.stem.replace("_", " "))
+
+
 def _read_csv(path: Path) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame()
@@ -93,6 +123,11 @@ def _column_labels(columns: list[str]) -> dict[str, str]:
     return {column: dashboard_formatting.display_column_label(column) for column in columns}
 
 
+def _display_text(value: object) -> str:
+    display = dashboard_formatting.display_value_label(value)
+    return "" if display is None else str(display)
+
+
 def _table_payload(
     key: str,
     title: str,
@@ -107,7 +142,7 @@ def _table_payload(
     return {
         "key": key,
         "title": title,
-        "source_path": _relative_label(source_path, root=root) if source_path else "",
+        "source_path": _source_label(source_path) if source_path else "",
         "columns": columns,
         "column_labels": _column_labels(columns),
         "rows": records,
@@ -146,8 +181,8 @@ def _base_detail(root: Path, item: str, manifest: dict[str, Any]) -> dict[str, A
         "label": str(row.get("label", item) or item),
         "status": str(row.get("status", "")),
         "status_label": dashboard_formatting.display_status_label(row.get("status", "")),
-        "value": str(row.get("value", "")),
-        "detail": str(row.get("detail", "")),
+        "value": _display_text(row.get("value", "")),
+        "detail": _display_text(row.get("detail", "")),
         "generated_at": str(manifest.get("generated_at", "")),
         "source_paths": [],
         "summary_cards": [],
@@ -161,7 +196,7 @@ def _base_detail(root: Path, item: str, manifest: dict[str, Any]) -> dict[str, A
 def _add_source(detail: dict[str, Any], path: Path, *, root: Path) -> None:
     detail["source_paths"].append(
         {
-            "label": _relative_label(path, root=root),
+            "label": _source_label(path),
             "exists": path.exists(),
             "href": f"/files/{_relative_label(path, root=root)}" if path.exists() else "",
         }
@@ -188,7 +223,7 @@ def _detail_h2(detail: dict[str, Any], *, root: Path) -> None:
             _table_payload("aum_market_summary", "AUM 市场覆盖摘要", summary, root=root)
         )
     detail["tables"].append(
-        _table_payload("passive_aum_rows", "passive_aum.csv 预览", frame, source_path=path, root=root)
+        _table_payload("passive_aum_rows", "被动资金规模数据预览", frame, source_path=path, root=root)
     )
 
 
@@ -330,7 +365,7 @@ def _detail_rdd(detail: dict[str, Any], *, root: Path) -> None:
             ),
         ]
     )
-    detail["notes"].append("L3 只有在 data/raw/hs300_rdd_candidates.csv 为正式候选排名表时才会显示为通过。")
+    detail["notes"].append("L3 只有在正式候选排名表通过校验时才会显示为通过。")
 
 
 def _detail_verdicts(detail: dict[str, Any], *, root: Path) -> None:

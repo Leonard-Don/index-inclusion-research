@@ -75,6 +75,9 @@ def test_candidate_preflight_result_uses_prepare_script_contract(tmp_path: Path)
 
     assert result["preflight"]["status"] == "warning"
     assert result["preflight"]["status_label"] == "可接入但需补充"
+    assert result["input_label"] == "候选名单上传件"
+    assert all("/" not in command for command in result["preflight"]["next_commands"])
+    assert any(command == "index-inclusion-prepare-hs300-rdd --force" for command in result["preflight"]["next_commands"])
     assert result["audit_summary"]["candidate_batches"] == 1
     assert result["candidate_preview"]["rows"][0]["ticker"] == "000686"
 
@@ -132,7 +135,7 @@ def test_workbench_context_uses_supplied_root_paths(tmp_path: Path) -> None:
     assert context["status"]["mode"] == "missing"
     assert context["collection_status"]["status"] == "missing"
     assert context["online_collection_status"]["status"] == "missing"
-    assert context["collection_status"]["paths"][0]["label"].startswith("results/literature")
+    assert context["collection_status"]["paths"][0]["label"] == "采集计划"
     assert context["collection_tables"][0]["key"] == "batch_collection_checklist"
     assert context["online_collection_tables"][0]["key"] == "online_year_coverage"
     assert context["online_collection_tables"][1]["key"] == "online_source_audit"
@@ -140,7 +143,7 @@ def test_workbench_context_uses_supplied_root_paths(tmp_path: Path) -> None:
     assert context["online_collection_tables"][3]["key"] == "online_gap_source_hints"
     assert context["collection_tables"][0]["rows"] == []
     assert context["online_collection_tables"][0]["rows"] == []
-    assert context["import_paths"][0]["label"] == "data/raw/hs300_rdd_candidates.csv"
+    assert context["import_paths"][0]["label"] == "正式候选样本"
 
 
 def test_refresh_collection_package_builds_browser_workbench_artifacts(tmp_path: Path) -> None:
@@ -157,8 +160,8 @@ def test_refresh_collection_package_builds_browser_workbench_artifacts(tmp_path:
     assert result["boundary_reference_rows"] == 2
     assert result["status"]["status"] == "ready"
     written = {path["label"] for path in result["written_paths"]}
-    assert "results/literature/hs300_rdd_l3_collection/collection_plan.md" in written
-    assert "results/literature/hs300_rdd_l3_collection/formal_candidate_template.csv" in written
+    assert "采集计划" in written
+    assert "正式样本模板" in written
 
     context = rdd_l3_workbench.build_rdd_l3_workbench_context(root=tmp_path)
     tables = {table["key"]: table for table in context["collection_tables"]}
@@ -239,7 +242,7 @@ def test_refresh_online_collection_uses_root_paths_and_extra_terms(monkeypatch, 
     assert result["status"] == "parsed"
     assert result["hint_rows"] == 1
     assert result["online_status"]["status"] == "ready"
-    assert any(path["label"].endswith("online_gap_source_hints.csv") for path in result["written_paths"])
+    assert any(path["label"] == "线上缺口来源入口" for path in result["written_paths"])
 
 
 def test_workbench_context_surfaces_online_collection_diagnostics(tmp_path: Path) -> None:

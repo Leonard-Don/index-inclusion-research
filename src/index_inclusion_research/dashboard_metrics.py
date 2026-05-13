@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from index_inclusion_research import dashboard_loaders
+from index_inclusion_research import dashboard_formatting, dashboard_loaders
 from index_inclusion_research.dashboard_types import (
     FormatPct,
     FormatPValue,
@@ -31,21 +31,15 @@ from index_inclusion_research.supplementary import (
 
 
 def _hs300_rdd_prepare_check_command() -> str:
-    return "index-inclusion-prepare-hs300-rdd --input /path/to/raw_candidates.xlsx --sheet 0 --check-only"
+    return "index-inclusion-prepare-hs300-rdd --check-only"
 
 
 def _hs300_rdd_prepare_import_command() -> str:
-    return (
-        "index-inclusion-prepare-hs300-rdd --input /path/to/raw_candidates.xlsx "
-        "--sheet 0 --output data/raw/hs300_rdd_candidates.csv --force"
-    )
+    return "index-inclusion-prepare-hs300-rdd --force"
 
 
 def _hs300_rdd_reconstruct_command() -> str:
-    return (
-        "index-inclusion-reconstruct-hs300-rdd --all-batches "
-        "--output data/raw/hs300_rdd_candidates.reconstructed.csv --force"
-    )
+    return "index-inclusion-reconstruct-hs300-rdd --all-batches --force"
 
 
 def _build_retention_ratio_card(
@@ -421,7 +415,7 @@ def _contract_field_label(field: str) -> str:
         "evidence_status": "证据状态",
         "source_kind": "来源类型",
         "source_label": "来源摘要",
-        "source_file": "来源文件",
+        "source_file": "来源摘要",
         "coverage_note": "覆盖说明",
         "candidate_rows": "候选样本数",
         "candidate_batches": "候选批次数",
@@ -435,16 +429,15 @@ def _contract_field_label(field: str) -> str:
 def _contract_consistency_copy(contract_check: RddContractCheck | None) -> str:
     if contract_check is None:
         return "当前未附带结果状态校验；页面展示以当前识别状态为准。"
-    manifest_path = contract_check["manifest_path"]
     if not contract_check["manifest_exists"]:
-        return f"未找到 {manifest_path}；页面展示以当前识别状态为准。"
+        return "未找到结构化结果状态；页面展示以当前识别状态为准。"
     if contract_check["matches"]:
-        return f"已校验：{manifest_path} 与当前识别状态一致。"
+        return "已校验：结构化结果状态与当前识别状态一致。"
     mismatch_labels = "、".join(
         _contract_field_label(field) for field in contract_check["mismatched_fields"]
     )
     return (
-        f"发现 {manifest_path} 与当前识别状态在 {mismatch_labels} 上不一致；"
+        f"发现结构化结果状态与当前识别状态在 {mismatch_labels} 上不一致；"
         "页面展示仍以当前识别状态为准，建议重跑 index-inclusion-make-figures-tables 和 "
         "index-inclusion-generate-research-report。"
     )
@@ -456,6 +449,7 @@ def build_identification_status_panel(
     contract_check: RddContractCheck | None = None,
 ) -> StatusPanel | None:
     mode = rdd_status["mode"]
+    status_message = str(dashboard_formatting.display_value_label(rdd_status.get("message", "")) or "")
     if rdd_status.get("candidate_batches"):
         sample_overview = (
             f"当前已识别 {rdd_status['candidate_batches']} 个候选批次、"
@@ -481,25 +475,23 @@ def build_identification_status_panel(
             f"如果手头没有官方名单，也可以先运行 {_hs300_rdd_reconstruct_command()} 生成公开重建样本，进入 L2 证据等级。"
         )
     contract_copy = (
-        "模板文件为 data/raw/hs300_rdd_candidates.template.csv；"
-        "必需列已固定为批次 ID、公告日、运行变量、断点、调入标记等字段。"
+        "候选名单模板已固定；必需列包括批次 ID、公告日、运行变量、断点、调入标记等字段。"
     )
     if rdd_status.get("audit_file"):
         contract_copy = (
-            f"{contract_copy} 当前已生成候选样本审计：{rdd_status['audit_file']}。"
+            f"{contract_copy} 当前已生成候选样本审计。"
         )
-    provenance_summary = rdd_provenance_summary(rdd_status)
+    provenance_summary = str(dashboard_formatting.display_value_label(rdd_provenance_summary(rdd_status)) or "")
     source_meta = (
-        provenance_summary or str(rdd_status.get("source_label", "")) or "待补候选样本"
+        provenance_summary
+        or str(dashboard_formatting.display_value_label(rdd_status.get("source_label", "")) or "")
+        or "待补候选样本"
     )
-    source_file = str(rdd_status.get("source_file", "")) or str(
-        rdd_status.get("input_file", "")
-    )
-    if source_file:
-        source_meta = f"{source_meta} · 文件 {source_file}"
     if rdd_status.get("generated_at"):
         source_meta = f"{source_meta} · 生成于 {rdd_status['generated_at']}"
-    coverage_meta = str(rdd_status.get("coverage_note", "")).strip() or sample_overview
+    coverage_meta = str(
+        dashboard_formatting.display_value_label(rdd_status.get("coverage_note", "")) or ""
+    ).strip() or sample_overview
     tier = str(rdd_status.get("evidence_tier", "")) or rdd_evidence_tier(mode)
     if mode == "real":
         tone = "official"
@@ -507,14 +499,14 @@ def build_identification_status_panel(
         signal_copy = (
             "正式候选样本已经通过校验，这里的 RDD 可以按官方口径直接纳入主结论。"
         )
-        panel_copy = f"{rdd_status['message']} 当前这版 RDD 已进入正式证据链，可与事件研究和匹配回归并列作为更强识别证据。"
+        panel_copy = f"{status_message} 当前这版 RDD 已进入正式证据链，可与事件研究和匹配回归并列作为更强识别证据。"
         entry_condition = "已满足：正式候选样本文件已通过字段与日期校验。"
     elif mode == "reconstructed":
         tone = "reconstructed"
         signal_value = f"{tier} · 公开重建样本"
         signal_copy = "当前已经有可读的边界样本结果，但必须明确标注为公开重建口径，不能写成官方候选排名表。"
         panel_copy = (
-            f"{rdd_status['message']} 当前这版 RDD 已进入公开数据版证据链，但应明确标注为公开重建样本，"
+            f"{status_message} 当前这版 RDD 已进入公开数据版证据链，但应明确标注为公开重建样本，"
             "而不是中证官方历史候选排名表。"
         )
         entry_condition = "当前已进入公开数据版证据链；如需升级为官方口径，请提供正式候选样本文件并通过校验。"
@@ -523,7 +515,7 @@ def build_identification_status_panel(
         signal_value = f"{tier} · 方法展示"
         signal_copy = "当前只用于展示识别框架、字段契约和运行链路，不进入正式证据链。"
         panel_copy = (
-            f"{rdd_status['message']} 退出 demo 模式后，可以通过正式候选样本进入 L3，"
+            f"{status_message} 退出 demo 模式后，可以通过正式候选样本进入 L3，"
             "也可以先通过公开重建样本进入 L2。"
         )
         entry_condition = (
@@ -536,7 +528,7 @@ def build_identification_status_panel(
             "当前首页只能展示事件研究与匹配回归；RDD 还没有进入正式或公开重建证据链。"
         )
         panel_copy = (
-            f"{rdd_status['message']} 当前还没有进入可读的边界证据；"
+            f"{status_message} 当前还没有进入可读的边界证据；"
             "后续可以通过正式候选样本进入 L3，或先通过公开重建样本进入 L2。"
         )
         entry_condition = (

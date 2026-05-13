@@ -182,7 +182,8 @@ def test_home_dashboard_renders_single_frontend_sections() -> None:
     assert "结果状态已同步" in html
     assert dashboard.runtime.load_rdd_status()["evidence_status"] in html
     assert dashboard.runtime.load_rdd_status()["source_label"] in html
-    assert "results/real_tables/results_manifest.csv" in html
+    assert "结构化结果状态" in html
+    assert "results/real_tables/results_manifest.csv" not in html
     assert 'width="1600"' not in html
     assert 'height="1000"' not in html
     assert 'width="2684"' in html

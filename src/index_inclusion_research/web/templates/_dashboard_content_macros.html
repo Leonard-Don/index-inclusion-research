@@ -2,6 +2,14 @@
 
 {% macro cma_display_text(text) -%}
 {{ (text or '')
+  | replace('data/raw/hs300_rdd_candidates.reconstructed.csv', '公开重建样本')
+  | replace('data/raw/hs300_rdd_candidates.csv', '正式候选样本')
+  | replace('data/raw/passive_aum.csv', '被动资金规模数据')
+  | replace('results/real_tables', '结果表')
+  | replace('hs300_rdd_candidates.reconstructed.csv', '公开重建样本')
+  | replace('hs300_rdd_candidates.csv', '正式候选样本')
+  | replace('cma_h6_weight_robustness.csv', 'H6 权重稳健性表')
+  | replace('cma_h7_sector_interaction.csv', 'H7 行业交互回归')
   | replace('US sector spread', '美股行业分化差值')
   | replace('CN/US', '中国 A 股 / 美国')
   | replace('US AUM ratio', '美股 AUM 倍数')
@@ -133,7 +141,7 @@
 {{ render_collapsible_table_group(
   "limits-artifact-index",
   "原始产物索引",
-  "列出后端结果、输入与维护产物的路径、类型、更新时间及前端状态；提供可追溯的审计与自查依据，作为研究过程的辅助参考。",
+  "列出后端结果、输入与维护产物的类型、更新时间及前端状态；提供可追溯的审计与自查依据，作为研究过程的辅助参考。",
   limits_section.artifact_tables,
   "library-panels",
   "完整索引",

@@ -211,6 +211,11 @@ COLUMN_LABELS = {
     "source_kind": "来源类型",
     "source_label": "来源名称",
     "source_url": "来源 URL",
+    "source_file": "来源摘要",
+    "input_file": "输入材料",
+    "audit_file": "审计材料",
+    "next_check_command": "预检命令",
+    "import_command": "写入命令",
     "announcement_id": "公告 ID",
     "publish_date": "发布日期",
     "title": "标题",
@@ -284,6 +289,28 @@ COLUMN_LABELS = {
     "fix": "修复建议",
     "claim": "核对声明",
 }
+
+PATH_TEXT_REPLACEMENTS = (
+    ("data/raw/hs300_rdd_candidates.reconstructed.csv", "公开重建样本"),
+    ("data/raw/hs300_rdd_candidates.csv", "正式候选样本"),
+    ("results/literature/hs300_rdd/candidate_batch_audit.csv", "候选样本审计"),
+    ("results/real_tables", "结果表"),
+    ("data/raw/passive_aum.csv", "被动资金规模数据"),
+    ("hs300_rdd_candidates.reconstructed.csv", "公开重建样本"),
+    ("hs300_rdd_candidates.csv", "正式候选样本"),
+    ("cma_h6_weight_robustness.csv", "H6 权重稳健性表"),
+    ("cma_h7_sector_interaction.csv", "H7 行业交互回归"),
+)
+
+
+def _display_command_label(text: str) -> str | None:
+    if "index-inclusion-prepare-hs300-rdd" not in text:
+        return None
+    if "--force" in text:
+        return "index-inclusion-prepare-hs300-rdd --force"
+    if "--check-only" in text:
+        return "index-inclusion-prepare-hs300-rdd --check-only"
+    return "index-inclusion-prepare-hs300-rdd"
 
 STATUS_LABELS = {
     "pass": "通过",
@@ -516,9 +543,14 @@ def display_value_label(value: object) -> object:
     if isinstance(value, bool):
         return "是" if value else "否"
     text = str(value)
+    command_label = _display_command_label(text)
+    if command_label is not None:
+        return command_label
     labeled = VALUE_LABELS.get(text, text)
     if not isinstance(labeled, str):
         return labeled
+    for old, new in PATH_TEXT_REPLACEMENTS:
+        labeled = labeled.replace(old, new)
     for old, new in TEXT_REPLACEMENTS:
         labeled = labeled.replace(old, new)
     return labeled
@@ -587,6 +619,8 @@ def clean_display_text(text: str) -> str:
         if "/Users/" in line:
             continue
         line = line.replace("`", "").lstrip("- ").strip()
+        for old, new in PATH_TEXT_REPLACEMENTS:
+            line = line.replace(old, new)
         if line:
             lines.append(line)
     return "\n".join(lines).strip()

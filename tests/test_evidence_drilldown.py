@@ -49,6 +49,8 @@ def test_h2_evidence_detail_reads_passive_aum(tmp_path: Path) -> None:
     assert detail is not None
     assert detail["label"] == "H2_passive_aum"
     assert detail["tables"][0]["key"] == "aum_market_summary"
+    assert detail["tables"][1]["source_path"] == "被动资金规模数据"
+    assert "passive_aum.csv" not in detail["tables"][1]["title"]
     assert detail["tables"][0]["rows"][0]["market"] == "US"
     assert detail["tables"][0]["column_labels"]["latest_aum_trillion"] == "最新 AUM（万亿美元）"
 
@@ -152,6 +154,8 @@ def test_rdd_evidence_detail_surfaces_live_status(tmp_path: Path) -> None:
     assert detail is not None
     assert detail["summary_cards"][0]["value"] == "L2"
     assert detail["tables"][0]["key"] == "rdd_status"
+    assert detail["tables"][0]["source_path"] == "RDD 状态"
+    assert all("data/raw/" not in note for note in detail["notes"])
 
 
 def test_match_robustness_evidence_detail_surfaces_grid_and_balance(tmp_path: Path) -> None:

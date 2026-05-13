@@ -97,11 +97,38 @@ def _read_first_csv_row(path: Path) -> dict[str, str]:
         return next(reader, {}) or {}
 
 
-def _path_label(root: Path, path: Path, to_relative: RelativePathBuilder) -> str:
-    try:
-        return to_relative(path)
-    except ValueError:
-        return str(path.relative_to(root)) if path.is_relative_to(root) else str(path)
+_ARTIFACT_LABELS = {
+    "event_study_summary.csv": "事件研究摘要",
+    "long_window_event_study_summary.csv": "长窗口摘要",
+    "regression_coefficients.csv": "回归系数表",
+    "identification_scope.csv": "识别范围说明",
+    "results_manifest.csv": "结果状态清单",
+    "research_summary.md": "研究摘要",
+    "cma_hypothesis_verdicts.csv": "CMA 假说裁决",
+    "summary.md": "复现摘要",
+    "rdd_status.csv": "RDD 状态",
+}
+
+
+def _artifact_group_label(relative_path: str) -> str:
+    if relative_path.startswith("results/real_tables/"):
+        return "结果表"
+    if relative_path.startswith("results/real_figures/"):
+        return "图表"
+    if relative_path.startswith("results/real_regressions/"):
+        return "回归结果"
+    if relative_path.startswith("results/literature/hs300_rdd/"):
+        return "RDD 输出"
+    if relative_path.startswith("results/literature/"):
+        return "文献复现"
+    if relative_path.startswith("data/raw/"):
+        return "输入数据"
+    return "核心产物"
+
+
+def _artifact_display_label(relative_path: str) -> str:
+    name = Path(relative_path).name
+    return _ARTIFACT_LABELS.get(name, name.rsplit(".", 1)[0].replace("_", " "))
 
 
 def _unique_commands(checks: list[ResultHealthCheck]) -> list[str]:
@@ -119,7 +146,6 @@ def _unique_commands(checks: list[ResultHealthCheck]) -> list[str]:
 def _rdd_l3_candidate_health(
     root: Path,
     *,
-    to_relative: RelativePathBuilder,
     contract_check: RddContractCheck | None,
 ) -> ResultHealthCheck:
     formal_path = root / "data" / "raw" / "hs300_rdd_candidates.csv"
@@ -128,12 +154,6 @@ def _rdd_l3_candidate_health(
     collection_checklist_path = root / "results" / "literature" / "hs300_rdd_l3_collection" / "batch_collection_checklist.csv"
     collection_template_path = root / "results" / "literature" / "hs300_rdd_l3_collection" / "formal_candidate_template.csv"
     collection_boundary_path = root / "results" / "literature" / "hs300_rdd_l3_collection" / "boundary_reference.csv"
-    formal_label = _path_label(root, formal_path, to_relative)
-    reconstructed_label = _path_label(root, reconstructed_path, to_relative)
-    collection_plan_label = _path_label(root, collection_plan_path, to_relative)
-    collection_checklist_label = _path_label(root, collection_checklist_path, to_relative)
-    collection_template_label = _path_label(root, collection_template_path, to_relative)
-    collection_boundary_label = _path_label(root, collection_boundary_path, to_relative)
     live_status: Mapping[str, object]
     if contract_check is None:
         live_status = {}
@@ -144,17 +164,17 @@ def _rdd_l3_candidate_health(
     rows = live_status.get("candidate_rows")
     batches = live_status.get("candidate_batches")
     refresh_command = "index-inclusion-hs300-rdd && index-inclusion-make-figures-tables && index-inclusion-generate-research-report && index-inclusion-cma"
-    import_command = "index-inclusion-prepare-hs300-rdd --input /path/to/raw_candidates.xlsx --check-only"
+    import_command = "index-inclusion-prepare-hs300-rdd --check-only"
     collection_command = "index-inclusion-plan-hs300-rdd-l3"
 
     if formal_path.exists():
         if mode == "real" or source_kind == "real":
             suffix = f"当前 RDD 已使用正式样本：{rows} 条候选、{batches} 个批次。" if rows and batches else "当前 RDD 已使用正式样本。"
-            return _health_check("RDD L3 正式样本", "ok", f"{formal_label} 可用，{suffix}")
+            return _health_check("RDD L3 正式样本", "ok", f"正式候选样本可用，{suffix}")
         return _health_check(
             "RDD L3 正式样本",
             "warning",
-            f"{formal_label} 已存在，但当前 RDD 状态仍是 {mode or source_kind or '未知'}；需要重跑识别和主结果。",
+            f"正式候选样本已存在，但当前 RDD 状态仍是 {mode or source_kind or '未知'}；需要重跑识别和主结果。",
             refresh_command,
         )
 
@@ -170,23 +190,22 @@ def _rdd_l3_candidate_health(
                 "RDD L3 正式样本",
                 "warning",
                 (
-                    f"未找到 {formal_label}；当前只能使用 {reconstructed_label} 的 L2 公开重建样本。"
-                    f"L3 采集包已就绪：{collection_plan_label}、{collection_checklist_label}、"
-                    f"{collection_template_label}、{collection_boundary_label}。"
+                    "未找到正式候选样本；当前只能使用 L2 公开重建样本。"
+                    "L3 采集包已就绪，可按采集计划继续补正式样本。"
                 ),
                 import_command,
             )
         return _health_check(
             "RDD L3 正式样本",
             "warning",
-            f"未找到 {formal_label}；当前只能使用 {reconstructed_label} 的 L2 公开重建样本。",
+            "未找到正式候选样本；当前只能使用 L2 公开重建样本。",
             collection_command,
         )
 
     return _health_check(
         "RDD L3 正式样本",
         "missing",
-        f"未找到 {formal_label}，也未找到 {reconstructed_label}。",
+        "未找到正式候选样本，也未找到公开重建样本。",
         import_command,
     )
 
@@ -231,12 +250,11 @@ def build_result_health(
     ]
     checks: list[ResultHealthCheck] = []
     for label, path, command in required:
-        relative = _path_label(root, path, to_relative)
         if path.exists():
             modified = refresh_artifact_modified_at(path)
-            checks.append(_health_check(label, "ok", f"{relative} 可用，最近修改：{modified}。"))
+            checks.append(_health_check(label, "ok", f"{label}可用，最近修改：{modified}。"))
         else:
-            checks.append(_health_check(label, "missing", f"未找到 {relative}。", command))
+            checks.append(_health_check(label, "missing", f"未找到{label}。", command))
 
     if contract_check is None:
         checks.append(_health_check("RDD/结果清单契约", "warning", "本次状态未附带 RDD 契约检查。"))
@@ -245,7 +263,7 @@ def build_result_health(
             _health_check(
                 "RDD/结果清单契约",
                 "missing",
-                f"未找到 {contract_check['manifest_path']}，无法确认 RDD 状态是否同步。",
+                "未找到结构化结果状态，无法确认 RDD 状态是否同步。",
                 "index-inclusion-make-figures-tables",
             )
         )
@@ -262,7 +280,7 @@ def build_result_health(
     else:
         checks.append(_health_check("RDD/结果清单契约", "ok", "结果清单与当前 RDD 识别状态一致。"))
 
-    checks.append(_rdd_l3_candidate_health(root, to_relative=to_relative, contract_check=contract_check))
+    checks.append(_rdd_l3_candidate_health(root, contract_check=contract_check))
 
     if contract_check and contract_check["manifest_exists"]:
         live_generated = str(contract_check["live_status"].get("generated_at", "") or "")
@@ -272,7 +290,7 @@ def build_result_health(
                 _health_check(
                     "RDD 状态新鲜度",
                     "warning",
-                    f"rdd_status.csv 的生成时间为 {live_generated}，结果清单仍记录 {manifest_generated}。",
+                    f"RDD 状态生成时间为 {live_generated}，结果清单仍记录 {manifest_generated}。",
                     "index-inclusion-make-figures-tables && index-inclusion-generate-research-report && index-inclusion-cma",
                 )
             )
@@ -316,7 +334,7 @@ def _contract_field_label(field: str) -> str:
         "evidence_status": "证据状态",
         "source_kind": "来源类型",
         "source_label": "来源摘要",
-        "source_file": "来源文件",
+        "source_file": "来源摘要",
         "coverage_note": "覆盖说明",
         "candidate_rows": "候选样本数",
         "candidate_batches": "候选批次数",
@@ -330,15 +348,14 @@ def _contract_field_label(field: str) -> str:
 def refresh_contract_status(contract_check: RddContractCheck | None) -> tuple[str, str]:
     if contract_check is None:
         return ("未校验", "本次刷新未附带结果状态校验。")
-    manifest_path = contract_check["manifest_path"] or "results_manifest.csv"
     if not contract_check["manifest_exists"]:
-        return ("缺少结果状态文件", f"未找到 {manifest_path}；刷新完成后请补生成结构化结果状态文件。")
+        return ("缺少结果状态文件", "未找到结构化结果状态文件；刷新完成后请补生成。")
     if contract_check["matches"]:
-        return ("结果状态已同步", f"{manifest_path} 已与当前识别状态保持一致。")
+        return ("结果状态已同步", "结构化结果状态已与当前识别状态保持一致。")
     mismatch_labels = "、".join(_contract_field_label(field) for field in contract_check["mismatched_fields"])
     return (
         "结果状态待同步",
-        f"{manifest_path} 与当前识别状态在 {mismatch_labels} 上不一致；建议重跑 index-inclusion-make-figures-tables 和 index-inclusion-generate-research-report。",
+        f"结构化结果状态与当前识别状态在 {mismatch_labels} 上不一致；建议重跑 index-inclusion-make-figures-tables 和 index-inclusion-generate-research-report。",
     )
 
 
@@ -363,9 +380,12 @@ def refresh_artifact_summary(
             f"本次刷新未检测到新的核心结果文件变化；结果状态：{contract_status_label}。{contract_status_copy}",
         )
 
-    preview_paths = [str(item.get("path", "") or "") for item in updated_artifacts[:2] if item.get("path")]
-    preview = "、".join(preview_paths)
-    if preview and artifact_count > len(preview_paths):
+    preview_labels = [
+        str(item.get("label", "") or item.get("group", "") or "核心产物")
+        for item in updated_artifacts[:2]
+    ]
+    preview = "、".join(preview_labels)
+    if preview and artifact_count > len(preview_labels):
         preview = f"{preview} 等 {artifact_count} 项"
     elif not preview:
         preview = f"共 {artifact_count} 项"
@@ -394,7 +414,7 @@ def build_dashboard_snapshot_meta(
     latest_path = to_relative(latest)
     return {
         "label": latest_dt.strftime("%Y-%m-%d %H:%M"),
-        "copy": f"页面目前读取的是 {len(files)} 个核心结果文件中的最新快照，最近更新文件：{latest_path}。",
+        "copy": f"页面目前读取的是 {len(files)} 个核心结果文件中的最新快照。",
         "source_path": latest_path,
         "source_count": len(files),
     }
@@ -437,6 +457,8 @@ def build_updated_artifacts(
                 current_mtime,
                 {
                     "path": relative_path,
+                    "label": _artifact_display_label(relative_path),
+                    "group": _artifact_group_label(relative_path),
                     "modified_at": refresh_artifact_modified_at(path),
                 },
             )
