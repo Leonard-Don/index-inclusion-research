@@ -266,6 +266,24 @@ def test_section_missing_tables_yield_empty_rows(tmp_path):
     }
 
 
+def test_section_empty_optional_csv_yields_empty_detail_table(tmp_path):
+    tables = tmp_path / "tables"
+    figures = tmp_path / "figures"
+    _seed_tables(tables)
+    (tables / "cma_h6_weight_explanation.csv").write_text("", encoding="utf-8")
+
+    section = build_cross_market_section(
+        tables_dir=tables,
+        figures_dir=figures,
+        mode="full",
+    )
+
+    assert section["detail_tables"]["h6_weight_explanation"] == {
+        "columns": [],
+        "rows": [],
+    }
+
+
 def test_section_full_mode_exposes_all_detail_tables(tmp_path):
     tables = tmp_path / "tables"
     figures = tmp_path / "figures"
