@@ -274,6 +274,15 @@ class TestBuildHeterogeneitySizeChartData:
         result = build_heterogeneity_size_chart_data(empty_root)
         assert result == {"buckets": [], "series": []}
 
+    def test_empty_csv_yields_empty_payload(self, tmp_path: Path) -> None:
+        tables = tmp_path / "results" / "real_tables"
+        tables.mkdir(parents=True)
+        (tables / "cma_heterogeneity_size.csv").write_text("", encoding="utf-8")
+
+        result = build_heterogeneity_size_chart_data(tmp_path)
+
+        assert result == {"buckets": [], "series": []}
+
     def test_populated_5_buckets_2_markets(self, heterogeneity_root: Path) -> None:
         result = build_heterogeneity_size_chart_data(heterogeneity_root)
         assert result["buckets"] == ["Q1", "Q2", "Q3", "Q4", "Q5"]
