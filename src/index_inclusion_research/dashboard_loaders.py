@@ -214,6 +214,12 @@ def load_single_csv(output_dir: Path, filename: str) -> pd.DataFrame | None:
 
 
 def read_csv_if_exists(path: str | Path) -> pd.DataFrame:
+    """Read an optional dashboard CSV.
+
+    Missing paths return a columnless empty DataFrame so downstream loaders
+    detect missing state via ``.empty``; existing-but-unreadable files still
+    raise, so a malformed table never masquerades as the missing case.
+    """
     return read_cached_csv(path, low_memory=False, optional=True)
 
 

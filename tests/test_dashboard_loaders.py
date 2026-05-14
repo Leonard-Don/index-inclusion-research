@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from index_inclusion_research import dashboard_loaders, dashboard_media
 from index_inclusion_research.result_contract import build_results_manifest
@@ -135,6 +136,21 @@ def test_read_csv_if_exists_uses_optional_cached_reader(monkeypatch, tmp_path: P
 
     assert frame.empty
     assert observed == [("missing.csv", False, True)]
+
+
+def test_read_csv_if_exists_returns_columnless_empty_frame_for_missing_path(tmp_path: Path) -> None:
+    frame = dashboard_loaders.read_csv_if_exists(tmp_path / "absent.csv")
+
+    assert frame.empty
+    assert list(frame.columns) == []
+
+
+def test_read_csv_if_exists_distinguishes_empty_existing_file_from_missing_path(tmp_path: Path) -> None:
+    empty_path = tmp_path / "empty.csv"
+    empty_path.write_text("", encoding="utf-8")
+
+    with pytest.raises(pd.errors.EmptyDataError):
+        dashboard_loaders.read_csv_if_exists(empty_path)
 
 
 def test_load_rdd_status_detects_demo_summary(tmp_path: Path) -> None:
