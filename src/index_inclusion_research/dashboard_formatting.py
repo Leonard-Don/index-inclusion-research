@@ -658,9 +658,9 @@ def render_table(frame: pd.DataFrame, compact: bool = False) -> str:
         if display[column].dtype == bool:
             display[column] = display[column].map({True: "是", False: "否"})
         if is_object_dtype(display[column]) or is_string_dtype(display[column]):
-            display[column] = display[column].map(lambda value, col=column: format_display_cell(value, col))
+            display[column] = display[column].map(lambda value, col=column: format_display_cell(value, col))  # type: ignore[misc]
         else:
-            display[column] = display[column].map(lambda value, col=column: format_display_cell(value, col))
+            display[column] = display[column].map(lambda value, col=column: format_display_cell(value, col))  # type: ignore[misc]
     return display.to_html(
         index=False,
         classes=classes,

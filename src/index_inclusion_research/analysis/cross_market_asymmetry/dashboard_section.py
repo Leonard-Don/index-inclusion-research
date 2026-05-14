@@ -296,26 +296,26 @@ def _build_evidence_coverage_payload(
         except (OSError, ValueError, TypeError):
             pass
 
-    rows: list[dict[str, object]] = []
+    fallback_rows: list[dict[str, object]] = []
     if not h6_weight_robustness.empty and "test" in h6_weight_robustness.columns:
         coverage = h6_weight_robustness.loc[
             h6_weight_robustness["test"].astype(str) == "coverage"
         ]
         if not coverage.empty:
-            row = coverage.iloc[0]
-            rows.append(
+            coverage_row = coverage.iloc[0]
+            fallback_rows.append(
                 {
                     "item": "H6_weight_change",
                     "label": "H6 权重变化",
-                    "status": str(row.get("status", "warn")),
-                    "status_label": _status_copy(row.get("status", "warn")),
-                    "value": f"匹配 {int(row.get('n_obs', 0) or 0)} 个事件",
-                    "detail": str(row.get("detail", "")).replace("matched events=", "匹配事件="),
+                    "status": str(coverage_row.get("status", "warn")),
+                    "status_label": _status_copy(coverage_row.get("status", "warn")),
+                    "value": f"匹配 {int(coverage_row.get('n_obs', 0) or 0)} 个事件",
+                    "detail": str(coverage_row.get("detail", "")).replace("matched events=", "匹配事件="),
                 }
             )
     if not hypothesis_verdicts.empty and "verdict" in hypothesis_verdicts.columns:
         _, insufficient = _verdict_distribution_counts()
-        rows.append(
+        fallback_rows.append(
             {
                 "item": "CMA_verdicts",
                 "label": "CMA 假说裁决",
@@ -325,7 +325,7 @@ def _build_evidence_coverage_payload(
                 "detail": "这里统计的是 H1-H7 的假说裁决分布，不代表所有假说都通过。",
             }
         )
-    return {"available": bool(rows), "rows": rows}
+    return {"available": bool(fallback_rows), "rows": fallback_rows}
 
 
 def _build_verdict_diff_payload(

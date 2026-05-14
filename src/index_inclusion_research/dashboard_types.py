@@ -323,6 +323,7 @@ class PaperDetailResult(BaseResult, total=False):
     evolution_nav_views: list[EvolutionNavView]
     primary_actions: list[ActionLink]
     verdict_citations: list[dict[str, object]]
+    acronym_note: str
 
 
 class RddStatus(TypedDict):
