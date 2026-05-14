@@ -357,6 +357,15 @@ class TestBuildMainRegressionChartData:
         result = build_main_regression_chart_data(empty_root)
         assert result == {"rows": []}
 
+    def test_empty_csv_yields_empty_payload(self, tmp_path: Path) -> None:
+        tables = tmp_path / "results" / "real_tables"
+        tables.mkdir(parents=True)
+        (tables / "regression_coefficients.csv").write_text("", encoding="utf-8")
+
+        result = build_main_regression_chart_data(tmp_path)
+
+        assert result == {"rows": []}
+
     def test_returns_only_main_car_treatment_rows(self, main_regression_root: Path) -> None:
         result = build_main_regression_chart_data(main_regression_root)
         # 4 quadrants for main_car, treatment_group only
