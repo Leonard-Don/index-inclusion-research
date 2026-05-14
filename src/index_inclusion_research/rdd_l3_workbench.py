@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 from werkzeug.datastructures import FileStorage
@@ -158,7 +158,7 @@ def _pathless_prepare_command(command: str) -> str:
 
 def _pathless_preflight_report(report: dict[str, object]) -> dict[str, object]:
     checks = []
-    for raw_check in report.get("checks", []):
+    for raw_check in cast(list[Any], report.get("checks", [])):
         check = dict(raw_check) if isinstance(raw_check, dict) else {}
         copy = str(check.get("copy", ""))
         next_step = str(check.get("next_step", ""))
@@ -173,7 +173,7 @@ def _pathless_preflight_report(report: dict[str, object]) -> dict[str, object]:
         checks.append(check)
     next_commands = [
         _pathless_prepare_command(str(command))
-        for command in report.get("next_commands", [])
+        for command in cast(list[Any], report.get("next_commands", []))
     ]
     return {
         **report,
