@@ -54,6 +54,9 @@ index-inclusion-generate-research-report = "index_inclusion_research.cli:run_gen
 index-inclusion-cma = "index_inclusion_research.cli:run_cma_main"
 
 [project.optional-dependencies]
+methods = [
+  "pyfixest>=0.50",
+]
 dev = [
   "mypy>=1.10",
   "pandas-stubs>=2.2,<2.3",
