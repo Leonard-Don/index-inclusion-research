@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -845,6 +846,57 @@ def test_frontend_copy_uses_clear_ctas_and_formats_public_tables() -> None:
     assert "13.373188" not in aum
     assert "4.10" in aum
     assert "13.37" in aum
+
+
+_INTERNAL_LEAK_PATTERNS: dict[str, re.Pattern[str]] = {
+    "raw/intermediate data file path": re.compile(
+        r"data/(?:raw|processed|interim)/[A-Za-z0-9_./-]+"
+        r"\.(?:csv|tsv|xls|xlsx|parquet|json|dta|feather)"
+    ),
+    "results/output artifact path": re.compile(
+        r"(?:results/(?:real_tables|real_figures|real_regressions|literature)|outputs|logs)/"
+        r"[A-Za-z0-9_./-]+"
+    ),
+    "package source path": re.compile(r"src/index_inclusion_research[A-Za-z0-9_./-]*"),
+    "absolute user path": re.compile(
+        r"(?:/(?:Users|home)/[A-Za-z0-9_./-]+|[A-Za-z]:\\\\Users\\\\[A-Za-z0-9_.\\\\-]+)"
+    ),
+    "tmp path": re.compile(r"/(?:private/)?tmp/[A-Za-z0-9_./-]+"),
+    "python repr": re.compile(
+        r"<class '[^']+'>|object at 0x[0-9a-f]+|<built-in method [^>]+>"
+    ),
+}
+
+
+def test_frontend_visible_text_does_not_leak_internal_paths_or_debug_repr() -> None:
+    """Guardrail for the path-hiding work (commit 277a078): user-visible
+    routes must not surface raw artifact paths, package source paths,
+    machine-absolute paths, or Python repr fragments. The friendly Chinese
+    labels in PATH_TEXT_REPLACEMENTS and clean_display_text are the
+    contract; this test catches future code that bypasses them."""
+    client = dashboard.app.test_client()
+    routes = (
+        "/?mode=full",
+        "/?mode=demo",
+        "/?mode=brief",
+        "/rdd-l3",
+        "/evidence/H2_passive_aum",
+        "/paper/harris_gurel_1986",
+        "/paper/wurgler_zhuravskaya_2002",
+        "/paper/greenwood_sammon_2022",
+    )
+
+    for route in routes:
+        response = client.get(route)
+        assert response.status_code == 200, (
+            f"{route} returned {response.status_code} when scanning for path leaks"
+        )
+        visible = _visible_text(response.get_data(as_text=True))
+        for label, pattern in _INTERNAL_LEAK_PATTERNS.items():
+            match = pattern.search(visible)
+            assert match is None, (
+                f"{route} leaked {label} into visible text: {match.group()!r}"
+            )
 
 
 def test_legacy_secondary_routes_redirect_to_single_frontend_anchors() -> None:
