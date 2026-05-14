@@ -280,7 +280,10 @@ def build_heterogeneity_size_chart_data(root: Path) -> dict:
     if not path.exists():
         return {"buckets": [], "series": []}
 
-    df = pd.read_csv(path)
+    try:
+        df = pd.read_csv(path)
+    except pd.errors.EmptyDataError:
+        return {"buckets": [], "series": []}
     if "asymmetry_index" not in df.columns:
         return {"buckets": [], "series": []}
 
