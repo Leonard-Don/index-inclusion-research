@@ -70,7 +70,10 @@ HET_DIMS: tuple[str, ...] = ("size", "liquidity", "sector", "gap_bucket")
 
 def _safe_read(path: Path) -> pd.DataFrame:
     if path.exists():
-        return pd.read_csv(path)
+        try:
+            return pd.read_csv(path)
+        except pd.errors.EmptyDataError:
+            return pd.DataFrame()
     return pd.DataFrame()
 
 
