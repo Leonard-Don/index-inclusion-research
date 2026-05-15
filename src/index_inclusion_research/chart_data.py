@@ -493,7 +493,10 @@ def build_mechanism_regression_chart_data(root: Path) -> dict:
     if not path.exists():
         return {"rows": []}
 
-    df = pd.read_csv(path)
+    try:
+        df = pd.read_csv(path)
+    except pd.errors.EmptyDataError:
+        return {"rows": []}
     rows = _treatment_forest_rows(df, specification="turnover_mechanism")
     return {"rows": rows}
 
