@@ -397,6 +397,17 @@ class TestBuildMainRegressionChartData:
     ) -> None:
         assert build_mechanism_regression_chart_data(empty_root) == {"rows": []}
 
+    def test_mechanism_regression_empty_csv_yields_empty_payload(
+        self, tmp_path: Path
+    ) -> None:
+        tables = tmp_path / "results" / "real_tables"
+        tables.mkdir(parents=True)
+        (tables / "regression_coefficients.csv").write_text("", encoding="utf-8")
+
+        result = build_mechanism_regression_chart_data(tmp_path)
+
+        assert result == {"rows": []}
+
 
 # ── event_counts ─────────────────────────────────────────────────────
 
