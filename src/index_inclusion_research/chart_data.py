@@ -232,7 +232,10 @@ def build_gap_decomposition_chart_data(root: Path) -> dict:
     if not summary_path.exists():
         return {"markets": [], "segments": [], "series": []}
 
-    summary = pd.read_csv(summary_path)
+    try:
+        summary = pd.read_csv(summary_path)
+    except pd.errors.EmptyDataError:
+        return {"markets": [], "segments": [], "series": []}
     summary = summary.loc[summary["metric"].isin(GAP_SEGMENTS)].copy()
     if summary.empty:
         return {"markets": [], "segments": [], "series": []}

@@ -236,6 +236,15 @@ class TestBuildGapDecompositionChartData:
         result = build_gap_decomposition_chart_data(empty_root)
         assert result == {"markets": [], "segments": [], "series": []}
 
+    def test_empty_csv_yields_empty_payload(self, tmp_path: Path) -> None:
+        tables = tmp_path / "results" / "real_tables"
+        tables.mkdir(parents=True)
+        (tables / "cma_gap_summary.csv").write_text("", encoding="utf-8")
+
+        result = build_gap_decomposition_chart_data(tmp_path)
+
+        assert result == {"markets": [], "segments": [], "series": []}
+
     def test_populated_returns_4_segments_per_market(self, gap_decomposition_root: Path) -> None:
         result = build_gap_decomposition_chart_data(gap_decomposition_root)
         assert len(result["series"]) == 4
