@@ -184,16 +184,19 @@ def build_car_heatmap_chart_data(root: Path) -> dict:
     annotations: list[dict] = []
     for i, row_label in enumerate(row_order):
         for j, window in enumerate(col_order):
-            car = float(heat_matrix.loc[row_label, window])  # type: ignore[arg-type]
-            p = float(p_matrix.loc[row_label, window])  # type: ignore[arg-type]
+            car_raw = heat_matrix.loc[row_label, window]
+            if pd.isna(car_raw):
+                continue
+            car = float(car_raw)  # type: ignore[arg-type]
+            p_float = _float_or_none(p_matrix.loc[row_label, window])
             data.append([j, i, round(car, 6)])
             annotations.append({
                 "col": j,
                 "row": i,
                 "car": round(car, 6),
                 "car_pct": f"{car:.2%}",
-                "p_value": round(p, 4),
-                "stars": _significance_stars(p),
+                "p_value": round(p_float, 4) if p_float is not None else None,
+                "stars": _significance_stars(p_float) if p_float is not None else "",
             })
 
     vmax = max(abs(v) for _, _, v in data) if data else 0.01
