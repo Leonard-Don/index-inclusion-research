@@ -19,12 +19,26 @@ SIGNIFICANCE_LEVEL = 0.10
 # See docs/limitations.md §7 and docs/paper_outline_verdicts.md.
 EVIDENCE_TIER: dict[str, str] = {
     "H1": "core",          # n≈436 events
-    "H2": "supplementary", # n=12 annual AUM observations
+    "H2": "supplementary", # baseline: n=12 annual AUM observations (US-only)
     "H3": "supplementary", # n=4 quadrants for dual-channel test
     "H4": "supplementary", # gap_drift regression p=0.537
     "H5": "core",          # n≈936 event-day observations
     "H6": "supplementary", # n=67 matched events
     "H7": "core",          # n≈187 US sector spread
+}
+
+# Per-hypothesis combined-n threshold for promotion from ``supplementary``
+# to ``core``. When :func:`_make_verdict` is called with an ``n_obs``
+# that meets/exceeds the listed threshold AND the hypothesis is
+# currently ``supplementary``, the row is upgraded to ``core``. This is
+# the only way evidence_tier becomes data-driven rather than fixed in
+# the hypothesis registry — used by H2 once the CN proxy lands, so the
+# tier reflects actual coverage instead of the 2025-Q1 underpowered
+# baseline. The threshold is intentionally conservative: H2 with both
+# CN + US rolling-CAR series available crosses n=15 (12 US + ≥3 CN),
+# matching the "core" floor most other hypotheses operate at.
+EVIDENCE_TIER_PROMOTION_FLOOR: dict[str, int] = {
+    "H2": 15,
 }
 
 
@@ -111,6 +125,17 @@ def _make_verdict(
     headline metric isn't a p. Downstream consumers can re-threshold
     against this column without parsing ``evidence_summary`` strings.
     """
+    n_obs_int = int(n_obs) if n_obs is not None else 0
+    base_tier = EVIDENCE_TIER.get(hypothesis.hid, "supplementary")
+    # Data-driven promotion: a supplementary hypothesis with adequate
+    # combined-n becomes core. Used for H2 once the CN proxy lands;
+    # leaves other supplementary tiers unchanged because their
+    # underpowering is structural, not just a missing data layer.
+    promotion_floor = EVIDENCE_TIER_PROMOTION_FLOOR.get(hypothesis.hid)
+    if base_tier == "supplementary" and promotion_floor is not None and n_obs_int >= promotion_floor:
+        evidence_tier = "core"
+    else:
+        evidence_tier = base_tier
     return {
         "hid": hypothesis.hid,
         "name_cn": hypothesis.name_cn,
@@ -123,11 +148,11 @@ def _make_verdict(
         "p_value": float(p_value) if p_value is not None else float("nan"),
         "key_label": key_label,
         "key_value": float(key_value) if key_value is not None else float("nan"),
-        "n_obs": int(n_obs) if n_obs is not None else 0,
+        "n_obs": n_obs_int,
         "paper_ids": " | ".join(hypothesis.paper_ids),
         "paper_count": len(hypothesis.paper_ids),
         "track": hypothesis.track,
-        "evidence_tier": EVIDENCE_TIER.get(hypothesis.hid, "supplementary"),
+        "evidence_tier": evidence_tier,
     }
 
 

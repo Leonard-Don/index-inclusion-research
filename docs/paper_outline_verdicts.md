@@ -29,7 +29,7 @@
 
 下面 7 条假说回答的是 "为什么 CN/US 在公告日 / 生效日的反应不一致",而**不是**直接回答 "指数纳入是否产生超额收益"(那个问题在上节已回答)。
 
-基于跨市场不对称(CMA)pipeline 自动产出,7 条 CN/US 不对称机制假说的当前裁决分布: **3 项支持 / 4 项证据不足**。 详见 `results/real_tables/cma_hypothesis_verdicts.csv`。
+基于跨市场不对称(CMA)pipeline 自动产出,7 条 CN/US 不对称机制假说的当前裁决分布: **3 项支持 / 1 项部分支持 / 3 项证据不足**。 详见 `results/real_tables/cma_hypothesis_verdicts.csv`。
 
 ### 样本概述
 
@@ -50,10 +50,10 @@
 CN-US pre-runup 差异 0.50% 在 bootstrap 下不显著 (p=0.875, CI95=[-3.25%, 4.70%])，方向偏 CN 但跨市场差异口径无法归因为信息泄露。
 _细节_: CN pre-runup=3.09%; US pre-runup=2.59%; diff=0.50%, bootstrap p=0.875, CI95=[-3.25%, 4.70%]
 
-### H2 · 被动基金 AUM 差异 —— 证据不足(可信度:低)
-**US AUM ratio = 13.481**, n = 12
-AUM 与 US 生效日 rolling CAR 的方向关系不稳定，当前不支持 H2。
-_细节_: US AUM 0.99→13.37; US effective rolling CAR 0.04%→0.05%
+### H2 · 被动基金 AUM 差异 —— 部分支持(可信度:中)
+**US AUM ratio = 13.481**, n = 17
+CN 方向符合 H2(AUM 上升 + effective CAR 走弱),另一市场数据不全或方向中性。(双市场覆盖)
+_细节_: US AUM 0.99→13.37 (2010→2025), effective CAR 0.04%→0.05% (2014→2025); CN AUM 0.19→1.12 (2020→2024), effective CAR 0.59%→0.42% (2021→2025)
 
 ### H3 · 散户 vs 机构结构 —— 支持(可信度:高)
 **双通道命中率 = 0.750**, n = 4

@@ -76,6 +76,10 @@ def run_download_passive_aum_cn_main() -> int | None:
     return _run_package_main("index_inclusion_research.download_passive_aum_cn")
 
 
+def run_download_cn_passive_aum_proxy_main() -> int | None:
+    return _run_package_main("index_inclusion_research.download_cn_passive_aum_proxy")
+
+
 def run_compute_h6_weight_change_main() -> int | None:
     return _run_package_main("index_inclusion_research.compute_h6_weight_change")
 

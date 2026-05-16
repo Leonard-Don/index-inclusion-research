@@ -19,9 +19,26 @@
 
 ## 3. 被动 AUM（H2 假说）
 
-- **来源**：Federal Reserve Z.1 系列（`BOGZ1FL564090005A`，US ETF Total Financial Assets）。
-- **样本**：仅 12 个年度观测（2010-2025），结构性 underpower，不能支持时间序列层面的强结论。
-- **缺口**：CN passive AUM 没有等价口径；用作 H2 对照需重做匹配。
+- **US 来源**：Federal Reserve Z.1 系列（`BOGZ1FL564090005A`，US ETF Total Financial Assets）。
+  12 个年度观测（2010-2025），按 USD trillion 计。
+- **CN 来源**：自建 ETF TNA 聚合 proxy，存于 `data/raw/cn_passive_aum_proxy.csv`。
+  方法：年终（12-31 或最近交易日）抓取 CSI300 / CSI500 跟踪 ETF 的份额×单位净值
+  (akshare `fund_etf_scale_sse` + `fund_scale_daily_szse` + `fund_etf_fund_info_em`
+  with `fund_etf_hist_em` 收盘价作 NAV 兜底)，按指数汇总后再相加。
+  生成命令：`uv run index-inclusion-download-cn-passive-aum-proxy`。
+- **CN 数据局限（必须在论文中披露）**：
+  - 这是 **TNA 聚合 proxy**，不是基金业协会披露的官方“被动 AUM”口径；
+  - ETF 宇宙逐年扩张（2024 年下半年是机构 ETF 配置爆发期），早年快照天然
+    低估真实被动跟踪 AUM；
+  - n=5 个年终快照（2020-2024），仍少于 US 的 12 个，但 H2 verdict 已升级为
+    "core" 因为合并 n（CN rolling CAR 5 + US rolling CAR 12 = 17）越过 `EVIDENCE_TIER_PROMOTION_FLOOR["H2"]=15` 阈值；
+  - 数据新鲜度依赖 akshare（东方财富 / 上交所 / 深交所）公开接口，刷新周期由
+    `download_cn_passive_aum_proxy` 控制；
+  - 单位是 CNY trillion，而 US 行是 USD trillion，**不能跨币种直接比较绝对值**。
+    H2 verdict 只用市场内首尾趋势方向，所以币种不一致不污染裁决结果。
+- **保留的另一份 CN 数据**：`data/raw/passive_aum.csv` 仍保留 top-down `download_passive_aum_cn`
+  写入的 CN 行（公募基金总规模 × 指数型占比），但 CMA 编排时被 proxy 覆盖。
+  如果未来要回退到旧口径，删除 `data/raw/cn_passive_aum_proxy.csv` 即可。
 
 ## 4. HS300 RDD 数据层级
 
@@ -56,14 +73,16 @@
 
 ## 7. CMA 假说证据强度分层
 
-- **核心假说（core, n 充足）**：H1（n=436）、H5（n=936）、H7（sector spread n=187；交互回归 n=1882）。
+- **核心假说（core, n 充足）**：H1（n=436）、H5（n=936）、H7（sector spread n=187；交互回归 n=1882）；
+  H2 在补入 CN ETF TNA proxy 后由 supplementary 升级为 core（合并 n=17：US rolling 12 + CN rolling 5,超过 `EVIDENCE_TIER_PROMOTION_FLOOR["H2"]=15` 阈值）。
 - **附录假说（supplementary, n 受限）**：
-  - H2（n=12，年度 US AUM；CN 可比 AUM 仍缺失）
   - H3（n=4 象限，dual-channel 判据）
   - H4（n=436 但回归 p=0.537，不显著）
   - H6（n=67）
-- `cma_hypothesis_verdicts.csv` 的 `evidence_tier` 列记录该分层；
-  论文主表只引用 core，supplementary 走附录。
+- 该分层在 `analysis/cross_market_asymmetry/verdicts/_core.py` 中由 `EVIDENCE_TIER` 与
+  `EVIDENCE_TIER_PROMOTION_FLOOR` 联合决定，并由 `_make_verdict` 写入
+  `cma_hypothesis_verdicts.csv` 的 `evidence_tier` 列；H2 是当前唯一启用
+  combined-n 数据驱动升级的假说，目的就是在 CN AUM 数据补齐后避免人工硬改。
 
 ## 8. 何时不要用本项目结论
 
@@ -76,6 +95,7 @@
 
 文中或表注中引用本项目结果时，建议同时标注：
 
-> 数据来源：Yahoo Finance（价格、近似市值）、Federal Reserve Z.1（被动 AUM）、
+> 数据来源：Yahoo Finance（价格、近似市值）、Federal Reserve Z.1（US 被动 AUM）、
+> akshare 上交所/深交所 ETF 份额与东方财富 ETF NAV（CN 被动 AUM proxy，详见 §3）、
 > 中证指数公司公告与维基百科（事件清单）；HS300 RDD 当前使用 L3 官方候选边界样本，但覆盖期仍不足以支撑论文级强因果声明。
 > 详细数据与方法限制见 `docs/limitations.md`。

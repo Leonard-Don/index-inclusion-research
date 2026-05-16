@@ -5,7 +5,7 @@
 ![Research](https://img.shields.io/badge/focus-index%20inclusion%20research-1f6feb)
 ![Literature](https://img.shields.io/badge/literature-16%20papers-6f42c1)
 ![Pipeline](https://img.shields.io/badge/pipeline-10%20steps-0969da)
-![CLI](https://img.shields.io/badge/CLI-30%20commands-2da44e)
+![CLI](https://img.shields.io/badge/CLI-31%20commands-2da44e)
 
 `index-inclusion-research` 是一个把指数纳入效应文献、真实样本结果与识别设计放到同一工作流里的实证研究项目。它把 16 篇文献库、3 条研究主线、真实样本表和 HS300 RDD 扩展统一到同一 dashboard 与 CLI 体系，适合：
 
@@ -39,7 +39,7 @@
 | 假说 | 名称 | 裁决 | 头条指标 | 写作层级 | 主线 |
 |---|---|---|---|---|---|
 | H1 | 信息泄露与预运行 | 证据不足 | bootstrap p = 0.875 (n=436) | 正文 core | 制度识别 |
-| H2 | 被动基金 AUM 差异 | 证据不足 | US AUM ratio = 13.48；CN AUM 待补 (n=12) | 附录 supplementary | 需求曲线 |
+| H2 | 被动基金 AUM 差异 | 部分支持 | US AUM ratio = 13.48；CN proxy 已补 (combined n=17) | 正文 core | 需求曲线 |
 | H3 | 散户 vs 机构结构 | 支持 | 双通道命中率 = 0.75 (n=4) | 附录 supplementary | 短期价格压力 |
 | H4 | 卖空约束 | 证据不足 | regression p = 0.537 (n=436) | 附录 supplementary | 制度识别 |
 | H5 | 涨跌停限制 | 支持 | limit_coef p = 0.008 (n=936) | 正文 core | 制度识别 |
@@ -47,7 +47,7 @@
 | H7 | 行业结构差异 | 支持 | US sector spread = 5.95；交互 p = 0.094 | 正文 core | 制度识别 |
 
 `make rebuild` 跑 10 步流水线刷新所有产出。详见 [results/real_tables/cma_hypothesis_verdicts.csv](results/real_tables/cma_hypothesis_verdicts.csv) 和 [docs/paper_outline_verdicts.md](docs/paper_outline_verdicts.md)。
-其中 H2 已在 evidence manifest 中明确标为 `warn`：当前只有 US 被动 AUM 年度序列，缺少 CN 可比被动 AUM，因此只适合附录解释，不写成主因果机制。
+H2 在 2026 年补入 `data/raw/cn_passive_aum_proxy.csv`（CSI300 + CSI500 ETF TNA 年终聚合 proxy）后，从 supplementary 升级为 core；evidence manifest 中状态从 `warn` 转为 `pass`，但 verdict 是 "部分支持"——CN 一侧方向符合 H2，US 一侧 effective CAR 没有持续衰减。所以 H2 仍不能写成"被动买盘单一机制"。
 
 阈值灵敏度（"如果阈值是 0.05 而不是 0.10？"）做成五层入口（决定 / 数据 / CLI / dashboard / doctor），终端一行：`index-inclusion-verdict-summary --sensitivity`。完整说明见 [docs/sensitivity_workflow.md](docs/sensitivity_workflow.md)。
 
@@ -126,7 +126,7 @@ make smoke   # 浏览器 smoke test，需要 Playwright + Chromium
 1. [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)：16 篇文献如何统一映射到当前项目。
 2. [docs/research_delivery_package.md](docs/research_delivery_package.md)：论文 / 答辩交付边界。
 3. [docs/dashboard_architecture.md](docs/dashboard_architecture.md)：dashboard 主干。
-4. [docs/cli_reference.md](docs/cli_reference.md)：30 个 console scripts 的完整说明。
+4. [docs/cli_reference.md](docs/cli_reference.md)：31 个 console scripts 的完整说明。
 5. 启动界面：`index-inclusion-dashboard` → 打开 <http://localhost:5001>。
 
 ## 项目结构
@@ -200,14 +200,14 @@ index-inclusion-refresh-real-evidence                # 真实数据 + evidence m
 index-inclusion-doctor --fail-on-warn                # 严格门禁（warn 也阻断）
 ```
 
-按用途分组（共 30 个 console scripts）：
+按用途分组（共 31 个 console scripts）：
 
 - 数据流水线：`build-event-sample` / `build-price-panel` / `match-controls` / `match-robustness` / `run-event-study` / `run-regressions`
 - 样本数据：`generate-sample-data` / `download-real-data`
 - 报表与图表：`make-figures-tables` / `generate-research-report` / `paper-bundle` / `paper-audit`
 - Dashboard 与三条主线：`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - HS300 RDD 工具链：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`
-- 跨市场不对称 + 假说证据：`cma` / `prepare-passive-aum` / `download-passive-aum-cn` / `compute-h6-weight-change` / `refresh-real-evidence`
+- 跨市场不对称 + 假说证据：`cma` / `prepare-passive-aum` / `download-passive-aum-cn` / `download-cn-passive-aum-proxy` / `compute-h6-weight-change` / `refresh-real-evidence`
 - 总入口：`rebuild-all` / `verdict-summary` / `doctor`
 
 `match-controls` 现在会同时输出 covariate balance 表（`match_balance.csv`，Stuart 2010 SMD）；`doctor` 的 `matched_sample_balance` 检查在 |SMD|≥0.25 时变 warn。`compute_pre_runup_bootstrap_test` 默认按 `announce_date` 做 block bootstrap，`cluster_method` 列记录采样方式。
@@ -278,8 +278,8 @@ GitHub Actions 通过 `astral-sh/setup-uv` + `uv sync --extra dev`（按 `uv.loc
 - `mkt_cap` / `turnover` 来自 Yahoo `sharesOutstanding` 近似，不是交易所历史口径。
 - HS300 RDD 当前 L3 覆盖 2020-11 到 2025-11 共 11 个批次、356 条候选，论文级因果声明需扩展到 ≥10 年（见 [docs/hs300_rdd_l3_collection_audit.md](docs/hs300_rdd_l3_collection_audit.md)）。
 - 7 条 CMA 假说当前为 post-hoc 拟合；预注册基线（PAP + 2026-05-03 verdicts 快照）见 [docs/pre_registration.md](docs/pre_registration.md)；当前 vs 基线的偏离用 `index-inclusion-verdict-summary --vs-pap` 一行查看，dashboard hero 上 PAP 状态 pill 也会标 `基线已锁` / `偏离`。
-- 假说证据强度分层：`core`（H1/H5/H7）vs `supplementary`（H2/H3/H4/H6），见 `cma_hypothesis_verdicts.csv` 的 `evidence_tier` 列。
-- H7 现在同时有描述性 sector spread 与 `cma_h7_sector_interaction.csv` 的 sector×phase/treatment 回归；H2 仍缺 CN 可比 AUM，系统会在 evidence manifest 与 dashboard 卡片上显示 warn。
+- 假说证据强度分层：`core`（H1/H2/H5/H7）vs `supplementary`（H3/H4/H6），见 `cma_hypothesis_verdicts.csv` 的 `evidence_tier` 列。H2 由 `EVIDENCE_TIER_PROMOTION_FLOOR` 数据驱动升级——补入 CN ETF TNA proxy 后合并 n=17 跨过 15 阈值。
+- H7 现在同时有描述性 sector spread 与 `cma_h7_sector_interaction.csv` 的 sector×phase/treatment 回归；H2 在 2026 年补入 CN ETF TNA proxy（`data/raw/cn_passive_aum_proxy.csv`）后，evidence manifest 中由 `warn` 升级为 `pass`，dashboard 卡片同步更新（详见 [data/raw/README.md](data/raw/README.md) 的 proxy 说明）。
 - 事件研究除简单 t 外提供 Patell Z 与 BMP t（`results/real_event_study/patell_bmp_summary.csv`）。
 - HS300 RDD 主结果 (`car_m1_p1` τ=3.92%, p=0.048, n=120) 同时跑了完整稳健性面板（main / donut / placebo±0.05 / polynomial），见 `results/literature/hs300_rdd/rdd_robustness.csv` 与首页 forest plot；论文应当报告全套面板而非只引用显著的 main spec。
 

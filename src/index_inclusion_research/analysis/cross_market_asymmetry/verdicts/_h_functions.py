@@ -178,6 +178,40 @@ def _h1_from_bootstrap(
 # ── H2 被动基金 AUM 差异 ─────────────────────────────────────────────
 
 
+def _h2_market_trend(
+    aum_frame: pd.DataFrame, rolling_frame: pd.DataFrame, market: str
+) -> dict[str, float | int] | None:
+    """Compute (first/last AUM, first/last effective-day CAR) for one market.
+
+    Returns ``None`` when either series has fewer than two observations
+    for that market — caller decides how to combine across markets.
+    """
+    aum = aum_frame.loc[aum_frame["market"] == market].sort_values("year")
+    roll = rolling_frame.loc[
+        (rolling_frame["market"] == market)
+        & (rolling_frame["event_phase"] == "effective")
+    ].sort_values("window_end_year")
+    if len(aum) < 2 or len(roll) < 2:
+        return None
+    first_aum = float(aum["aum_trillion"].iloc[0])
+    last_aum = float(aum["aum_trillion"].iloc[-1])
+    first_car = float(roll["car_mean"].iloc[0])
+    last_car = float(roll["car_mean"].iloc[-1])
+    return {
+        "first_aum": first_aum,
+        "last_aum": last_aum,
+        "first_car": first_car,
+        "last_car": last_car,
+        "aum_ratio": last_aum / first_aum if first_aum > 0 else float("nan"),
+        "car_first_year": int(roll["window_end_year"].iloc[0]),
+        "car_last_year": int(roll["window_end_year"].iloc[-1]),
+        "aum_first_year": int(aum["year"].iloc[0]),
+        "aum_last_year": int(aum["year"].iloc[-1]),
+        "n_roll": int(len(roll)),
+        "n_aum": int(len(aum)),
+    }
+
+
 def _h2(
     hypothesis: StructuralHypothesis,
     time_series_rolling: pd.DataFrame,
@@ -205,44 +239,109 @@ def _h2(
             "rolling CAR 输出列不完整，无法和 AUM 年度序列对齐。",
             "重跑 CMA M5 时序模块，生成 cma_time_series_rolling.csv。",
         )
-    us_roll = time_series_rolling.loc[
-        (time_series_rolling["market"] == "US")
-        & (time_series_rolling["event_phase"] == "effective")
-    ].sort_values("window_end_year")
-    us_aum = aum_frame.loc[aum_frame["market"] == "US"].sort_values("year")
-    if len(us_roll) < 2 or len(us_aum) < 2:
+    us_trend = _h2_market_trend(aum_frame, time_series_rolling, "US")
+    cn_trend = _h2_market_trend(aum_frame, time_series_rolling, "CN")
+
+    if us_trend is None and cn_trend is None:
         return _pending(
             hypothesis,
-            "US rolling CAR 或 US AUM 年度序列不足，无法判断趋势。",
-            "至少准备两个年份以上的 US 被动 AUM，并保留 rolling CAR 输出。",
+            "US 与 CN 任一市场的 rolling CAR 或 AUM 年度序列都不足，无法判断趋势。",
+            "至少准备两个年份以上的 US/CN 被动 AUM，并保留 rolling CAR 输出。",
         )
-    first_aum = float(us_aum["aum_trillion"].iloc[0])
-    last_aum = float(us_aum["aum_trillion"].iloc[-1])
-    first_car = float(us_roll["car_mean"].iloc[0])
-    last_car = float(us_roll["car_mean"].iloc[-1])
-    aum_up = last_aum > first_aum
-    effect_down = last_car < first_car
-    if aum_up and effect_down:
+
+    # Direction check per market (AUM up + effective CAR down ⇒ H2 pattern)
+    def _direction(trend: dict[str, float | int]) -> str:
+        aum_up = trend["last_aum"] > trend["first_aum"]
+        effect_down = trend["last_car"] < trend["first_car"]
+        if aum_up and effect_down:
+            return "match"
+        if aum_up or effect_down:
+            return "mixed"
+        return "miss"
+
+    parts: list[str] = []
+    matches: list[str] = []
+    misses: list[str] = []
+    headline_ratio: float = float("nan")
+    headline_label: str = "AUM ratio"
+    combined_n: int = 0
+    for market, trend in (("US", us_trend), ("CN", cn_trend)):
+        if trend is None:
+            parts.append(f"{market}: AUM 或 rolling CAR 不足，跳过")
+            continue
+        parts.append(
+            f"{market} AUM {trend['first_aum']:.2f}→{trend['last_aum']:.2f}"
+            f" ({trend['aum_first_year']}→{trend['aum_last_year']}),"
+            f" effective CAR {_fmt_pct(trend['first_car'])}→{_fmt_pct(trend['last_car'])}"
+            f" ({trend['car_first_year']}→{trend['car_last_year']})"
+        )
+        combined_n += int(trend["n_roll"])
+        verdict_dir = _direction(trend)
+        if verdict_dir == "match":
+            matches.append(market)
+        elif verdict_dir == "miss":
+            misses.append(market)
+        # Prefer US AUM ratio as the headline (consistent with prior versions);
+        # fall back to CN if US is missing.
+        if market == "US":
+            headline_ratio = float(trend["aum_ratio"])
+            headline_label = "US AUM ratio"
+        elif market == "CN" and (headline_ratio != headline_ratio):  # NaN check
+            headline_ratio = float(trend["aum_ratio"])
+            headline_label = "CN AUM ratio"
+
+    coverage_note = ""
+    if us_trend is not None and cn_trend is not None:
+        coverage_note = "双市场覆盖"
+    elif us_trend is not None:
+        coverage_note = "仅 US 覆盖,CN AUM/rolling CAR 不足"
+    else:
+        coverage_note = "仅 CN 覆盖,US AUM/rolling CAR 不足"
+
+    match_count = len(matches)
+    miss_count = len(misses)
+    if match_count == 2:
+        verdict = "支持"
+        confidence = "中"
+        summary = (
+            f"US 与 CN 两市场 AUM 同步上升且生效日 rolling CAR 同步走弱，方向都符合 H2。"
+            f"({coverage_note})"
+        )
+    elif match_count == 1 and miss_count == 0:
         verdict = "部分支持"
         confidence = "中"
-        summary = "US 被动 AUM 上升且 US 生效日 rolling CAR 走弱，方向符合 H2。"
+        summary = (
+            f"{matches[0]} 方向符合 H2(AUM 上升 + effective CAR 走弱),"
+            f"另一市场数据不全或方向中性。({coverage_note})"
+        )
+    elif match_count == 1 and miss_count == 1:
+        verdict = "部分支持"
+        confidence = "低"
+        summary = (
+            f"{matches[0]} 方向符合 H2 但 {misses[0]} 方向相反,跨市场不一致。"
+            f"({coverage_note})"
+        )
     else:
         verdict = "证据不足"
         confidence = "低"
-        summary = "AUM 与 US 生效日 rolling CAR 的方向关系不稳定，当前不支持 H2。"
+        summary = (
+            f"两市场 AUM 与 effective rolling CAR 的方向关系不一致或不支持 H2。"
+            f"({coverage_note})"
+        )
+
     return _make_verdict(
         hypothesis,
         verdict=verdict,
         confidence=confidence,
         evidence_summary=summary,
-        metric_snapshot=(
-            f"US AUM {first_aum:.2f}→{last_aum:.2f}; "
-            f"US effective rolling CAR {_fmt_pct(first_car)}→{_fmt_pct(last_car)}"
+        metric_snapshot="; ".join(parts),
+        next_step=(
+            "用年度面板回归替代趋势首尾比较;CN proxy 来自 data/raw/cn_passive_aum_proxy.csv,"
+            "为 ETF TNA 聚合(非直接 AUM),解释时请见 docs/limitations.md §3。"
         ),
-        next_step="用年度面板回归替代趋势首尾比较，并加入 CN AUM 作为对照。",
-        key_label="US AUM ratio",
-        key_value=last_aum / first_aum if first_aum > 0 else float("nan"),
-        n_obs=int(len(us_roll)),
+        key_label=headline_label,
+        key_value=headline_ratio,
+        n_obs=combined_n,
     )
 
 

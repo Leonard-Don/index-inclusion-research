@@ -235,13 +235,18 @@ def test_home_dashboard_full_mode_marks_cma_evidence_tiers() -> None:
     assert "附录/探索性" in html
     assert html.count('data-evidence-tier="core"') >= 6
     assert html.count('data-evidence-tier="supplementary"') >= 8
-    for hid in ("H1", "H5", "H7"):
+    # H2 promoted from supplementary to core after CN ETF-TNA proxy
+    # (data/raw/cn_passive_aum_proxy.csv) crosses the combined-n floor
+    # of 15 (US rolling 12 + CN rolling 5 = 17). See
+    # EVIDENCE_TIER_PROMOTION_FLOOR in
+    # analysis/cross_market_asymmetry/verdicts/_core.py.
+    for hid in ("H1", "H2", "H5", "H7"):
         marker = f'id="hypothesis-{hid}"'
         card_start = html.index(marker)
         card_end = html.index("</article>", card_start)
         assert 'data-evidence-tier="core"' in html[card_start:card_end]
         assert "正文可引用" in html[card_start:card_end]
-    for hid in ("H2", "H3", "H4", "H6"):
+    for hid in ("H3", "H4", "H6"):
         marker = f'id="hypothesis-{hid}"'
         card_start = html.index(marker)
         card_end = html.index("</article>", card_start)

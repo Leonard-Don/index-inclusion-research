@@ -259,7 +259,11 @@ def audit_patell_bmp(root: Path = ROOT, *, require_bundle: bool = True) -> Audit
 
 
 def audit_cma_core(root: Path = ROOT, *, require_bundle: bool = True) -> AuditResult:
-    claim = "机制主表：正文只引用“正文可引用”的 H1 / H5 / H7，其余机制假说放入附录/探索性证据。"
+    claim = (
+        "机制主表：正文只引用“正文可引用”的 core 假说（基线 H1 / H5 / H7;"
+        " H2 在补入 CN ETF TNA proxy 后由 EVIDENCE_TIER_PROMOTION_FLOOR 升级为 core）,"
+        "其余机制假说放入附录/探索性证据。"
+    )
     required: tuple[Path, ...] = (
         root / "results" / "real_tables" / "cma_hypothesis_verdicts.csv",
         root / "results" / "real_tables" / "cma_hypothesis_verdicts.tex",
@@ -305,27 +309,34 @@ def audit_cma_core(root: Path = ROOT, *, require_bundle: bool = True) -> AuditRe
             artifacts=_existing_artifacts(required, root=root),
         )
     core = set(verdicts.loc[verdicts["evidence_tier"].astype(str) == "core", "hid"].astype(str))
-    expected = {"H1", "H5", "H7"}
+    # Baseline PAP core set; plus the H2 promotion path enabled by
+    # EVIDENCE_TIER_PROMOTION_FLOOR once the CN ETF-TNA proxy is in place.
+    baseline_core = {"H1", "H5", "H7"}
+    promoted_core = baseline_core | {"H2"}
     details = tuple(
         f"{row['hid']} · {row['evidence_tier']} · {row['verdict']}"
         for _, row in verdicts.sort_values("hid").iterrows()
     )
-    if core != expected:
+    if core not in (baseline_core, promoted_core):
         return AuditResult(
             name="cma_core_claim",
             status="warn",
             claim=claim,
-            message=f"Core hypothesis set is {sorted(core)}, expected {sorted(expected)}.",
+            message=(
+                f"Core hypothesis set is {sorted(core)}; expected either baseline "
+                f"{sorted(baseline_core)} or proxy-promoted {sorted(promoted_core)}."
+            ),
             fix="Update docs/pre_registration.md §7 before changing evidence_tier, or restore the frozen tier mapping.",
             artifacts=_existing_artifacts(required, root=root),
             details=details,
         )
+    matched_label = "baseline H1/H5/H7" if core == baseline_core else "proxy-promoted H1/H2/H5/H7"
     return AuditResult(
         name="cma_core_claim",
         status="pass",
         claim=claim,
         message=(
-            "Core mechanism set matches PAP (H1/H5/H7)"
+            f"Core mechanism set matches PAP ({matched_label})"
             + (", with paper bundle and narrative copies present." if require_bundle else ".")
         ),
         artifacts=_existing_artifacts(required, root=root),
