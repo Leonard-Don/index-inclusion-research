@@ -80,6 +80,44 @@ index-inclusion-make-figures-tables
 
 `build-price-panel` 默认 AR 仍是基准调整后的 `ret - benchmark_ret`；想额外得到 market-model 残差，加上 `--include-market-model-ar` 即可。该 flag 会在面板上追加四列 `ar_market_model`、`market_model_alpha`、`market_model_beta`、`market_model_estimation_obs`（按事件 × phase 在估计窗口 [-20,-2] 上对 `ret = α + β·benchmark_ret` 做 OLS，估计窗口数据不足时整个事件留 NaN）。`market_model_estimation_obs` 记录该事件 × phase 在估计窗口内同时具备 `ret` 与 `benchmark_ret` 的配对观测数，便于下游审计 NaN 是因为窗口太薄、基准方差为零，还是事件外行未参与估计。把面板传给 `index_inclusion_research.analysis.summarize_market_model_estimation_obs` 可以拿到一行汇总：`n_events_total` / `n_events_finite_ar` / `n_events_nan_ar` / `n_events_below_min_obs` / `minimum_estimation_obs`，其中阈值与模型自带的 OLS 最小观测门槛（2）一致，不引入新的策略选择。
 
+### `index-inclusion-run-event-study --ar-model` 与 `--estimation-window`
+
+`run-event-study` 现在支持两个 AR 引擎，默认与历史输出位级一致：
+
+```bash
+# 默认：简单市场调整 (ar = ret − benchmark_ret)；输出与新增 flag 前一致
+index-inclusion-run-event-study
+
+# 切换到市场模型 β-AR，估计窗口 (-120, -10)（文献短窗口标准）
+index-inclusion-run-event-study --ar-model market
+
+# 自定义估计窗口：LOW,HIGH 为正整数，内部带负号（要求 LOW > HIGH）
+index-inclusion-run-event-study --ar-model market --estimation-window 250,21
+```
+
+引擎选择建议：
+
+- `adjusted`（默认）：速度快、口径标准，PAP 主表与 CMA verdict 都钉在这一支；
+  默认仍是这条路径，不要在论文最终稿换。
+- `market`：β 调整后推断力更强，但每个事件至少需要约 30 个估计窗口配对观测
+  （`ret` 与 `benchmark_ret` 同时非缺失）才会得到非 NaN 的 AR；样本稀的事件会被
+  整段写成 NaN，并落到 `event_study_skipped_events.csv` 而不是静默贡献 0。
+  切换引擎在 CN 样本上经验上会让 CAR 偏移约 5-15 bps。
+
+`--ar-model market` 会在输出目录额外写两个文件：
+
+- `event_study_meta.json`：记录 `ar_model` / `ar_column` / `estimation_window` /
+  `profile` / `panel` / `car_windows`，便于审稿人和重跑校验。`adjusted` 模式也会
+  写这个文件，`estimation_window` 字段为 `null`。
+- `event_study_skipped_events.csv`：列出估计窗口内观测不足或基准方差退化导致
+  AR=NaN 的 event × phase；含 `event_id` / `event_phase` /
+  `market_model_estimation_obs` / `minimum_estimation_obs` / `reason`
+  （`insufficient_estimation_obs` 或 `degenerate_benchmark_variance`）。该文件仅
+  在 `--ar-model market` 时生成。
+
+注意：Patell/BMP 汇总 (`patell_bmp_summary.csv`) 仍始终基于简单 `ar` 计算；
+切换引擎不会把 Patell/BMP 提升进主表。
+
 ## 8. 自动生成论文结果摘要
 
 ```bash
