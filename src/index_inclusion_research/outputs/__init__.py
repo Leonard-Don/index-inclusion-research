@@ -1,3 +1,4 @@
+from .hs300_rdd_forest import build_hs300_rdd_forest_plot
 from .reports import (
     build_asymmetry_summary,
     build_data_source_table,
@@ -18,6 +19,7 @@ __all__ = [
     "build_asymmetry_summary",
     "build_data_source_table",
     "build_event_counts_by_year_table",
+    "build_hs300_rdd_forest_plot",
     "build_identification_scope_table",
     "build_robustness_event_study_summary",
     "build_robustness_regression_summary",

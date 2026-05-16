@@ -94,7 +94,7 @@ Federal Reserve Z.1。论文写作时必须披露：
 | 图 2 | CMA 机制热力图 | `real_figures/cma_mechanism_heatmap.png` |
 | 附录 A | supplementary 假说裁决 | H2/H3/H4/H6 相关 `cma_*.csv` |
 | 附录 B | H7 行业交互稳健性 | `cma_h7_sector_interaction.csv` |
-| 附录 C | HS300 RDD | `results/literature/hs300_rdd/` |
+| 附录 C | HS300 RDD | `results/literature/hs300_rdd/`；稳健性森林图 `results/figures/hs300_rdd_robustness_forest.png`（同名 `.pdf` 为论文用矢量版本） |
 | 附录 D | 数据与方法限制 | `docs/limitations.md` |
 | 附录 E | PAP 与 verdict diff | `docs/pre_registration.md`、`docs/verdict_iteration.md` |
 
@@ -136,7 +136,7 @@ make smoke
 1. `paper/bundle_summary.md`：自动研究状态快照。
 2. `paper/narrative/research_delivery_package.md`：本文档副本。
 3. `paper/narrative/paper_outline_verdicts.md`：当前裁决叙事。
-4. `paper/rdd/rdd_robustness.csv`：RDD 全套稳健性。
+4. `paper/rdd/rdd_robustness.csv`：RDD 全套稳健性。配套图：`results/figures/hs300_rdd_robustness_forest.{png,pdf}`，把 main / donut / placebo±0.05 / polynomial 共五个规格的 τ 与 95% CI 放在同一张森林图里，避免论文只引用显著的 main spec（详见 [docs/limitations.md](limitations.md) §RDD 稳健性透明披露要求）。
 
 ## 7. 更新规则
 

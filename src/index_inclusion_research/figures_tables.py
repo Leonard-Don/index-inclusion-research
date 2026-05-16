@@ -21,6 +21,7 @@ from index_inclusion_research.outputs import (
     build_asymmetry_summary,
     build_data_source_table,
     build_event_counts_by_year_table,
+    build_hs300_rdd_forest_plot,
     build_identification_scope_table,
     build_robustness_event_study_summary,
     build_robustness_regression_summary,
@@ -39,6 +40,39 @@ from index_inclusion_research.result_contract import (
 )
 
 ROOT = paths.project_root()
+
+
+def _maybe_build_hs300_rdd_forest_plot(
+    *,
+    rdd_output_dir: Path | None,
+    figures_dir: Path | None,
+) -> None:
+    """Refresh the HS300 RDD robustness forest plot when its source CSV
+    is present. Mirrors the PNG into the literature dashboard's figure
+    directory so the existing dashboard entry point picks it up without
+    re-running the dashboard pipeline.
+    """
+    if rdd_output_dir is None:
+        rdd_output_dir = ROOT / "results" / "literature" / "hs300_rdd"
+    if figures_dir is None:
+        figures_dir = ROOT / "results" / "figures"
+    robust_csv = rdd_output_dir / "rdd_robustness.csv"
+    if not robust_csv.exists():
+        return
+    png_path = figures_dir / "hs300_rdd_robustness_forest.png"
+    pdf_path = figures_dir / "hs300_rdd_robustness_forest.pdf"
+    try:
+        build_hs300_rdd_forest_plot(
+            robustness_csv_path=robust_csv,
+            output_png_path=png_path,
+            output_pdf_path=pdf_path,
+        )
+    except (ValueError, OSError) as exc:
+        logger.warning("HS300 RDD forest plot skipped: %s", exc)
+        return
+    mirror_path = rdd_output_dir / "figures" / "rdd_robustness_forest.png"
+    mirror_path.parent.mkdir(parents=True, exist_ok=True)
+    mirror_path.write_bytes(png_path.read_bytes())
 
 
 def _read_csv_if_exists(path: str | Path, parse_dates: list[str] | None = None) -> pd.DataFrame:
@@ -176,6 +210,14 @@ def main(argv: list[str] | None = None) -> None:
 
     if not average_paths.empty:
         plot_average_paths(average_paths, args.figures_dir)
+
+    # HS300 RDD robustness forest plot — produced from
+    # results/literature/hs300_rdd/rdd_robustness.csv when present, so
+    # the figure stays in lockstep with the main figure refresh cycle.
+    _maybe_build_hs300_rdd_forest_plot(
+        rdd_output_dir=Path(args.rdd_output_dir) if args.rdd_output_dir else None,
+        figures_dir=Path(args.figures_dir) if args.figures_dir else None,
+    )
 
     frames = {}
     long_event_level = pd.DataFrame()

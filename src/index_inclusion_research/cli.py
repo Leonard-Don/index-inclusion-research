@@ -130,3 +130,7 @@ def run_generate_research_report_main() -> int | None:
 
 def run_cma_main() -> int | None:
     return _run_package_main("index_inclusion_research.cross_market_asymmetry")
+
+
+def run_build_hs300_rdd_forest_main() -> int | None:
+    return _run_package_main("index_inclusion_research.build_hs300_rdd_forest")

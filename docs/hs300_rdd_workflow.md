@@ -102,3 +102,14 @@ index-inclusion-prepare-hs300-rdd \
 ## 4. 浏览器 L3 工作台
 
 如果更适合在浏览器里操作，启动 dashboard 后打开 `/rdd-l3`。这个工作台和 `prepare-hs300-rdd` 共享一套预检规则：先一键刷新 L3 采集包，并直接预览批次清单 / 正式填报模板 / 边界参考；也可以直接从页面刷新中证线上采集诊断，传入公告日期窗口、返回行数和补充搜索词。工作台会读取 `online_search_diagnostics.csv`、`online_year_coverage.csv`、`online_source_audit.csv`、`online_manual_gap_worklist.csv` 与 `online_gap_source_hints.csv`，把线上搜索命中、年份覆盖、附件审计、`notice_only` 补录缺口和可点击来源入口展示出来。拿到官方候选名单后再上传预检字段、来源、cutoff 两侧覆盖和处理 / 对照样本，最后确认写入 `data/raw/hs300_rdd_candidates.csv` 并刷新 RDD 状态与 evidence manifest。
+
+## 5. RDD 输出
+
+`index-inclusion-hs300-rdd` 跑完后，主要交付物在 `results/literature/hs300_rdd/`：
+
+- `rdd_summary.csv` / `rdd_summary.tex`：主回归 τ、SE、p、n
+- `rdd_robustness.csv` / `rdd_robustness.tex`：main / donut(±0.01) / placebo±0.05 / polynomial 五个规格
+- `figures/car_m1_p1_rdd_main.png` / `car_m1_p1_rdd_bins.png` 等：主图与副图
+- `mccrary_density_test.csv`、`rdd_status.csv`、`summary.md`：识别检验与执行状态
+
+稳健性森林图统一在 `results/figures/hs300_rdd_robustness_forest.{png,pdf}` 生成（PDF 为论文用矢量版本），并镜像到 `results/literature/hs300_rdd/figures/rdd_robustness_forest.png` 供 dashboard 用。它由 `build_hs300_rdd_forest_plot` 渲染：每行一个规格，τ 为点估计、95% CI 横向 whisker；按显著性着色（p<0.05 蓝、p<0.10 橙、p≥0.10 灰）；右侧标注 `n=X, p=Y.YYY`；底部脚注记录数据源 CSV、生成日期与 2020-11–2025-11 样本区间。`make-figures-tables` 会在源 CSV 存在时自动刷新；也可以直接 `index-inclusion-build-hs300-rdd-forest` 单跑。论文应当报告全套面板而非只引用显著的 main spec（参见 [docs/limitations.md](limitations.md)）。
