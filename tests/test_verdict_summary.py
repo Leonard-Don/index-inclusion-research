@@ -333,6 +333,38 @@ def test_render_summary_json_normalises_nan_to_null() -> None:
     assert h2["key_value"] is None
 
 
+def test_render_summary_json_normalises_infinities_to_null() -> None:
+    """±inf must serialise to JSON null, not the non-standard Infinity literal.
+
+    json.dumps with default ``allow_nan=True`` emits ``Infinity`` / ``-Infinity``
+    for non-finite floats — those are not valid per RFC 8259 and crash strict
+    parsers (e.g. JavaScript ``JSON.parse``) that consume this output.
+    """
+    import json
+
+    df = pd.DataFrame(
+        [
+            {
+                "hid": "H1", "name_cn": "pos-inf",
+                "verdict": "支持", "confidence": "中",
+                "key_label": "p", "key_value": float("inf"), "n_obs": 10,
+            },
+            {
+                "hid": "H2", "name_cn": "neg-inf",
+                "verdict": "证据不足", "confidence": "中",
+                "key_label": "p", "key_value": float("-inf"), "n_obs": 10,
+            },
+        ]
+    )
+    raw = render_summary_json(df)
+    # Strict JSON: must not contain the non-standard ``Infinity`` literal.
+    assert "Infinity" not in raw
+    payload = json.loads(raw)
+    by_hid = {v["hid"]: v for v in payload["verdicts"]}
+    assert by_hid["H1"]["key_value"] is None
+    assert by_hid["H2"]["key_value"] is None
+
+
 def test_render_summary_json_with_diff_rows() -> None:
     import json
 

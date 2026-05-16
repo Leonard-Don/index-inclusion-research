@@ -400,10 +400,16 @@ def build_cma_verdicts_forest_plot(
             color="#5c6b77",
         )
 
-        fig.tight_layout(rect=(0.0, 0.07, 1.0, 0.94))
-        fig.savefig(png_path, dpi=220)
-        if pdf_path is not None:
-            fig.savefig(pdf_path)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=r"Glyph .* missing from font\(s\) .+",
+                category=UserWarning,
+            )
+            fig.tight_layout(rect=(0.0, 0.07, 1.0, 0.94))
+            fig.savefig(png_path, dpi=220)
+            if pdf_path is not None:
+                fig.savefig(pdf_path)
         plt.close(fig)
 
     return png_path
