@@ -329,7 +329,18 @@ def winsorize_event_level_metrics(
 def compute_event_level_metrics(
     panel: pd.DataFrame,
     car_windows: list[list[int]] | list[tuple[int, int]],
+    *,
+    ar_column: str = "ar",
 ) -> pd.DataFrame:
+    """Aggregate event-window CARs from per-day abnormal returns.
+
+    ``ar_column`` controls which abnormal-return column drives the CAR sums.
+    The default ``"ar"`` is the existing simple market-adjusted AR; pass
+    ``"ar_market_model"`` to switch to the market-model β-AR engine
+    (assumes :func:`compute_market_model_abnormal_returns` has already
+    populated the column). The default keeps the historical bit-for-bit
+    output of the function — this parameter is strictly additive.
+    """
     windows = _normalise_windows(car_windows)
     rows: list[dict[str, object]] = []
     grouping = ["event_id", "event_phase"]
@@ -355,7 +366,13 @@ def compute_event_level_metrics(
         }
         for window in windows:
             mask = (group["relative_day"] >= window.start) & (group["relative_day"] <= window.end)
-            metrics[f"car_{window.slug}"] = group.loc[mask, "ar"].sum()
+            # ``min_count=1`` keeps the simple-AR path bit-equivalent to the
+            # historical ``.sum()`` call (clean panels always have finite
+            # ``ar`` rows so at least one value is present); but when the
+            # market-model engine emits an all-NaN window — because the
+            # estimation gate failed — the CAR surfaces as NaN instead of a
+            # silent 0. This is the seam the engine-flag test relies on.
+            metrics[f"car_{window.slug}"] = group.loc[mask, ar_column].sum(min_count=1)
 
         pre_group = group.loc[(group["relative_day"] >= -5) & (group["relative_day"] <= -1)]
         post_group = group.loc[(group["relative_day"] >= 0) & (group["relative_day"] <= 5)]
@@ -541,8 +558,18 @@ def compute_patell_bmp_summary(
 def compute_event_study(
     panel: pd.DataFrame,
     car_windows: list[list[int]] | list[tuple[int, int]],
+    *,
+    ar_column: str = "ar",
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    event_level = compute_event_level_metrics(panel, car_windows)
+    """End-to-end event-study aggregation around a single AR engine.
+
+    ``ar_column`` is threaded into both the per-event CAR windows
+    (:func:`compute_event_level_metrics`) and the average-path cumsum so
+    that flipping the engine keeps every downstream artifact internally
+    consistent. The default ``"ar"`` keeps the simple market-adjusted
+    behavior — and therefore the historical bit-for-bit output — intact.
+    """
+    event_level = compute_event_level_metrics(panel, car_windows, ar_column=ar_column)
     summary = summarize_event_level_metrics(event_level, car_windows)
 
     if panel.empty:
@@ -566,15 +593,15 @@ def compute_event_study(
         return event_level, summary, average_paths
 
     path_frame = panel.sort_values(["event_id", "event_phase", "relative_day"]).copy()
-    path_frame["car_path"] = path_frame.groupby(["event_id", "event_phase"], dropna=False)["ar"].cumsum()
+    path_frame["car_path"] = path_frame.groupby(["event_id", "event_phase"], dropna=False)[ar_column].cumsum()
     average_paths = (
         path_frame.groupby(["market", "event_phase", "inclusion", "relative_day"], dropna=False)
         .agg(
-            mean_ar=("ar", "mean"),
-            std_ar=("ar", lambda series: series.std(ddof=1)),
+            mean_ar=(ar_column, "mean"),
+            std_ar=(ar_column, lambda series: series.std(ddof=1)),
             mean_car=("car_path", "mean"),
             std_car=("car_path", lambda series: series.std(ddof=1)),
-            n_obs=("ar", "size"),
+            n_obs=(ar_column, "size"),
         )
         .reset_index()
     )

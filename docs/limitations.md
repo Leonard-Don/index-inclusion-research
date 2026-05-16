@@ -34,7 +34,13 @@
 
 ## 5. 事件研究方法
 
-- **AR 计算**：`ar = ret − benchmark_ret`（简单市场调整）；没有市场模型 β 估计。
+- **AR 计算**：默认仍为简单市场调整（`ar = ret − benchmark_ret`，向后兼容；
+  主表、PAP 与 CMA verdict 都钉在这一引擎上）。通过
+  `index-inclusion-run-event-study --ar-model market` 可切换到带 β 估计的市场模型 AR
+  （`ar_market_model = ret − (α + β·benchmark_ret)`，估计窗口默认 (-120, -10)，
+  与短窗口事件研究文献一致；用 `--estimation-window LOW,HIGH` 改写）。切换引擎
+  在 CN 样本上经验上会让 CAR 偏移约 5-15 bps（β 与 1 之差带来的修正），主表
+  保持不变；若要纳入论文需重新跑 PAP §7 决策。
 - **σ 估计**：默认从 panel 内 `[-window_pre, -2]` 区间估计 (window_pre 默认 20)；
   这是 18 日的 in-panel proxy estimation window，比文献标准（120-250 日）短。
 - **标准化**：`compute_patell_bmp_summary` 在简单 t 之外提供 Patell t 与 BMP t；
