@@ -133,11 +133,38 @@ index-inclusion-generate-research-report
 ## 8b. 聚合并审计论文交付包
 
 ```bash
-index-inclusion-paper-bundle --force
+index-inclusion-paper-bundle --force            # 默认先刷新衍生图/PAP 审计再拷贝
+index-inclusion-paper-bundle --force --no-regenerate   # 跳过预刷新（已跑过 make rebuild 时更快）
 index-inclusion-paper-audit --fail-on-warn
 ```
 
-`paper-bundle` 会把正文表、图、叙事、RDD 附录和 PAP snapshot 聚合到 `paper/`。
+`paper-bundle` 会把正文表、图、叙事、RDD 附录和 PAP snapshot 聚合到 `paper/`，
+默认在拷贝前自动重跑三个会被现有 CSV 驱动的衍生产物（任何一项失败都只 warn，
+不打断 bundle）：
+
+1. HS300 RDD 稳健性森林图（`build_hs300_rdd_forest_plot`，输入
+   `results/literature/hs300_rdd/rdd_robustness.csv`）→
+   `results/figures/hs300_rdd_robustness_forest.{png,pdf}`，同时镜像到
+   `results/literature/hs300_rdd/figures/rdd_robustness_forest.png` 给 dashboard。
+2. CMA 跨假说证据强度森林图（`build_cma_verdicts_forest_plot`，输入
+   `results/real_tables/cma_hypothesis_verdicts.csv`）→
+   `results/figures/cma_verdicts_forest.{png,pdf}`。
+3. PAP 偏离审计（`build_pap_diff`，输入最新 `snapshots/pre-registration-*.csv` +
+   当前 verdicts CSV）→ `results/real_tables/pap_deviation_report.csv`。
+
+输出 (`paper/`)：
+
+- `paper/tables/` — `*.tex` 主表 + `patell_bmp_summary.csv` + `pap_deviation_report.csv`
+- `paper/figures/` — `*.png`（CMA / 事件研究 / 新增两个森林图）+ 两张森林图的 `.pdf`
+- `paper/rdd/` — HS300 RDD CSV / TeX / 子图
+- `paper/narrative/` — paper_outline / limitations / pre_registration 等
+- `paper/data/` — `hs300_rdd_candidates.csv` + `snapshots/pre-registration-*.csv`
+- `paper/README.md` — 人类可读清单
+- `paper/bundle_summary.md` — 研究状态快照
+- `paper/manifest.json` — 机器可读清单：每个产物的 source / target / sha256 /
+  size_bytes，外加 ``regenerated`` 字段记录三个预刷新步骤的状态
+  (`ok` / `skipped` / `error`)。下游审计 / 归档可比对 sha256 判定 drift。
+
 `paper-audit` 逐项检查正文主结论、Patell/BMP 稳健性、CMA core 机制主表、RDD 附录、PAP/limitations 与 `paper/` 交付包是否都有可追溯产物。机器可读输出：
 
 ```bash
