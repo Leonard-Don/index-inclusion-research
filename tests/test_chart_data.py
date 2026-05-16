@@ -209,6 +209,28 @@ class TestBuildCarHeatmapChartData:
         result = build_car_heatmap_chart_data(populated_root)
         json.dumps(result)
 
+    def test_partial_data_does_not_leak_nan(self, tmp_path: Path) -> None:
+        """A partial event-study summary (e.g., only CN announce computed so
+        far) must not leak NaN into the heatmap payload — the dashboard
+        frontend parses these dicts with strict JSON and ``NaN`` is not valid
+        JSON. Cells with no underlying observation should be dropped, mirroring
+        the existing ``build_cma_mechanism_heatmap_chart_data`` contract."""
+        tables = tmp_path / "results" / "real_tables"
+        tables.mkdir(parents=True)
+        (tables / "event_study_summary.csv").write_text(
+            "market,event_phase,window,inclusion,mean_car,p_value\n"
+            "CN,announce,\"[-1,+1]\",1,0.0185,0.005\n"
+        )
+
+        result = build_car_heatmap_chart_data(tmp_path)
+
+        assert len(result["data"]) == 1
+        assert len(result["annotations"]) == 1
+        assert result["annotations"][0]["row"] == 0  # CN announce
+        assert result["annotations"][0]["col"] == 0  # [-1,+1]
+        # Strict JSON serialisation — fails loudly if any NaN/Infinity leaked.
+        json.dumps(result, allow_nan=False)
+
 
 # ── gap_decomposition ────────────────────────────────────────────────
 
