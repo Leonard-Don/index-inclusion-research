@@ -40,6 +40,7 @@ index-inclusion-plan-hs300-rdd-l3 = "index_inclusion_research.cli:run_plan_hs300
 index-inclusion-collect-hs300-rdd-l3 = "index_inclusion_research.cli:run_collect_hs300_rdd_l3_main"
 index-inclusion-prepare-passive-aum = "index_inclusion_research.cli:run_prepare_passive_aum_main"
 index-inclusion-download-passive-aum-cn = "index_inclusion_research.cli:run_download_passive_aum_cn_main"
+index-inclusion-download-cn-passive-aum-proxy = "index_inclusion_research.cli:run_download_cn_passive_aum_proxy_main"
 index-inclusion-compute-h6-weight-change = "index_inclusion_research.cli:run_compute_h6_weight_change_main"
 index-inclusion-refresh-real-evidence = "index_inclusion_research.cli:run_refresh_real_evidence_main"
 index-inclusion-rebuild-all = "index_inclusion_research.cli:run_rebuild_all_main"

@@ -25,6 +25,12 @@ REAL_MATCHED_EVENT_PANEL = ROOT / "data" / "processed" / "real_matched_event_pan
 REAL_EVENTS_CLEAN = ROOT / "data" / "processed" / "real_events_clean.csv"
 WEIGHT_CHANGE_PATH = ROOT / "data" / "processed" / "hs300_weight_change.csv"
 DEFAULT_PASSIVE_AUM_PATH = ROOT / "data" / "raw" / "passive_aum.csv"
+# Bottom-up CN passive-AUM proxy (sum of year-end ETF TNA per index).
+# Schema: ``index_name, snapshot_date, total_tna_cny_billions, etf_count, source, note``.
+# When present we aggregate its CSI300+CSI500 rows into a CN row appended to
+# the AUM frame so H2 can compare both markets. See
+# :mod:`index_inclusion_research.download_cn_passive_aum_proxy`.
+DEFAULT_CN_PASSIVE_AUM_PROXY_PATH = ROOT / "data" / "raw" / "cn_passive_aum_proxy.csv"
 PAPER_VERDICT_PATH = ROOT / "docs" / "paper_outline_verdicts.md"
 
 APPEND_MARKER = "## 六、美股 vs A股 不对称"
@@ -32,6 +38,72 @@ APPEND_MARKER = "## 六、美股 vs A股 不对称"
 
 def _load_panel(path: Path) -> pd.DataFrame:
     return pd.read_csv(path, low_memory=False)
+
+
+def _cn_proxy_to_aum_rows(proxy_frame: pd.DataFrame) -> pd.DataFrame:
+    """Convert the CN ETF-TNA proxy into ``(market, year, aum_trillion)`` rows.
+
+    The proxy file lives at ``data/raw/cn_passive_aum_proxy.csv`` with one
+    row per ``(index_name, snapshot_date)`` in CNY billions. To make it
+    comparable to the US Z.1 trillion-USD series in ``passive_aum.csv``
+    we:
+
+    1. Sum across ``index_name`` (CSI300 + CSI500) per snapshot — the
+       broad CN passive-tracking AUM is approximated as the union of
+       the two main broad-market index trackers.
+    2. Collapse the snapshot date to its calendar year.
+    3. Convert CNY billions → CNY trillions (i.e. divide by 1_000).
+
+    The result is still RMB-denominated, **not USD**: the existing CN
+    rows in ``passive_aum.csv`` (from the top-down
+    ``download_passive_aum_cn`` pipeline) are also RMB trillions, so
+    schema-wise we are consistent with the prior convention. H2's
+    verdict only checks within-market trend direction, so the USD/RMB
+    asymmetry never enters the verdict logic — see ``docs/limitations.md``
+    §3 for caveats and ``analysis/cross_market_asymmetry/verdicts/_h_functions._h2``
+    for the trend calculation.
+    """
+    required = {"index_name", "snapshot_date", "total_tna_cny_billions"}
+    if proxy_frame.empty or not required.issubset(proxy_frame.columns):
+        return pd.DataFrame(columns=["market", "year", "aum_trillion"])
+    work = proxy_frame.copy()
+    work["year"] = pd.to_datetime(work["snapshot_date"], errors="coerce").dt.year
+    work = work.dropna(subset=["year"])
+    if work.empty:
+        return pd.DataFrame(columns=["market", "year", "aum_trillion"])
+    work["year"] = work["year"].astype(int)
+    work["total_tna_cny_billions"] = pd.to_numeric(
+        work["total_tna_cny_billions"], errors="coerce"
+    )
+    work = work.dropna(subset=["total_tna_cny_billions"])
+    aggregated = (
+        work.groupby("year", as_index=False)["total_tna_cny_billions"].sum()
+    )
+    aggregated["aum_trillion"] = aggregated["total_tna_cny_billions"] / 1_000.0
+    aggregated["market"] = "CN"
+    return aggregated[["market", "year", "aum_trillion"]].sort_values("year").reset_index(drop=True)
+
+
+def _merge_aum_with_cn_proxy(
+    aum_frame: pd.DataFrame, proxy_path: Path
+) -> pd.DataFrame:
+    """Replace CN rows in ``aum_frame`` with proxy-derived CN rows if available.
+
+    Other markets (US) pass through unchanged. If the proxy file is
+    missing or empty we return ``aum_frame`` as-is.
+    """
+    if not proxy_path.exists():
+        return aum_frame
+    try:
+        proxy = pd.read_csv(proxy_path)
+    except Exception:
+        return aum_frame
+    cn_rows = _cn_proxy_to_aum_rows(proxy)
+    if cn_rows.empty:
+        return aum_frame
+    other = aum_frame.loc[aum_frame["market"].astype(str).str.upper() != "CN"]
+    combined = pd.concat([other, cn_rows], ignore_index=True)
+    return combined.sort_values(["market", "year"]).reset_index(drop=True)
 
 
 def _append_research_summary(
@@ -204,6 +276,13 @@ def run_cma_pipeline(
     resolved_aum_path = Path(aum_path) if aum_path is not None else DEFAULT_PASSIVE_AUM_PATH
     if resolved_aum_path.exists():
         aum_frame = pd.read_csv(resolved_aum_path)
+    if aum_frame is not None:
+        # Overlay the bottom-up CN ETF-TNA proxy (CSI300 + CSI500 union)
+        # on top of any CN rows already in passive_aum.csv. The proxy is
+        # narrower (broad-index trackers only) but more transparent than
+        # the top-down ratio-applied series produced by
+        # download_passive_aum_cn.
+        aum_frame = _merge_aum_with_cn_proxy(aum_frame, DEFAULT_CN_PASSIVE_AUM_PROXY_PATH)
     time_series.render_rolling_figure(
         rolling, output_dir=figures_dir, aum_frame=aum_frame
     )

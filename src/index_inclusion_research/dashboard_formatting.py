@@ -296,6 +296,7 @@ PATH_TEXT_REPLACEMENTS = (
     ("data/raw/hs300_rdd_candidates.csv", "正式候选样本"),
     ("results/literature/hs300_rdd/candidate_batch_audit.csv", "候选样本审计"),
     ("results/real_tables", "结果表"),
+    ("data/raw/cn_passive_aum_proxy.csv", "中国 A 股 ETF TNA proxy"),
     ("data/raw/passive_aum.csv", "被动资金规模数据"),
     ("hs300_rdd_candidates.reconstructed.csv", "公开重建样本"),
     ("hs300_rdd_candidates.csv", "正式候选样本"),

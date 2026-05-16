@@ -7,6 +7,7 @@ import pandas as pd
 
 from index_inclusion_research.analysis.cross_market_asymmetry.verdicts._core import (
     EVIDENCE_TIER,
+    EVIDENCE_TIER_PROMOTION_FLOOR,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -96,11 +97,17 @@ def test_readme_h1_h7_verdict_table_tier_column_matches_evidence_tier() -> None:
     """
     tier_label = {"core": "正文 core", "supplementary": "附录 supplementary"}
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    promotable = set(EVIDENCE_TIER_PROMOTION_FLOOR.keys())
     for hid, tier in EVIDENCE_TIER.items():
-        expected_label = tier_label[tier]
-        opposite_label = tier_label[
-            "supplementary" if tier == "core" else "core"
-        ]
+        # Promotion-eligible rows (currently H2) may legitimately read
+        # the promoted tier in README once their CSV row crosses the
+        # combined-n floor; treat the README as valid if it matches
+        # either the static baseline or 'core'.
+        valid_tiers: set[str] = {tier}
+        if hid in promotable:
+            valid_tiers.add("core")
+        valid_labels = {tier_label[t] for t in valid_tiers}
+        invalid_labels = {tier_label[t] for t in {"core", "supplementary"} - valid_tiers}
         row_pattern = re.compile(
             rf"^\|\s*{re.escape(hid)}\s*\|.*\|\s*$",
             re.MULTILINE,
@@ -111,20 +118,35 @@ def test_readme_h1_h7_verdict_table_tier_column_matches_evidence_tier() -> None:
             f"for {hid}; found {len(rows)}: {rows!r}"
         )
         row = rows[0]
-        assert expected_label in row, (
-            f"README.md H1..H7 verdict-table row for {hid} must contain "
-            f"'{expected_label}' (写作层级 cell) to match "
-            f"EVIDENCE_TIER[{hid!r}]={tier!r}; row: {row!r}"
+        assert any(lbl in row for lbl in valid_labels), (
+            f"README.md H1..H7 verdict-table row for {hid} must contain one of "
+            f"{valid_labels} (写作层级 cell) — static EVIDENCE_TIER[{hid!r}]={tier!r}"
+            + (
+                f", may be promoted by combined-n floor "
+                f"{EVIDENCE_TIER_PROMOTION_FLOOR[hid]}"
+                if hid in promotable
+                else ""
+            )
+            + f"; row: {row!r}"
         )
-        assert opposite_label not in row, (
-            f"README.md H1..H7 verdict-table row for {hid} must NOT contain "
-            f"'{opposite_label}' (would contradict "
-            f"EVIDENCE_TIER[{hid!r}]={tier!r}); row: {row!r}"
-        )
+        for invalid in invalid_labels:
+            assert invalid not in row, (
+                f"README.md H1..H7 verdict-table row for {hid} must NOT contain "
+                f"'{invalid}' (would contradict EVIDENCE_TIER[{hid!r}]={tier!r}); "
+                f"row: {row!r}"
+            )
 
 
 def test_existing_verdicts_csv_has_tier_after_pipeline_run() -> None:
-    """If the live CSV exists, it should carry the tier column."""
+    """If the live CSV exists, it should carry the tier column.
+
+    For hypotheses listed in ``EVIDENCE_TIER_PROMOTION_FLOOR`` the CSV
+    tier may differ from the static ``EVIDENCE_TIER`` baseline once the
+    combined-n promotion fires (e.g. H2 promoted from supplementary to
+    core after the CN ETF-TNA proxy lands). Those hypotheses are
+    allowed either tier; everything else must exactly match the static
+    baseline so a silent registry drift still trips this guard.
+    """
     from index_inclusion_research.paths import results_dir
 
     path = results_dir() / "real_tables" / "cma_hypothesis_verdicts.csv"
@@ -135,6 +157,15 @@ def test_existing_verdicts_csv_has_tier_after_pipeline_run() -> None:
         return  # CSV pre-dates this column; will refresh on next make rebuild
     assert set(df["evidence_tier"].unique()).issubset({"core", "supplementary"})
     by_hid = dict(zip(df["hid"], df["evidence_tier"], strict=False))
+    promotable = set(EVIDENCE_TIER_PROMOTION_FLOOR.keys())
     for hid, tier in EVIDENCE_TIER.items():
-        if hid in by_hid:
+        if hid not in by_hid:
+            continue
+        if hid in promotable:
+            # Either the static baseline or the promoted tier is valid.
+            assert by_hid[hid] in {tier, "core"}, (
+                f"{hid} CSV tier {by_hid[hid]!r} is not in expected set "
+                f"({tier!r}, 'core')"
+            )
+        else:
             assert by_hid[hid] == tier

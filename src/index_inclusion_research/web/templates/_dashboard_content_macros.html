@@ -4,6 +4,7 @@
 {{ (text or '')
   | replace('data/raw/hs300_rdd_candidates.reconstructed.csv', '公开重建样本')
   | replace('data/raw/hs300_rdd_candidates.csv', '正式候选样本')
+  | replace('data/raw/cn_passive_aum_proxy.csv', '中国 A 股 ETF TNA proxy')
   | replace('data/raw/passive_aum.csv', '被动资金规模数据')
   | replace('results/real_tables', '结果表')
   | replace('hs300_rdd_candidates.reconstructed.csv', '公开重建样本')
