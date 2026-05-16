@@ -1,6 +1,6 @@
 # 命令行入口参考
 
-29 个 console scripts 按用途分组：
+30 个 console scripts 按用途分组：
 
 - **数据流水线**：`build-event-sample` / `build-price-panel` / `match-controls` / `match-robustness` / `run-event-study` / `run-regressions`
 - **样本数据**：`generate-sample-data` / `download-real-data`
@@ -8,7 +8,7 @@
 - **Dashboard 与三条主线**：`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - **HS300 RDD 工具链**：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`（详见 [docs/hs300_rdd_workflow.md](hs300_rdd_workflow.md)）
 - **跨市场不对称 + 假说证据**：`cma`（7 条假说 verdict）/ `prepare-passive-aum` / `download-passive-aum-cn` / `compute-h6-weight-change` / `refresh-real-evidence`
-- **总入口**：`rebuild-all`（10 步流水线一键跑）/ `verdict-summary`（终端速览）/ `doctor`（项目健康检查）
+- **总入口**：`rebuild-all`（10 步流水线一键跑）/ `verdict-summary`（终端速览）/ `pap-diff`（PAP 偏离审计）/ `doctor`（项目健康检查）
 
 所有入口都通过 `pyproject.toml` 的 console scripts 或 `python3 -m index_inclusion_research.<module>` 调用，也可以用 `make rebuild` / `make verdicts` / `make doctor` / `make sync` 简写。安装时使用 `make sync` 会按 `uv.lock` 装锁定版本（CI 也走这条路径）。
 
@@ -184,6 +184,40 @@ index-inclusion-collect-hs300-rdd-l3 \
 - `online_manual_gap_worklist.csv`：按 P1/P2/P3 排序的人工补录清单，优先处理“已有调入、缺备选对照”的年份
 - `online_gap_source_hints.csv`：为每个缺口生成中证详情页、官方附件、Wayback、站内网页搜索和巨潮全文搜索入口
 - `online_collection_report.md`：人类可读汇总和下一步命令
+
+## 12. PAP 偏离审计（`pap-diff`）
+
+把当前 7 条假说 verdict 和 [`docs/pre_registration.md`](pre_registration.md) 冻结的 PAP 基线做结构化比对。和 `verdict-summary --vs-pap` 的字段级 diff 不同，`pap-diff` 把每条假说强制分到 5 类之一，并写一份机器可读 CSV，便于 PAP §7 决策签字与审稿人答复：
+
+| 分类 | 含义 |
+|---|---|
+| `unchanged` | verdict / confidence / evidence_tier / n_obs / key_value 全部匹配（容差内）|
+| `tightened` | verdict 不变，但 confidence 上升（低 → 中 → 高）或 p-value 显著下降 |
+| `weakened` | verdict 不变，但 confidence 下降或 p-value 显著上升 |
+| `flipped` | verdict 文本变化（如 证据不足 → 支持），**需 PAP §7 签字** |
+| `unverifiable` | 基线 / 当前缺行，或 key_value 在某一侧为 NaN |
+
+```bash
+# 默认对最新 snapshots/pre-registration-*.csv，写 results/real_tables/pap_deviation_report.csv
+index-inclusion-pap-diff
+
+# 信息性模式（默认）—— 始终 exit 0，即便有 flipped
+index-inclusion-pap-diff --no-color | tee /tmp/pap_audit.txt
+
+# 当作 CI 闸门 —— flipped 即 exit 1
+index-inclusion-pap-diff --strict
+
+# 比对指定基线 / 调阈值
+index-inclusion-pap-diff --baseline snapshots/pre-registration-2026-05-03.csv \
+  --p-delta-threshold 0.01 --key-value-rel-threshold 0.05
+
+# 只打印不写盘
+index-inclusion-pap-diff --no-write
+```
+
+输出 CSV `results/real_tables/pap_deviation_report.csv` 每行一条 H1..H7，列：`hid, name_cn, classification, baseline_verdict, current_verdict, baseline_confidence, current_confidence, baseline_evidence_tier, current_evidence_tier, baseline_n_obs, current_n_obs, baseline_key_label, current_key_label, baseline_key_value, current_key_value, notes`。
+
+`verdict-summary --vs-pap` 仍然是日常 diff 的首选（彩色终端 + 字段级前后值）；`pap-diff` 是预注册答辩 / 审计场景的结构化版本。
 
 ## Verdicts ↔ Literature 双向链接
 

@@ -46,6 +46,7 @@ index-inclusion-rebuild-all = "index_inclusion_research.cli:run_rebuild_all_main
 index-inclusion-paper-bundle = "index_inclusion_research.cli:run_paper_bundle_main"
 index-inclusion-paper-audit = "index_inclusion_research.cli:run_paper_audit_main"
 index-inclusion-verdict-summary = "index_inclusion_research.cli:run_verdict_summary_main"
+index-inclusion-pap-diff = "index_inclusion_research.cli:run_pap_diff_main"
 index-inclusion-doctor = "index_inclusion_research.cli:run_doctor_main"
 index-inclusion-generate-sample-data = "index_inclusion_research.cli:run_generate_sample_data_main"
 index-inclusion-download-real-data = "index_inclusion_research.cli:run_download_real_data_main"
