@@ -100,6 +100,10 @@ def run_verdict_summary_main() -> int | None:
     return _run_package_main("index_inclusion_research.verdict_summary")
 
 
+def run_pap_diff_main() -> int | None:
+    return _run_package_main("index_inclusion_research.pap_diff")
+
+
 def run_doctor_main() -> int | None:
     return _run_package_main("index_inclusion_research.doctor")
 
