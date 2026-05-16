@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as _dt
 import json
 import re
 from pathlib import Path
@@ -13,13 +14,17 @@ import index_inclusion_research.doctor as doctor_module
 from index_inclusion_research.doctor import (
     CheckResult,
     check_chart_builders_register,
+    check_cma_verdicts_forest_artifact,
     check_console_scripts_importable,
     check_h6_weight_change_readiness,
     check_h7_cn_sector_readiness,
+    check_hs300_rdd_forest_artifact,
     check_hypothesis_paper_ids_resolve,
     check_match_robustness_grid,
     check_matched_sample_balance,
     check_p_gated_verdict_sensitivity,
+    check_pap_deviation_no_flips,
+    check_pap_snapshot_freshness,
     check_paper_audit,
     check_paper_verdict_section_synced,
     check_pending_data_verdicts,
@@ -535,6 +540,342 @@ def test_check_console_scripts_importable_passes() -> None:
 def test_check_paper_audit_passes_current_repo() -> None:
     result = check_paper_audit()
     assert result.status == "pass"
+
+
+# ── PAP discipline + figure-freshness checks ─────────────────────────
+
+
+def _write_pap_report(
+    path: Path,
+    rows: list[dict[str, object]],
+) -> None:
+    """Write a minimal pap_deviation_report.csv with the schema doctor reads."""
+    columns = (
+        "hid",
+        "name_cn",
+        "classification",
+        "baseline_verdict",
+        "current_verdict",
+        "notes",
+    )
+    df = pd.DataFrame(rows, columns=list(columns))
+    df.to_csv(path, index=False)
+
+
+def test_check_pap_deviation_no_flips_passes_when_all_unchanged(
+    tmp_path: Path,
+) -> None:
+    report = tmp_path / "pap_deviation_report.csv"
+    _write_pap_report(
+        report,
+        [
+            {
+                "hid": f"H{i}",
+                "name_cn": f"假说{i}",
+                "classification": "unchanged",
+                "baseline_verdict": "支持",
+                "current_verdict": "支持",
+                "notes": "",
+            }
+            for i in range(1, 8)
+        ],
+    )
+    result = check_pap_deviation_no_flips(
+        report_path=report,
+        verdicts_csv_path=tmp_path / "missing_verdicts.csv",
+        snapshots_dir=tmp_path / "missing_snapshots",
+    )
+    assert result.status == "pass"
+    assert "All 7 hypothesis verdict(s) are unchanged" in result.message
+
+
+def test_check_pap_deviation_no_flips_fails_on_flip(tmp_path: Path) -> None:
+    report = tmp_path / "pap_deviation_report.csv"
+    rows = [
+        {
+            "hid": f"H{i}",
+            "name_cn": f"假说{i}",
+            "classification": "unchanged",
+            "baseline_verdict": "支持",
+            "current_verdict": "支持",
+            "notes": "",
+        }
+        for i in range(1, 8)
+    ]
+    rows[2] = {
+        "hid": "H3",
+        "name_cn": "散户 vs 机构结构",
+        "classification": "flipped",
+        "baseline_verdict": "支持",
+        "current_verdict": "证据不足",
+        "notes": "verdict 支持 → 证据不足",
+    }
+    _write_pap_report(report, rows)
+    result = check_pap_deviation_no_flips(
+        report_path=report,
+        verdicts_csv_path=tmp_path / "missing_verdicts.csv",
+        snapshots_dir=tmp_path / "missing_snapshots",
+    )
+    assert result.status == "fail"
+    assert "flipped" in result.message
+    assert "make verdicts && make paper" in result.fix
+    assert any("H3" in detail and "支持" in detail for detail in result.details)
+
+
+def test_check_pap_deviation_no_flips_warns_on_drift(tmp_path: Path) -> None:
+    report = tmp_path / "pap_deviation_report.csv"
+    rows = [
+        {
+            "hid": "H1",
+            "name_cn": "信息泄露",
+            "classification": "tightened",
+            "baseline_verdict": "证据不足",
+            "current_verdict": "证据不足",
+            "notes": "confidence 低 → 中",
+        },
+        {
+            "hid": "H2",
+            "name_cn": "AUM",
+            "classification": "weakened",
+            "baseline_verdict": "部分支持",
+            "current_verdict": "部分支持",
+            "notes": "confidence 高 → 中",
+        },
+    ]
+    _write_pap_report(report, rows)
+    result = check_pap_deviation_no_flips(
+        report_path=report,
+        verdicts_csv_path=tmp_path / "missing_verdicts.csv",
+        snapshots_dir=tmp_path / "missing_snapshots",
+    )
+    assert result.status == "warn"
+    assert "tightened/weakened" in result.message
+    assert "make verdicts && make paper" in result.fix
+    assert any("H1" in detail for detail in result.details)
+    assert any("H2" in detail for detail in result.details)
+
+
+def test_check_pap_deviation_no_flips_regenerates_via_pap_diff(
+    tmp_path: Path,
+) -> None:
+    """If the report CSV is missing, doctor should call pap_diff in-process."""
+    snapshots_dir = tmp_path / "snapshots"
+    snapshots_dir.mkdir()
+    baseline = snapshots_dir / "pre-registration-2026-05-03.csv"
+    pd.DataFrame(
+        [
+            {
+                "hid": "H1",
+                "name_cn": "信息泄露",
+                "verdict": "证据不足",
+                "confidence": "中",
+                "evidence_tier": "core",
+                "n_obs": 436,
+                "key_label": "bootstrap p",
+                "key_value": 0.87,
+                "p_value": 0.87,
+            }
+        ]
+    ).to_csv(baseline, index=False)
+    current = tmp_path / "verdicts.csv"
+    pd.DataFrame(
+        [
+            {
+                "hid": "H1",
+                "name_cn": "信息泄露",
+                "verdict": "证据不足",
+                "confidence": "中",
+                "evidence_tier": "core",
+                "n_obs": 436,
+                "key_label": "bootstrap p",
+                "key_value": 0.87,
+                "p_value": 0.87,
+            }
+        ]
+    ).to_csv(current, index=False)
+    report = tmp_path / "pap_deviation_report.csv"
+    assert not report.exists()
+    result = check_pap_deviation_no_flips(
+        report_path=report,
+        verdicts_csv_path=current,
+        snapshots_dir=snapshots_dir,
+    )
+    assert report.exists(), "doctor should have regenerated the deviation report"
+    assert result.status == "pass"
+
+
+def test_check_pap_deviation_no_flips_warns_when_baseline_missing(
+    tmp_path: Path,
+) -> None:
+    result = check_pap_deviation_no_flips(
+        report_path=tmp_path / "missing_report.csv",
+        verdicts_csv_path=tmp_path / "missing_verdicts.csv",
+        snapshots_dir=tmp_path / "missing_snapshots",
+    )
+    assert result.status == "warn"
+    assert "PAP deviation report not found" in result.message
+
+
+def test_check_pap_snapshot_freshness_passes_when_recent(tmp_path: Path) -> None:
+    snapshots = tmp_path / "snapshots"
+    snapshots.mkdir()
+    (snapshots / "pre-registration-2026-05-10.csv").write_text("hid\nH1\n")
+    result = check_pap_snapshot_freshness(
+        snapshots_dir=snapshots,
+        stale_days=90,
+        today=_dt.date(2026, 5, 16),
+    )
+    assert result.status == "pass"
+    assert "pre-registration-2026-05-10" in result.message
+
+
+def test_check_pap_snapshot_freshness_warns_when_stale(tmp_path: Path) -> None:
+    snapshots = tmp_path / "snapshots"
+    snapshots.mkdir()
+    # 100 days before reference date
+    (snapshots / "pre-registration-2026-02-05.csv").write_text("hid\nH1\n")
+    result = check_pap_snapshot_freshness(
+        snapshots_dir=snapshots,
+        stale_days=90,
+        today=_dt.date(2026, 5, 16),
+    )
+    assert result.status == "warn"
+    assert "100 days old" in result.message
+    assert "quarterly" in result.message
+
+
+def test_check_pap_snapshot_freshness_fails_when_missing(tmp_path: Path) -> None:
+    snapshots = tmp_path / "snapshots"
+    snapshots.mkdir()
+    result = check_pap_snapshot_freshness(
+        snapshots_dir=snapshots,
+        stale_days=90,
+        today=_dt.date(2026, 5, 16),
+    )
+    assert result.status == "fail"
+    assert "No PAP snapshots" in result.message
+
+
+def test_check_pap_snapshot_freshness_fails_when_dir_missing(tmp_path: Path) -> None:
+    result = check_pap_snapshot_freshness(
+        snapshots_dir=tmp_path / "no-such-snapshots",
+        stale_days=90,
+        today=_dt.date(2026, 5, 16),
+    )
+    assert result.status == "fail"
+    assert "snapshots directory missing" in result.message
+
+
+def test_check_pap_snapshot_freshness_picks_newest_by_date(tmp_path: Path) -> None:
+    """Multiple snapshots: doctor should pick the lexicographically last one."""
+    snapshots = tmp_path / "snapshots"
+    snapshots.mkdir()
+    (snapshots / "pre-registration-2026-02-05.csv").write_text("hid\nH1\n")
+    (snapshots / "pre-registration-2026-05-10.csv").write_text("hid\nH1\n")
+    result = check_pap_snapshot_freshness(
+        snapshots_dir=snapshots,
+        stale_days=90,
+        today=_dt.date(2026, 5, 16),
+    )
+    assert result.status == "pass"
+    assert "pre-registration-2026-05-10" in result.message
+
+
+def _touch_with_mtime(path: Path, *, mtime: float) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"")
+    import os
+    os.utime(path, (mtime, mtime))
+
+
+def test_check_hs300_rdd_forest_artifact_passes_when_fresh(tmp_path: Path) -> None:
+    csv = tmp_path / "rdd_robustness.csv"
+    png = tmp_path / "hs300_rdd_robustness_forest.png"
+    pdf = tmp_path / "hs300_rdd_robustness_forest.pdf"
+    _touch_with_mtime(csv, mtime=1_700_000_000.0)
+    _touch_with_mtime(png, mtime=1_700_000_100.0)
+    _touch_with_mtime(pdf, mtime=1_700_000_100.0)
+    result = check_hs300_rdd_forest_artifact(
+        png_path=png,
+        pdf_path=pdf,
+        robustness_csv_path=csv,
+    )
+    assert result.status == "pass"
+    assert "fresher than" in result.message
+
+
+def test_check_hs300_rdd_forest_artifact_warns_when_stale(tmp_path: Path) -> None:
+    csv = tmp_path / "rdd_robustness.csv"
+    png = tmp_path / "hs300_rdd_robustness_forest.png"
+    pdf = tmp_path / "hs300_rdd_robustness_forest.pdf"
+    _touch_with_mtime(csv, mtime=1_700_000_200.0)
+    _touch_with_mtime(png, mtime=1_700_000_100.0)  # older than csv
+    _touch_with_mtime(pdf, mtime=1_700_000_100.0)
+    result = check_hs300_rdd_forest_artifact(
+        png_path=png,
+        pdf_path=pdf,
+        robustness_csv_path=csv,
+    )
+    assert result.status == "warn"
+    assert "make figures-tables" in result.fix
+    assert any("mtime older" in d for d in result.details)
+
+
+def test_check_hs300_rdd_forest_artifact_warns_when_missing(tmp_path: Path) -> None:
+    csv = tmp_path / "rdd_robustness.csv"
+    _touch_with_mtime(csv, mtime=1_700_000_000.0)
+    result = check_hs300_rdd_forest_artifact(
+        png_path=tmp_path / "missing_forest.png",
+        pdf_path=tmp_path / "missing_forest.pdf",
+        robustness_csv_path=csv,
+    )
+    assert result.status == "warn"
+    assert "missing" in result.message
+    assert "make figures-tables" in result.fix
+
+
+def test_check_cma_verdicts_forest_artifact_passes_when_fresh(tmp_path: Path) -> None:
+    csv = tmp_path / "cma_hypothesis_verdicts.csv"
+    png = tmp_path / "cma_verdicts_forest.png"
+    pdf = tmp_path / "cma_verdicts_forest.pdf"
+    _touch_with_mtime(csv, mtime=1_700_000_000.0)
+    _touch_with_mtime(png, mtime=1_700_000_100.0)
+    _touch_with_mtime(pdf, mtime=1_700_000_100.0)
+    result = check_cma_verdicts_forest_artifact(
+        png_path=png,
+        pdf_path=pdf,
+        verdicts_csv_path=csv,
+    )
+    assert result.status == "pass"
+
+
+def test_check_cma_verdicts_forest_artifact_warns_when_stale(tmp_path: Path) -> None:
+    csv = tmp_path / "cma_hypothesis_verdicts.csv"
+    png = tmp_path / "cma_verdicts_forest.png"
+    pdf = tmp_path / "cma_verdicts_forest.pdf"
+    _touch_with_mtime(csv, mtime=1_700_000_200.0)
+    _touch_with_mtime(png, mtime=1_700_000_100.0)  # stale
+    _touch_with_mtime(pdf, mtime=1_700_000_100.0)
+    result = check_cma_verdicts_forest_artifact(
+        png_path=png,
+        pdf_path=pdf,
+        verdicts_csv_path=csv,
+    )
+    assert result.status == "warn"
+    assert "overdue" in result.message
+    assert "make figures-tables" in result.fix
+
+
+def test_check_cma_verdicts_forest_artifact_warns_when_missing(tmp_path: Path) -> None:
+    csv = tmp_path / "cma_hypothesis_verdicts.csv"
+    _touch_with_mtime(csv, mtime=1_700_000_000.0)
+    result = check_cma_verdicts_forest_artifact(
+        png_path=tmp_path / "missing_cma.png",
+        pdf_path=tmp_path / "missing_cma.pdf",
+        verdicts_csv_path=csv,
+    )
+    assert result.status == "warn"
+    assert "missing" in result.message
 
 
 # ── orchestration ────────────────────────────────────────────────────

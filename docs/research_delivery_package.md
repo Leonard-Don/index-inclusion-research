@@ -160,6 +160,8 @@ make smoke
 6. `paper/tables/pap_deviation_report.csv`：每条假说 baseline → current 的 unchanged / tightened / weakened / flipped / unverifiable 分类，便于答辩前快速回答"哪几条假说自 PAP 冻结后发生了变化"。
 7. `paper/manifest.json`：每个产物的 sha256 / size / 来源路径 + ``regenerated`` 状态块，给归档 / CI / paper-audit drift 检测用。
 
+PAP 纪律现在由 `index-inclusion-doctor` 主动把关——`pap_deviation_no_flips` 检查见到任何 `flipped` 假说直接 `fail`（PAP §7 需签字），`tightened` / `weakened` 报 `warn`；`pap_snapshot_freshness` 在最新 `snapshots/pre-registration-YYYY-MM-DD.csv` 超过 90 天时 `warn`，提示季度 re-baseline。两张森林图（HS300 RDD + CMA verdicts）的 PNG/PDF 也被 doctor 追 mtime——比对应的输入 CSV 旧就 `warn` 提示 `make figures-tables` 漏跑。`make doctor-strict` 让这些 `warn` 全部转成非零退出码。
+
 ## 7. 更新规则
 
 - 修改 verdict 计算逻辑、阈值、样本边界或 evidence_tier 前，先更新

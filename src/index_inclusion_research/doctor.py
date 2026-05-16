@@ -14,9 +14,11 @@ stay easily testable in isolation; the CLI just composes them.
 from __future__ import annotations
 
 import argparse
+import datetime as _dt
 import importlib
 import json
 import logging
+import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -38,6 +40,15 @@ DEFAULT_WEIGHT_CHANGE_CSV = ROOT / "data" / "processed" / "hs300_weight_change.c
 DEFAULT_HETEROGENEITY_SECTOR_CSV = DEFAULT_RESULTS_DIR / "cma_heterogeneity_sector.csv"
 DEFAULT_MATCH_BALANCE_CSV = ROOT / "results" / "real_regressions" / "match_balance.csv"
 DEFAULT_MATCH_ROBUSTNESS_GRID_CSV = ROOT / "results" / "real_regressions" / "match_robustness_grid.csv"
+DEFAULT_PAP_DEVIATION_REPORT_CSV = DEFAULT_RESULTS_DIR / "pap_deviation_report.csv"
+DEFAULT_SNAPSHOTS_DIR = ROOT / "snapshots"
+DEFAULT_HS300_RDD_FOREST_PNG = ROOT / "results" / "figures" / "hs300_rdd_robustness_forest.png"
+DEFAULT_HS300_RDD_FOREST_PDF = ROOT / "results" / "figures" / "hs300_rdd_robustness_forest.pdf"
+DEFAULT_HS300_RDD_ROBUSTNESS_CSV = DEFAULT_RDD_STATUS_DIR / "rdd_robustness.csv"
+DEFAULT_CMA_VERDICTS_FOREST_PNG = ROOT / "results" / "figures" / "cma_verdicts_forest.png"
+DEFAULT_CMA_VERDICTS_FOREST_PDF = ROOT / "results" / "figures" / "cma_verdicts_forest.pdf"
+PAP_SNAPSHOT_GLOB = "pre-registration-*.csv"
+PAP_SNAPSHOT_STALE_DAYS = 90
 
 EXPECTED_HIDS: tuple[str, ...] = ("H1", "H2", "H3", "H4", "H5", "H6", "H7")
 EXPECTED_CMA_OUTPUTS: tuple[str, ...] = (
@@ -966,6 +977,336 @@ def check_match_robustness_grid(
     )
 
 
+# ── PAP discipline + figure-freshness checks ─────────────────────────
+
+
+def _ensure_pap_deviation_report(
+    *,
+    report_path: Path,
+    verdicts_csv_path: Path,
+    snapshots_dir: Path,
+) -> Path | None:
+    """Regenerate ``pap_deviation_report.csv`` in-process if it's missing.
+
+    Imports :mod:`index_inclusion_research.pap_diff` lazily so doctor
+    stays cheap when the PAP audit has already been run. Returns the
+    path on success, or ``None`` if regeneration was impossible (no
+    baseline / no current verdicts).
+    """
+    if report_path.exists():
+        return report_path
+
+    from index_inclusion_research import pap_diff
+
+    baseline_path = pap_diff.resolve_default_baseline(snapshots_dir)
+    if baseline_path is None or not baseline_path.exists():
+        return None
+    if not verdicts_csv_path.exists():
+        return None
+
+    baseline = pap_diff._read_csv(baseline_path)
+    current = pap_diff._read_csv(verdicts_csv_path)
+    report = pap_diff.build_pap_diff(baseline, current)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report.to_csv(report_path, index=False)
+    return report_path
+
+
+def check_pap_deviation_no_flips(
+    *,
+    report_path: Path = DEFAULT_PAP_DEVIATION_REPORT_CSV,
+    verdicts_csv_path: Path = DEFAULT_VERDICTS_CSV,
+    snapshots_dir: Path = DEFAULT_SNAPSHOTS_DIR,
+) -> CheckResult:
+    """Surface PAP drift: warn on tightened/weakened, fail on flipped.
+
+    Reads ``results/real_tables/pap_deviation_report.csv`` (regenerating
+    it in-process via :mod:`pap_diff` if missing). Compares every
+    hypothesis row's ``classification`` against the frozen PAP baseline
+    so any verdict that flipped since PAP sign-off shows up as a hard
+    failure — that's the case the referee will hit hardest.
+    """
+    name = "pap_deviation_no_flips"
+    resolved = _ensure_pap_deviation_report(
+        report_path=report_path,
+        verdicts_csv_path=verdicts_csv_path,
+        snapshots_dir=snapshots_dir,
+    )
+    if resolved is None or not resolved.exists():
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"PAP deviation report not found and could not regenerate: "
+                f"{_relative_label(report_path)}"
+            ),
+            fix=(
+                "Confirm snapshots/pre-registration-*.csv exists and run "
+                "`index-inclusion-pap-diff`."
+            ),
+        )
+    try:
+        df = pd.read_csv(resolved, keep_default_na=False)
+    except (OSError, ValueError) as exc:
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=f"PAP deviation report unreadable: {exc}",
+            fix="Regenerate with `index-inclusion-pap-diff`.",
+        )
+    if "classification" not in df.columns:
+        return CheckResult(
+            name=name,
+            status="warn",
+            message="PAP deviation report is missing the 'classification' column.",
+            fix="Regenerate with `index-inclusion-pap-diff` to refresh the schema.",
+        )
+    if df.empty:
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=f"{_relative_label(resolved)} is empty.",
+            fix="Regenerate with `index-inclusion-pap-diff`.",
+        )
+
+    classifications = df["classification"].astype(str).str.strip()
+    flipped_rows = df.loc[classifications == "flipped"]
+    drifted_rows = df.loc[classifications.isin({"tightened", "weakened"})]
+
+    def _row_label(row: pd.Series) -> str:
+        hid = str(row.get("hid", "")).strip() or "?"
+        cls = str(row.get("classification", "")).strip()
+        base = str(row.get("baseline_verdict", "")).strip()
+        cur = str(row.get("current_verdict", "")).strip()
+        return f"{hid} · {cls}: {base} → {cur}"
+
+    if not flipped_rows.empty:
+        details = tuple(_row_label(row) for _, row in flipped_rows.iterrows())
+        return CheckResult(
+            name=name,
+            status="fail",
+            message=(
+                f"{len(flipped_rows)} of {len(df)} hypothesis verdict(s) "
+                f"have flipped vs the frozen PAP baseline."
+            ),
+            fix="Run `make verdicts && make paper` to inspect changed rows; PAP §7 sign-off required for any flip.",
+            details=details,
+        )
+    if not drifted_rows.empty:
+        details = tuple(_row_label(row) for _, row in drifted_rows.iterrows())
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"{len(drifted_rows)} of {len(df)} hypothesis verdict(s) "
+                f"drifted (tightened/weakened) vs the frozen PAP baseline."
+            ),
+            fix="Run `make verdicts && make paper` to inspect changed rows.",
+            details=details,
+        )
+    return CheckResult(
+        name=name,
+        status="pass",
+        message=(
+            f"All {len(df)} hypothesis verdict(s) are unchanged vs the frozen "
+            f"PAP baseline."
+        ),
+    )
+
+
+def _parse_snapshot_date(path: Path) -> _dt.date | None:
+    """Extract the ``YYYY-MM-DD`` date from a pre-registration filename."""
+    match = re.search(r"(\d{4})-(\d{2})-(\d{2})", path.name)
+    if match is None:
+        return None
+    try:
+        return _dt.date(int(match.group(1)), int(match.group(2)), int(match.group(3)))
+    except ValueError:
+        return None
+
+
+def check_pap_snapshot_freshness(
+    *,
+    snapshots_dir: Path = DEFAULT_SNAPSHOTS_DIR,
+    stale_days: int = PAP_SNAPSHOT_STALE_DAYS,
+    today: _dt.date | None = None,
+) -> CheckResult:
+    """Warn when the latest PAP baseline snapshot is > ``stale_days`` old.
+
+    The PAP should be re-baselined quarterly to keep ``pap-diff`` honest;
+    a snapshot older than 90 days is a sign the team forgot to refresh
+    after a verdict iteration. Missing snapshots entirely is treated as
+    a hard error — there's nothing for ``pap-diff`` to compare against.
+    """
+    name = "pap_snapshot_freshness"
+    if not snapshots_dir.exists():
+        return CheckResult(
+            name=name,
+            status="fail",
+            message=f"snapshots directory missing: {_relative_label(snapshots_dir)}",
+            fix=(
+                "Create snapshots/pre-registration-YYYY-MM-DD.csv from the "
+                "current cma_hypothesis_verdicts.csv to seed the PAP baseline."
+            ),
+        )
+    candidates = sorted(snapshots_dir.glob(PAP_SNAPSHOT_GLOB))
+    if not candidates:
+        return CheckResult(
+            name=name,
+            status="fail",
+            message=(
+                f"No PAP snapshots found under "
+                f"{_relative_label(snapshots_dir)}/{PAP_SNAPSHOT_GLOB}."
+            ),
+            fix=(
+                "Copy results/real_tables/cma_hypothesis_verdicts.csv to "
+                "snapshots/pre-registration-YYYY-MM-DD.csv to seed the PAP baseline."
+            ),
+        )
+
+    latest = candidates[-1]
+    snapshot_date = _parse_snapshot_date(latest)
+    reference_date = today if today is not None else _dt.date.today()
+    if snapshot_date is None:
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"Latest snapshot {_relative_label(latest)} doesn't carry a "
+                f"YYYY-MM-DD date suffix."
+            ),
+            fix=(
+                "Rename to snapshots/pre-registration-YYYY-MM-DD.csv to make "
+                "freshness auditable."
+            ),
+        )
+    age_days = (reference_date - snapshot_date).days
+    if age_days > stale_days:
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"Latest PAP snapshot {_relative_label(latest)} is "
+                f"{age_days} days old (> {stale_days}); recommend quarterly "
+                f"re-baselining."
+            ),
+            fix=(
+                "Copy results/real_tables/cma_hypothesis_verdicts.csv to "
+                "snapshots/pre-registration-YYYY-MM-DD.csv after the next "
+                "verdict iteration."
+            ),
+        )
+    return CheckResult(
+        name=name,
+        status="pass",
+        message=(
+            f"Latest PAP snapshot {_relative_label(latest)} is {age_days} day(s) old "
+            f"(≤ {stale_days})."
+        ),
+    )
+
+
+def _forest_artifact_status(
+    *,
+    name: str,
+    png_path: Path,
+    pdf_path: Path,
+    input_csv_path: Path,
+    fix_command: str,
+    input_label: str,
+) -> CheckResult:
+    """Shared core for the two forest-plot freshness checks."""
+    missing = [p for p in (png_path, pdf_path) if not p.exists()]
+    if missing:
+        labels = ", ".join(_relative_label(p) for p in missing)
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=f"forest plot artifact(s) missing: {labels}",
+            fix=fix_command,
+        )
+    if not input_csv_path.exists():
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"forest plot input {_relative_label(input_csv_path)} "
+                f"({input_label}) is missing; cannot verify freshness."
+            ),
+            fix=fix_command,
+        )
+    input_mtime = input_csv_path.stat().st_mtime
+    stale = [
+        p for p in (png_path, pdf_path) if p.stat().st_mtime < input_mtime
+    ]
+    if stale:
+        details = tuple(
+            f"{_relative_label(p)} mtime older than "
+            f"{_relative_label(input_csv_path)}"
+            for p in stale
+        )
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"{len(stale)} forest plot artifact(s) older than input "
+                f"{_relative_label(input_csv_path)}; re-run of "
+                f"`make figures-tables` overdue."
+            ),
+            fix=fix_command,
+            details=details,
+        )
+    return CheckResult(
+        name=name,
+        status="pass",
+        message=(
+            f"forest plot artifacts ({_relative_label(png_path)}, "
+            f"{_relative_label(pdf_path)}) are fresher than "
+            f"{_relative_label(input_csv_path)}."
+        ),
+    )
+
+
+def check_hs300_rdd_forest_artifact(
+    *,
+    png_path: Path = DEFAULT_HS300_RDD_FOREST_PNG,
+    pdf_path: Path = DEFAULT_HS300_RDD_FOREST_PDF,
+    robustness_csv_path: Path = DEFAULT_HS300_RDD_ROBUSTNESS_CSV,
+) -> CheckResult:
+    """Warn if the HS300 RDD robustness forest plot is missing or stale."""
+    return _forest_artifact_status(
+        name="hs300_rdd_forest_artifact",
+        png_path=png_path,
+        pdf_path=pdf_path,
+        input_csv_path=robustness_csv_path,
+        fix_command=(
+            "Run `make figures-tables` (or "
+            "`index-inclusion-build-hs300-rdd-forest`) to refresh the figure."
+        ),
+        input_label="rdd_robustness.csv",
+    )
+
+
+def check_cma_verdicts_forest_artifact(
+    *,
+    png_path: Path = DEFAULT_CMA_VERDICTS_FOREST_PNG,
+    pdf_path: Path = DEFAULT_CMA_VERDICTS_FOREST_PDF,
+    verdicts_csv_path: Path = DEFAULT_VERDICTS_CSV,
+) -> CheckResult:
+    """Warn if the CMA cross-hypothesis verdict forest plot is missing or stale."""
+    return _forest_artifact_status(
+        name="cma_verdicts_forest_artifact",
+        png_path=png_path,
+        pdf_path=pdf_path,
+        input_csv_path=verdicts_csv_path,
+        fix_command=(
+            "Run `make figures-tables` (or "
+            "`index-inclusion-build-cma-verdicts-forest`) to refresh the figure."
+        ),
+        input_label="cma_hypothesis_verdicts.csv",
+    )
+
+
 DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_hypothesis_paper_ids_resolve,
     check_verdicts_csv_health,
@@ -979,6 +1320,10 @@ DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_rdd_robustness_panel,
     check_matched_sample_balance,
     check_match_robustness_grid,
+    check_pap_deviation_no_flips,
+    check_pap_snapshot_freshness,
+    check_hs300_rdd_forest_artifact,
+    check_cma_verdicts_forest_artifact,
     check_chart_builders_register,
     check_console_scripts_importable,
     check_paper_audit,

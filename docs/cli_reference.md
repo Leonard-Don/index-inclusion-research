@@ -288,6 +288,40 @@ index-inclusion-pap-diff --no-write
 
 `verdict-summary --vs-pap` 仍然是日常 diff 的首选（彩色终端 + 字段级前后值）；`pap-diff` 是预注册答辩 / 审计场景的结构化版本。
 
+## 13. 项目健康检查（`doctor`）
+
+`index-inclusion-doctor` 运行一组有界的健康探针，按 pass / warn / fail 打印每项检查 + 建议修复命令。默认 exit 码只数 `fail`；`--fail-on-warn` 把 `warn` 也算进去（`make doctor-strict` / `make ci` 走这条路径）。
+
+当前覆盖的检查（节选，完整定义见 [src/index_inclusion_research/doctor.py](../src/index_inclusion_research/doctor.py) 的 `DEFAULT_CHECKS`）：
+
+- `hypothesis_paper_ids_resolve` — 7 条假说引用的 paper_id 都能在文献目录里找到
+- `verdicts_csv_health` — `cma_hypothesis_verdicts.csv` 行齐 H1..H7
+- `results_directory_populated` — `results/real_tables/` 12 个 canonical CMA 输出齐全
+- `paper_verdict_section_synced` — `docs/paper_outline_verdicts.md` 与 verdict CSV 一致
+- `p_gated_verdict_sensitivity` — p-gated 假说没有处于 `[0.05, 0.10)` 边界
+- `pending_data_verdicts` — 没有 verdict 卡在 "待补数据"
+- `h6_weight_change_readiness` / `h7_cn_sector_readiness` — 机制数据覆盖
+- `rdd_l3_sample_readiness` / `rdd_robustness_panel` — HS300 RDD L3 + 4-spec 稳健性面板
+- `matched_sample_balance` / `match_robustness_grid` — 配对样本 SMD + 稳健性网格
+- `pap_deviation_no_flips` — PAP 偏离审计：任何 `flipped` 假说 → `fail`（需 PAP §7 签字），`tightened` / `weakened` → `warn`，全部 `unchanged` → `pass`；CSV 缺失时调用 `pap_diff.build_pap_diff` 现场重生成
+- `pap_snapshot_freshness` — `snapshots/pre-registration-YYYY-MM-DD.csv` > 90 天未刷 → `warn`（建议季度 re-baseline），目录或 snapshot 完全缺失 → `fail`
+- `hs300_rdd_forest_artifact` — `results/figures/hs300_rdd_robustness_forest.{png,pdf}` 存在且 mtime ≥ `rdd_robustness.csv`；缺失或 stale 触发 `make figures-tables` 提示
+- `cma_verdicts_forest_artifact` — `results/figures/cma_verdicts_forest.{png,pdf}` vs `cma_hypothesis_verdicts.csv` 的同款 mtime 检查
+- `chart_builders_register` — `CHART_BUILDERS` ≥ 12 项
+- `console_scripts_importable` — 所有 `pyproject.toml` 入口都能 import
+- `paper_audit_claims` — `paper_audit` 不报 warn/fail
+
+```bash
+# 默认人读输出，warn 不算失败
+index-inclusion-doctor
+
+# CI 严格模式，warn 也算失败
+index-inclusion-doctor --fail-on-warn
+
+# 机器可读，喂给 jq / make
+index-inclusion-doctor --format json --fail-on-warn
+```
+
 ## Verdicts ↔ Literature 双向链接
 
 每条 H1..H7 在 [hypotheses.py](../src/index_inclusion_research/analysis/cross_market_asymmetry/hypotheses.py) 注册时同时声明 `paper_ids`。两端都消费这个映射：
