@@ -376,6 +376,25 @@ class TestBuildTimeSeriesRollingChartData:
         result = build_time_series_rolling_chart_data(empty_root)
         assert result == {"series": [], "years": []}
 
+    def test_empty_csv_yields_empty_payload(self, tmp_path: Path) -> None:
+        """A zero-byte ``cma_time_series_rolling.csv`` (e.g., a truncated or
+        partially failed pipeline run) must produce the canonical empty
+        payload instead of bubbling ``pd.errors.EmptyDataError`` up through
+        the outer ``build_chart_data`` safety net, which would surface as a
+        generic error card rather than an empty-state line chart. Mirrors
+        the contract already pinned for ``build_car_heatmap_chart_data``,
+        ``build_gap_decomposition_chart_data``,
+        ``build_heterogeneity_size_chart_data``,
+        ``build_main_regression_chart_data`` and
+        ``build_mechanism_regression_chart_data``."""
+        tables = tmp_path / "results" / "real_tables"
+        tables.mkdir(parents=True)
+        (tables / "cma_time_series_rolling.csv").write_text("", encoding="utf-8")
+
+        result = build_time_series_rolling_chart_data(tmp_path)
+
+        assert result == {"series": [], "years": []}
+
     def test_populated_returns_4_market_phase_series(self, time_series_rolling_root: Path) -> None:
         result = build_time_series_rolling_chart_data(time_series_rolling_root)
         assert len(result["series"]) == 4

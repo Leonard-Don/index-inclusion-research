@@ -333,7 +333,10 @@ def build_time_series_rolling_chart_data(root: Path) -> dict:
     if not path.exists():
         return {"series": [], "years": []}
 
-    df = pd.read_csv(path)
+    try:
+        df = pd.read_csv(path)
+    except pd.errors.EmptyDataError:
+        return {"series": [], "years": []}
     required = {"market", "event_phase", "car_mean", "window_end_year"}
     if not required.issubset(df.columns):
         return {"series": [], "years": []}
