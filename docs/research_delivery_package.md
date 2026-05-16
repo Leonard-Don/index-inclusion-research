@@ -104,14 +104,21 @@ Federal Reserve Z.1。论文写作时必须披露：
 | 表 3 | CMA core 假说裁决 | `cma_hypothesis_verdicts.csv` 中 `evidence_tier=core` |
 | 图 1 | CAR path by market and event phase | `real_figures/*_car_path.png` |
 | 图 2 | CMA 机制热力图 | `real_figures/cma_mechanism_heatmap.png` |
+| 图 3 | CMA 跨假说证据强度森林图 | `results/figures/cma_verdicts_forest.png`（同名 `.pdf` 为矢量版本） |
 | 附录 A | supplementary 假说裁决 | H2/H3/H4/H6 相关 `cma_*.csv` |
 | 附录 B | H7 行业交互稳健性 | `cma_h7_sector_interaction.csv` |
 | 附录 C | HS300 RDD | `results/literature/hs300_rdd/`；稳健性森林图 `results/figures/hs300_rdd_robustness_forest.png`（同名 `.pdf` 为论文用矢量版本） |
 | 附录 D | 数据与方法限制 | `docs/limitations.md` |
-| 附录 E | PAP 与 verdict diff | `docs/pre_registration.md`、`docs/verdict_iteration.md` |
+| 附录 E | PAP 与 verdict diff | `docs/pre_registration.md`、`docs/verdict_iteration.md`、`results/real_tables/pap_deviation_report.csv`（每行一条假说 unchanged/tightened/weakened/flipped/unverifiable 分类） |
 
 `make paper` 会把上述核心材料聚合到 `paper/` 目录，其中叙事文件在
-`paper/narrative/`，表格在 `paper/tables/`，RDD 材料在 `paper/rdd/`。
+`paper/narrative/`，表格在 `paper/tables/`（含 `pap_deviation_report.csv` PAP 偏离审计
+快照），论文级跨假说 / RDD 稳健性森林图在 `paper/figures/` 中以 PNG + PDF 双格式提供
+（`cma_verdicts_forest.{png,pdf}`、`hs300_rdd_robustness_forest.{png,pdf}`），RDD 材料在
+`paper/rdd/`。`paper/manifest.json` 给每个拷贝过来的产物记录 sha256 / size / source /
+target，便于检查交付包是否 drift。`paper-bundle` 默认在拷贝前会自动重跑这两张森林图
+和 PAP 偏离审计 CSV，所以即使 `make rebuild` 早于最新一次 verdict 修改，`make paper` 仍
+能交付一致的快照（已跑过 rebuild 时可加 `--no-regenerate` 跳过这一步）。
 
 ## 5. 答辩口径
 
@@ -148,7 +155,10 @@ make smoke
 1. `paper/bundle_summary.md`：自动研究状态快照。
 2. `paper/narrative/research_delivery_package.md`：本文档副本。
 3. `paper/narrative/paper_outline_verdicts.md`：当前裁决叙事。
-4. `paper/rdd/rdd_robustness.csv`：RDD 全套稳健性。配套图：`results/figures/hs300_rdd_robustness_forest.{png,pdf}`，把 main / donut / placebo±0.05 / polynomial 共五个规格的 τ 与 95% CI 放在同一张森林图里，避免论文只引用显著的 main spec（详见 [docs/limitations.md](limitations.md) §RDD 稳健性透明披露要求）。
+4. `paper/rdd/rdd_robustness.csv`：RDD 全套稳健性。配套图：`paper/figures/hs300_rdd_robustness_forest.{png,pdf}`（同时保留 `paper/rdd/rdd_robustness_forest.png` 给 dashboard），把 main / donut / placebo±0.05 / polynomial 共五个规格的 τ 与 95% CI 放在同一张森林图里，避免论文只引用显著的 main spec（详见 [docs/limitations.md](limitations.md) §RDD 稳健性透明披露要求）。
+5. `paper/figures/cma_verdicts_forest.{png,pdf}`：H1–H7 跨假说 support-strength 森林图，按 evidence_tier 上色，给答辩 / 论文 figure 1 用。
+6. `paper/tables/pap_deviation_report.csv`：每条假说 baseline → current 的 unchanged / tightened / weakened / flipped / unverifiable 分类，便于答辩前快速回答"哪几条假说自 PAP 冻结后发生了变化"。
+7. `paper/manifest.json`：每个产物的 sha256 / size / 来源路径 + ``regenerated`` 状态块，给归档 / CI / paper-audit drift 检测用。
 
 ## 7. 更新规则
 
