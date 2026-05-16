@@ -81,7 +81,14 @@ def _cn_proxy_to_aum_rows(proxy_frame: pd.DataFrame) -> pd.DataFrame:
     )
     aggregated["aum_trillion"] = aggregated["total_tna_cny_billions"] / 1_000.0
     aggregated["market"] = "CN"
-    return aggregated[["market", "year", "aum_trillion"]].sort_values("year").reset_index(drop=True)
+    result = pd.DataFrame(
+        {
+            "market": aggregated["market"],
+            "year": aggregated["year"],
+            "aum_trillion": aggregated["aum_trillion"],
+        }
+    )
+    return result.sort_values(by=["year"]).reset_index(drop=True)
 
 
 def _merge_aum_with_cn_proxy(

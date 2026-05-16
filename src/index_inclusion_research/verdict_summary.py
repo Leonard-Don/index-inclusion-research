@@ -584,7 +584,9 @@ def render_summary_json(
     Schema is stable for downstream tooling:
     ``{"verdicts": [...], "track_summary": [...], "aggregate": {...},
     "diff": [...]?, "sensitivity": {"thresholds": [...], "rows": [...]}?}``.
-    NaN values become ``null``; numeric fields stay numeric. The
+    Non-finite floats (NaN / ±inf) become ``null`` so the output stays
+    valid per RFC 8259 — Python's default ``json.dumps`` would otherwise
+    emit ``NaN`` / ``Infinity`` literals that strict parsers reject. The
     ``sensitivity`` block only appears when ``sensitivity_thresholds``
     is non-None.
     """
@@ -593,7 +595,7 @@ def render_summary_json(
     def _row_to_jsonable(row: pd.Series) -> dict[str, object]:
         out: dict[str, object] = {}
         for col, value in row.items():
-            if isinstance(value, float) and math.isnan(value):
+            if isinstance(value, float) and not math.isfinite(value):
                 out[col] = None  # type: ignore[index]
             elif isinstance(value, (int, float, str, bool)) or value is None:
                 out[col] = value  # type: ignore[index]

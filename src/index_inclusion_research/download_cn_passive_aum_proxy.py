@@ -189,7 +189,7 @@ def _to_iso(value: object) -> str:
     if isinstance(value, str):
         return value
     try:
-        return pd.Timestamp(value).date().isoformat()
+        return pd.Timestamp(str(value)).date().isoformat()
     except Exception:
         return str(value)
 
