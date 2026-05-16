@@ -134,3 +134,7 @@ def run_cma_main() -> int | None:
 
 def run_build_hs300_rdd_forest_main() -> int | None:
     return _run_package_main("index_inclusion_research.build_hs300_rdd_forest")
+
+
+def run_build_cma_verdicts_forest_main() -> int | None:
+    return _run_package_main("index_inclusion_research.build_cma_verdicts_forest")

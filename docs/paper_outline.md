@@ -112,10 +112,20 @@ CAR_i = \alpha + \beta Inclusion_i + \gamma_1 Size_i + \gamma_2 PreReturn_i + \v
 
 - `results/regressions/regression_models.csv`
 - `results/regressions/regression_coefficients.csv`
+- `results/real_tables/cma_hypothesis_verdicts.csv`（CMA 7 条机制假说裁决）
+- `results/figures/cma_verdicts_forest.png` / `.pdf`（**推荐作为 §4.3 证据强度概览图**）
 
 写法模板：
 
 机制回归结果表明，指数纳入与成交量、换手率变化之间呈现显著正相关关系，说明指数纳入带来了明显的交易活跃度提升。若公告阶段系数更显著，可支持信息效应；若生效阶段更显著，则更支持被动资金需求冲击机制。波动率变化结果则有助于判断指数纳入是否伴随短期交易拥挤。
+
+CMA pipeline 把以上机制问题进一步拆成 7 条可裁决假说 (H1-H7)，正文建议把
+`results/figures/cma_verdicts_forest.png`（横轴 0-1 的 support-strength 评分，
+纵轴 H1-H7，颜色按 evidence_tier）作为 §4.3 的**证据强度概览图**插入，让读者一眼
+看到当前结论的分布——H5/H7（涨跌停、行业结构）落在 0.7-1.0 的支持区间，
+H2（被动 AUM）位于 0.5 的"部分支持"位置，而 H1/H4/H6 落在 0-0.3 的不支持区间。
+评分映射 (verdict, confidence) → strength 仅用于可视化对比，不构成新的统计推断
+（详细映射见图脚注）。重绘：`index-inclusion-build-cma-verdicts-forest`。
 
 ### 4.4 中国市场 RDD 识别扩展（HS300）
 
