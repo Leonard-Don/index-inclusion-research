@@ -1,10 +1,10 @@
 # 命令行入口参考
 
-32 个 console scripts 按用途分组：
+33 个 console scripts 按用途分组：
 
 - **数据流水线**：`build-event-sample` / `build-price-panel` / `match-controls` / `match-robustness` / `run-event-study` / `run-regressions`
 - **样本数据**：`generate-sample-data` / `download-real-data`
-- **报表与图表**：`make-figures-tables` / `generate-research-report` / `paper-bundle` / `paper-audit` / `build-hs300-rdd-forest`
+- **报表与图表**：`make-figures-tables` / `generate-research-report` / `paper-bundle` / `paper-audit` / `build-hs300-rdd-forest` / `build-cma-verdicts-forest`
 - **Dashboard 与三条主线**：`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - **HS300 RDD 工具链**：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`（详见 [docs/hs300_rdd_workflow.md](hs300_rdd_workflow.md)）
 - **跨市场不对称 + 假说证据**：`cma`（7 条假说 verdict）/ `prepare-passive-aum` / `download-passive-aum-cn` / `download-cn-passive-aum-proxy` / `compute-h6-weight-change` / `refresh-real-evidence`
@@ -77,6 +77,8 @@ index-inclusion-make-figures-tables
 `make-figures-tables` 默认自动识别 real/sample 工作流；显式回到 sample 路径：`--profile sample`。
 
 `make-figures-tables` 在 `results/literature/hs300_rdd/rdd_robustness.csv` 存在时，会自动调用 `build_hs300_rdd_forest_plot` 输出稳健性森林图（main / donut / placebo±0.05 / polynomial），写到 `results/figures/hs300_rdd_robustness_forest.{png,pdf}`，并把 PNG 镜像到 `results/literature/hs300_rdd/figures/rdd_robustness_forest.png` 给 dashboard 用。如需单独重绘可执行：`index-inclusion-build-hs300-rdd-forest`（支持 `--robustness-csv` / `--png` / `--pdf` 路径覆盖，`--no-mirror-dashboard` 关闭 dashboard 镜像）。
+
+同一调用还会在 `results/real_tables/cma_hypothesis_verdicts.csv` 存在时自动渲染 CMA 跨假说证据强度森林图（H1-H7 在 y 轴，0-1 的 support-strength 评分在 x 轴，按 evidence_tier 上色），写到 `results/figures/cma_verdicts_forest.{png,pdf}`。评分 = f(verdict, confidence)：(支持·高)=1.0 / (支持·中)=0.7 / (部分支持·高)=0.6 / (部分支持·中)=0.5 / (证据不足·中)=0.3 / (证据不足·低)=0.0，仅用于可视化对比，不构成新的统计推断。如需单独重绘：`index-inclusion-build-cma-verdicts-forest`（支持 `--verdicts-csv` / `--png` / `--pdf` 路径覆盖，传空 `--pdf ""` 跳过 PDF）。
 
 `match-controls` 现在会同时输出 covariate-balance 表（默认 `match_balance.csv`，与 `--output-diagnostics` 同目录）。`index-inclusion-doctor` 的 `matched_sample_balance` 检查会扫这份表，遇到 |SMD|≥0.25 时变 warn。
 

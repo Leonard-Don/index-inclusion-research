@@ -19,6 +19,7 @@ from index_inclusion_research.loaders import (
 )
 from index_inclusion_research.outputs import (
     build_asymmetry_summary,
+    build_cma_verdicts_forest_plot,
     build_data_source_table,
     build_event_counts_by_year_table,
     build_hs300_rdd_forest_plot,
@@ -73,6 +74,37 @@ def _maybe_build_hs300_rdd_forest_plot(
     mirror_path = rdd_output_dir / "figures" / "rdd_robustness_forest.png"
     mirror_path.parent.mkdir(parents=True, exist_ok=True)
     mirror_path.write_bytes(png_path.read_bytes())
+
+
+def _maybe_build_cma_verdicts_forest(
+    *,
+    tables_dir: Path | None,
+    figures_dir: Path | None,
+) -> None:
+    """Refresh the cross-hypothesis CMA verdicts forest plot when its
+    source CSV (``cma_hypothesis_verdicts.csv``) is present. Mirrors
+    the HS300 RDD forest plot integration: silently skip if the source
+    is missing, log a warning if rendering fails so the broader figures
+    pipeline isn't blocked by a single visualisation regression.
+    """
+    if tables_dir is None:
+        tables_dir = ROOT / "results" / "real_tables"
+    if figures_dir is None:
+        figures_dir = ROOT / "results" / "figures"
+    verdicts_csv = tables_dir / "cma_hypothesis_verdicts.csv"
+    if not verdicts_csv.exists():
+        return
+    png_path = figures_dir / "cma_verdicts_forest.png"
+    pdf_path = figures_dir / "cma_verdicts_forest.pdf"
+    try:
+        build_cma_verdicts_forest_plot(
+            verdicts_csv_path=verdicts_csv,
+            output_png_path=png_path,
+            output_pdf_path=pdf_path,
+        )
+    except (ValueError, OSError) as exc:
+        logger.warning("CMA verdicts forest plot skipped: %s", exc)
+        return
 
 
 def _read_csv_if_exists(path: str | Path, parse_dates: list[str] | None = None) -> pd.DataFrame:
@@ -216,6 +248,14 @@ def main(argv: list[str] | None = None) -> None:
     # the figure stays in lockstep with the main figure refresh cycle.
     _maybe_build_hs300_rdd_forest_plot(
         rdd_output_dir=Path(args.rdd_output_dir) if args.rdd_output_dir else None,
+        figures_dir=Path(args.figures_dir) if args.figures_dir else None,
+    )
+
+    # CMA verdicts cross-hypothesis forest plot — paired with the HS300
+    # RDD plot so the paper has both the single-spec robustness view
+    # and the cross-hypothesis evidence-strength overview in lockstep.
+    _maybe_build_cma_verdicts_forest(
+        tables_dir=Path(args.tables_dir) if args.tables_dir else None,
         figures_dir=Path(args.figures_dir) if args.figures_dir else None,
     )
 
