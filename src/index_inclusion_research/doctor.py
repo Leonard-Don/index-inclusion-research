@@ -18,6 +18,7 @@ import datetime as _dt
 import importlib
 import json
 import logging
+import os
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
@@ -1234,6 +1235,21 @@ def _forest_artifact_status(
                 f"({input_label}) is missing; cannot verify freshness."
             ),
             fix=fix_command,
+        )
+    if (
+        os.getenv("CI", "").lower() == "true"
+        and png_path.is_relative_to(ROOT)
+        and pdf_path.is_relative_to(ROOT)
+        and input_csv_path.is_relative_to(ROOT)
+    ):
+        return CheckResult(
+            name=name,
+            status="pass",
+            message=(
+                f"forest plot artifacts ({_relative_label(png_path)}, "
+                f"{_relative_label(pdf_path)}) are present; skipping mtime "
+                "freshness in CI because checkout mtimes are not generation times."
+            ),
         )
     input_mtime = input_csv_path.stat().st_mtime
     stale = [
