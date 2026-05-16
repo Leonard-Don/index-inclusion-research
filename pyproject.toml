@@ -54,6 +54,7 @@ index-inclusion-download-real-data = "index_inclusion_research.cli:run_download_
 index-inclusion-make-figures-tables = "index_inclusion_research.cli:run_make_figures_tables_main"
 index-inclusion-generate-research-report = "index_inclusion_research.cli:run_generate_research_report_main"
 index-inclusion-cma = "index_inclusion_research.cli:run_cma_main"
+index-inclusion-build-hs300-rdd-forest = "index_inclusion_research.cli:run_build_hs300_rdd_forest_main"
 
 [project.optional-dependencies]
 methods = [
