@@ -231,6 +231,28 @@ class TestBuildCarHeatmapChartData:
         # Strict JSON serialisation — fails loudly if any NaN/Infinity leaked.
         json.dumps(result, allow_nan=False)
 
+    def test_empty_csv_yields_empty_payload(self, tmp_path: Path) -> None:
+        """A zero-byte ``event_study_summary.csv`` (e.g., a truncated or
+        partially failed pipeline run) must produce the canonical empty
+        payload instead of bubbling ``pd.errors.EmptyDataError`` up through
+        the outer ``build_chart_data`` safety net, which would surface as a
+        generic error card rather than an empty-state heatmap. Mirrors the
+        contract already pinned for ``build_gap_decomposition_chart_data``,
+        ``build_main_regression_chart_data`` and
+        ``build_mechanism_regression_chart_data``."""
+        tables = tmp_path / "results" / "real_tables"
+        tables.mkdir(parents=True)
+        (tables / "event_study_summary.csv").write_text("", encoding="utf-8")
+
+        result = build_car_heatmap_chart_data(tmp_path)
+
+        assert result == {
+            "data": [],
+            "row_labels": [],
+            "col_labels": [],
+            "annotations": [],
+        }
+
 
 # ── gap_decomposition ────────────────────────────────────────────────
 

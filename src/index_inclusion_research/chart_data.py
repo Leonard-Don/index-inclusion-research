@@ -162,7 +162,10 @@ def build_car_heatmap_chart_data(root: Path) -> dict:
     if not summary_path.exists():
         return {"data": [], "row_labels": [], "col_labels": [], "annotations": []}
 
-    event = pd.read_csv(summary_path)
+    try:
+        event = pd.read_csv(summary_path)
+    except pd.errors.EmptyDataError:
+        return {"data": [], "row_labels": [], "col_labels": [], "annotations": []}
     heat = event.loc[event["inclusion"] == 1].copy()
     if heat.empty:
         return {"data": [], "row_labels": [], "col_labels": [], "annotations": []}
