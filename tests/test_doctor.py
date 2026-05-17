@@ -28,6 +28,7 @@ from index_inclusion_research.doctor import (
     check_paper_audit,
     check_paper_verdict_section_synced,
     check_pending_data_verdicts,
+    check_public_summary_freshness,
     check_rdd_l3_sample_readiness,
     check_results_directory_populated,
     check_verdicts_csv_health,
@@ -876,6 +877,55 @@ def test_check_cma_verdicts_forest_artifact_warns_when_missing(tmp_path: Path) -
     )
     assert result.status == "warn"
     assert "missing" in result.message
+
+
+def test_check_public_summary_freshness_passes_when_fresh(tmp_path: Path) -> None:
+    summary = tmp_path / "index_research_summary.json"
+    verdicts = tmp_path / "cma_hypothesis_verdicts.csv"
+    pap = tmp_path / "pap_deviation_report.csv"
+    rdd = tmp_path / "rdd_robustness.csv"
+    _touch_with_mtime(verdicts, mtime=1_700_000_000.0)
+    _touch_with_mtime(pap, mtime=1_700_000_000.0)
+    _touch_with_mtime(rdd, mtime=1_700_000_000.0)
+    _touch_with_mtime(summary, mtime=1_700_000_100.0)
+    result = check_public_summary_freshness(
+        summary_path=summary,
+        verdicts_csv_path=verdicts,
+        pap_csv_path=pap,
+        rdd_csv_path=rdd,
+    )
+    assert result.status == "pass"
+    assert "fresher" in result.message
+
+
+def test_check_public_summary_freshness_warns_when_stale(tmp_path: Path) -> None:
+    summary = tmp_path / "index_research_summary.json"
+    verdicts = tmp_path / "cma_hypothesis_verdicts.csv"
+    _touch_with_mtime(verdicts, mtime=1_700_000_200.0)  # newer than summary
+    _touch_with_mtime(summary, mtime=1_700_000_100.0)
+    result = check_public_summary_freshness(
+        summary_path=summary,
+        verdicts_csv_path=verdicts,
+        pap_csv_path=tmp_path / "missing_pap.csv",
+        rdd_csv_path=tmp_path / "missing_rdd.csv",
+    )
+    assert result.status == "warn"
+    assert "overdue" in result.message
+    assert "index-inclusion-export-public-summary" in result.fix
+
+
+def test_check_public_summary_freshness_warns_when_missing(tmp_path: Path) -> None:
+    verdicts = tmp_path / "cma_hypothesis_verdicts.csv"
+    _touch_with_mtime(verdicts, mtime=1_700_000_000.0)
+    result = check_public_summary_freshness(
+        summary_path=tmp_path / "missing_summary.json",
+        verdicts_csv_path=verdicts,
+        pap_csv_path=tmp_path / "missing_pap.csv",
+        rdd_csv_path=tmp_path / "missing_rdd.csv",
+    )
+    assert result.status == "warn"
+    assert "missing" in result.message
+    assert "index-inclusion-export-public-summary" in result.fix
 
 
 # ── orchestration ────────────────────────────────────────────────────

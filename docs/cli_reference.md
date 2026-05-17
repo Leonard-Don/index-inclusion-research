@@ -1,6 +1,6 @@
 # 命令行入口参考
 
-36 个 console scripts 按用途分组：
+37 个 console scripts 按用途分组：
 
 - **数据流水线**：`build-event-sample` / `build-price-panel` / `match-controls` / `match-robustness` / `run-event-study` / `run-regressions`
 - **样本数据**：`generate-sample-data` / `download-real-data`
@@ -8,7 +8,7 @@
 - **Dashboard 与三条主线**：`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - **HS300 RDD 工具链**：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`（详见 [docs/hs300_rdd_workflow.md](hs300_rdd_workflow.md)）
 - **跨市场不对称 + 假说证据**：`cma`（7 条假说 verdict）/ `prepare-passive-aum` / `download-passive-aum-cn` / `download-cn-passive-aum-proxy` / `compute-h6-weight-change` / `refresh-real-evidence`
-- **总入口**：`rebuild-all`（10 步流水线一键跑）/ `verdict-summary`（终端速览）/ `pap-diff`（PAP 偏离审计）/ `doctor`（项目健康检查）
+- **总入口**：`rebuild-all`（10 步流水线一键跑）/ `verdict-summary`（终端速览）/ `pap-diff`（PAP 偏离审计）/ `doctor`（项目健康检查）/ `export-public-summary`（生成 data/public/index_research_summary.json）
 
 所有入口都通过 `pyproject.toml` 的 console scripts 或 `python3 -m index_inclusion_research.<module>` 调用，也可以用 `make rebuild` / `make verdicts` / `make doctor` / `make sync` 简写。安装时使用 `make sync` 会按 `uv.lock` 装锁定版本（CI 也走这条路径）。
 
@@ -313,6 +313,7 @@ index-inclusion-pap-diff --no-write
 - `pap_snapshot_freshness` — `snapshots/pre-registration-YYYY-MM-DD.csv` > 90 天未刷 → `warn`（建议季度 re-baseline），目录或 snapshot 完全缺失 → `fail`
 - `hs300_rdd_forest_artifact` — `results/figures/hs300_rdd_robustness_forest.{png,pdf}` 存在且 mtime ≥ `rdd_robustness.csv`；缺失或 stale 触发 `make figures-tables` 提示
 - `cma_verdicts_forest_artifact` — `results/figures/cma_verdicts_forest.{png,pdf}` vs `cma_hypothesis_verdicts.csv` 的同款 mtime 检查
+- `public_summary_freshness` — `data/public/index_research_summary.json` 存在且 mtime ≥ `cma_hypothesis_verdicts.csv` / `pap_deviation_report.csv` / `rdd_robustness.csv`；缺失或 stale 触发 `index-inclusion-export-public-summary` 提示
 - `chart_builders_register` — `CHART_BUILDERS` ≥ 12 项
 - `console_scripts_importable` — 所有 `pyproject.toml` 入口都能 import
 - `paper_audit_claims` — `paper_audit` 不报 warn/fail
@@ -326,6 +327,32 @@ index-inclusion-doctor --fail-on-warn
 
 # 机器可读，喂给 jq / make
 index-inclusion-doctor --format json --fail-on-warn
+```
+
+## 14. 公开摘要导出（`export-public-summary`）
+
+`index-inclusion-export-public-summary` 把 `results/real_tables/cma_hypothesis_verdicts.csv` / `pap_deviation_report.csv` / `results/literature/hs300_rdd/rdd_robustness.csv` / `snapshots/pre-registration-*.csv` / 已发布 figure 文件汇总为单一精简 JSON `data/public/index_research_summary.json`（~3-5 KB），可安全提交进 Git。下游消费者（例如 sibling 项目 `cn-altdata-brief`、未来的 GitHub Pages 日报）只读这份文件即可拿到 7 条假说裁决、PAP 偏离汇总、threshold × AR-engine 稳健性、HS300 RDD 主结果、文献覆盖、已发布 figure 路径——不需要直接访问 runtime caches、不需要跑 `index-inclusion-cma` 或 `make figures-tables`。
+
+设计要点：
+
+- **schema 稳定**：顶层 `schema_version`（当前 1）控制破坏性变更；同输入同输出（除了 `generated_at`），方便 `git diff` 看出真实数据变化。
+- **safety**：永远不写入 absolute path（`path_ref` 是相对 repo root 的字面值）、debug 字段或 CSV 多行 narrative；只保留 `headline_metric` 等小型结构化字段。
+- **graceful degrade**：缺 CSV 时对应 key 直接缺席，不写入合成数据。
+- **atomic write**：通过 `tempfile.mkstemp` + `os.rename` 保证读者永远看不到半写文件。
+- **doctor 守护**：`public_summary_freshness` 检查 mtime，输入 CSV 任何一项比 summary 新 → `warn`。
+
+```bash
+# 写入 data/public/index_research_summary.json
+index-inclusion-export-public-summary
+
+# 自定义输出位置
+index-inclusion-export-public-summary --output /tmp/foo.json
+
+# 不写盘，只打印到 stdout
+index-inclusion-export-public-summary --print
+
+# 通过 module 调用（与 console script 等价）
+python3 -m index_inclusion_research.export_public_summary
 ```
 
 ## Verdicts ↔ Literature 双向链接
