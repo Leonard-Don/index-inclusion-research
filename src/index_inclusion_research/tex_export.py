@@ -834,6 +834,21 @@ def _str2bool(value: str) -> bool:
     raise argparse.ArgumentTypeError(f"Invalid boolean: {value!r}")
 
 
+def _parse_generated_at(value: str) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            f"Invalid ISO timestamp for --generated-at: {value!r}"
+        ) from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise argparse.ArgumentTypeError(
+            "--generated-at must include a timezone offset, e.g. "
+            "2026-05-17T12:34:56Z."
+        )
+    return parsed
+
+
 def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="index-inclusion-tex-export",
@@ -888,6 +903,15 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--generated-at",
+        type=_parse_generated_at,
+        default=None,
+        help=(
+            "ISO timestamp for the manuscript Generated comment. "
+            "Must include a timezone offset, e.g. 2026-05-17T12:34:56Z."
+        ),
+    )
+    parser.add_argument(
         "--force",
         action="store_true",
         help="Overwrite existing manuscript.tex / references.bib if present.",
@@ -909,6 +933,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             references_bib=args.references_out,
             include_todos=args.include_todos,
             cjk_engine=args.cjk_engine,
+            generated_at=args.generated_at,
             force=args.force,
         )
     except FileExistsError as exc:
