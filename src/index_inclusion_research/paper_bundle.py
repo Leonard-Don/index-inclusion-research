@@ -66,6 +66,7 @@ def _section_specs(root: Path) -> tuple[BundleSection, ...]:
                 "cma_verdicts_forest.pdf",
                 "cma_verdicts_sensitivity.pdf",
                 "cma_verdicts_ar_engine.pdf",
+                "cma_verdicts_2d_robustness.pdf",
             ),
         ),
         BundleSection(
@@ -361,6 +362,42 @@ def _regenerate_artifacts(root: Path) -> dict[str, str]:
             status["cma_verdicts_ar_engine_forest"] = "error"
     else:
         status["cma_verdicts_ar_engine_forest"] = "skipped"
+
+    # ── 2d) CMA verdicts 2D robustness heatmap (threshold × engine) ──
+    # Cross of the two 1D sweeps above; cache-only re-render so the
+    # paper bundle never triggers a fresh sweep. Picks up dedicated
+    # grid_<T>_<engine>/ caches *or* falls back to the 1D
+    # threshold_<T>/ + ar_<engine>/ caches.
+    if sensitivity_root.exists() and (
+        any(sensitivity_root.glob("grid_*/cma_hypothesis_verdicts.csv"))
+        or any(sensitivity_root.glob("threshold_*/cma_hypothesis_verdicts.csv"))
+        or any(sensitivity_root.glob("ar_*/cma_hypothesis_verdicts.csv"))
+    ):
+        try:
+            from index_inclusion_research.outputs import (
+                build_cma_2d_robustness_heatmap_from_cache,
+            )
+
+            png_path = (
+                root / "results" / "figures" / "cma_verdicts_2d_robustness.png"
+            )
+            pdf_path = (
+                root / "results" / "figures" / "cma_verdicts_2d_robustness.pdf"
+            )
+            build_cma_2d_robustness_heatmap_from_cache(
+                output_png_path=png_path,
+                output_pdf_path=pdf_path,
+                sensitivity_root=sensitivity_root,
+            )
+            status["cma_verdicts_2d_robustness_heatmap"] = "ok"
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "CMA verdicts 2D robustness heatmap regeneration skipped: %s",
+                exc,
+            )
+            status["cma_verdicts_2d_robustness_heatmap"] = "error"
+    else:
+        status["cma_verdicts_2d_robustness_heatmap"] = "skipped"
 
     # ── 3) PAP deviation report ───────────────────────────────────
     snapshots_dir = root / "snapshots"

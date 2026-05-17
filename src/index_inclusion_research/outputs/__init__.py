@@ -1,3 +1,12 @@
+from .cma_verdicts_2d_robustness import (
+    DEFAULT_2D_AR_MODELS,
+    DEFAULT_2D_THRESHOLDS,
+    build_cma_2d_robustness_heatmap,
+    build_cma_2d_robustness_heatmap_from_cache,
+    build_cma_2d_sweep,
+    build_cma_2d_sweep_from_cache,
+    render_2d_robustness_heatmap,
+)
 from .cma_verdicts_ar_engine import (
     DEFAULT_AR_ENGINE_THRESHOLD,
     DEFAULT_AR_MODELS,
@@ -34,10 +43,16 @@ from .reports import (
 )
 
 __all__ = [
+    "DEFAULT_2D_AR_MODELS",
+    "DEFAULT_2D_THRESHOLDS",
     "DEFAULT_AR_ENGINE_THRESHOLD",
     "DEFAULT_AR_MODELS",
     "DEFAULT_SENSITIVITY_THRESHOLDS",
     "build_asymmetry_summary",
+    "build_cma_2d_robustness_heatmap",
+    "build_cma_2d_robustness_heatmap_from_cache",
+    "build_cma_2d_sweep",
+    "build_cma_2d_sweep_from_cache",
     "build_cma_ar_engine_forest_plot",
     "build_cma_ar_engine_forest_plot_from_cache",
     "build_cma_ar_engine_sweep",
@@ -60,6 +75,7 @@ __all__ = [
     "export_descriptive_tables",
     "export_latex_tables",
     "plot_average_paths",
+    "render_2d_robustness_heatmap",
     "render_ar_engine_forest_plot",
     "render_sensitivity_forest_plot",
 ]

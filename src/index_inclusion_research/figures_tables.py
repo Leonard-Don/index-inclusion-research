@@ -19,6 +19,7 @@ from index_inclusion_research.loaders import (
 )
 from index_inclusion_research.outputs import (
     build_asymmetry_summary,
+    build_cma_2d_robustness_heatmap_from_cache,
     build_cma_ar_engine_forest_plot_from_cache,
     build_cma_sensitivity_forest_plot_from_cache,
     build_cma_verdicts_forest_plot,
@@ -144,6 +145,52 @@ def _maybe_build_cma_sensitivity_forest(
         )
     except (ValueError, OSError) as exc:
         logger.warning("CMA verdicts sensitivity forest plot skipped: %s", exc)
+        return
+
+
+def _maybe_build_cma_2d_robustness_heatmap(
+    *,
+    figures_dir: Path | None,
+    sensitivity_root: Path | None = None,
+) -> None:
+    """Refresh the 2D (threshold × AR engine) robustness heatmap when
+    any of the sensitivity sub-caches is populated.
+
+    Mirrors :func:`_maybe_build_cma_sensitivity_forest`: silently skip
+    if neither dedicated grid caches nor single-axis fallbacks exist
+    under ``results/sensitivity/`` (the user hasn't opted into the
+    sweep yet); log a warning on render failure so the broader figures
+    pipeline keeps going. Refreshing the sweep itself can require up
+    to 8 CMA runs (3 of them market-engine), so we never trigger it
+    automatically here — users opt in via
+    ``index-inclusion-build-cma-2d-robustness-heatmap``.
+    """
+    if figures_dir is None:
+        figures_dir = ROOT / "results" / "figures"
+    sens_root = sensitivity_root or (ROOT / "results" / "sensitivity")
+    if not sens_root.exists():
+        return
+    has_grid_cache = any(
+        sens_root.glob("grid_*/cma_hypothesis_verdicts.csv")
+    )
+    has_threshold_fallback = any(
+        sens_root.glob("threshold_*/cma_hypothesis_verdicts.csv")
+    )
+    has_ar_fallback = any(
+        sens_root.glob("ar_*/cma_hypothesis_verdicts.csv")
+    )
+    if not (has_grid_cache or has_threshold_fallback or has_ar_fallback):
+        return
+    png_path = figures_dir / "cma_verdicts_2d_robustness.png"
+    pdf_path = figures_dir / "cma_verdicts_2d_robustness.pdf"
+    try:
+        build_cma_2d_robustness_heatmap_from_cache(
+            output_png_path=png_path,
+            output_pdf_path=pdf_path,
+            sensitivity_root=sens_root,
+        )
+    except (ValueError, OSError) as exc:
+        logger.warning("CMA verdicts 2D robustness heatmap skipped: %s", exc)
         return
 
 
@@ -354,6 +401,14 @@ def main(argv: list[str] | None = None) -> None:
     # caches is the explicit job of
     # `index-inclusion-build-cma-ar-engine-forest`.
     _maybe_build_cma_ar_engine_forest(
+        figures_dir=Path(args.figures_dir) if args.figures_dir else None,
+    )
+
+    # 2D robustness heatmap that crosses both methodological axes
+    # (4 thresholds × 2 AR engines = 8 cells per hypothesis). Cache-
+    # only re-render here; the explicit refresh CLI is
+    # `index-inclusion-build-cma-2d-robustness-heatmap`.
+    _maybe_build_cma_2d_robustness_heatmap(
         figures_dir=Path(args.figures_dir) if args.figures_dir else None,
     )
 

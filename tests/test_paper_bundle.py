@@ -53,6 +53,8 @@ def _seed_minimal_project(root: Path) -> None:
     (root / "results" / "figures" / "hs300_rdd_robustness_forest.pdf").write_bytes(b"%PDF")
     (root / "results" / "figures" / "cma_verdicts_forest.png").write_bytes(b"png")
     (root / "results" / "figures" / "cma_verdicts_forest.pdf").write_bytes(b"%PDF")
+    (root / "results" / "figures" / "cma_verdicts_2d_robustness.png").write_bytes(b"png")
+    (root / "results" / "figures" / "cma_verdicts_2d_robustness.pdf").write_bytes(b"%PDF")
 
     rdd_dir = root / "results" / "literature" / "hs300_rdd"
     rdd_dir.mkdir(parents=True)
@@ -127,6 +129,8 @@ def test_build_paper_bundle_creates_expected_structure(tmp_path: Path) -> None:
     assert (result.dest / "figures" / "hs300_rdd_robustness_forest.pdf").exists()
     assert (result.dest / "figures" / "cma_verdicts_forest.png").exists()
     assert (result.dest / "figures" / "cma_verdicts_forest.pdf").exists()
+    assert (result.dest / "figures" / "cma_verdicts_2d_robustness.png").exists()
+    assert (result.dest / "figures" / "cma_verdicts_2d_robustness.pdf").exists()
     # RDD CSVs and figures land flat in paper/rdd/
     assert (result.dest / "rdd" / "rdd_summary.csv").exists()
     assert (result.dest / "rdd" / "rdd_robustness.csv").exists()
@@ -154,6 +158,7 @@ def test_build_paper_bundle_emits_readme_and_summary(tmp_path: Path) -> None:
     # on disk — keeps `paper/README.md` accurate when shared standalone.
     assert "hs300_rdd_robustness_forest.png" in readme
     assert "cma_verdicts_forest.png" in readme
+    assert "cma_verdicts_2d_robustness.png" in readme
     assert "pap_deviation_report.csv" in readme
 
     summary = result.summary.read_text(encoding="utf-8")
@@ -277,6 +282,8 @@ def test_manifest_lists_new_visualization_artifacts(tmp_path: Path) -> None:
     assert "figures/hs300_rdd_robustness_forest.pdf" in targets
     assert "figures/cma_verdicts_forest.png" in targets
     assert "figures/cma_verdicts_forest.pdf" in targets
+    assert "figures/cma_verdicts_2d_robustness.png" in targets
+    assert "figures/cma_verdicts_2d_robustness.pdf" in targets
     assert "tables/pap_deviation_report.csv" in targets
 
 

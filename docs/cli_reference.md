@@ -1,10 +1,10 @@
 # 命令行入口参考
 
-35 个 console scripts 按用途分组：
+36 个 console scripts 按用途分组：
 
 - **数据流水线**：`build-event-sample` / `build-price-panel` / `match-controls` / `match-robustness` / `run-event-study` / `run-regressions`
 - **样本数据**：`generate-sample-data` / `download-real-data`
-- **报表与图表**：`make-figures-tables` / `generate-research-report` / `paper-bundle` / `paper-audit` / `build-hs300-rdd-forest` / `build-cma-verdicts-forest` / `build-cma-sensitivity-forest` / `build-cma-ar-engine-forest`
+- **报表与图表**：`make-figures-tables` / `generate-research-report` / `paper-bundle` / `paper-audit` / `build-hs300-rdd-forest` / `build-cma-verdicts-forest` / `build-cma-sensitivity-forest` / `build-cma-ar-engine-forest` / `build-cma-2d-robustness-heatmap`
 - **Dashboard 与三条主线**：`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - **HS300 RDD 工具链**：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`（详见 [docs/hs300_rdd_workflow.md](hs300_rdd_workflow.md)）
 - **跨市场不对称 + 假说证据**：`cma`（7 条假说 verdict）/ `prepare-passive-aum` / `download-passive-aum-cn` / `download-cn-passive-aum-proxy` / `compute-h6-weight-change` / `refresh-real-evidence`
@@ -83,6 +83,8 @@ index-inclusion-make-figures-tables
 针对"verdict 取决于阈值选择"的审稿人质疑，`index-inclusion-build-cma-sensitivity-forest` 会一次性扫 0.05 / 0.10 / 0.15 / 0.20 四个阈值（可用 `--thresholds 0.01 0.05 0.10` 覆盖；自定义阈值至多两位小数），把 CMA pipeline 的 verdicts 重跑结果落到 `results/sensitivity/threshold_<T>/cma_hypothesis_verdicts.csv` 缓存，并生成 H1-H7 × 4 阈值的轨迹图 `results/figures/cma_verdicts_sensitivity.{png,pdf}`：每条假说一根灰色连线串起 4 个 dot，颜色按 evidence_tier、形状区分 circle（相对上一阈值 verdict 稳定）与 triangle（在该阈值 verdict 翻转），右侧 margin 注 `stable` / `1 flip` / `2+ flips`。解释边界：threshold knob 当前只影响 H1/H4/H5 这些 p-gated 假说；H2/H3/H6/H7 是非 p 头条 gate，图中用于参照整体证据强度。详见 [docs/sensitivity_workflow.md](sensitivity_workflow.md) §Forest visualization。
 
 针对"verdict 取决于 AR 模型选择"的审稿人质疑，`index-inclusion-build-cma-ar-engine-forest` 会在同一个阈值（默认 0.10，可用 `--threshold` 覆盖）下扫描两条 AR 引擎（默认 `adjusted` + `market`，可用 `--ar-models adjusted market` 覆盖），把 CMA pipeline 的 verdicts 重跑结果落到 `results/sensitivity/ar_<engine>/cma_hypothesis_verdicts.csv` 缓存，并生成 H1-H7 × 2 引擎的对比图 `results/figures/cma_verdicts_ar_engine.{png,pdf}`：每条假说两个 dot（adjusted=圆形/teal，market=方形/purple），strength 不同时由灰色短箭头串起，右侧 margin 注 `stable` / `flipped`。同目录的 `cma_ar_engine_cache_metadata.json` 会记录 threshold，所以 `--threshold 0.05` 不会复用 `0.10` 的 verdicts。`adjusted` 即文献标准的 `ret − benchmark_ret`，`market` 是市场模型 β-AR，估计窗口 `(-120, -10)` trading days（commit 1e29476）；AR-engine sweep 直接 materialize `market_model_event_panel.csv` / `market_model_matched_event_panel.csv`，不会额外写 `event_study_skipped_events.csv`，如需该 sidecar 请跑 `index-inclusion-run-event-study --ar-model market`。**首次跑 market 引擎需要先做一次完整的 CMA pipeline（约 2-5 分钟），metadata threshold 匹配且上游未更新时下次只是 cache hit。** 详见 [docs/sensitivity_workflow.md](sensitivity_workflow.md) §AR Engine Robustness。
+
+把两条单轴 sweep 合并成同一张图就是 2D 稳健性热力图：`index-inclusion-build-cma-2d-robustness-heatmap` 会跨乘 4 阈值 × 2 引擎 = 8 单元，生成 H1-H7 × 8 单元的色温图 `results/figures/cma_verdicts_2d_robustness.{png,pdf}`，回答"两条方法学 axis 同时变会不会让结论翻"的"同时"那一半。色温编码 support-strength（深红=insufficient/0.0，白=partial/0.5，深蓝=support/1.0），单元中央 ASCII tag (S+/S/P+/I) 提供 greyscale-friendly 解码，列分两组（左 4 列 = adjusted 引擎，右 4 列 = market 引擎，中间用粗黑分隔线），右侧 margin 注每条假说 `stable` / `1 flip` / `2+ flips`（按 8 单元里的 distinct verdict 数）。运行 runner 会先尝试**复用**已有的单轴 cache：(0.10, adjusted) 来自 `ar_adjusted/`、(0.10, market) 来自 `ar_market/`、(T, adjusted) 来自 `threshold_<T>/`，只有 (T≠0.10, market) 三个单元真正需要 fresh CMA pass。新缓存落在 `results/sensitivity/grid_<T>_<engine>/cma_hypothesis_verdicts.csv`。详见 [docs/sensitivity_workflow.md](sensitivity_workflow.md) §2D Robustness。
 
 `match-controls` 现在会同时输出 covariate-balance 表（默认 `match_balance.csv`，与 `--output-diagnostics` 同目录）。`index-inclusion-doctor` 的 `matched_sample_balance` 检查会扫这份表，遇到 |SMD|≥0.25 时变 warn。
 
