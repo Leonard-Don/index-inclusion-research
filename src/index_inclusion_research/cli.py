@@ -164,3 +164,7 @@ def run_export_public_summary_main() -> int | None:
 
 def run_paper_skeleton_main() -> int | None:
     return _run_package_main("index_inclusion_research.paper_skeleton")
+
+
+def run_citation_graph_main() -> int | None:
+    return _run_package_main("index_inclusion_research.citation_graph")

@@ -181,6 +181,14 @@ class LiteraturePaper:
     one_line_role: str
     practical_use: str
     pdf_path: Path
+    # Heuristic literature-link graph (added 2026-05): outgoing links to
+    # OTHER papers in PAPER_LIBRARY. These are NOT bibliography-verified
+    # citations; they are deterministic, paper-facing similarity/context
+    # links built from year + topic + methodology so the literature review
+    # can show a transparent navigation network without fabricating formal
+    # citation evidence. Empty tuple means no within-library predecessor
+    # link. Stored as a tuple so the dataclass stays frozen.
+    related_paper_ids: tuple[str, ...] = ()
 
     @property
     def exists(self) -> bool:
@@ -209,6 +217,7 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         pdf_path=PDF_ROOT
         / "con"
         / "1986_Harris_Gurel_Price_and_Volume_Effects_SP500.pdf",
+        related_paper_ids=(),  # 1986 seminal price-pressure piece; no within-library predecessor.
     ),
     LiteraturePaper(
         paper_id="shleifer_1986",
@@ -227,6 +236,7 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         pdf_path=PDF_ROOT
         / "pro"
         / "1986_Shleifer_Do_Demand_Curves_for_Stocks_Slope_Down.pdf",
+        related_paper_ids=(),  # 1986 seminal demand-curve piece; no within-library predecessor.
     ),
     LiteraturePaper(
         paper_id="lynch_mendenhall_1997",
@@ -245,6 +255,7 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         pdf_path=PDF_ROOT
         / "pro"
         / "1997_Lynch_Mendenhall_New_Evidence_SP500_Index.pdf",
+        related_paper_ids=("shleifer_1986", "harris_gurel_1986"),
     ),
     LiteraturePaper(
         paper_id="kaul_mehrotra_morck_2000",
@@ -263,6 +274,7 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         pdf_path=PDF_ROOT
         / "pro"
         / "2000_Kaul_Mehrotra_Morck_Demand_Curves_for_Stocks_Do_Slope_Down.pdf",
+        related_paper_ids=("shleifer_1986", "harris_gurel_1986", "lynch_mendenhall_1997"),
     ),
     LiteraturePaper(
         paper_id="denis_et_al_2003",
@@ -279,6 +291,12 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         one_line_role="把“纯资金冲击”扩展到“信息背书”的关键文献。",
         practical_use="适用于说明公告日上涨未必完全由被动资金驱动，信息机制同样可能发挥作用。",
         pdf_path=PDF_ROOT / "pro" / "Denis_McConnell_Ovtchinnikov_Yu_2003.pdf",
+        related_paper_ids=(
+            "shleifer_1986",
+            "harris_gurel_1986",
+            "lynch_mendenhall_1997",
+            "wurgler_zhuravskaya_2002",
+        ),
     ),
     LiteraturePaper(
         paper_id="wurgler_zhuravskaya_2002",
@@ -295,6 +313,7 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         one_line_role="解释套利约束为何可能延缓价格压力回归。",
         practical_use="适用于在机制部分连接“供需冲击”与“价格偏差为何持续”这两层解释，也可直接引用其 S&P 500 截面实证结论。",
         pdf_path=PDF_ROOT / "mid" / "Wurgler_Zhuravskaya_2002_working_paper.pdf",
+        related_paper_ids=("shleifer_1986", "harris_gurel_1986", "kaul_mehrotra_morck_2000"),
     ),
     LiteraturePaper(
         paper_id="madhavan_2003",
@@ -313,6 +332,7 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         pdf_path=PDF_ROOT
         / "mid"
         / "2003_Madhavan_The_Russell_Reconstitution_Effect.pdf",
+        related_paper_ids=("shleifer_1986", "harris_gurel_1986", "lynch_mendenhall_1997"),
     ),
     LiteraturePaper(
         paper_id="petajisto_2011",
@@ -329,6 +349,11 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         one_line_role="把指数溢价量化成指数基金隐性成本、同时支撑向下倾斜需求曲线的关键文献。",
         practical_use="适用于把指数溢价讨论转化为被动基金隐性交易成本的产业语言，并为需求曲线斜率提供数值校准。",
         pdf_path=PDF_ROOT / "con" / "Petajisto_2011_index_premium_hidden_cost.pdf",
+        related_paper_ids=(
+            "shleifer_1986",
+            "harris_gurel_1986",
+            "wurgler_zhuravskaya_2002",
+        ),
     ),
     LiteraturePaper(
         paper_id="kasch_sarkar_2011",
@@ -347,6 +372,11 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         pdf_path=PDF_ROOT
         / "con"
         / "2011_Kasch_Sarkar_Is_There_an_SP500_Index_Effect.pdf",
+        related_paper_ids=(
+            "shleifer_1986",
+            "lynch_mendenhall_1997",
+            "denis_et_al_2003",
+        ),
     ),
     LiteraturePaper(
         paper_id="ahn_patatoukas_2022",
@@ -365,6 +395,12 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         pdf_path=PDF_ROOT
         / "mid"
         / "2022_Ahn_Patatoukas_Identifying_the_Effect_of_Stock_Indexing.pdf",
+        related_paper_ids=(
+            "shleifer_1986",
+            "wurgler_zhuravskaya_2002",
+            "petajisto_2011",
+            "chang_hong_liskovich_2014",
+        ),
     ),
     LiteraturePaper(
         paper_id="coakley_et_al_2022",
@@ -383,6 +419,12 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         pdf_path=PDF_ROOT
         / "con"
         / "2022_Coakley_Dotsis_Kourtis_Psychoyios_SP500_Inclusion_Options.pdf",
+        related_paper_ids=(
+            "shleifer_1986",
+            "harris_gurel_1986",
+            "lynch_mendenhall_1997",
+            "petajisto_2011",
+        ),
     ),
     LiteraturePaper(
         paper_id="greenwood_sammon_2022",
@@ -401,6 +443,14 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         pdf_path=PDF_ROOT
         / "con"
         / "2022_Greenwood_Sammon_The_Disappearing_Index_Effect.pdf",
+        related_paper_ids=(
+            "shleifer_1986",
+            "harris_gurel_1986",
+            "lynch_mendenhall_1997",
+            "wurgler_zhuravskaya_2002",
+            "petajisto_2011",
+            "kasch_sarkar_2011",
+        ),
     ),
     LiteraturePaper(
         paper_id="chang_hong_liskovich_2014",
@@ -419,6 +469,12 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         pdf_path=PDF_ROOT
         / "pro"
         / "2014_Chang_Hong_Liskovich_Price_Effects_of_Stock_Market_Indexing.pdf",
+        related_paper_ids=(
+            "shleifer_1986",
+            "harris_gurel_1986",
+            "wurgler_zhuravskaya_2002",
+            "kasch_sarkar_2011",
+        ),
     ),
     LiteraturePaper(
         paper_id="chu_et_al_2021",
@@ -435,6 +491,12 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         one_line_role="把指数效应问题重新放回 A 股制度环境里的长期异象文献。",
         practical_use="适用于说明 A 股长期效应需要用公司特异性风险、管理者过度自信与国有股权结构三条机制共同解释，不能简单照搬美股叙事。",
         pdf_path=PDF_ROOT / "pro" / "1-s2.0-S0927538X2100158X-main.pdf",
+        related_paper_ids=(
+            "shleifer_1986",
+            "harris_gurel_1986",
+            "wurgler_zhuravskaya_2002",
+            "chang_hong_liskovich_2014",
+        ),
     ),
     LiteraturePaper(
         paper_id="yao_zhang_li_hs300",
@@ -451,6 +513,12 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         one_line_role="把中国市场 RDD 识别思路转化为中文实证语言的核心论文。",
         practical_use="适合作为中国样本 RDD 识别框架的中文核心依据。",
         pdf_path=PDF_ROOT / "pro" / "3439A97D91C0913CDC56FC9521E_597DEABF_14507A.pdf",
+        related_paper_ids=(
+            "shleifer_1986",
+            "harris_gurel_1986",
+            "chang_hong_liskovich_2014",
+            "chu_et_al_2021",
+        ),
     ),
     LiteraturePaper(
         paper_id="yao_zhou_chen_2022",
@@ -467,6 +535,13 @@ PAPER_LIBRARY: tuple[LiteraturePaper, ...] = (
         one_line_role="CSI300 RDD 正向效应在国际期刊层面的学术背书。",
         practical_use="适用于说明中国市场 RDD 识别下调入效应显著、调出效应不显著的非对称特征。",
         pdf_path=PDF_ROOT / "con" / "1-s2.0-S1544612321004244-main.pdf",
+        related_paper_ids=(
+            "shleifer_1986",
+            "harris_gurel_1986",
+            "wurgler_zhuravskaya_2002",
+            "chang_hong_liskovich_2014",
+            "chu_et_al_2021",
+        ),
     ),
 )
 
@@ -513,3 +588,19 @@ def get_literature_paper(paper_id: str) -> LiteraturePaper | None:
         if paper.paper_id == paper_id:
             return paper
     return None
+
+
+def build_linked_by_map() -> dict[str, tuple[str, ...]]:
+    """Return ``paper_id -> tuple of paper_ids heuristically linked to it``.
+
+    Derived from each paper's ``related_paper_ids`` tuple — the bidirectional
+    view used by :mod:`index_inclusion_research.citation_graph` to compute
+    in-degree-like link centrality without re-walking the library. Empty tuple
+    means no indexed paper links to this one.
+    """
+    inverse: dict[str, list[str]] = {paper.paper_id: [] for paper in PAPER_LIBRARY}
+    for paper in PAPER_LIBRARY:
+        for target in paper.related_paper_ids:
+            if target in inverse:
+                inverse[target].append(paper.paper_id)
+    return {pid: tuple(linkers) for pid, linkers in inverse.items()}

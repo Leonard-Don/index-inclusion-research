@@ -6,7 +6,7 @@
     "results/figures/cma_verdicts_ar_engine.png",
     "results/figures/cma_verdicts_2d_robustness.png"
   ],
-  "generated_at": "2026-05-17T03:03:28+00:00",
+  "generated_at": "2026-05-17T03:39:04+00:00",
   "hs300_rdd": {
     "main_bandwidth": 0.0600000000000022,
     "main_n_obs": 120,
@@ -22,7 +22,7 @@
     ]
   },
   "literature": {
-    "console_scripts_count": 38,
+    "console_scripts_count": 39,
     "papers_indexed": 16,
     "research_thread_names": [
       "price_pressure",
@@ -30,6 +30,21 @@
       "identification"
     ],
     "research_threads": 3
+  },
+  "literature_network": {
+    "edge_count": 52,
+    "edge_semantics": "heuristic_similarity_not_bibliographic_citation",
+    "node_count": 16,
+    "top_3_central_papers": [
+      "shleifer_1986",
+      "harris_gurel_1986",
+      "wurgler_zhuravskaya_2002"
+    ],
+    "top_3_most_linked": [
+      "shleifer_1986",
+      "harris_gurel_1986",
+      "wurgler_zhuravskaya_2002"
+    ]
   },
   "pap_baseline": {
     "frozen_for_days": 1,
