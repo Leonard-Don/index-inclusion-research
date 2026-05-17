@@ -139,6 +139,18 @@ significance threshold 影响的是 H1 / H4 / H5 这三条 p-gated 假说；H2 /
 [docs/sensitivity_workflow.md §5 Forest visualization](sensitivity_workflow.md)。
 重绘：`index-inclusion-build-cma-sensitivity-forest`。
 
+**附录建议——AR 引擎版（第二条 robustness axis）**：把
+`results/figures/cma_verdicts_ar_engine.png` 与上面的阈值版并列放在 §4.3 附录，
+回应审稿人的另一条经典质疑"verdict 取决于 AR 模型选择"。同一组 H1-H7、固定阈值
+（默认 0.10），把 CMA pipeline 在两条 AR 引擎下分别跑一次：`adjusted`
+（ret − benchmark_ret，文献标准、项目默认）和 `market`（市场模型 β-AR，估计窗口
+(-120, -10) trading days，commit 1e29476）。每条假说 2 个 dot（adjusted=圆形/teal，
+market=方形/purple），strength 不同时由灰色短箭头串起，右侧 margin 标注
+`stable` / `flipped`。两版灵敏度图在结构上对偶：阈值版证明 verdict 不依赖于阈值选择，
+AR 引擎版证明 verdict 不依赖于 AR 模型选择。详细使用见
+[docs/sensitivity_workflow.md §6 AR Engine Robustness](sensitivity_workflow.md)。
+重绘：`index-inclusion-build-cma-ar-engine-forest`。
+
 ### 4.4 中国市场 RDD 识别扩展（HS300）
 
 对应文件：

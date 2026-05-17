@@ -65,6 +65,7 @@ def _section_specs(root: Path) -> tuple[BundleSection, ...]:
                 "hs300_rdd_robustness_forest.pdf",
                 "cma_verdicts_forest.pdf",
                 "cma_verdicts_sensitivity.pdf",
+                "cma_verdicts_ar_engine.pdf",
             ),
         ),
         BundleSection(
@@ -225,7 +226,8 @@ def _regenerate_artifacts(root: Path) -> dict[str, str]:
     1. HS300 RDD robustness forest (PNG + PDF) ← ``rdd_robustness.csv``
     2. CMA verdicts forest (PNG + PDF) ← ``cma_hypothesis_verdicts.csv``
     3. CMA sensitivity forest (PNG + PDF) ← existing threshold cache only
-    4. PAP deviation report CSV ← latest snapshot + verdicts CSV
+    4. CMA AR-engine forest (PNG + PDF) ← existing engine cache only
+    5. PAP deviation report CSV ← latest snapshot + verdicts CSV
 
     Each step is wrapped so a single failure (missing input, broken
     CSV) only logs a warning and never aborts the whole bundle. The
@@ -325,6 +327,40 @@ def _regenerate_artifacts(root: Path) -> dict[str, str]:
             status["cma_verdicts_sensitivity_forest"] = "error"
     else:
         status["cma_verdicts_sensitivity_forest"] = "skipped"
+
+    # ── 2c) CMA verdicts AR-engine forest (engine sweep) ──────────
+    # Same opt-in contract as the threshold variant above. A fresh
+    # ``--ar-model market`` run is the slow operation here (materialises
+    # a market-model panel before re-running the CMA orchestrator), so
+    # the bundle never triggers a fresh sweep — it only re-renders the
+    # figure from existing ``ar_<engine>/`` caches.
+    if sensitivity_root.exists() and any(
+        sensitivity_root.glob("ar_*/cma_hypothesis_verdicts.csv")
+    ):
+        try:
+            from index_inclusion_research.outputs import (
+                build_cma_ar_engine_forest_plot_from_cache,
+            )
+
+            png_path = (
+                root / "results" / "figures" / "cma_verdicts_ar_engine.png"
+            )
+            pdf_path = (
+                root / "results" / "figures" / "cma_verdicts_ar_engine.pdf"
+            )
+            build_cma_ar_engine_forest_plot_from_cache(
+                output_png_path=png_path,
+                output_pdf_path=pdf_path,
+                sensitivity_root=sensitivity_root,
+            )
+            status["cma_verdicts_ar_engine_forest"] = "ok"
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "CMA verdicts AR-engine forest regeneration skipped: %s", exc
+            )
+            status["cma_verdicts_ar_engine_forest"] = "error"
+    else:
+        status["cma_verdicts_ar_engine_forest"] = "skipped"
 
     # ── 3) PAP deviation report ───────────────────────────────────
     snapshots_dir = root / "snapshots"

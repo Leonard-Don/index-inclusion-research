@@ -19,6 +19,7 @@ from index_inclusion_research.loaders import (
 )
 from index_inclusion_research.outputs import (
     build_asymmetry_summary,
+    build_cma_ar_engine_forest_plot_from_cache,
     build_cma_sensitivity_forest_plot_from_cache,
     build_cma_verdicts_forest_plot,
     build_data_source_table,
@@ -143,6 +144,45 @@ def _maybe_build_cma_sensitivity_forest(
         )
     except (ValueError, OSError) as exc:
         logger.warning("CMA verdicts sensitivity forest plot skipped: %s", exc)
+        return
+
+
+def _maybe_build_cma_ar_engine_forest(
+    *,
+    figures_dir: Path | None,
+    sensitivity_root: Path | None = None,
+) -> None:
+    """Refresh the AR-engine-aware CMA verdicts forest plot when the
+    engine-sweep cache is populated.
+
+    Mirrors :func:`_maybe_build_cma_sensitivity_forest`: silently skip if
+    no per-engine CSVs exist under ``results/sensitivity/`` (the user
+    hasn't opted into the sweep yet), log a warning on render failure so
+    the broader figures pipeline keeps going. Refreshing the sweep
+    itself requires running the CMA pipeline once per engine (the
+    ``market`` engine is materially slower because it materialises a
+    market-model panel first), so we don't trigger it automatically
+    here — users opt in via
+    ``index-inclusion-build-cma-ar-engine-forest``.
+    """
+    if figures_dir is None:
+        figures_dir = ROOT / "results" / "figures"
+    sens_root = sensitivity_root or (ROOT / "results" / "sensitivity")
+    if not sens_root.exists():
+        return
+    cached_csvs = list(sens_root.glob("ar_*/cma_hypothesis_verdicts.csv"))
+    if not cached_csvs:
+        return
+    png_path = figures_dir / "cma_verdicts_ar_engine.png"
+    pdf_path = figures_dir / "cma_verdicts_ar_engine.pdf"
+    try:
+        build_cma_ar_engine_forest_plot_from_cache(
+            output_png_path=png_path,
+            output_pdf_path=pdf_path,
+            sensitivity_root=sens_root,
+        )
+    except (ValueError, OSError) as exc:
+        logger.warning("CMA verdicts AR-engine forest plot skipped: %s", exc)
         return
 
 
@@ -305,6 +345,15 @@ def main(argv: list[str] | None = None) -> None:
     # re-render the figure from existing CSVs so make-figures-tables
     # never silently re-runs the full CMA pipeline 4×.
     _maybe_build_cma_sensitivity_forest(
+        figures_dir=Path(args.figures_dir) if args.figures_dir else None,
+    )
+
+    # AR-engine-aware version of the CMA forest — opt-in (renders only
+    # when results/sensitivity/ar_<engine>/ caches exist). Same cache-
+    # only contract as the threshold variant above; refreshing the
+    # caches is the explicit job of
+    # `index-inclusion-build-cma-ar-engine-forest`.
+    _maybe_build_cma_ar_engine_forest(
         figures_dir=Path(args.figures_dir) if args.figures_dir else None,
     )
 

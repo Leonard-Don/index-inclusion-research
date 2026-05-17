@@ -55,6 +55,12 @@ DEFAULT_CMA_SENSITIVITY_FOREST_PDF = (
     ROOT / "results" / "figures" / "cma_verdicts_sensitivity.pdf"
 )
 DEFAULT_CMA_SENSITIVITY_ROOT = ROOT / "results" / "sensitivity"
+DEFAULT_CMA_AR_ENGINE_FOREST_PNG = (
+    ROOT / "results" / "figures" / "cma_verdicts_ar_engine.png"
+)
+DEFAULT_CMA_AR_ENGINE_FOREST_PDF = (
+    ROOT / "results" / "figures" / "cma_verdicts_ar_engine.pdf"
+)
 PAP_SNAPSHOT_GLOB = "pre-registration-*.csv"
 PAP_SNAPSHOT_STALE_DAYS = 90
 
@@ -1330,6 +1336,94 @@ def check_cma_verdicts_forest_artifact(
     )
 
 
+def check_cma_ar_engine_forest_artifact(
+    *,
+    png_path: Path = DEFAULT_CMA_AR_ENGINE_FOREST_PNG,
+    pdf_path: Path = DEFAULT_CMA_AR_ENGINE_FOREST_PDF,
+    sensitivity_root: Path = DEFAULT_CMA_SENSITIVITY_ROOT,
+) -> CheckResult:
+    """Warn if the AR-engine-sweep CMA forest plot is missing or stale.
+
+    Sister of :func:`check_cma_sensitivity_forest_artifact`: same three
+    regimes, but the inputs are the per-engine CSVs under
+    ``results/sensitivity/ar_<engine>/cma_hypothesis_verdicts.csv``
+    (currently ``ar_adjusted`` and ``ar_market``). If no caches exist
+    yet the user simply hasn't opted into the AR engine sweep — the
+    check stays a soft warn rather than a fail so a fresh checkout
+    isn't blocked.
+    """
+    fix_command = (
+        "Run `index-inclusion-build-cma-ar-engine-forest` to refresh "
+        "the AR-engine-sweep figure."
+    )
+    name = "cma_ar_engine_forest_artifact"
+    if not sensitivity_root.exists():
+        return CheckResult(
+            name=name,
+            status="pass",
+            message=(
+                f"sensitivity cache {_relative_label(sensitivity_root)} not "
+                "populated; AR-engine forest figure is opt-in."
+            ),
+        )
+    cached_csvs = sorted(
+        sensitivity_root.glob("ar_*/cma_hypothesis_verdicts.csv")
+    )
+    if not cached_csvs:
+        return CheckResult(
+            name=name,
+            status="pass",
+            message=(
+                f"sensitivity cache {_relative_label(sensitivity_root)} has "
+                "no per-engine CSVs; AR-engine forest figure is opt-in."
+            ),
+        )
+    missing_outputs = [p for p in (png_path, pdf_path) if not p.exists()]
+    if missing_outputs:
+        labels = ", ".join(_relative_label(p) for p in missing_outputs)
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"AR-engine forest plot artifact(s) missing despite "
+                f"populated cache ({len(cached_csvs)} engine CSV(s)): {labels}"
+            ),
+            fix=fix_command,
+        )
+    png_mtime = png_path.stat().st_mtime
+    pdf_mtime = pdf_path.stat().st_mtime
+    output_mtime = min(png_mtime, pdf_mtime)
+    stale_inputs = [
+        p for p in cached_csvs if p.stat().st_mtime > output_mtime
+    ]
+    if stale_inputs:
+        details = tuple(
+            f"{_relative_label(p)} newer than "
+            f"{_relative_label(png_path)} / {_relative_label(pdf_path)}"
+            for p in stale_inputs
+        )
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"{len(stale_inputs)} cached AR-engine CSV(s) newer than "
+                "the AR-engine forest plot; re-run of the build CLI overdue."
+            ),
+            fix=fix_command,
+            details=details,
+        )
+    engine_count = len(cached_csvs)
+    return CheckResult(
+        name=name,
+        status="pass",
+        message=(
+            f"AR-engine forest plot artifacts ({_relative_label(png_path)}, "
+            f"{_relative_label(pdf_path)}) are fresher than {engine_count} "
+            "cached AR-engine CSV(s)."
+        ),
+    )
+
+
 def check_cma_sensitivity_forest_artifact(
     *,
     png_path: Path = DEFAULT_CMA_SENSITIVITY_FOREST_PNG,
@@ -1447,6 +1541,7 @@ DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_hs300_rdd_forest_artifact,
     check_cma_verdicts_forest_artifact,
     check_cma_sensitivity_forest_artifact,
+    check_cma_ar_engine_forest_artifact,
     check_chart_builders_register,
     check_console_scripts_importable,
     check_paper_audit,
