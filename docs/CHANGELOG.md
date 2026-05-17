@@ -4,6 +4,34 @@ All notable, user-visible changes to `index-inclusion-research`.
 
 ## Unreleased
 
+- feat(paper): submission readiness gate (44th CLI). New
+  `index-inclusion-submission-ready` console script is the final
+  pre-submission go/no-go gate, sitting downstream of `paper-integrity`.
+  Where the integrity gate verifies that the generated artifacts agree
+  with each other, the submission-ready gate asks the broader
+  question — *is the paper actually ready to ship?* — by aggregating
+  ~17 checks: skeleton presence + 8 required top-level sections, count
+  of `[TODO: ...]` markers (warn with per-section breakdown),
+  methodology summary freshness vs skeleton, 9 expected figures present
+  + non-empty + ≥ 800x600 (zero-dep PNG IHDR parsing), TeX + BibTeX
+  artifacts + 16 BibTeX entries, optional `pdflatex` sanity compile
+  in a temp dir (gracefully skipped if pdflatex is not on PATH),
+  `paper-integrity` gate bubbled up as a check, PAP `all_unchanged`
+  on the public summary, `doctor.run_all_checks` aggregated, public
+  summary freshness vs verdicts CSV, raw input CSV schema spot-check,
+  literature catalog count, 3 sensitivity figures fresh, verdict
+  timeline fresh, and an external `pytest` reminder. Aggregates into
+  `SubmissionAssessment` with `overall_status` (ready /
+  partially_ready / not_ready), `pass_count` / `warning_count` /
+  `blocker_count`, plus a rough `estimated_remaining_work_hours`
+  heuristic (`2.0h * fail + 0.5h * warn + 1.0h * TODO`). Supports
+  `--format text|json|markdown` and `--fail-on-warn` (CI). Exit codes:
+  0 ready / 1 partially_ready / 2 not_ready. Completely read-only —
+  every fix_command points at the corresponding generator. README CLI
+  badge bumped 43→44 (3 places), `docs/cli_reference.md` gains §21
+  with the full check list, `docs/research_delivery_package.md` lists
+  it as the last command in the publishing checklist.
+
 - feat(paper): LaTeX / Overleaf export CLI. New
   `index-inclusion-tex-export` console script (the 43rd) converts
   `paper/skeleton.md` and `paper/methodology_summary.md` into

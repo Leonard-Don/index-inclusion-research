@@ -192,3 +192,9 @@ def run_tex_export_main() -> int | None:
     return _run_package_main(
         "index_inclusion_research.tex_export"
     )
+
+
+def run_submission_ready_main() -> int | None:
+    return _run_package_main(
+        "index_inclusion_research.submission_ready"
+    )
