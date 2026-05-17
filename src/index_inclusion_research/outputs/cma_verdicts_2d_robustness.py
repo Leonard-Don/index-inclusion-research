@@ -69,6 +69,9 @@ from index_inclusion_research.outputs.cma_verdicts_ar_engine import (
     _normalise_ar_model,
     _normalise_ar_models,
 )
+from index_inclusion_research.outputs.cma_verdicts_ar_engine import (
+    _cache_metadata_matches as _ar_cache_metadata_matches,
+)
 from index_inclusion_research.outputs.cma_verdicts_forest import (
     _HYPOTHESIS_ORDER,
     _VERDICT_ASCII,
@@ -217,7 +220,11 @@ def _fallback_single_axis_cache_csv(
 
     if math.isclose(threshold, default_threshold, abs_tol=1e-12):
         ar_path = sensitivity_root / f"ar_{ar_model}" / "cma_hypothesis_verdicts.csv"
-        if ar_path.exists():
+        if ar_path.exists() and _ar_cache_metadata_matches(
+            ar_path,
+            ar_model=ar_model,
+            threshold=default_threshold,
+        ):
             return ar_path
     if ar_model == AR_MODEL_ADJUSTED:
         thr_path = (
@@ -287,6 +294,12 @@ def _discover_cached_combinations(
         try:
             ar_model = _normalise_ar_model(raw)
         except ValueError:
+            continue
+        if not _ar_cache_metadata_matches(
+            csv_path,
+            ar_model=ar_model,
+            threshold=_normalise_threshold(0.10),
+        ):
             continue
         discovered.add((_normalise_threshold(0.10), ar_model))
     return tuple(sorted(discovered))

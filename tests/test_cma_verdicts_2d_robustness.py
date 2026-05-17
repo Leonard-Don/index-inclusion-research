@@ -48,6 +48,9 @@ from index_inclusion_research.outputs.cma_verdicts_2d_robustness import (
     _verdict_to_tag,
     _write_cache_metadata,
 )
+from index_inclusion_research.outputs.cma_verdicts_ar_engine import (
+    _write_cache_metadata as _write_ar_cache_metadata,
+)
 
 # ── fixtures ─────────────────────────────────────────────────────────
 
@@ -609,11 +612,29 @@ def test_fallback_uses_ar_engine_cache_at_default_threshold(
     ar_csv = tmp_path / "ar_market" / "cma_hypothesis_verdicts.csv"
     ar_csv.parent.mkdir(parents=True, exist_ok=True)
     ar_csv.write_bytes(b"")
+    _write_ar_cache_metadata(ar_csv, ar_model=AR_MODEL_MARKET, threshold=0.10)
     assert (
         _fallback_single_axis_cache_csv(
             0.10, AR_MODEL_MARKET, sensitivity_root=tmp_path
         )
         == ar_csv
+    )
+
+
+def test_fallback_rejects_ar_engine_cache_with_wrong_threshold_metadata(
+    tmp_path: Path,
+) -> None:
+    """ar_<engine>/ can only seed the default 0.10 cell when metadata matches."""
+    ar_csv = tmp_path / "ar_market" / "cma_hypothesis_verdicts.csv"
+    ar_csv.parent.mkdir(parents=True, exist_ok=True)
+    ar_csv.write_bytes(b"")
+    _write_ar_cache_metadata(ar_csv, ar_model=AR_MODEL_MARKET, threshold=0.05)
+
+    assert (
+        _fallback_single_axis_cache_csv(
+            0.10, AR_MODEL_MARKET, sensitivity_root=tmp_path
+        )
+        is None
     )
 
 
@@ -716,9 +737,9 @@ def test_cache_only_sweep_uses_single_axis_fallbacks(tmp_path: Path) -> None:
     for ar_model in DEFAULT_2D_AR_MODELS:
         ar_dir = cache_root / f"ar_{ar_model}"
         ar_dir.mkdir(parents=True, exist_ok=True)
-        _verdicts_at_cell(0.10, ar_model).to_csv(
-            ar_dir / "cma_hypothesis_verdicts.csv", index=False
-        )
+        ar_csv = ar_dir / "cma_hypothesis_verdicts.csv"
+        _verdicts_at_cell(0.10, ar_model).to_csv(ar_csv, index=False)
+        _write_ar_cache_metadata(ar_csv, ar_model=ar_model, threshold=0.10)
 
     sweep = build_cma_2d_sweep_from_cache(sensitivity_root=cache_root)
     # 5 unique cells via fallback: (0.05/0.10/0.15/0.20, adjusted) +
