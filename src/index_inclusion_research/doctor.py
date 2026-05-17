@@ -76,6 +76,12 @@ DEFAULT_RDD_ROBUSTNESS_CSV_FOR_SUMMARY = (
 DEFAULT_CITATION_CENTRALITY_CSV = (
     ROOT / "results" / "literature" / "citation_centrality.csv"
 )
+DEFAULT_CITATION_NETWORK_PNG = (
+    ROOT / "results" / "literature" / "citation_network.png"
+)
+DEFAULT_CITATION_NETWORK_PDF = (
+    ROOT / "results" / "literature" / "citation_network.pdf"
+)
 DEFAULT_PAPER_SKELETON_MD = ROOT / "paper" / "skeleton.md"
 PAP_SNAPSHOT_GLOB = "pre-registration-*.csv"
 PAP_SNAPSHOT_STALE_DAYS = 90
@@ -915,6 +921,32 @@ def check_heuristic_citation_centrality_schema(
             f"{_relative_label(csv_path)} uses heuristic link columns "
             "top_linked_by/top_links_to."
         ),
+    )
+
+
+def check_citation_graph_artifact(
+    *,
+    png_path: Path = DEFAULT_CITATION_NETWORK_PNG,
+    pdf_path: Path = DEFAULT_CITATION_NETWORK_PDF,
+    centrality_csv_path: Path = DEFAULT_CITATION_CENTRALITY_CSV,
+) -> CheckResult:
+    """Warn if the heuristic literature-link network figure is missing or stale.
+
+    Mirrors :func:`check_hs300_rdd_forest_artifact` and the CMA forest checks:
+    the PNG / PDF twins must both exist and have an mtime ≥ the centrality
+    CSV they accompany. Re-run ``index-inclusion-citation-graph`` to refresh
+    all three artifacts together (idempotent — overwrites in place).
+    """
+    return _forest_artifact_status(
+        name="citation_graph_artifact",
+        png_path=png_path,
+        pdf_path=pdf_path,
+        input_csv_path=centrality_csv_path,
+        fix_command=(
+            "Run `index-inclusion-citation-graph` to refresh the citation "
+            "network figure (PNG + PDF) and centrality CSV together."
+        ),
+        input_label="citation_centrality.csv",
     )
 
 
@@ -1917,6 +1949,7 @@ DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_chart_builders_register,
     check_console_scripts_importable,
     check_heuristic_citation_centrality_schema,
+    check_citation_graph_artifact,
     check_paper_audit,
 )
 

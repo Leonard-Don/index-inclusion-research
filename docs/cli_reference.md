@@ -315,6 +315,7 @@ index-inclusion-pap-diff --no-write
 - `pap_snapshot_freshness` — `snapshots/pre-registration-YYYY-MM-DD.csv` > 90 天未刷 → `warn`（建议季度 re-baseline），目录或 snapshot 完全缺失 → `fail`
 - `hs300_rdd_forest_artifact` — `results/figures/hs300_rdd_robustness_forest.{png,pdf}` 存在且 mtime ≥ `rdd_robustness.csv`；缺失或 stale 触发 `make figures-tables` 提示
 - `cma_verdicts_forest_artifact` — `results/figures/cma_verdicts_forest.{png,pdf}` vs `cma_hypothesis_verdicts.csv` 的同款 mtime 检查
+- `citation_graph_artifact` — `results/literature/citation_network.{png,pdf}` vs `citation_centrality.csv` 的同款 mtime 检查；缺失或 stale 触发 `index-inclusion-citation-graph` 提示
 - `public_summary_freshness` — `data/public/index_research_summary.json` 存在且 mtime ≥ `cma_hypothesis_verdicts.csv` / `pap_deviation_report.csv` / `rdd_robustness.csv`；缺失或 stale 触发 `index-inclusion-export-public-summary` 提示
 - `paper_skeleton_freshness` — `paper/skeleton.md` 存在且 mtime ≥ `cma_hypothesis_verdicts.csv` / `pap_deviation_report.csv` / `rdd_robustness.csv` / `index_research_summary.json`；缺失或 stale 触发 `index-inclusion-paper-skeleton --force` 提示
 - `chart_builders_register` — `CHART_BUILDERS` ≥ 12 项
@@ -397,6 +398,35 @@ python3 -m index_inclusion_research.paper_skeleton
 - §5 限制（`docs/limitations.md` 全文嵌入）
 - §6 结论 TODO + §7 PAP 合规自动表
 - §参考文献（16 篇自动枚举）+ §附录 ABC
+
+## 16. 启发式文献关联网络（`citation-graph`）
+
+`index-inclusion-citation-graph` 把 16 篇文献库的 `related_paper_ids` 启发式链接（按年代/主题/方法学的相似性，**不是** bibliography 验证的引用）汇总成有向图、计算中心性、输出可视化图与 CSV。生成三件套放在 `results/literature/`：
+
+- `citation_network.png` — 力导向布局 PNG（确定性 seed=0），节点大小 = 启发式入度，颜色按立场（反方 / 中性 / 正方），箭头方向 = 关联对象。
+- `citation_network.pdf` — 矢量版同图，供论文 / 演讲嵌入。
+- `citation_centrality.csv` — 每行一篇文献，列：`paper_id, in_degree, out_degree, betweenness, eigenvector, top_linked_by, top_links_to`（最后两列 pipe-join 前 3 名 paper_id）。
+
+中心性算法纯 stdlib：Brandes BFS 算无向投影的 betweenness、PageRank-flavored damped 幂迭代算 eigenvector，避免引入 networkx。所有排序的 tie-break 按 paper_id 字典序，输出在 seed 固定时跨运行可复现。
+
+```bash
+# 默认产出（覆盖现有 PNG/PDF/CSV）
+index-inclusion-citation-graph
+
+# 自定义路径
+index-inclusion-citation-graph --png /tmp/net.png --pdf /tmp/net.pdf --csv /tmp/cent.csv
+
+# 跳过 PDF（传空字符串）
+index-inclusion-citation-graph --pdf ""
+
+# 换 layout seed（默认 0 — 论文 canonical 图）
+index-inclusion-citation-graph --seed 7
+
+# 通过 module 调用（与 console script 等价）
+python3 -m index_inclusion_research.citation_graph
+```
+
+边的语义在 export-public-summary JSON 的 `literature_network.edge_semantics` 字段里显式标为 `heuristic_similarity_not_bibliographic_citation`，下游消费者不会误把这些链接当成正式引用图。Doctor `citation_graph_artifact` 检查 PNG/PDF 是否比 centrality CSV 新；`heuristic_citation_centrality_schema` 检查 CSV 列名仍是 `top_linked_by` / `top_links_to`（旧版 `top_cited_by` / `top_cites` 视作语言污染立即报 fail）。
 
 ## Verdicts ↔ Literature 双向链接
 

@@ -799,6 +799,14 @@ def main(argv: list[str] | None = None) -> int:
     graph = build_citation_graph()
     centrality = compute_centrality(graph)
     pdf_target = args.pdf.strip() or None
+    # Write the centrality CSV first so doctor's `citation_graph_artifact`
+    # mtime check sees the figures as newer than the CSV (the figure
+    # twins are the *output* artifacts, the CSV is the *input* mtime
+    # baseline). Re-ordering keeps a fresh run leaving doctor in `pass`.
+    csv_written = write_centrality_csv(
+        graph, output_csv_path=args.csv, centrality=centrality
+    )
+    logger.info("heuristic literature-link centrality CSV written: %s", csv_written)
     png_written = render_citation_network_plot(
         graph,
         output_png_path=args.png,
@@ -808,10 +816,6 @@ def main(argv: list[str] | None = None) -> int:
     logger.info("heuristic literature network PNG written: %s", png_written)
     if pdf_target:
         logger.info("heuristic literature network PDF written: %s", pdf_target)
-    csv_written = write_centrality_csv(
-        graph, output_csv_path=args.csv, centrality=centrality
-    )
-    logger.info("heuristic literature-link centrality CSV written: %s", csv_written)
 
     summary = summarize_for_public_summary(graph, centrality=centrality)
     logger.info(
