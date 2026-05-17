@@ -179,6 +179,9 @@
 # 交互式 — 终端逐字段提问
 index-inclusion-add-paper
 
+# 先生成 JSON 模板，再复制编辑（只打印到 stdout，不碰 catalog/BibTeX）
+index-inclusion-add-paper --print-json-template > new_paper.json
+
 # 非交互式 — 从 JSON 读所有字段（便于版本管理/PR review）
 index-inclusion-add-paper --from-json new_paper.json
 
