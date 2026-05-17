@@ -39,6 +39,7 @@ Design notes
 from __future__ import annotations
 
 import logging
+import math
 import subprocess
 import warnings
 from collections.abc import Iterable
@@ -347,11 +348,10 @@ def _to_int(value: object) -> int | None:
     Missing values land as ``NaN`` in pandas; we round + cast safely so
     the JSON export below doesn't choke on floats.
     """
-    try:
-        if pd.isna(value):
-            return None
-    except (TypeError, ValueError):
-        pass
+    if value is None or value is pd.NA or value is pd.NaT:
+        return None
+    if isinstance(value, float) and math.isnan(value):
+        return None
     try:
         return int(float(value))  # type: ignore[arg-type]
     except (TypeError, ValueError):
