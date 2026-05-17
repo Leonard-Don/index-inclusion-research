@@ -1,0 +1,146 @@
+"""Tests for ``index_inclusion_research.tex_export``."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from index_inclusion_research import tex_export
+
+
+def _sample_skeleton() -> str:
+    return """# 指数纳入效应测试稿
+
+**作者**: [TODO: 作者]
+**日期**: 2026-05-17
+**摘要 (TODO)**: [TODO: 摘要] with **bold** and `code_1`.
+
+## 1. 引言
+
+[TODO: 引言 prose] A&B has 5% effect.
+
+### 1.1 研究问题
+
+- **H1**: short-run pressure
+- `H2`: demand curve
+
+| 假说 | n |
+|---|---:|
+| H1 | 436 |
+| H2 | 17 |
+
+![图 1: CMA](../results/figures/cma_verdicts_forest.png)
+
+> block quote with *emphasis*
+
+## 参考文献
+
+1. shleifer_1986
+"""
+
+
+def _sample_methodology() -> str:
+    return """# 方法论摘要
+
+## 1. 样本规模
+
+| 假说 | n_obs |
+|---|---:|
+| H1 | 436 |
+"""
+
+
+def test_build_tex_manuscript_converts_core_markdown_blocks() -> None:
+    tex = tex_export.build_tex_manuscript(
+        _sample_skeleton(),
+        _sample_methodology(),
+        Path("/tmp/project"),
+        include_todos=True,
+    )
+
+    assert r"\usepackage[UTF8]{ctex}" in tex
+    assert r"\title{指数纳入效应测试稿}" in tex
+    assert r"\TODO{作者}" in tex
+    assert r"\section{1. 引言}" in tex
+    assert r"\subsection{1.1 研究问题}" in tex
+    assert r"\begin{itemize}" in tex
+    assert r"\begin{tabular}{lr}" in tex
+    assert r"\includegraphics[width=\textwidth]{../results/figures/cma_verdicts_forest.png}" in tex
+    assert r"\begin{quote}" in tex
+    assert r"\bibliography{references}" in tex
+    assert r"\appendix" in tex
+    assert r"\section{方法论摘要（自动派生）}" in tex
+    assert r"A\&B has 5\% effect." in tex
+    assert r"\texttt{code\_1}" in tex
+
+
+def test_build_tex_manuscript_can_strip_todos_from_title_abstract_and_body() -> None:
+    tex = tex_export.build_tex_manuscript(
+        _sample_skeleton(),
+        "",
+        Path("/tmp/project"),
+        include_todos=False,
+    )
+
+    assert "[TODO:" not in tex
+    assert r"\TODO{" not in tex
+    assert r"\author{}" in tex
+    assert r"\begin{abstract}" in tex
+
+
+def test_write_manuscript_writes_tex_and_bib_and_refuses_overwrite(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "repo"
+    paper_dir = root / "paper"
+    paper_dir.mkdir(parents=True)
+    skeleton_path = paper_dir / "skeleton.md"
+    methodology_path = paper_dir / "methodology_summary.md"
+    skeleton_path.write_text(_sample_skeleton(), encoding="utf-8")
+    methodology_path.write_text(_sample_methodology(), encoding="utf-8")
+    monkeypatch.setenv("INDEX_INCLUSION_ROOT", str(root))
+
+    manuscript_path, references_path = tex_export.write_manuscript()
+
+    assert manuscript_path == paper_dir / "manuscript.tex"
+    assert references_path == paper_dir / "references.bib"
+    assert manuscript_path.exists()
+    assert references_path.exists()
+    assert "@article{shleifer_1986" in references_path.read_text(encoding="utf-8")
+
+    with pytest.raises(FileExistsError):
+        tex_export.write_manuscript()
+
+
+def test_main_supports_explicit_outputs_and_force(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    skeleton_path = tmp_path / "skeleton.md"
+    methodology_path = tmp_path / "methodology.md"
+    manuscript_path = tmp_path / "out" / "manuscript.tex"
+    references_path = tmp_path / "out" / "references.bib"
+    skeleton_path.write_text(_sample_skeleton(), encoding="utf-8")
+    methodology_path.write_text(_sample_methodology(), encoding="utf-8")
+
+    rc = tex_export.main(
+        [
+            "--skeleton-md",
+            str(skeleton_path),
+            "--methodology-md",
+            str(methodology_path),
+            "--manuscript-out",
+            str(manuscript_path),
+            "--references-out",
+            str(references_path),
+            "--include-todos",
+            "false",
+            "--force",
+        ]
+    )
+    capsys.readouterr()
+
+    assert rc == 0
+    assert manuscript_path.exists()
+    assert references_path.exists()
+    assert "[TODO:" not in manuscript_path.read_text(encoding="utf-8")

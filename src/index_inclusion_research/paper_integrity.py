@@ -1,6 +1,6 @@
 """Cross-document consistency gate (``index-inclusion-paper-integrity``).
 
-Individual generators across the 41 console scripts are independently
+Individual generators across the project console scripts are independently
 tested, but they emit artifacts that *talk about each other*. The paper
 verdicts CSV is referenced in the skeleton, the methodology summary
 recaps the same sample sizes, the public summary JSON quotes PAP

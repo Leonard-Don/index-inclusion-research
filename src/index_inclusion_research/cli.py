@@ -186,3 +186,9 @@ def run_paper_integrity_main() -> int | None:
     return _run_package_main(
         "index_inclusion_research.paper_integrity"
     )
+
+
+def run_tex_export_main() -> int | None:
+    return _run_package_main(
+        "index_inclusion_research.tex_export"
+    )

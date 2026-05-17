@@ -142,11 +142,14 @@ make rebuild
 make paper
 make paper-audit
 index-inclusion-paper-integrity --fail-on-warn   # 跨文档一致性发布门禁
+index-inclusion-tex-export --force               # Overleaf / XeLaTeX 源文件
 make doctor-strict
 make ci
 ```
 
 `index-inclusion-paper-integrity` 是论文交付的**最后一道门禁**：每个单独的生成器（`cma` / `paper-skeleton` / `methodology-summary` / `export-public-summary` / `pap-diff`）单测都已通过，但它们生成的工件**互相之间**仍可能 drift（一边重生成、另一边没追上）。此 CLI 跑 10 个跨文档比对：verdicts CSV 的 7 行 H ⇄ skeleton/methodology 的表格；skeleton 的 5 张 figure 引用 ⇄ `results/figures/` 实际文件；`pap_deviation_report.csv` 的 per-row classification ⇄ `data/public/index_research_summary.json` 的聚合计数；`pyproject.toml [project.scripts]` 的入口数 ⇄ README CLI badge；`literature_catalog.PAPER_LIBRARY` 的 16 篇 ⇄ skeleton §References；methodology summary 的 n_obs ⇄ verdicts CSV；methodology summary 的稳健性 stable/cell 计数 ⇄ public summary `sensitivity_robustness`。退出码 0=全通过 / 1=warn / 2=fail。**任何 fail → 论文未到发布就绪状态**。详情见 [docs/cli_reference.md §19](cli_reference.md)。
+
+`index-inclusion-tex-export --force` 是 gate 之后的写作格式出口：它不会重新解释证据，只把已生成的 `paper/skeleton.md` 与 `paper/methodology_summary.md` 转成 `paper/manuscript.tex`，并从 16 篇文献库生成 `paper/references.bib`。默认保留 `\TODO{...}` 方便 Overleaf 续写；送审草稿可加 `--include-todos false`。
 
 如果改过 dashboard 或截图，再跑：
 
