@@ -1,3 +1,12 @@
+from .cma_verdicts_ar_engine import (
+    DEFAULT_AR_ENGINE_THRESHOLD,
+    DEFAULT_AR_MODELS,
+    build_cma_ar_engine_forest_plot,
+    build_cma_ar_engine_forest_plot_from_cache,
+    build_cma_ar_engine_sweep,
+    build_cma_ar_engine_sweep_from_cache,
+    render_ar_engine_forest_plot,
+)
 from .cma_verdicts_forest import build_cma_verdicts_forest_plot
 from .cma_verdicts_sensitivity import (
     DEFAULT_SENSITIVITY_THRESHOLDS,
@@ -25,8 +34,14 @@ from .reports import (
 )
 
 __all__ = [
+    "DEFAULT_AR_ENGINE_THRESHOLD",
+    "DEFAULT_AR_MODELS",
     "DEFAULT_SENSITIVITY_THRESHOLDS",
     "build_asymmetry_summary",
+    "build_cma_ar_engine_forest_plot",
+    "build_cma_ar_engine_forest_plot_from_cache",
+    "build_cma_ar_engine_sweep",
+    "build_cma_ar_engine_sweep_from_cache",
     "build_cma_sensitivity_forest_plot",
     "build_cma_sensitivity_forest_plot_from_cache",
     "build_cma_sensitivity_sweep",
@@ -45,5 +60,6 @@ __all__ = [
     "export_descriptive_tables",
     "export_latex_tables",
     "plot_average_paths",
+    "render_ar_engine_forest_plot",
     "render_sensitivity_forest_plot",
 ]

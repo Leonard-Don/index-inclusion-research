@@ -107,6 +107,43 @@ index-inclusion-build-cma-sensitivity-forest \
 
 `make figures-tables` 在 `results/sensitivity/` 已有缓存时会自动从缓存重渲该图（不会自动跑 CMA pipeline 四遍），与 `cma_verdicts_forest` 一起更新；`make paper` 通过 `paper_bundle.py::_regenerate_artifacts` 也只做 cache-only 重绘。`index-inclusion-doctor` 的 `cma_sensitivity_forest_artifact` 检查在缓存非空但 PNG/PDF 缺失 / 过期时变 warn。
 
+## 6. AR Engine Robustness 层（AR 引擎选择敏感性）
+
+阈值灵敏度回答的是"p 阈值挪一挪 verdict 会不会翻"；AR 引擎灵敏度回答的是另一条同样常被审稿人提的问题——"AR 本身的定义（市场调整 vs 市场模型）换一下会不会翻"。两者是 robustness defense 的两条独立 axis：**threshold sensitivity 证明 verdict 不依赖于阈值选择；AR engine sensitivity 证明 verdict 不依赖于 AR 模型选择**。
+
+```bash
+# 默认 adjusted + market 两条引擎，threshold=0.10
+index-inclusion-build-cma-ar-engine-forest
+
+# 显式覆盖引擎列表（重复 / 顺序混乱时会去重并规范化到 (adjusted, market) 顺序）
+index-inclusion-build-cma-ar-engine-forest --ar-models adjusted market
+
+# 自定义共用阈值（默认 0.10）
+index-inclusion-build-cma-ar-engine-forest --threshold 0.05
+
+# 显式落盘路径
+index-inclusion-build-cma-ar-engine-forest \
+  --png results/figures/cma_verdicts_ar_engine.png \
+  --pdf results/figures/cma_verdicts_ar_engine.pdf
+```
+
+引擎定义（与 `run-event-study --ar-model` 同义，commit 1e29476 引入）：
+
+- **adjusted**（项目默认）：`ar = ret − benchmark_ret`，文献标准的简单市场调整。
+- **market**：`ar = ret − (α + β · benchmark_ret)`，α/β 在事件每条 (event_id, phase) 上以 (-120, -10) trading days 估计窗口跑 OLS；估计窗口数据不足或基准方差为零的事件留 NaN。注意 AR-engine sweep 走的是直接面板 materialization：审计信息保留在 `market_model_event_panel.csv` / `market_model_matched_event_panel.csv` 的 `market_model_estimation_obs` 与 `ar_market_model` 列中；不会额外生成 `event_study_skipped_events.csv`（该 sidecar 只属于 `index-inclusion-run-event-study --ar-model market`）。
+
+输出图：
+- **横轴**：support-strength 评分 [0, 1]（同 `cma_verdicts_forest::classify_strength`）
+- **纵轴**：H1-H7
+- **每条假说**：2 个 dot（每条引擎一个），strength 不同时由灰色短箭头串起，便于看翻转方向
+- **dot 颜色 + 形状**：adjusted = circle / teal，market = square / purple（greyscale 打印也能解码）
+- **右侧 margin**：每条假说 `stable`（两条引擎 verdict 一致）/ `flipped`（verdict 不一致，这一行对 AR 模型敏感）
+- **解释边界**：market 引擎在估计窗口太薄或基准方差退化时会把对应事件×phase 的 `ar` 留 NaN，CAR 聚合 + p_value 都会随之轻微移动；H3 / H7 这种命中率 / spread 头条 gate 也会因 NaN 比例变化而受影响，但量级与 p-gated H1/H4/H5 不可比。
+
+每次运行会把单引擎 CMA pipeline 的 verdicts 缓存到 `results/sensitivity/ar_<engine>/cma_hypothesis_verdicts.csv`（engine ∈ `adjusted` / `market`），并在同目录写 `cma_ar_engine_cache_metadata.json` 记录当前 threshold；只有 metadata threshold 与 CLI threshold 一致且 CMA 上游未更新时才会走 cache hit，避免 `--threshold 0.05` 复用 `0.10` 的 verdicts。`adjusted` 缓存与历史 CMA pipeline 的输出位级一致（默认 ar 列就是 `ret − benchmark_ret`）；`market` 缓存额外会在同目录写 `market_model_event_panel.csv` / `market_model_matched_event_panel.csv` 两个临时面板（`ar` 列被市场模型 β-AR 覆写后整面板回灌给 orchestrator）。**首次跑 market 引擎需要等一次完整的 CMA pipeline 跑完（约 2-5 分钟）；之后只要 metadata threshold 匹配且 CMA 上游 (event / matched panel / events_clean / passive_aum / weight_change) 没变就走 cache hit。**
+
+`make figures-tables` 与 `make paper` 同样只做 cache-only 重绘（不会自动 fire 一次 fresh market-engine 跑）。`index-inclusion-doctor` 的 `cma_ar_engine_forest_artifact` 检查在缓存非空但 PNG/PDF 缺失 / 过期时变 warn，与 `cma_sensitivity_forest_artifact` 平行。
+
 ## Doctor 严格门禁与机器可读输出
 
 `index-inclusion-doctor` 默认只在 `fail` 时返回非零退出码；`warn` 用来标记研究边界、生成物漂移或数据缺口（H2 AUM、H6 weight_change、H7 CN sector、HS300 RDD L2/L3 状态、matched_sample_balance）。常规 CI 让 warning 可见但不阻断；严格模式：
