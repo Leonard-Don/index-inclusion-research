@@ -1,6 +1,6 @@
 # 命令行入口参考
 
-45 个 console scripts 按用途分组：
+46 个 console scripts 按用途分组：
 
 - **数据流水线**：`build-event-sample` / `build-price-panel` / `match-controls` / `match-robustness` / `run-event-study` / `run-regressions`
 - **样本数据**：`generate-sample-data` / `download-real-data`
@@ -8,7 +8,7 @@
 - **Dashboard 与三条主线**：`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - **HS300 RDD 工具链**：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`（详见 [docs/hs300_rdd_workflow.md](hs300_rdd_workflow.md)）
 - **跨市场不对称 + 假说证据**：`cma`（7 条假说 verdict）/ `prepare-passive-aum` / `download-passive-aum-cn` / `download-cn-passive-aum-proxy` / `compute-h6-weight-change` / `refresh-real-evidence`
-- **总入口**：`rebuild-all`（10 步流水线一键跑）/ `verdict-summary`（终端速览）/ `pap-diff`（PAP 偏离审计）/ `doctor`（项目健康检查）/ `export-public-summary`（生成 data/public/index_research_summary.json）/ `paper-skeleton`（自动生成 paper/skeleton.md 论文骨架）/ `methodology-summary`（自动生成 paper/methodology_summary.md 方法论摘要卡）/ `paper-integrity`（论文交付前的跨文档一致性发布门禁）/ `tex-export`（生成 Overleaf/XeLaTeX 论文源文件）/ `submission-ready`（论文提交前最后一道发布就绪 go/no-go 门禁）/ `enrich-bib`（用 CrossRef 自动补全 BibTeX 期刊 / 卷 / 页 / DOI）
+- **总入口**：`rebuild-all`（10 步流水线一键跑）/ `verdict-summary`（终端速览）/ `pap-diff`（PAP 偏离审计）/ `doctor`（项目健康检查）/ `export-public-summary`（生成 data/public/index_research_summary.json）/ `paper-skeleton`（自动生成 paper/skeleton.md 论文骨架）/ `methodology-summary`（自动生成 paper/methodology_summary.md 方法论摘要卡）/ `paper-integrity`（论文交付前的跨文档一致性发布门禁）/ `tex-export`（生成 Overleaf/XeLaTeX 论文源文件）/ `submission-ready`（论文提交前最后一道发布就绪 go/no-go 门禁）/ `enrich-bib`（用 CrossRef 自动补全 BibTeX 期刊 / 卷 / 页 / DOI）/ `add-paper`（交互式添加新文献到 PAPER_LIBRARY 并同步下游 6 个工件）
 
 > `citation-graph` 生成的是启发式文献关联网络（主题/方法/年代链接），不是逐条 bibliography 引用核验。
 
@@ -623,6 +623,54 @@ index-inclusion-tex-export --force --enrich-bib
 - **BibTeX 格式化**：输出按 `author / title / year / journal / volume / issue / pages / doi / note` 固定顺序排列，便于 diff review。
 
 第一次跑当前 `paper/references.bib`（16 条）的实际结果：**15 条 enriched / 1 条 kept TODO**。剩下的 1 条是姚东旻/张日升/李嘉晟那篇中文期刊文章（CrossRef 返回的 fuzzy match 落在 0.5 confidence，低于 0.7 阈值；作者可手填）。
+
+## 23. 交互式文献库扩展（`add-paper`）
+
+`index-inclusion-add-paper` 是 46 个 console scripts 的第 46 号，专门解决一个具体的研究工作流问题：**论文进入毕业季后，每个月仍会有新的指数效应文献被加入综述（2024-2025 的 JFE/RFS/JF 顶刊出文非常活跃）。手动新增一篇要触碰 6 个文件：`literature_catalog/_data.py` 添加 `LiteraturePaper(...)` 条目、`paper/references.bib` 追加 BibTeX、`citation_graph` 重新渲染 PNG/PDF/CSV、`paper/skeleton.md` 重新生成 §References、`paper/methodology_summary.md` 重新计算 top-5 centrality 引用、`data/public/index_research_summary.json` 更新 `papers_indexed` 计数。手动改一遍要 20-30 分钟且非常容易遗漏其中一处。
+
+`add-paper` 把整套手术封进一个 CLI 入口，使「添加一篇文献」收敛为「填一张表 + 等几秒」：
+
+```bash
+# 交互式（在终端逐字段提问）
+index-inclusion-add-paper
+
+# 非交互式（从 JSON 文件读全部字段）
+index-inclusion-add-paper --from-json greenwood_sammon_2024.json
+
+# Dry-run：只看会发生什么，不写盘
+index-inclusion-add-paper --from-json greenwood_sammon_2024.json --dry-run
+
+# 批量添加：维护 PAPER_LIBRARY + references.bib，下游一次性补
+index-inclusion-add-paper --from-json a.json --skip-downstream
+index-inclusion-add-paper --from-json b.json --skip-downstream
+index-inclusion-paper-skeleton --force \
+  && index-inclusion-methodology-summary \
+  && index-inclusion-export-public-summary \
+  && index-inclusion-citation-graph
+
+# 写完并立即跑跨文档门禁
+index-inclusion-add-paper --from-json greenwood_sammon_2024.json --run-integrity
+```
+
+Mandatory 字段（`add_paper.NewPaper.__post_init__` 强制）：`paper_id`（小写下划线，正则 `[a-z][a-z0-9_]*`）/ `authors`（分号分隔）/ `year`（1800-2199 的四位年份）/ `title` / `position`（`pro_index_effect` / `contra` / `neutral`）/ `market_focus`（`US` / `CN` / `both`）。`related_paper_ids` 也必须是合法 `paper_id` 字符串；`camp` 必须落在现有五个文献阵营内。自由文本字段会用安全 Python literal / BibTeX escaping 写盘，避免 JSON 或 TTY 输入里的换行、反斜杠、花括号、控制字符把 `_data.py` 或 `references.bib` 打坏。可选字段不被允许被编造——缺省一律落到 `[TODO: not provided]` 占位符，研究者后续可以在 `_data.py` 中手填。
+
+设计契约：
+
+- **paper_id 唯一性**：与现有 16 篇库的任何条目重名 → 拒绝（带提示）。这让批量重跑同一 JSON 是幂等的——第二次会报"已存在"而不是默默写两遍。
+- **保留现有 thematic tuple**：现有 16 篇不是全局 alphabetical；新增条目会按 `paper_id` 做一次字典序扫描，插到第一个比它大的现有 `paper_id` 前面，否则放到 tuple 尾部。文本编辑而不是 import-time mutation——后者对 frozen dataclass 不可行，且重启 Python 后丢失。
+- **paper_id 受限于 ASCII**：避免下游 BibTeX cite-key 解析、文件路径生成、citation graph 节点 ID 等多处对 unicode 不友好的链路出问题。
+- **`--dry-run` 不写一个字节**：只打印 catalog diff 字符数 + BibTeX 草稿；适合提交前先看看。
+- **`--skip-downstream` 仍维护 catalog + BibTeX**：批量场景下避免每次都重渲 citation_network.png / .pdf 的 matplotlib 开销，但 `paper/references.bib` 会随每次 add 同步追加。
+- **`--run-integrity` 可选门禁**：写盘后运行 `index-inclusion-paper-integrity --fail-on-warn`；若门禁非零，CLI 返回非零并在报告里保留已写入的部分状态。
+
+输出 `AddPaperReport`：
+
+- `paper_library_count_before / after`（确认 16 → 17 的跨越）
+- `catalog_updated` / `bibtex_updated` / `downstream_artifacts`（哪些下游 CLI 跑成功了）
+- `dry_run` / `skipped_downstream`（行为标志，便于测试断言）
+- `notes`（关联 paper_id 中有未知 ID、批量补丁的下一步指令等）
+
+CI/local 流程建议：每次添加完用 `index-inclusion-paper-integrity --fail-on-warn` 确认跨文档一致性，再 commit。
 
 ## Verdicts ↔ Literature 双向链接
 

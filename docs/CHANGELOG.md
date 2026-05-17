@@ -4,6 +4,41 @@ All notable, user-visible changes to `index-inclusion-research`.
 
 ## Unreleased
 
+- feat(literature): interactive add-paper CLI (46th). New
+  `index-inclusion-add-paper` console script lets the researcher add a
+  new academic paper to the 16-paper `literature_catalog.PAPER_LIBRARY`
+  with one command instead of touching 6 files. Inputs (paper_id,
+  authors, year, title, journal, market_focus US/CN/both, methodology
+  event_study/regression/RDD/other, position pro_index_effect/contra/
+  neutral, research_thread, related_paper_ids, abstract) are collected
+  either via TTY prompts (`interactive_add_paper`) or from a JSON file
+  (`--from-json paper.json`). Mandatory fields enforced via
+  `NewPaper.__post_init__`; missing optional fields fall back to
+  `[TODO: not provided]` placeholders (no fabrication). `paper_id`
+  validated against `[a-z][a-z0-9_]*`; duplicates rejected with helpful
+  error (idempotent re-runs). Source rendering uses safe Python string
+  literals for free text, validates four-digit `year`, known `camp`, and
+  legal `related_paper_ids`, and BibTeX escaping covers braces,
+  backslashes, controls, newlines, and field-injection-shaped input.
+  Side-effects: (1) inserts a new `LiteraturePaper(...)` literal into
+  `literature_catalog/_data.py` via a lexicographic scan that preserves
+  the existing thematic tuple order (textual edit, reviewable diff), (2)
+  appends `@article{<paper_id>, ...}` to `paper/references.bib`,
+  (3) regenerates `paper/skeleton.md` §References, `paper/methodology_summary.md`
+  top-5 centrality, `data/public/index_research_summary.json`
+  `papers_indexed` count, and `results/literature/citation_*` figure
+  twin + CSV. Downstream failures now return a non-zero CLI result with
+  the partial-write report instead of silently looking successful. Flags:
+  `--dry-run` (show diff without writing), `--skip-downstream`
+  (catalog + BibTeX only for batch adds), `--run-integrity`
+  (`paper-integrity --fail-on-warn` after writes), `--from-json` (non-
+  interactive), `--catalog-path` / `--bibtex-path` (test overrides).
+  README CLI badge bumped 45→46 (3 places), `docs/cli_reference.md` 头部
+  count + appendix §23, `docs/literature_to_project_guide.md` §五 cross-
+  reference. Returns structured `AddPaperReport` (paper_library_count
+  before/after, catalog_updated, bibtex_updated, downstream_artifacts,
+  paper_integrity_exit_code, notes) so callers can audit what changed.
+
 - feat(paper): BibTeX CrossRef enrichment (45th CLI). New
   `index-inclusion-enrich-bib` console script resolves the
   `[TODO: journal]` / `[TODO: volume]` / `[TODO: pages]` / `[TODO: doi]`
