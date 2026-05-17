@@ -166,6 +166,8 @@ def test_main_supports_explicit_outputs_and_force(
             str(references_path),
             "--include-todos",
             "false",
+            "--generated-at",
+            "2026-05-17T20:34:56+08:00",
             "--force",
         ]
     )
@@ -174,4 +176,37 @@ def test_main_supports_explicit_outputs_and_force(
     assert rc == 0
     assert manuscript_path.exists()
     assert references_path.exists()
-    assert "[TODO:" not in manuscript_path.read_text(encoding="utf-8")
+    manuscript_text = manuscript_path.read_text(encoding="utf-8")
+    assert "[TODO:" not in manuscript_text
+    assert "% Generated: 2026-05-17 12:34:56 UTC." in manuscript_text
+
+    rc_without_force = tex_export.main(
+        [
+            "--skeleton-md",
+            str(skeleton_path),
+            "--methodology-md",
+            str(methodology_path),
+            "--manuscript-out",
+            str(manuscript_path),
+            "--references-out",
+            str(references_path),
+            "--generated-at",
+            "2026-05-18T00:00:00Z",
+        ]
+    )
+    capsys.readouterr()
+
+    assert rc_without_force == 1
+    refused_text = manuscript_path.read_text(encoding="utf-8")
+    assert "% Generated: 2026-05-17 12:34:56 UTC." in refused_text
+    assert "% Generated: 2026-05-18 00:00:00 UTC." not in refused_text
+
+
+def test_main_rejects_invalid_generated_at(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        tex_export.main(["--generated-at", "2026-05-17 12:34:56"])
+
+    assert exc_info.value.code == 2
+    assert "--generated-at must include a timezone offset" in capsys.readouterr().err
