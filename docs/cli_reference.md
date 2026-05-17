@@ -1,6 +1,6 @@
 # 命令行入口参考
 
-43 个 console scripts 按用途分组：
+44 个 console scripts 按用途分组：
 
 - **数据流水线**：`build-event-sample` / `build-price-panel` / `match-controls` / `match-robustness` / `run-event-study` / `run-regressions`
 - **样本数据**：`generate-sample-data` / `download-real-data`
@@ -8,7 +8,7 @@
 - **Dashboard 与三条主线**：`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - **HS300 RDD 工具链**：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`（详见 [docs/hs300_rdd_workflow.md](hs300_rdd_workflow.md)）
 - **跨市场不对称 + 假说证据**：`cma`（7 条假说 verdict）/ `prepare-passive-aum` / `download-passive-aum-cn` / `download-cn-passive-aum-proxy` / `compute-h6-weight-change` / `refresh-real-evidence`
-- **总入口**：`rebuild-all`（10 步流水线一键跑）/ `verdict-summary`（终端速览）/ `pap-diff`（PAP 偏离审计）/ `doctor`（项目健康检查）/ `export-public-summary`（生成 data/public/index_research_summary.json）/ `paper-skeleton`（自动生成 paper/skeleton.md 论文骨架）/ `methodology-summary`（自动生成 paper/methodology_summary.md 方法论摘要卡）/ `paper-integrity`（论文交付前的跨文档一致性发布门禁）/ `tex-export`（生成 Overleaf/XeLaTeX 论文源文件）
+- **总入口**：`rebuild-all`（10 步流水线一键跑）/ `verdict-summary`（终端速览）/ `pap-diff`（PAP 偏离审计）/ `doctor`（项目健康检查）/ `export-public-summary`（生成 data/public/index_research_summary.json）/ `paper-skeleton`（自动生成 paper/skeleton.md 论文骨架）/ `methodology-summary`（自动生成 paper/methodology_summary.md 方法论摘要卡）/ `paper-integrity`（论文交付前的跨文档一致性发布门禁）/ `tex-export`（生成 Overleaf/XeLaTeX 论文源文件）/ `submission-ready`（论文提交前最后一道发布就绪 go/no-go 门禁）
 
 > `citation-graph` 生成的是启发式文献关联网络（主题/方法/年代链接），不是逐条 bibliography 引用核验。
 
@@ -539,6 +539,60 @@ index-inclusion-tex-export --cjk-engine xeCJK --force
 ```
 
 该导出器只消费已通过 `paper-integrity` 的 Markdown/方法论产物，不改动 verdicts、public summary 或 paper audit 逻辑。默认保留 `\TODO{...}` 方便在 Overleaf 中继续写作；`--include-todos false` 会从 `manuscript.tex` 中去掉 TODO 标记，适合生成送审草稿。
+
+## 21. 论文提交就绪发布门禁（`submission-ready`）
+
+`index-inclusion-submission-ready` 是 44 个 console scripts 的第 44 号，也是论文实际提交前的**最后一道 go/no-go 门禁**。`paper-integrity` 检查的是工件之间的一致性（cross-document drift）；`submission-ready` 则把视角放宽到**整个提交包**：
+
+- **PAPER STRUCTURE**：`paper/skeleton.md` 存在 + 8 个顶级章节齐全（引言 / 文献综述 / 研究设计 / 实证结果 / 限制与讨论 / 结论与启示 / PAP / 参考文献）。
+- **PROSE**：扫描 `paper/skeleton.md` 的 `[TODO: ...]` 标记，按章节归类。任何 TODO 都是 `warn`（散文未完稿，不阻断流水线但需要写完）。
+- **METHODOLOGY**：`paper/methodology_summary.md` 存在；如果它比 `skeleton.md` 旧超过 1 天则 `warn`。
+- **FIGURES**：9 张关键论文图全部存在、非空、宽×高 ≥ 800×600（基于 PNG IHDR 头解析，零额外依赖）。
+- **TEX**：`paper/manuscript.tex` + `paper/references.bib` 都存在；BibTeX 条目数 == 16。如果 `pdflatex` 在 PATH 上，则在临时目录里尝试编译一次（失败则 `fail`；`pdflatex` 不可用则 `warn` 表示跳过）。
+- **INTEGRITY**：调用 `paper_integrity.check_paper_integrity()`，把它的 fail / warn 桥接到本门禁的同级 status。
+- **PAP**：`data/public/index_research_summary.json` 的 `pap_deviation_summary.all_unchanged == true`；任何 `flipped` 直接 `fail`，`tightened` / `weakened` / `unverifiable` 报 `warn`。
+- **DOCTOR**：重跑 `doctor.run_all_checks()`，把全部 health checks 的 fail / warn 一起冒泡。
+- **PUBLIC SUMMARY**：JSON 存在且不比 `cma_hypothesis_verdicts.csv` 旧（1 分钟时钟漂移容忍）。
+- **DATA**：`data/raw/real_events.csv` / `real_prices.csv` / `real_benchmarks.csv` 都存在且必备列 schema 通过。
+- **LITERATURE**：`literature_catalog.PAPER_LIBRARY` 至少 16 条目。
+- **SENSITIVITY**：3 张 CMA 稳健性图（threshold / AR engine / 2D heatmap）都存在且不比 verdicts CSV 旧。
+- **TIMELINE**：`verdict_timeline.png` 存在且不比 verdicts CSV 旧。
+- **TESTS**：CLI 内不跑 pytest（避免 8 分钟阻塞 + 写 `.pytest_cache`）；输出 `warn` 提示外部执行 `pytest --maxfail=1 -q`。
+
+聚合结果：
+
+- `ready` — 0 warn / 0 fail，全绿，可以提交；
+- `partially_ready` — 0 fail，有 warn，软阻断（默认 exit 1，可继续）；
+- `not_ready` — 任何 fail，硬阻断，列出 N 项 blocker。
+
+退出码（与 doctor / paper-integrity 同协议）：`0` ready / `1` partially_ready（或 warn + `--fail-on-warn`）/ `2` not_ready。
+
+```bash
+# 默认 text 输出（按 pass / warn / fail 顺序 + 估算剩余工时）
+index-inclusion-submission-ready
+
+# JSON 输出供 CI consume
+index-inclusion-submission-ready --format json
+
+# Markdown 表格（嵌入 PR / status report）
+index-inclusion-submission-ready --format markdown
+
+# 严格 CI 模式：warn 也阻断
+index-inclusion-submission-ready --fail-on-warn
+```
+
+**估算剩余工时** = `blocker_count * 2.0h + warning_count * 0.5h + skeleton_TODO_count * 1.0h`。它是粗略启发式，意在让"还差多少"这件事有一个数字承诺，而不是模糊的"快了"。
+
+把它放到 paper 发布的 last-mile（接在 `paper-integrity` 之后）：
+
+```bash
+make rebuild && make paper
+index-inclusion-paper-integrity --fail-on-warn
+index-inclusion-submission-ready --fail-on-warn   # 最终 go/no-go
+index-inclusion-tex-export --include-todos false --force
+```
+
+它是**完全只读的** —— 从不修改任何工件，所有 fix command 都指向对应的生成器（`make-figures-tables` / `paper-skeleton` / `methodology-summary` / `tex-export` 等）。
 
 ## Verdicts ↔ Literature 双向链接
 
