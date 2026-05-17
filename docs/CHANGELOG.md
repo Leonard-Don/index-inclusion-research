@@ -4,6 +4,29 @@ All notable, user-visible changes to `index-inclusion-research`.
 
 ## Unreleased
 
+- feat(paper): cross-document integrity gate. New
+  `index-inclusion-paper-integrity` console script (the 42nd) is the
+  publication-time gate that the paper bundle's artifacts are mutually
+  consistent. While each generator is unit-tested in isolation, the
+  generated artifacts cross-reference each other — verdicts CSV vs
+  paper/skeleton.md vs paper/methodology_summary.md vs
+  pap_deviation_report.csv vs data/public/index_research_summary.json
+  vs README.md badge vs literature_catalog.PAPER_LIBRARY. This CLI runs
+  10 cross-document checks (`check_verdicts_hids_match_skeleton`,
+  `check_figures_referenced_exist`, `check_pap_classifications_match_public_summary`,
+  `check_console_scripts_count_matches_readme`,
+  `check_paper_library_referenced_in_skeleton`,
+  `check_sample_sizes_match_methodology`,
+  `check_sensitivity_coverage_match`, etc.) and aggregates them into a
+  severity-tagged report (info / warn / fail). Exit codes match doctor
+  conventions: 0 pass, 1 warn, 2 fail; `--fail-on-warn` makes warns also
+  exit 1 for CI. Supports `--format text|json|markdown`. Doctor gains
+  `check_paper_integrity` adapter so the gate also surfaces in
+  `index-inclusion-doctor`. README CLI badge bumped 41→42,
+  `docs/cli_reference.md` gains §19, `docs/research_delivery_package.md`
+  mentions the gate as the publish prerequisite. Read-only — never
+  mutates any artifact, just compares them.
+
 - feat(paper): methodology summary auto-generator. New
   `index-inclusion-methodology-summary` console script (the 41st)
   renders a single-page methodology card to

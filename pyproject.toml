@@ -64,6 +64,7 @@ index-inclusion-paper-skeleton = "index_inclusion_research.cli:run_paper_skeleto
 index-inclusion-citation-graph = "index_inclusion_research.cli:run_citation_graph_main"
 index-inclusion-verdict-timeline = "index_inclusion_research.cli:run_verdict_timeline_main"
 index-inclusion-methodology-summary = "index_inclusion_research.cli:run_methodology_summary_main"
+index-inclusion-paper-integrity = "index_inclusion_research.cli:run_paper_integrity_main"
 
 [project.optional-dependencies]
 methods = [

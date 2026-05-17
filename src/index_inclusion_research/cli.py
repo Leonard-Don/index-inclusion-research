@@ -180,3 +180,9 @@ def run_methodology_summary_main() -> int | None:
     return _run_package_main(
         "index_inclusion_research.methodology_summary"
     )
+
+
+def run_paper_integrity_main() -> int | None:
+    return _run_package_main(
+        "index_inclusion_research.paper_integrity"
+    )

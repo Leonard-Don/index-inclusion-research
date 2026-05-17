@@ -990,6 +990,22 @@ def check_verdict_timeline_artifact(
     )
 
 
+def check_paper_integrity() -> CheckResult:
+    """Cross-document integrity gate: verify the paper bundle's artifacts agree.
+
+    Thin doctor adapter around
+    :func:`index_inclusion_research.paper_integrity.check_paper_integrity`.
+    Surfaces the worst severity (fail > warn > pass) so doctor's strict
+    mode can flag a broken paper bundle without crowding the per-issue
+    list. Run ``index-inclusion-paper-integrity`` for the full report.
+    """
+    from index_inclusion_research.paper_integrity import (
+        check_paper_integrity_doctor,
+    )
+
+    return check_paper_integrity_doctor()
+
+
 def check_paper_audit() -> CheckResult:
     """Paper-facing claims should be backed by current artifacts and bundle copies."""
     from index_inclusion_research.paper_audit import run_paper_audit, summarize_audit
@@ -2086,6 +2102,7 @@ DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_citation_graph_artifact,
     check_verdict_timeline_artifact,
     check_paper_audit,
+    check_paper_integrity,
 )
 
 
