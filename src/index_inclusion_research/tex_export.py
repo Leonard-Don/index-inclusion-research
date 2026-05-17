@@ -775,6 +775,7 @@ def write_manuscript(
     cjk_engine: str = "ctex",
     generated_at: datetime | None = None,
     force: bool = False,
+    enrich_bib: bool = False,
 ) -> tuple[Path, Path]:
     """Render both ``manuscript.tex`` and ``references.bib`` to disk.
 
@@ -782,6 +783,13 @@ def write_manuscript(
     inspect them. Refuses to overwrite existing files unless
     ``force=True`` so a user who hand-edited the manuscript won't lose
     work by re-running the CLI.
+
+    When ``enrich_bib=True`` the freshly written ``references.bib`` is
+    passed through :func:`enrich_bib.enrich_references_bib` *in place* —
+    that is, CrossRef-resolved journal / volume / pages / DOI fields are
+    merged into the output file. Network failures or low-confidence
+    CrossRef matches leave the TODO placeholders untouched, so the
+    behavior degrades gracefully.
     """
     skeleton_md = skeleton_md or _default_skeleton_md()
     methodology_md = methodology_md or _default_methodology_md()
@@ -818,6 +826,24 @@ def write_manuscript(
     references_bib.parent.mkdir(parents=True, exist_ok=True)
     manuscript_tex.write_text(manuscript, encoding="utf-8")
     references_bib.write_text(bib, encoding="utf-8")
+
+    if enrich_bib:
+        # Lazy import — keeps tex_export importable without the enricher
+        # in environments that don't ship the CrossRef client.
+        from index_inclusion_research import enrich_bib as _enrich_bib
+
+        report = _enrich_bib.enrich_references_bib(
+            input_bib_path=references_bib,
+            output_bib_path=references_bib,
+            write_output=True,
+        )
+        logger.info(
+            "BibTeX enrichment: %d enriched / %d kept TODO / %d skipped",
+            report.enriched_count(),
+            report.kept_todo_count(),
+            report.skipped_count(),
+        )
+
     return manuscript_tex, references_bib
 
 
@@ -916,6 +942,17 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Overwrite existing manuscript.tex / references.bib if present.",
     )
+    parser.add_argument(
+        "--enrich-bib",
+        action="store_true",
+        help=(
+            "After writing references.bib, query CrossRef to fill in "
+            "journal / volume / issue / pages / DOI for each entry. "
+            "Low-confidence matches keep the [TODO: ...] placeholder. "
+            "Requires network access; degrades gracefully if CrossRef "
+            "is unreachable."
+        ),
+    )
     return parser
 
 
@@ -935,6 +972,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             cjk_engine=args.cjk_engine,
             generated_at=args.generated_at,
             force=args.force,
+            enrich_bib=args.enrich_bib,
         )
     except FileExistsError as exc:
         logger.error(str(exc))

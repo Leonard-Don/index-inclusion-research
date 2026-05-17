@@ -4,6 +4,29 @@ All notable, user-visible changes to `index-inclusion-research`.
 
 ## Unreleased
 
+- feat(paper): BibTeX CrossRef enrichment (45th CLI). New
+  `index-inclusion-enrich-bib` console script resolves the
+  `[TODO: journal]` / `[TODO: volume]` / `[TODO: pages]` / `[TODO: doi]`
+  placeholders that `index-inclusion-tex-export` emits into
+  `paper/references.bib`. The script queries CrossRef's free REST API
+  (`https://api.crossref.org/works`) per entry, scores the candidate
+  matches with a 0–1 confidence (author-surname overlap + title token
+  Jaccard + year-mismatch penalty), and only fills in fields when the
+  score meets `--min-confidence` (default 0.7). Author / title / year
+  are *never* overwritten — those are the researcher's canonical choice.
+  Responses cache to `cache/crossref_cache.json` for idempotent reruns;
+  CrossRef being down ⇒ every entry low-confidence ⇒ output bib equals
+  input bib (TODOs preserved). HTML entities decoded
+  (`International Journal of Finance &amp; Economics` →
+  `\&`-escaped) and pages normalized to BibTeX `--` form. Real-data
+  smoke against `paper/references.bib`: 15 / 16 entries enriched,
+  1 kept TODO (Chinese-language paper with [TODO: year] placeholder
+  CrossRef can't disambiguate above the threshold). `tex-export` gains
+  an optional `--enrich-bib` flag that runs the enrichment inline so
+  `make paper` can produce a publication-ready bib in one shot.
+  README CLI badge bumped 44→45 (3 places), `docs/cli_reference.md`
+  gains §22 with full match-heuristic description.
+
 - feat(paper): submission readiness gate (44th CLI). New
   `index-inclusion-submission-ready` console script is the final
   pre-submission go/no-go gate, sitting downstream of `paper-integrity`.
