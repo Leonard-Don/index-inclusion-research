@@ -960,6 +960,7 @@ def check_citation_graph_artifact(
             "network figure (PNG + PDF) and centrality CSV together."
         ),
         input_label="citation_centrality.csv",
+        allow_ci_missing_generated=True,
     )
 
 
@@ -987,6 +988,7 @@ def check_verdict_timeline_artifact(
             "of cma_hypothesis_verdicts.csv."
         ),
         input_label="cma_hypothesis_verdicts.csv",
+        allow_ci_missing_generated=True,
     )
 
 
@@ -1411,10 +1413,27 @@ def _forest_artifact_status(
     input_csv_path: Path,
     fix_command: str,
     input_label: str,
+    allow_ci_missing_generated: bool = False,
 ) -> CheckResult:
     """Shared core for the two forest-plot freshness checks."""
     missing = [p for p in (png_path, pdf_path) if not p.exists()]
     if missing:
+        if (
+            allow_ci_missing_generated
+            and os.getenv("CI", "").lower() == "true"
+            and png_path.is_relative_to(ROOT)
+            and pdf_path.is_relative_to(ROOT)
+            and input_csv_path.is_relative_to(ROOT)
+        ):
+            labels = ", ".join(_relative_label(p) for p in missing)
+            return CheckResult(
+                name=name,
+                status="pass",
+                message=(
+                    f"generated/gitignored forest plot artifact(s) missing in CI: {labels}; "
+                    "skipping presence check for fresh checkouts."
+                ),
+            )
         labels = ", ".join(_relative_label(p) for p in missing)
         return CheckResult(
             name=name,

@@ -14,6 +14,7 @@ import index_inclusion_research.doctor as doctor_module
 from index_inclusion_research.doctor import (
     CheckResult,
     check_chart_builders_register,
+    check_citation_graph_artifact,
     check_cma_verdicts_forest_artifact,
     check_console_scripts_importable,
     check_h6_weight_change_readiness,
@@ -33,6 +34,7 @@ from index_inclusion_research.doctor import (
     check_public_summary_freshness,
     check_rdd_l3_sample_readiness,
     check_results_directory_populated,
+    check_verdict_timeline_artifact,
     check_verdicts_csv_health,
     doctor_exit_code,
     main,
@@ -939,6 +941,60 @@ def test_check_cma_verdicts_forest_artifact_warns_when_missing(tmp_path: Path) -
         png_path=tmp_path / "missing_cma.png",
         pdf_path=tmp_path / "missing_cma.pdf",
         verdicts_csv_path=csv,
+    )
+    assert result.status == "warn"
+    assert "missing" in result.message
+
+
+def test_check_citation_graph_artifact_allows_missing_generated_artifacts_in_ci(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Gitignored literature figures may be absent in a fresh CI checkout."""
+    monkeypatch.setenv("CI", "true")
+    result = check_citation_graph_artifact(
+        png_path=doctor_module.ROOT
+        / "results"
+        / "literature"
+        / "missing_citation_network_for_ci.png",
+        pdf_path=doctor_module.ROOT
+        / "results"
+        / "literature"
+        / "missing_citation_network_for_ci.pdf",
+        centrality_csv_path=doctor_module.DEFAULT_CITATION_CENTRALITY_CSV,
+    )
+    assert result.status == "pass"
+    assert "generated/gitignored" in result.message
+
+
+def test_check_verdict_timeline_artifact_allows_missing_generated_artifacts_in_ci(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Gitignored verdict-timeline figures may be absent in a fresh CI checkout."""
+    monkeypatch.setenv("CI", "true")
+    result = check_verdict_timeline_artifact(
+        png_path=doctor_module.ROOT
+        / "results"
+        / "figures"
+        / "missing_verdict_timeline_for_ci.png",
+        pdf_path=doctor_module.ROOT
+        / "results"
+        / "figures"
+        / "missing_verdict_timeline_for_ci.pdf",
+        source_csv_path=doctor_module.DEFAULT_VERDICT_TIMELINE_SOURCE_CSV,
+    )
+    assert result.status == "pass"
+    assert "generated/gitignored" in result.message
+
+
+def test_check_citation_graph_artifact_still_warns_when_missing_outside_ci(
+    tmp_path: Path,
+) -> None:
+    csv = tmp_path / "citation_centrality.csv"
+    _touch_with_mtime(csv, mtime=1_700_000_000.0)
+    result = check_citation_graph_artifact(
+        png_path=tmp_path / "missing_citation_network.png",
+        pdf_path=tmp_path / "missing_citation_network.pdf",
+        centrality_csv_path=csv,
     )
     assert result.status == "warn"
     assert "missing" in result.message
