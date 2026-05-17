@@ -1,6 +1,6 @@
 # 命令行入口参考
 
-41 个 console scripts 按用途分组：
+42 个 console scripts 按用途分组：
 
 - **数据流水线**：`build-event-sample` / `build-price-panel` / `match-controls` / `match-robustness` / `run-event-study` / `run-regressions`
 - **样本数据**：`generate-sample-data` / `download-real-data`
@@ -8,7 +8,7 @@
 - **Dashboard 与三条主线**：`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - **HS300 RDD 工具链**：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`（详见 [docs/hs300_rdd_workflow.md](hs300_rdd_workflow.md)）
 - **跨市场不对称 + 假说证据**：`cma`（7 条假说 verdict）/ `prepare-passive-aum` / `download-passive-aum-cn` / `download-cn-passive-aum-proxy` / `compute-h6-weight-change` / `refresh-real-evidence`
-- **总入口**：`rebuild-all`（10 步流水线一键跑）/ `verdict-summary`（终端速览）/ `pap-diff`（PAP 偏离审计）/ `doctor`（项目健康检查）/ `export-public-summary`（生成 data/public/index_research_summary.json）/ `paper-skeleton`（自动生成 paper/skeleton.md 论文骨架）/ `methodology-summary`（自动生成 paper/methodology_summary.md 方法论摘要卡）
+- **总入口**：`rebuild-all`（10 步流水线一键跑）/ `verdict-summary`（终端速览）/ `pap-diff`（PAP 偏离审计）/ `doctor`（项目健康检查）/ `export-public-summary`（生成 data/public/index_research_summary.json）/ `paper-skeleton`（自动生成 paper/skeleton.md 论文骨架）/ `methodology-summary`（自动生成 paper/methodology_summary.md 方法论摘要卡）/ `paper-integrity`（论文交付前的跨文档一致性发布门禁）
 
 > `citation-graph` 生成的是启发式文献关联网络（主题/方法/年代链接），不是逐条 bibliography 引用核验。
 
@@ -430,7 +430,7 @@ python3 -m index_inclusion_research.citation_graph
 
 ## 17. 假说裁决演进时间线（`verdict-timeline`）
 
-`index-inclusion-verdict-timeline` 是 41 个 console scripts 的第 40 号。它通过 `git log --follow` 与 `git show <sha>:results/real_tables/cma_hypothesis_verdicts.csv` 把 H1..H7 的历史裁决从仓库 git 史里重建出来，渲染成一张 7 swimlane 时间线，给 PAP 自律一份**视觉的演化档案**——配合现有的 `pap-diff` 偏离审计（commit `48a22f0`），从“静态对比 PAP 基线”补到“动态展示研究迭代”。
+`index-inclusion-verdict-timeline` 是 42 个 console scripts 的第 40 号。它通过 `git log --follow` 与 `git show <sha>:results/real_tables/cma_hypothesis_verdicts.csv` 把 H1..H7 的历史裁决从仓库 git 史里重建出来，渲染成一张 7 swimlane 时间线，给 PAP 自律一份**视觉的演化档案**——配合现有的 `pap-diff` 偏离审计（commit `48a22f0`），从“静态对比 PAP 基线”补到“动态展示研究迭代”。
 
 - `results/figures/verdict_timeline.png` — 14×8 in @ 100 dpi 主图，每个 H 一行 swimlane；每个 commit 一个圆点（裁决保持）或方块（裁决文本改变）；颜色按裁决类别（绿=支持，黄=部分支持，红=证据不足）；2026-05-16 PAP baseline 画一条虚线；右侧 annotation 标注每条 H 的最新裁决。
 - `results/figures/verdict_timeline.pdf` — 矢量版同图。
@@ -453,7 +453,7 @@ python3 -m index_inclusion_research.outputs.verdict_timeline
 
 ## 18. 方法论摘要卡（`methodology-summary`）
 
-`index-inclusion-methodology-summary` 是 41 个 console scripts 的第 41 号。它把当前 verdicts CSV、`data/processed/real_events_clean.csv` 与 `real_matched_event_panel.csv` 行数、`data/public/index_research_summary.json` 的稳健性 / PAP 偏离块、`results/literature/citation_centrality.csv` 的 top-5 eigenvector 中心性、`pyproject.toml` 的 console-scripts 总数与 `doctor.DEFAULT_CHECKS` 的健康检查总数蒸馏成一份 ~3-5 KB 的单页 Markdown「方法论摘要卡」，落地到 `paper/methodology_summary.md`。
+`index-inclusion-methodology-summary` 是 42 个 console scripts 的第 41 号。它把当前 verdicts CSV、`data/processed/real_events_clean.csv` 与 `real_matched_event_panel.csv` 行数、`data/public/index_research_summary.json` 的稳健性 / PAP 偏离块、`results/literature/citation_centrality.csv` 的 top-5 eigenvector 中心性、`pyproject.toml` 的 console-scripts 总数与 `doctor.DEFAULT_CHECKS` 的健康检查总数蒸馏成一份 ~3-5 KB 的单页 Markdown「方法论摘要卡」，落地到 `paper/methodology_summary.md`。
 
 与 `paper-skeleton` 的区别：摘要卡**完全不出 `[TODO: prose]` 标记**，所有数值与表格全部从工件自动派生，是答辩 / 评审「你到底做了什么？」一问的速查页。
 
@@ -480,9 +480,48 @@ python3 -m index_inclusion_research.methodology_summary
 - §5 数据契约（`events.csv` / `prices.csv` / `benchmarks.csv` 字段速览）
 - §6 复现命令（`make rebuild` / `make-figures-tables` / `paper-bundle --force` / `methodology-summary`）
 - §7 关键文献基础（top-5 中心性 + 立场，链路语义启发式相似性而非 bibliography）
-- §8 工具链（41 CLI / 27 doctor checks / public summary schema v1 / paper bundle 72 artifacts）
+- §8 工具链（42 CLI / 29 doctor checks / public summary schema v1 / paper bundle 72 artifacts）
 
 Doctor `methodology_summary_freshness` 检查在任何输入（verdicts CSV / public summary JSON / citation centrality CSV）mtime 比摘要卡新时 `warn`；CI 环境下因 checkout mtime 不可信而自动 pass。`make paper` 与 `paper-bundle --force` 在 `_regenerate_artifacts` 第 7 步自动重生成本摘要卡，使 bundle 永远 self-consistent。
+
+## 19. 跨文档一致性发布门禁（`paper-integrity`）
+
+`index-inclusion-paper-integrity` 是 42 个 console scripts 的第 42 号，也是论文交付前的最后一道**跨文档**门禁。每条单独的生成器（`cma`、`paper-skeleton`、`methodology-summary`、`export-public-summary`、`pap-diff` 等）单测都已经通过，本 CLI 不再核对每个工件的内部正确性，而是核对它们**互相之间**是否仍然 self-consistent。
+
+10 类检查（同源 `paper_integrity.DEFAULT_INTEGRITY_CHECKS`）：
+
+- **hypothesis_set**：`cma_hypothesis_verdicts.csv` 的 7 个 H 行 ⇄ `paper/skeleton.md` 表格 H 行；同样 ⇄ `paper/methodology_summary.md`。
+- **figures**：`paper/skeleton.md` 里 `![]()` 引用的 5 张图 ⇄ `results/figures/` 实际文件是否存在。
+- **pap**：`pap_deviation_report.csv` 各 hid 的 classification ⇄ `data/public/index_research_summary.json` `pap_deviation_summary` 的聚合计数；同时 ⇄ `paper/skeleton.md` §7 PAP 表。
+- **references**：`literature_catalog.PAPER_LIBRARY` 的 16 篇 paper_id ⇄ `paper/skeleton.md` 参考文献章节。
+- **cli_count**：`pyproject.toml [project.scripts]` 实际入口数 ⇄ `README.md` CLI shield badge。
+- **sample_sizes**：`paper/methodology_summary.md` §1 n_obs 列 ⇄ `cma_hypothesis_verdicts.csv` n_obs 字段。
+- **sensitivity**：`paper/methodology_summary.md` §3 稳健性覆盖（stable/cell 计数）⇄ `data/public/index_research_summary.json` `sensitivity_robustness` 块。
+- **doctor**：`docs/cli_reference.md` 里提到的 doctor check 总数 ⇄ `doctor.DEFAULT_CHECKS` 实际长度（弱约束 / warn）。
+
+退出码：`0`（全部通过）/ `1`（任何 warn 或 `--fail-on-warn`）/ `2`（任何 fail）。
+
+```bash
+# 默认 text 输出（按 info / warn / fail 排序，附 fix command）
+index-inclusion-paper-integrity
+
+# JSON 输出供 CI consume
+index-inclusion-paper-integrity --format json
+
+# Markdown 表格（嵌入 PR / status report）
+index-inclusion-paper-integrity --format markdown
+
+# 严格 CI 模式：任何 warn 也阻断
+index-inclusion-paper-integrity --fail-on-warn
+```
+
+它也作为 `check_paper_integrity` 接入 `doctor.DEFAULT_CHECKS`：doctor 在 strict 模式（`--fail-on-warn`）下若 integrity 出现 warn 就会一起阻断。把它放到 paper 发布的 last-mile：
+
+```bash
+make paper                                  # regenerate bundle artifacts
+index-inclusion-paper-integrity --fail-on-warn  # gate
+git push                                    # only if integrity passes
+```
 
 ## Verdicts ↔ Literature 双向链接
 
