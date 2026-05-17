@@ -177,7 +177,26 @@ PAP 纪律现在由 `index-inclusion-doctor` 主动把关——`pap_deviation_no
 
 更新触发条件：每次 `index-inclusion-cma` / `pap-diff` / `make figures-tables` 后，跑一次 `index-inclusion-export-public-summary` 即可刷新；CI 也可以把这一步纳入 paper-bundle 之后的同一条 pipeline。
 
-## 8. 更新规则
+## 8. Paper skeleton automation
+
+`paper/skeleton.md` 是项目内置的论文骨架，由第 38 个 console script `index-inclusion-paper-skeleton` 一键生成。它把当前 verdict CSV、PAP 偏离报告、HS300 RDD 主结果、threshold × AR-engine × 2D 稳健性结论、`docs/limitations.md` 全文与 16 篇参考文献蒸馏成一份 ~21 KB 的 Markdown 论文模板。
+
+**对论文写作流程的价值**：
+
+- **节省 1-2 天结构性工作**：所有 section 标题、figure 引用 (`![图 X](../results/figures/...)`)、verdict 表、参考文献 16 条枚举、PAP 7 行 deviation 表都已就位，写作者只需扫过 `[TODO: prose]` 标记，逐节填写中文段落。
+- **永不需要手动同步数据**：H1-H7 verdict、HS300 τ/p/n、阈值/AR/2D 稳健性结论、PAP 偏离 5 类计数都从当前 artifact 自动派生；任何一处 verdict 更新，跑 `index-inclusion-paper-skeleton --force` 即可让骨架重新对齐。
+- **doctor 守护**：`paper_skeleton_freshness` 检查在任何输入 (`cma_hypothesis_verdicts.csv` / `pap_deviation_report.csv` / `rdd_robustness.csv` / `index_research_summary.json`) mtime 比 skeleton 新时 `warn`。
+- **paper-bundle 集成**：`make paper` 在 `_regenerate_artifacts` 内部自动重生成 skeleton，所以 bundle 永远 self-consistent — 拉一份 zip 出去，骨架就是当前最新数据状态的论文模板。
+
+**写作动线**：
+
+1. `make rebuild && make figures-tables` 刷新 verdict + figure。
+2. `index-inclusion-paper-skeleton --force` 重生成骨架（或直接 `make paper` 一键全套）。
+3. 打开 `paper/skeleton.md`，`grep "TODO"` 列出所有待写段落（约 17 处）。
+4. 逐节填写 prose，需要的 figure / 表 / 数据均已被骨架引用。
+5. 输出最终论文（`.docx` / `.tex` / `.pdf`），proofread 与编辑器整理。
+
+## 9. 更新规则
 
 - 修改 verdict 计算逻辑、阈值、样本边界或 evidence_tier 前，先更新
   [docs/pre_registration.md](pre_registration.md) §7 决策日志。

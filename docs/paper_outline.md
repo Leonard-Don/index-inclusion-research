@@ -3,6 +3,8 @@
 > 当前写作总入口见 [docs/research_delivery_package.md](research_delivery_package.md)。
 > 本模板保留论文正文结构和段落写法；正式主表 / 附录划分、答辩口径和交付前验证以该交付包为准。
 > 下方 P1/P2/P3 是论文研究命题，不等同于 CMA 的 H1-H7 机制裁决。
+>
+> **更快的起点**：本文是人工撰写的论文模板（结构 + 段落写法范例）。如果只需要一份**自动从当前 verdict 数据生成**的骨架（每条假说裁决 / HS300 RDD τ/p/n / 稳健性结论已自动填好，只剩 `[TODO: prose]` 标记），跑 `index-inclusion-paper-skeleton --force` 生成 [`paper/skeleton.md`](../paper/skeleton.md)，详见 [docs/cli_reference.md §15](cli_reference.md#15-论文骨架生成paper-skeleton)。
 
 ## 题目示例
 
