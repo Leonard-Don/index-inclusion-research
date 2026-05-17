@@ -5,7 +5,7 @@
 ![Research](https://img.shields.io/badge/focus-index%20inclusion%20research-1f6feb)
 ![Literature](https://img.shields.io/badge/literature-16%20papers-6f42c1)
 ![Pipeline](https://img.shields.io/badge/pipeline-10%20steps-0969da)
-![CLI](https://img.shields.io/badge/CLI-33%20commands-2da44e)
+![CLI](https://img.shields.io/badge/CLI-34%20commands-2da44e)
 
 `index-inclusion-research` 是一个把指数纳入效应文献、真实样本结果与识别设计放到同一工作流里的实证研究项目。它把 16 篇文献库、3 条研究主线、真实样本表和 HS300 RDD 扩展统一到同一 dashboard 与 CLI 体系，适合：
 
@@ -49,7 +49,7 @@
 `make rebuild` 跑 10 步流水线刷新所有产出。详见 [results/real_tables/cma_hypothesis_verdicts.csv](results/real_tables/cma_hypothesis_verdicts.csv) 和 [docs/paper_outline_verdicts.md](docs/paper_outline_verdicts.md)。
 H2 在 2026 年补入 `data/raw/cn_passive_aum_proxy.csv`（CSI300 + CSI500 ETF TNA 年终聚合 proxy）后，从 supplementary 升级为 core；evidence manifest 中状态从 `warn` 转为 `pass`，但 verdict 是 "部分支持"——CN 一侧方向符合 H2，US 一侧 effective CAR 没有持续衰减。所以 H2 仍不能写成"被动买盘单一机制"。
 
-阈值灵敏度（"如果阈值是 0.05 而不是 0.10？"）做成五层入口（决定 / 数据 / CLI / dashboard / doctor），终端一行：`index-inclusion-verdict-summary --sensitivity`。完整说明见 [docs/sensitivity_workflow.md](docs/sensitivity_workflow.md)。
+阈值灵敏度（"如果阈值是 0.05 而不是 0.10？"）做成六层入口（决定 / 数据 / CLI / dashboard / doctor / forest 图），终端一行：`index-inclusion-verdict-summary --sensitivity`。完整说明见 [docs/sensitivity_workflow.md](docs/sensitivity_workflow.md)。
 
 ## GitHub 首页先看什么
 
@@ -126,7 +126,7 @@ make smoke   # 浏览器 smoke test，需要 Playwright + Chromium
 1. [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)：16 篇文献如何统一映射到当前项目。
 2. [docs/research_delivery_package.md](docs/research_delivery_package.md)：论文 / 答辩交付边界。
 3. [docs/dashboard_architecture.md](docs/dashboard_architecture.md)：dashboard 主干。
-4. [docs/cli_reference.md](docs/cli_reference.md)：33 个 console scripts 的完整说明。
+4. [docs/cli_reference.md](docs/cli_reference.md)：34 个 console scripts 的完整说明。
 5. 启动界面：`index-inclusion-dashboard` → 打开 <http://localhost:5001>。
 
 ## 项目结构
@@ -200,11 +200,11 @@ index-inclusion-refresh-real-evidence                # 真实数据 + evidence m
 index-inclusion-doctor --fail-on-warn                # 严格门禁（warn 也阻断）
 ```
 
-按用途分组（共 33 个 console scripts）：
+按用途分组（共 34 个 console scripts）：
 
 - 数据流水线：`build-event-sample` / `build-price-panel` / `match-controls` / `match-robustness` / `run-event-study` / `run-regressions`
 - 样本数据：`generate-sample-data` / `download-real-data`
-- 报表与图表：`make-figures-tables` / `generate-research-report` / `paper-bundle` / `paper-audit` / `build-hs300-rdd-forest` / `build-cma-verdicts-forest`
+- 报表与图表：`make-figures-tables` / `generate-research-report` / `paper-bundle` / `paper-audit` / `build-hs300-rdd-forest` / `build-cma-verdicts-forest` / `build-cma-sensitivity-forest`
 - Dashboard 与三条主线：`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - HS300 RDD 工具链：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`
 - 跨市场不对称 + 假说证据：`cma` / `prepare-passive-aum` / `download-passive-aum-cn` / `download-cn-passive-aum-proxy` / `compute-h6-weight-change` / `refresh-real-evidence`

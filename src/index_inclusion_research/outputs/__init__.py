@@ -1,4 +1,12 @@
 from .cma_verdicts_forest import build_cma_verdicts_forest_plot
+from .cma_verdicts_sensitivity import (
+    DEFAULT_SENSITIVITY_THRESHOLDS,
+    build_cma_sensitivity_forest_plot,
+    build_cma_sensitivity_forest_plot_from_cache,
+    build_cma_sensitivity_sweep,
+    build_cma_sensitivity_sweep_from_cache,
+    render_sensitivity_forest_plot,
+)
 from .hs300_rdd_forest import build_hs300_rdd_forest_plot
 from .reports import (
     build_asymmetry_summary,
@@ -17,7 +25,12 @@ from .reports import (
 )
 
 __all__ = [
+    "DEFAULT_SENSITIVITY_THRESHOLDS",
     "build_asymmetry_summary",
+    "build_cma_sensitivity_forest_plot",
+    "build_cma_sensitivity_forest_plot_from_cache",
+    "build_cma_sensitivity_sweep",
+    "build_cma_sensitivity_sweep_from_cache",
     "build_cma_verdicts_forest_plot",
     "build_data_source_table",
     "build_event_counts_by_year_table",
@@ -32,4 +45,5 @@ __all__ = [
     "export_descriptive_tables",
     "export_latex_tables",
     "plot_average_paths",
+    "render_sensitivity_forest_plot",
 ]

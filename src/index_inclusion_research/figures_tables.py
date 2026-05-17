@@ -19,6 +19,7 @@ from index_inclusion_research.loaders import (
 )
 from index_inclusion_research.outputs import (
     build_asymmetry_summary,
+    build_cma_sensitivity_forest_plot_from_cache,
     build_cma_verdicts_forest_plot,
     build_data_source_table,
     build_event_counts_by_year_table,
@@ -104,6 +105,44 @@ def _maybe_build_cma_verdicts_forest(
         )
     except (ValueError, OSError) as exc:
         logger.warning("CMA verdicts forest plot skipped: %s", exc)
+        return
+
+
+def _maybe_build_cma_sensitivity_forest(
+    *,
+    figures_dir: Path | None,
+    sensitivity_root: Path | None = None,
+) -> None:
+    """Refresh the sensitivity-aware CMA verdicts forest plot when the
+    threshold-sweep cache is populated.
+
+    Mirrors :func:`_maybe_build_cma_verdicts_forest`: silently skip if
+    no per-threshold CSVs exist under ``results/sensitivity/`` (the
+    user hasn't opted into the sweep yet), log a warning on render
+    failure so the broader figures pipeline keeps going. Refreshing
+    the sweep itself requires running the CMA pipeline four times so
+    we don't trigger it automatically here — users opt in via
+    ``index-inclusion-build-cma-sensitivity-forest``.
+    """
+    if figures_dir is None:
+        figures_dir = ROOT / "results" / "figures"
+    sens_root = sensitivity_root or (ROOT / "results" / "sensitivity")
+    if not sens_root.exists():
+        return
+    # Only render if at least one cached threshold CSV exists.
+    cached_csvs = list(sens_root.glob("threshold_*/cma_hypothesis_verdicts.csv"))
+    if not cached_csvs:
+        return
+    png_path = figures_dir / "cma_verdicts_sensitivity.png"
+    pdf_path = figures_dir / "cma_verdicts_sensitivity.pdf"
+    try:
+        build_cma_sensitivity_forest_plot_from_cache(
+            output_png_path=png_path,
+            output_pdf_path=pdf_path,
+            sensitivity_root=sens_root,
+        )
+    except (ValueError, OSError) as exc:
+        logger.warning("CMA verdicts sensitivity forest plot skipped: %s", exc)
         return
 
 
@@ -256,6 +295,16 @@ def main(argv: list[str] | None = None) -> None:
     # and the cross-hypothesis evidence-strength overview in lockstep.
     _maybe_build_cma_verdicts_forest(
         tables_dir=Path(args.tables_dir) if args.tables_dir else None,
+        figures_dir=Path(args.figures_dir) if args.figures_dir else None,
+    )
+
+    # Sensitivity-aware version of the CMA forest — opt-in (renders only
+    # when results/sensitivity/threshold_<T>/ caches exist). Building the
+    # cache itself is the responsibility of
+    # `index-inclusion-build-cma-sensitivity-forest`; here we only
+    # re-render the figure from existing CSVs so make-figures-tables
+    # never silently re-runs the full CMA pipeline 4×.
+    _maybe_build_cma_sensitivity_forest(
         figures_dir=Path(args.figures_dir) if args.figures_dir else None,
     )
 

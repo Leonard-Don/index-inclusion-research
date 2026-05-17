@@ -127,6 +127,18 @@ H2（被动 AUM）位于 0.5 的"部分支持"位置，而 H1/H4/H6 落在 0-0.3
 评分映射 (verdict, confidence) → strength 仅用于可视化对比，不构成新的统计推断
 （详细映射见图脚注）。重绘：`index-inclusion-build-cma-verdicts-forest`。
 
+**附录建议——灵敏度版**：把
+`results/figures/cma_verdicts_sensitivity.png` 作为 §4.3 的附录图加入，专门回应
+审稿人的"verdict 取决于 p 阈值选择"质疑。同一组 H1-H7，把 CMA pipeline 在 0.05
+/ 0.10 / 0.15 / 0.20 四个阈值下重跑，每条假说连成 4 个 dot 的灰线，dot 颜色按
+该阈值下的 evidence_tier 上色、形状区分 stable (circle) 与 flipped at threshold
+(triangle)，右侧 margin 标注每条假说的 flip 计数。读者一眼可见：真正受
+significance threshold 影响的是 H1 / H4 / H5 这三条 p-gated 假说；H2 / H3 / H6 / H7
+的头条 gate 是方向 spread / 命中率 / AUM 比率，留在图中作为 evidence-strength
+参照，不应写成 p 阈值翻转。详细使用见
+[docs/sensitivity_workflow.md §5 Forest visualization](sensitivity_workflow.md)。
+重绘：`index-inclusion-build-cma-sensitivity-forest`。
+
 ### 4.4 中国市场 RDD 识别扩展（HS300）
 
 对应文件：

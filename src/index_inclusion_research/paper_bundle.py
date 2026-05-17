@@ -64,6 +64,7 @@ def _section_specs(root: Path) -> tuple[BundleSection, ...]:
             explicit_files=(
                 "hs300_rdd_robustness_forest.pdf",
                 "cma_verdicts_forest.pdf",
+                "cma_verdicts_sensitivity.pdf",
             ),
         ),
         BundleSection(
@@ -218,12 +219,13 @@ def _regenerate_artifacts(root: Path) -> dict[str, str]:
     The bundle copies whatever exists under ``results/``. If the user
     edits a verdicts row or pulls new RDD data but doesn't re-run the
     figure / audit pipeline, the bundle would ship a stale snapshot. To
-    keep ``make paper`` self-consistent we regenerate the three
+    keep ``make paper`` self-consistent we regenerate the derived
     derived-from-CSV artifacts before copying:
 
     1. HS300 RDD robustness forest (PNG + PDF) ← ``rdd_robustness.csv``
     2. CMA verdicts forest (PNG + PDF) ← ``cma_hypothesis_verdicts.csv``
-    3. PAP deviation report CSV ← latest snapshot + verdicts CSV
+    3. CMA sensitivity forest (PNG + PDF) ← existing threshold cache only
+    4. PAP deviation report CSV ← latest snapshot + verdicts CSV
 
     Each step is wrapped so a single failure (missing input, broken
     CSV) only logs a warning and never aborts the whole bundle. The
@@ -288,6 +290,41 @@ def _regenerate_artifacts(root: Path) -> dict[str, str]:
             status["cma_verdicts_forest"] = "error"
     else:
         status["cma_verdicts_forest"] = "skipped"
+
+    # ── 2b) CMA verdicts sensitivity forest (multi-threshold) ─────
+    # Opt-in regeneration: only re-render from the existing
+    # ``results/sensitivity/threshold_<T>/`` cache (don't trigger
+    # 4 fresh CMA runs from a bundle build — too slow, and the user
+    # who wants a fresh sweep runs the dedicated CLI). If no cache
+    # exists, we skip silently so a fresh checkout doesn't FAIL.
+    sensitivity_root = root / "results" / "sensitivity"
+    if sensitivity_root.exists() and any(
+        sensitivity_root.glob("threshold_*/cma_hypothesis_verdicts.csv")
+    ):
+        try:
+            from index_inclusion_research.outputs import (
+                build_cma_sensitivity_forest_plot_from_cache,
+            )
+
+            png_path = (
+                root / "results" / "figures" / "cma_verdicts_sensitivity.png"
+            )
+            pdf_path = (
+                root / "results" / "figures" / "cma_verdicts_sensitivity.pdf"
+            )
+            build_cma_sensitivity_forest_plot_from_cache(
+                output_png_path=png_path,
+                output_pdf_path=pdf_path,
+                sensitivity_root=sensitivity_root,
+            )
+            status["cma_verdicts_sensitivity_forest"] = "ok"
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "CMA verdicts sensitivity forest regeneration skipped: %s", exc
+            )
+            status["cma_verdicts_sensitivity_forest"] = "error"
+    else:
+        status["cma_verdicts_sensitivity_forest"] = "skipped"
 
     # ── 3) PAP deviation report ───────────────────────────────────
     snapshots_dir = root / "snapshots"

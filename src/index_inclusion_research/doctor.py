@@ -48,6 +48,13 @@ DEFAULT_HS300_RDD_FOREST_PDF = ROOT / "results" / "figures" / "hs300_rdd_robustn
 DEFAULT_HS300_RDD_ROBUSTNESS_CSV = DEFAULT_RDD_STATUS_DIR / "rdd_robustness.csv"
 DEFAULT_CMA_VERDICTS_FOREST_PNG = ROOT / "results" / "figures" / "cma_verdicts_forest.png"
 DEFAULT_CMA_VERDICTS_FOREST_PDF = ROOT / "results" / "figures" / "cma_verdicts_forest.pdf"
+DEFAULT_CMA_SENSITIVITY_FOREST_PNG = (
+    ROOT / "results" / "figures" / "cma_verdicts_sensitivity.png"
+)
+DEFAULT_CMA_SENSITIVITY_FOREST_PDF = (
+    ROOT / "results" / "figures" / "cma_verdicts_sensitivity.pdf"
+)
+DEFAULT_CMA_SENSITIVITY_ROOT = ROOT / "results" / "sensitivity"
 PAP_SNAPSHOT_GLOB = "pre-registration-*.csv"
 PAP_SNAPSHOT_STALE_DAYS = 90
 
@@ -1323,6 +1330,105 @@ def check_cma_verdicts_forest_artifact(
     )
 
 
+def check_cma_sensitivity_forest_artifact(
+    *,
+    png_path: Path = DEFAULT_CMA_SENSITIVITY_FOREST_PNG,
+    pdf_path: Path = DEFAULT_CMA_SENSITIVITY_FOREST_PDF,
+    sensitivity_root: Path = DEFAULT_CMA_SENSITIVITY_ROOT,
+) -> CheckResult:
+    """Warn if the threshold-sweep CMA forest plot is missing or stale.
+
+    Mirrors :func:`check_cma_verdicts_forest_artifact` (commit e049bbd)
+    but for the sensitivity-aware multi-threshold version. The sweep
+    inputs are the per-threshold CSVs under
+    ``results/sensitivity/threshold_<T>/cma_hypothesis_verdicts.csv``;
+    if no caches exist yet the user simply hasn't opted into the
+    sweep, so the check stays a soft warn rather than a fail.
+
+    The check has three regimes:
+
+    1. **No cache directory or empty cache** → ``pass`` with a hint
+       to run the CLI. This is the "fresh checkout" case and shouldn't
+       block CI.
+    2. **PNG/PDF missing but cache populated** → ``warn``: the cache
+       implies the user wanted the sweep, but the figure was never
+       built or got deleted.
+    3. **PNG/PDF older than any cached CSV** → ``warn``: a CSV was
+       refreshed (re-run at that threshold) but the figure didn't
+       follow. Fix is the same CLI.
+    """
+    fix_command = (
+        "Run `index-inclusion-build-cma-sensitivity-forest` to refresh "
+        "the threshold-sweep figure."
+    )
+    name = "cma_sensitivity_forest_artifact"
+    if not sensitivity_root.exists():
+        return CheckResult(
+            name=name,
+            status="pass",
+            message=(
+                f"sensitivity cache {_relative_label(sensitivity_root)} not "
+                "populated; threshold-sweep figure is opt-in."
+            ),
+        )
+    cached_csvs = sorted(
+        sensitivity_root.glob("threshold_*/cma_hypothesis_verdicts.csv")
+    )
+    if not cached_csvs:
+        return CheckResult(
+            name=name,
+            status="pass",
+            message=(
+                f"sensitivity cache {_relative_label(sensitivity_root)} has "
+                "no per-threshold CSVs; threshold-sweep figure is opt-in."
+            ),
+        )
+    missing_outputs = [p for p in (png_path, pdf_path) if not p.exists()]
+    if missing_outputs:
+        labels = ", ".join(_relative_label(p) for p in missing_outputs)
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"sensitivity forest plot artifact(s) missing despite "
+                f"populated cache ({len(cached_csvs)} threshold CSV(s)): {labels}"
+            ),
+            fix=fix_command,
+        )
+    png_mtime = png_path.stat().st_mtime
+    pdf_mtime = pdf_path.stat().st_mtime
+    output_mtime = min(png_mtime, pdf_mtime)
+    stale_inputs = [
+        p for p in cached_csvs if p.stat().st_mtime > output_mtime
+    ]
+    if stale_inputs:
+        details = tuple(
+            f"{_relative_label(p)} newer than "
+            f"{_relative_label(png_path)} / {_relative_label(pdf_path)}"
+            for p in stale_inputs
+        )
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"{len(stale_inputs)} cached threshold CSV(s) newer than "
+                "the sensitivity forest plot; re-run of the build CLI overdue."
+            ),
+            fix=fix_command,
+            details=details,
+        )
+    threshold_count = len(cached_csvs)
+    return CheckResult(
+        name=name,
+        status="pass",
+        message=(
+            f"sensitivity forest plot artifacts ({_relative_label(png_path)}, "
+            f"{_relative_label(pdf_path)}) are fresher than {threshold_count} "
+            "cached threshold CSV(s)."
+        ),
+    )
+
+
 DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_hypothesis_paper_ids_resolve,
     check_verdicts_csv_health,
@@ -1340,6 +1446,7 @@ DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_pap_snapshot_freshness,
     check_hs300_rdd_forest_artifact,
     check_cma_verdicts_forest_artifact,
+    check_cma_sensitivity_forest_artifact,
     check_chart_builders_register,
     check_console_scripts_importable,
     check_paper_audit,
