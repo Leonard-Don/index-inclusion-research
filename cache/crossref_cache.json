@@ -1,0 +1,178 @@
+{
+  "ahn_patatoukas_2022|identifying the effect of stock indexing: impetus or impediment to arbitrage and price discovery?|2022": {
+    "author_matched": "Ahn, Patatoukas",
+    "confidence_score": 1.0,
+    "doi": "10.1017/s0022109021000235",
+    "issue": "5",
+    "journal": "Journal of Financial and Quantitative Analysis",
+    "pages": "2022-2062",
+    "title_matched": "Identifying the Effect of Stock Indexing: Impetus or Impediment to Arbitrage and Price Discovery?",
+    "volume": "57",
+    "year": 2021
+  },
+  "chang_hong_liskovich_2014|regression discontinuity and the price effects of stock market indexing|2014": {
+    "author_matched": "Chang, Hong, Liskovich",
+    "confidence_score": 1.0,
+    "doi": "10.3386/w19290",
+    "issue": "",
+    "journal": "",
+    "pages": "",
+    "title_matched": "Regression Discontinuity and the Price Effects of Stock Market Indexing",
+    "volume": "",
+    "year": 2013
+  },
+  "chu_et_al_2021|long-term impacts of index reconstitutions: evidence from the csi 300 additions and deletions|2021": {
+    "author_matched": "Chu, Goodell, Li, Zhang",
+    "confidence_score": 1.0,
+    "doi": "10.1016/j.pacfin.2021.101651",
+    "issue": "",
+    "journal": "Pacific-Basin Finance Journal",
+    "pages": "101651",
+    "title_matched": "Long-term impacts of index reconstitutions: Evidence from the CSI 300 additions and deletions",
+    "volume": "69",
+    "year": 2021
+  },
+  "coakley_et_al_2022|the s\\&p 500 index inclusion effect: evidence from the options market|2022": {
+    "author_matched": "Coakley, Dotsis, Kourtis, Psychoyios",
+    "confidence_score": 0.929,
+    "doi": "10.1002/ijfe.2728",
+    "issue": "1",
+    "journal": "International Journal of Finance & Economics",
+    "pages": "1157-1171",
+    "title_matched": "The S&P 500 index inclusion effect: Evidence from the options market",
+    "volume": "29",
+    "year": 2022
+  },
+  "denis_et_al_2003|s\\&p 500 index additions and earnings expectations|2003": {
+    "author_matched": "Denis, McConnell, Ovtchinnikov, Yu",
+    "confidence_score": 0.917,
+    "doi": "10.2139/ssrn.329543",
+    "issue": "",
+    "journal": "SSRN Electronic Journal",
+    "pages": "",
+    "title_matched": "S&P 500 Index Additions and Earnings Expectations",
+    "volume": "",
+    "year": 2002
+  },
+  "greenwood_sammon_2022|the disappearing index effect|2022": {
+    "author_matched": "Greenwood, Sammon",
+    "confidence_score": 1.0,
+    "doi": "10.3386/w30748",
+    "issue": "",
+    "journal": "",
+    "pages": "",
+    "title_matched": "The Disappearing Index Effect",
+    "volume": "",
+    "year": 2022
+  },
+  "harris_gurel_1986|price and volume effects associated with changes in the s\\&p 500 list: new evidence for the existence of price pressures|1986": {
+    "author_matched": "Harris, Gurel",
+    "confidence_score": 0.95,
+    "doi": "10.2307/2328230",
+    "issue": "4",
+    "journal": "The Journal of Finance",
+    "pages": "815",
+    "title_matched": "Price and Volume Effects Associated with Changes in the S&P 500 List: New Evidence for the Existence of Price Pressures",
+    "volume": "41",
+    "year": 1986
+  },
+  "kasch_sarkar_2011|is there an s\\&p 500 index effect?|2011": {
+    "author_matched": "Kasch, Sarkar",
+    "confidence_score": 0.9,
+    "doi": "10.2139/ssrn.2171235",
+    "issue": "",
+    "journal": "SSRN Electronic Journal",
+    "pages": "",
+    "title_matched": "Is There an S&P 500 Index Effect?",
+    "volume": "",
+    "year": 2012
+  },
+  "kaul_mehrotra_morck_2000|demand curves for stocks do slope down: new evidence from an index weights adjustment|2000": {
+    "author_matched": "Kaul, Mehrotra, Morck",
+    "confidence_score": 1.0,
+    "doi": "10.1111/0022-1082.00230",
+    "issue": "2",
+    "journal": "The Journal of Finance",
+    "pages": "893-912",
+    "title_matched": "Demand Curves for Stocks <i>Do</i> Slope Down: New Evidence from an Index Weights Adjustment",
+    "volume": "55",
+    "year": 2000
+  },
+  "lynch_mendenhall_1997|new evidence on stock price effects associated with changes in the s\\&p 500 index|1997": {
+    "author_matched": "Lynch, Mendenhall",
+    "confidence_score": 0.938,
+    "doi": "10.1086/209722",
+    "issue": "3",
+    "journal": "The Journal of Business",
+    "pages": "351-383",
+    "title_matched": "New Evidence on Stock Price Effects Associated with Changes in the S&P 500 Index",
+    "volume": "70",
+    "year": 1997
+  },
+  "madhavan_2003|the russell reconstitution effect|2003": {
+    "author_matched": "Madhavan",
+    "confidence_score": 1.0,
+    "doi": "10.2469/faj.v59.n4.2545",
+    "issue": "4",
+    "journal": "Financial Analysts Journal",
+    "pages": "51-64",
+    "title_matched": "The Russell Reconstitution Effect",
+    "volume": "59",
+    "year": 2003
+  },
+  "petajisto_2011|the index premium and its hidden cost for index funds|2011": {
+    "author_matched": "Petajisto",
+    "confidence_score": 1.0,
+    "doi": "10.2139/ssrn.1235604",
+    "issue": "",
+    "journal": "SSRN Electronic Journal",
+    "pages": "",
+    "title_matched": "The Index Premium and its Hidden Cost for Index Funds",
+    "volume": "",
+    "year": 2010
+  },
+  "shleifer_1986|do demand curves for stocks slope down?|1986": {
+    "author_matched": "SHLEIFER",
+    "confidence_score": 1.0,
+    "doi": "10.1111/j.1540-6261.1986.tb04518.x",
+    "issue": "3",
+    "journal": "The Journal of Finance",
+    "pages": "579-590",
+    "title_matched": "Do Demand Curves for Stocks Slope Down?",
+    "volume": "41",
+    "year": 1986
+  },
+  "wurgler_zhuravskaya_2002|does arbitrage flatten demand curves for stocks?|2002": {
+    "author_matched": "Wurgler, Zhuravskaya",
+    "confidence_score": 1.0,
+    "doi": "10.1086/341636",
+    "issue": "4",
+    "journal": "The Journal of Business",
+    "pages": "583-608",
+    "title_matched": "Does Arbitrage Flatten Demand Curves for Stocks?",
+    "volume": "75",
+    "year": 2002
+  },
+  "yao_zhang_li_hs300|指数效应存在吗？——来自“沪深300”断点回归的证据|0": {
+    "author_matched": "李",
+    "confidence_score": 0.5,
+    "doi": "10.62989/jemr2025.2.2.20",
+    "issue": "2",
+    "journal": "Academic Frontiers Publishing Group",
+    "pages": "95-99",
+    "title_matched": "沪深300 红利指数复制策略研究",
+    "volume": "2",
+    "year": 2025
+  },
+  "yao_zhou_chen_2022|price effects in the chinese stock market: evidence from the china securities index (csi300) based on regression discontinuity|2022": {
+    "author_matched": "YAO, ZHOU, CHEN",
+    "confidence_score": 1.0,
+    "doi": "10.1016/j.frl.2021.102435",
+    "issue": "",
+    "journal": "Finance Research Letters",
+    "pages": "102435",
+    "title_matched": "Price effects in the Chinese stock market: Evidence from the China securities index (CSI300) based on regression discontinuity",
+    "volume": "46",
+    "year": 2022
+  }
+}

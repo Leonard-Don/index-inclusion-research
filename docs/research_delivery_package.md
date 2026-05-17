@@ -154,6 +154,15 @@ make ci
 
 `index-inclusion-tex-export --force` 是 gate 之后的写作格式出口：它不会重新解释证据，只把已生成的 `paper/skeleton.md` 与 `paper/methodology_summary.md` 转成 `paper/manuscript.tex`，并从 16 篇文献库生成 `paper/references.bib`。默认保留 `\TODO{...}` 方便 Overleaf 续写；送审草稿可加 `--include-todos false`。
 
+`paper/references.bib` 默认携带 `[TODO: journal]` / `[TODO: volume]` / `[TODO: pages]` / `[TODO: doi]` 占位符——主流财经期刊（RFS / JFE / JFQA / JBF / MS / JF）要求完整 bibliography，缺字段 → desk reject。运行 `index-inclusion-enrich-bib` 用 CrossRef 自动补全这些字段（confidence 阈值 0.7，低于阈值保留 TODO，原始 `author`/`title`/`year` 永不覆盖），缓存命中跳过网络调用，CrossRef 不可达时输出 bib 等价于输入 bib：
+
+```bash
+index-inclusion-enrich-bib                       # 默认：references.bib → references.enriched.bib
+index-inclusion-tex-export --force --enrich-bib  # 或者一次性 inline 补全
+```
+
+当前 16 条文献的实际跑分：15 条 enriched / 1 条 kept TODO（中文期刊文章，confidence 0.5 < 0.7）。详见 [docs/cli_reference.md §22](cli_reference.md)。
+
 如果改过 dashboard 或截图，再跑：
 
 ```bash

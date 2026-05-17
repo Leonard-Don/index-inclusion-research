@@ -1,6 +1,6 @@
 # 命令行入口参考
 
-44 个 console scripts 按用途分组：
+45 个 console scripts 按用途分组：
 
 - **数据流水线**：`build-event-sample` / `build-price-panel` / `match-controls` / `match-robustness` / `run-event-study` / `run-regressions`
 - **样本数据**：`generate-sample-data` / `download-real-data`
@@ -8,7 +8,7 @@
 - **Dashboard 与三条主线**：`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - **HS300 RDD 工具链**：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`（详见 [docs/hs300_rdd_workflow.md](hs300_rdd_workflow.md)）
 - **跨市场不对称 + 假说证据**：`cma`（7 条假说 verdict）/ `prepare-passive-aum` / `download-passive-aum-cn` / `download-cn-passive-aum-proxy` / `compute-h6-weight-change` / `refresh-real-evidence`
-- **总入口**：`rebuild-all`（10 步流水线一键跑）/ `verdict-summary`（终端速览）/ `pap-diff`（PAP 偏离审计）/ `doctor`（项目健康检查）/ `export-public-summary`（生成 data/public/index_research_summary.json）/ `paper-skeleton`（自动生成 paper/skeleton.md 论文骨架）/ `methodology-summary`（自动生成 paper/methodology_summary.md 方法论摘要卡）/ `paper-integrity`（论文交付前的跨文档一致性发布门禁）/ `tex-export`（生成 Overleaf/XeLaTeX 论文源文件）/ `submission-ready`（论文提交前最后一道发布就绪 go/no-go 门禁）
+- **总入口**：`rebuild-all`（10 步流水线一键跑）/ `verdict-summary`（终端速览）/ `pap-diff`（PAP 偏离审计）/ `doctor`（项目健康检查）/ `export-public-summary`（生成 data/public/index_research_summary.json）/ `paper-skeleton`（自动生成 paper/skeleton.md 论文骨架）/ `methodology-summary`（自动生成 paper/methodology_summary.md 方法论摘要卡）/ `paper-integrity`（论文交付前的跨文档一致性发布门禁）/ `tex-export`（生成 Overleaf/XeLaTeX 论文源文件）/ `submission-ready`（论文提交前最后一道发布就绪 go/no-go 门禁）/ `enrich-bib`（用 CrossRef 自动补全 BibTeX 期刊 / 卷 / 页 / DOI）
 
 > `citation-graph` 生成的是启发式文献关联网络（主题/方法/年代链接），不是逐条 bibliography 引用核验。
 
@@ -593,6 +593,36 @@ index-inclusion-tex-export --include-todos false --force
 ```
 
 它是**完全只读的** —— 从不修改任何工件，所有 fix command 都指向对应的生成器（`make-figures-tables` / `paper-skeleton` / `methodology-summary` / `tex-export` 等）。
+
+## 22. BibTeX CrossRef 补全（`enrich-bib`）
+
+`index-inclusion-enrich-bib` 是 45 个 console scripts 的第 45 号，专门解决一个具体的期刊投稿要求：**主流财经期刊（RFS / JFE / JFQA / JBF / MS / JF）要求 bibliography 中每条 `@article` 必须包含完整的 journal name / volume / issue / pages / DOI，缺失字段 → desk reject**。`tex-export` 默认生成的 `paper/references.bib` 只携带文献库里的 `author`、`title`、`year`、`note`，其他字段全是 `[TODO: journal]` 占位符。
+
+`enrich-bib` 把每条占位符喂给 CrossRef 的免费 REST API（`https://api.crossref.org/works`），按"作者 surname 重叠 + 标题 token Jaccard + 年份惩罚"打 0–1 的 confidence score。`--min-confidence`（默认 0.7）以上 → 写回 journal / volume / issue / pages / DOI；以下 → 保留 `[TODO: ...]` 占位符。`author` / `title` / `year` **永远不会被 CrossRef 覆盖**——那是研究者亲自选定的版本。
+
+```bash
+# 默认：读 paper/references.bib，写 paper/references.enriched.bib
+index-inclusion-enrich-bib
+
+# 严格阈值（只接受非常确信的匹配）
+index-inclusion-enrich-bib --min-confidence 0.9
+
+# 看会发生什么但不写文件
+index-inclusion-enrich-bib --dry-run
+
+# 也可以通过 tex-export 一次性跑（保留 TODO 占位 + 顺手补全）
+index-inclusion-tex-export --force --enrich-bib
+```
+
+工程细节：
+
+- **缓存**：CrossRef 响应缓存到 `cache/crossref_cache.json`（包括 miss），重复运行不产生网络流量；删除该文件即可强制刷新。
+- **客户端礼貌**：单进程 5 req/s 上限（远低于 CrossRef polite-pool 的 50 req/s 配额），User-Agent 标识项目 URL + 维护者邮箱以获取较高的速率配额。
+- **网络容错**：CrossRef 不可达 / 超时 / 返回非-200 → 全部条目低 confidence → 输出 bib 等价于输入 bib（保留所有 `[TODO: journal]`）。**永远不会用空字符串覆盖原始字段**。
+- **HTML 实体解码**：CrossRef 的 `container-title` 经常返回 `International Journal of Finance &amp; Economics` 这种 HTML-escape 形式；输出会先 `html.unescape` 再 BibTeX-escape 为 `\&`。
+- **BibTeX 格式化**：输出按 `author / title / year / journal / volume / issue / pages / doi / note` 固定顺序排列，便于 diff review。
+
+第一次跑当前 `paper/references.bib`（16 条）的实际结果：**15 条 enriched / 1 条 kept TODO**。剩下的 1 条是姚东旻/张日升/李嘉晟那篇中文期刊文章（CrossRef 返回的 fuzzy match 落在 0.5 confidence，低于 0.7 阈值；作者可手填）。
 
 ## Verdicts ↔ Literature 双向链接
 

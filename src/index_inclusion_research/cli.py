@@ -198,3 +198,9 @@ def run_submission_ready_main() -> int | None:
     return _run_package_main(
         "index_inclusion_research.submission_ready"
     )
+
+
+def run_enrich_bib_main() -> int | None:
+    return _run_package_main(
+        "index_inclusion_research.enrich_bib"
+    )
