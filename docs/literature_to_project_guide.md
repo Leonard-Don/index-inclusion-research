@@ -168,3 +168,28 @@
 而不是：
 
 `先基于 3 篇论文搭起来，后来再把其他 13 篇补进去的项目`
+
+## 五、如何安全地添加新文献
+
+随着论文写作推进（2024-2025 顶刊出文非常活跃），新的指数效应文献会不断进入综述。手动改 `literature_catalog/_data.py` 后还要同步触碰 5 个下游工件（BibTeX、citation graph、skeleton §References、methodology centrality、public_summary `papers_indexed`），任何一个忘记都会让 `paper-integrity` 报错。
+
+正确做法是用专门的 CLI：
+
+```bash
+# 交互式 — 终端逐字段提问
+index-inclusion-add-paper
+
+# 非交互式 — 从 JSON 读所有字段（便于版本管理/PR review）
+index-inclusion-add-paper --from-json new_paper.json
+
+# 先看 dry-run（不写盘）
+index-inclusion-add-paper --from-json new_paper.json --dry-run
+
+# 写完后立刻跑 paper-integrity gate
+index-inclusion-paper-integrity --fail-on-warn
+
+# 或在 add-paper 写盘后直接触发同一道门禁
+index-inclusion-add-paper --from-json new_paper.json --run-integrity
+```
+
+字段语义、JSON schema 与 dry-run 示例见 [docs/cli_reference.md §23](cli_reference.md#23-交互式文献库扩展add-paper)。

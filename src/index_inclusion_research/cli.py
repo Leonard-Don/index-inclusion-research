@@ -204,3 +204,9 @@ def run_enrich_bib_main() -> int | None:
     return _run_package_main(
         "index_inclusion_research.enrich_bib"
     )
+
+
+def run_add_paper_main() -> int | None:
+    return _run_package_main(
+        "index_inclusion_research.add_paper"
+    )

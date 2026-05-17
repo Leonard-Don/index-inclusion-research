@@ -88,7 +88,7 @@ def _default_cli_reference_md() -> Path:
 
 
 EXPECTED_HIDS: tuple[str, ...] = ("H1", "H2", "H3", "H4", "H5", "H6", "H7")
-EXPECTED_PAPER_LIBRARY_COUNT: int = 16
+EXPECTED_MIN_PAPER_LIBRARY_COUNT: int = 16
 
 Severity = str  # one of "info" / "warn" / "fail"
 _SEVERITY_GLYPH: dict[Severity, str] = {
@@ -572,7 +572,7 @@ def check_paper_library_referenced_in_skeleton(
     *,
     skeleton_md: Path | None = None,
 ) -> list[IntegrityIssue]:
-    """The 16 papers in ``literature_catalog.PAPER_LIBRARY`` must all appear
+    """The core papers in ``literature_catalog.PAPER_LIBRARY`` must all appear
     as ``paper_id=`` mentions in the skeleton's references section."""
     skeleton_md = skeleton_md or _default_skeleton_md()
     issues: list[IntegrityIssue] = []
@@ -590,14 +590,14 @@ def check_paper_library_referenced_in_skeleton(
         return issues
 
     catalog_ids = {p.paper_id for p in PAPER_LIBRARY}
-    if len(catalog_ids) != EXPECTED_PAPER_LIBRARY_COUNT:
+    if len(catalog_ids) < EXPECTED_MIN_PAPER_LIBRARY_COUNT:
         issues.append(
             IntegrityIssue(
                 severity="warn",
                 category="references",
                 description=(
                     f"literature_catalog.PAPER_LIBRARY has {len(catalog_ids)} "
-                    f"papers, expected {EXPECTED_PAPER_LIBRARY_COUNT}."
+                    f"papers, expected at least {EXPECTED_MIN_PAPER_LIBRARY_COUNT}."
                 ),
             )
         )
