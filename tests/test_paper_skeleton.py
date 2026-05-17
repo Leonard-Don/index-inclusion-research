@@ -1,4 +1,4 @@
-"""Unit tests for ``paper_skeleton`` — the 38th console script.
+"""Unit tests for ``paper_skeleton``.
 
 Covers:
 
@@ -169,7 +169,7 @@ def _make_public_summary() -> dict:
         "schema_version": 1,
         "generated_at": "2026-05-17T00:00:00+00:00",
         "literature": {
-            "console_scripts_count": 38,
+            "console_scripts_count": 39,
             "papers_indexed": 16,
             "research_thread_names": [
                 "price_pressure",
@@ -389,6 +389,41 @@ def test_references_enumerates_every_literature_entry(fixture_paths):
         assert (
             f"`paper_id={paper.paper_id}`" in rendered
         ), f"reference missing paper_id={paper.paper_id}"
+
+
+def test_heuristic_network_language_never_claims_verified_citations(fixture_paths):
+    """The generated paper contract must not present heuristic links as citations."""
+    rendered = _render(fixture_paths)
+
+    assert "不是已验证引用关系" in rendered
+    assert "不得作为被引/引用证据" in rendered
+    assert "逐条 bibliography 引用核验" not in rendered
+
+
+def test_cli_entry_count_uses_public_summary(fixture_paths):
+    """CLI count text should follow the generated public summary, not a stale literal."""
+    rendered = _render(fixture_paths)
+
+    assert "### B. CLI 入口 (39 个)" in rendered
+    assert "完整 39 个 console scripts" in rendered
+    assert "完整 38 个 console scripts" not in rendered
+
+
+def test_repo_docs_do_not_pin_stale_console_script_ordinals():
+    """Repo-facing docs should avoid stale ordinal counts as scripts grow."""
+    root = Path(__file__).resolve().parents[1]
+    docs = {
+        "README.md": (root / "README.md").read_text(encoding="utf-8"),
+        "docs/research_delivery_package.md": (
+            root / "docs" / "research_delivery_package.md"
+        ).read_text(encoding="utf-8"),
+    }
+
+    for label, doc in docs.items():
+        assert "第 38 个" not in doc, label
+        assert "第 39 个" not in doc, label
+    assert "index-inclusion-paper-skeleton" in docs["docs/research_delivery_package.md"]
+    assert "paper-skeleton" in docs["README.md"]
 
 
 def test_advertised_figure_paths_exist_in_results_figures(fixture_paths):

@@ -179,7 +179,7 @@ PAP 纪律现在由 `index-inclusion-doctor` 主动把关——`pap_deviation_no
 
 ## 8. Paper skeleton automation
 
-`paper/skeleton.md` 是项目内置的论文骨架，由第 38 个 console script `index-inclusion-paper-skeleton` 一键生成。它把当前 verdict CSV、PAP 偏离报告、HS300 RDD 主结果、threshold × AR-engine × 2D 稳健性结论、`docs/limitations.md` 全文与 16 篇参考文献蒸馏成一份 ~21 KB 的 Markdown 论文模板。
+`paper/skeleton.md` 是项目内置的论文骨架，由 console script `index-inclusion-paper-skeleton` 一键生成。它把当前 verdict CSV、PAP 偏离报告、HS300 RDD 主结果、threshold × AR-engine × 2D 稳健性结论、`docs/limitations.md` 全文与 16 篇参考文献蒸馏成一份 ~21 KB 的 Markdown 论文模板。
 
 **对论文写作流程的价值**：
 

@@ -73,6 +73,9 @@ DEFAULT_PUBLIC_SUMMARY_JSON = (
 DEFAULT_RDD_ROBUSTNESS_CSV_FOR_SUMMARY = (
     ROOT / "results" / "literature" / "hs300_rdd" / "rdd_robustness.csv"
 )
+DEFAULT_CITATION_CENTRALITY_CSV = (
+    ROOT / "results" / "literature" / "citation_centrality.csv"
+)
 DEFAULT_PAPER_SKELETON_MD = ROOT / "paper" / "skeleton.md"
 PAP_SNAPSHOT_GLOB = "pre-registration-*.csv"
 PAP_SNAPSHOT_STALE_DAYS = 90
@@ -833,6 +836,85 @@ def check_console_scripts_importable() -> CheckResult:
         name="console_scripts_importable",
         status="pass",
         message=f"All {len(scripts)} console_script entry points resolve to callables.",
+    )
+
+
+def check_heuristic_citation_centrality_schema(
+    *,
+    csv_path: Path = DEFAULT_CITATION_CENTRALITY_CSV,
+) -> CheckResult:
+    """Guard generated literature-network CSV semantics.
+
+    ``citation_centrality.csv`` is a legacy filename, but its link-list
+    columns must stay heuristic: ``top_linked_by`` / ``top_links_to``.
+    Old ``top_cited_by`` / ``top_cites`` headers make the generated
+    output look like verified bibliography evidence, so doctor fails
+    them explicitly.
+    """
+    name = "heuristic_citation_centrality_schema"
+    if not csv_path.exists():
+        return CheckResult(
+            name=name,
+            status="pass",
+            message=(
+                f"heuristic literature centrality CSV not present at {_relative_label(csv_path)}; "
+                "schema guard will validate top_linked_by/top_links_to when the generated file exists."
+            ),
+        )
+    try:
+        df = pd.read_csv(csv_path, nrows=0)
+    except (OSError, ValueError) as exc:
+        return CheckResult(
+            name=name,
+            status="fail",
+            message=f"heuristic literature centrality CSV is unreadable: {exc}",
+            fix="Regenerate with `index-inclusion-citation-graph`.",
+        )
+
+    columns = set(df.columns)
+    legacy_columns = sorted(columns & {"top_cited_by", "top_cites"})
+    if legacy_columns:
+        return CheckResult(
+            name=name,
+            status="fail",
+            message=(
+                f"{_relative_label(csv_path)} uses legacy citation-language column(s): "
+                f"{legacy_columns}."
+            ),
+            fix=(
+                "Regenerate with `index-inclusion-citation-graph`; heuristic links "
+                "must use top_linked_by/top_links_to and must not be represented as "
+                "verified citations."
+            ),
+            details=tuple(legacy_columns),
+        )
+
+    required_columns = {
+        "paper_id",
+        "in_degree",
+        "out_degree",
+        "betweenness",
+        "eigenvector",
+        "top_linked_by",
+        "top_links_to",
+    }
+    missing = sorted(required_columns - columns)
+    if missing:
+        return CheckResult(
+            name=name,
+            status="fail",
+            message=f"{_relative_label(csv_path)} is missing heuristic column(s): {missing}.",
+            fix="Regenerate with `index-inclusion-citation-graph`.",
+            details=tuple(missing),
+        )
+
+    return CheckResult(
+        name=name,
+        status="pass",
+        message=(
+            f"{_relative_label(csv_path)} uses heuristic link columns "
+            "top_linked_by/top_links_to."
+        ),
     )
 
 
@@ -1727,11 +1809,11 @@ def check_paper_skeleton_freshness(
     """Warn if ``paper/skeleton.md`` is missing or older than any of its
     auto-populated input artifacts.
 
-    The skeleton is the 38th-CLI deliverable — a paper template that bakes
-    in the current verdict table, sensitivity counts, HS300 RDD headline,
-    and PAP deviation block. If any input CSV has been refreshed but the
-    skeleton was not regenerated, the rendered template will misrepresent
-    the current research state. Mirrors the freshness pattern used by
+    The skeleton is a generated paper template that bakes in the current
+    verdict table, sensitivity counts, HS300 RDD headline, and PAP
+    deviation block. If any input CSV has been refreshed but the skeleton
+    was not regenerated, the rendered template will misrepresent the
+    current research state. Mirrors the freshness pattern used by
     :func:`check_public_summary_freshness`.
     """
     name = "paper_skeleton_freshness"
@@ -1834,6 +1916,7 @@ DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_paper_skeleton_freshness,
     check_chart_builders_register,
     check_console_scripts_importable,
+    check_heuristic_citation_centrality_schema,
     check_paper_audit,
 )
 
