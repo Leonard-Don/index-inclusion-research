@@ -1,10 +1,9 @@
 """Generate the paper skeleton markdown (``paper/skeleton.md``).
 
-This is the 38th console script: ``index-inclusion-paper-skeleton``. It
-renders a full Markdown paper template — section headers, figure
-references, table placeholders, auto-populated verdict / RDD / robustness
-summaries, and ``[TODO: prose]`` markers — so the writing step starts
-from a structured skeleton instead of a blank page.
+``index-inclusion-paper-skeleton`` renders a full Markdown paper template
+— section headers, figure references, table placeholders, auto-populated
+verdict / RDD / robustness summaries, and ``[TODO: prose]`` markers — so
+the writing step starts from a structured skeleton instead of a blank page.
 
 The generator NEVER fabricates prose. Every auto-populated block is
 derived deterministically from the current research artifacts:
@@ -587,7 +586,7 @@ PAP 偏离审计自动汇总：
 
 下列 {{ references | length }} 篇文献来自 `literature_catalog.PAPER_LIBRARY`（项目核心文献库）：
 
-启发式文献关联网络（自动）：本项目文献库共 {{ citation_network.node_count }} 篇，共 {{ citation_network.edge_count }} 条“主题/方法/年代”关联边；关联最多：{{ citation_network.most_linked_label }}；桥梁文献（betweenness）：{{ citation_network.bridge_papers_label }}。这不是逐条 bibliography 引用核验，只用于文献综述导航。可视化见 `results/literature/citation_network.png`（中心性 CSV：`results/literature/citation_centrality.csv`，由 `index-inclusion-citation-graph` 生成）。
+启发式文献关联网络（自动）：本项目文献库共 {{ citation_network.node_count }} 篇，共 {{ citation_network.edge_count }} 条“主题/方法/年代”关联边；关联最多：{{ citation_network.most_linked_label }}；桥梁文献（betweenness）：{{ citation_network.bridge_papers_label }}。这不是已验证引用关系，也不是逐条 bibliography citation 核验；只用于文献综述导航，不得作为被引/引用证据。可视化见 `results/literature/citation_network.png`（中心性 CSV：`results/literature/citation_centrality.csv`，由 `index-inclusion-citation-graph` 生成）。
 
 {% for ref in references -%}
 {{ loop.index }}. {{ ref.authors }} ({{ ref.year }}). *{{ ref.title }}*. {{ ref.market_focus }}. `paper_id={{ ref.paper_id }}`.
@@ -601,7 +600,7 @@ PAP 偏离审计自动汇总：
 
 ### B. CLI 入口 ({{ literature.console_scripts_count }} 个)
 
-[TODO: CLI 入口列表 — 完整 38 个 console scripts 的分组、用法与示例命令见 `docs/cli_reference.md`。]
+[TODO: CLI 入口列表 — 完整 {{ literature.console_scripts_count or "TODO" }} 个 console scripts 的分组、用法与示例命令见 `docs/cli_reference.md`。]
 
 ### C. 复现指南
 

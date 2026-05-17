@@ -18,6 +18,7 @@ from index_inclusion_research.doctor import (
     check_console_scripts_importable,
     check_h6_weight_change_readiness,
     check_h7_cn_sector_readiness,
+    check_heuristic_citation_centrality_schema,
     check_hs300_rdd_forest_artifact,
     check_hypothesis_paper_ids_resolve,
     check_match_robustness_grid,
@@ -537,6 +538,69 @@ def test_check_chart_builders_register_warns_when_too_few() -> None:
 def test_check_console_scripts_importable_passes() -> None:
     result = check_console_scripts_importable()
     assert result.status == "pass"
+
+
+def test_check_heuristic_citation_centrality_schema_passes_with_link_columns(
+    tmp_path: Path,
+) -> None:
+    csv = tmp_path / "citation_centrality.csv"
+    pd.DataFrame(
+        [
+            {
+                "paper_id": "shleifer_1986",
+                "in_degree": 1,
+                "out_degree": 0,
+                "betweenness": 0.0,
+                "eigenvector": 1.0,
+                "top_linked_by": "harris_gurel_1986",
+                "top_links_to": "",
+            }
+        ]
+    ).to_csv(csv, index=False)
+
+    result = check_heuristic_citation_centrality_schema(csv_path=csv)
+
+    assert result.status == "pass"
+    assert "top_linked_by/top_links_to" in result.message
+
+
+def test_check_heuristic_citation_centrality_schema_fails_legacy_citation_columns(
+    tmp_path: Path,
+) -> None:
+    csv = tmp_path / "citation_centrality.csv"
+    pd.DataFrame(
+        [
+            {
+                "paper_id": "shleifer_1986",
+                "in_degree": 1,
+                "out_degree": 0,
+                "betweenness": 0.0,
+                "eigenvector": 1.0,
+                "top_cited_by": "harris_gurel_1986",
+                "top_cites": "",
+            }
+        ]
+    ).to_csv(csv, index=False)
+
+    result = check_heuristic_citation_centrality_schema(csv_path=csv)
+
+    assert result.status == "fail"
+    assert "legacy citation-language" in result.message
+    assert "top_cited_by" in result.details
+    assert "verified citations" in result.fix
+
+
+def test_check_heuristic_citation_centrality_schema_passes_when_generated_file_missing(
+    tmp_path: Path,
+) -> None:
+    """Fresh CI checkouts may not carry ignored generated literature outputs."""
+    csv = tmp_path / "citation_centrality.csv"
+
+    result = check_heuristic_citation_centrality_schema(csv_path=csv)
+
+    assert result.status == "pass"
+    assert "schema guard will validate" in result.message
+    assert not result.fix
 
 
 def test_check_paper_audit_passes_current_repo() -> None:
