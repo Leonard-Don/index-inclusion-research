@@ -1,10 +1,10 @@
 # 命令行入口参考
 
-39 个 console scripts 按用途分组：
+40 个 console scripts 按用途分组：
 
 - **数据流水线**：`build-event-sample` / `build-price-panel` / `match-controls` / `match-robustness` / `run-event-study` / `run-regressions`
 - **样本数据**：`generate-sample-data` / `download-real-data`
-- **报表与图表**：`make-figures-tables` / `generate-research-report` / `paper-bundle` / `paper-audit` / `build-hs300-rdd-forest` / `build-cma-verdicts-forest` / `build-cma-sensitivity-forest` / `build-cma-ar-engine-forest` / `build-cma-2d-robustness-heatmap` / `citation-graph`
+- **报表与图表**：`make-figures-tables` / `generate-research-report` / `paper-bundle` / `paper-audit` / `build-hs300-rdd-forest` / `build-cma-verdicts-forest` / `build-cma-sensitivity-forest` / `build-cma-ar-engine-forest` / `build-cma-2d-robustness-heatmap` / `citation-graph` / `verdict-timeline`
 - **Dashboard 与三条主线**：`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - **HS300 RDD 工具链**：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`（详见 [docs/hs300_rdd_workflow.md](hs300_rdd_workflow.md)）
 - **跨市场不对称 + 假说证据**：`cma`（7 条假说 verdict）/ `prepare-passive-aum` / `download-passive-aum-cn` / `download-cn-passive-aum-proxy` / `compute-h6-weight-change` / `refresh-real-evidence`
@@ -427,6 +427,29 @@ python3 -m index_inclusion_research.citation_graph
 ```
 
 边的语义在 export-public-summary JSON 的 `literature_network.edge_semantics` 字段里显式标为 `heuristic_similarity_not_bibliographic_citation`，下游消费者不会误把这些链接当成正式引用图。Doctor `citation_graph_artifact` 检查 PNG/PDF 是否比 centrality CSV 新；`heuristic_citation_centrality_schema` 检查 CSV 列名仍是 `top_linked_by` / `top_links_to`（旧版 `top_cited_by` / `top_cites` 视作语言污染立即报 fail）。
+
+## 17. 假说裁决演进时间线（`verdict-timeline`）
+
+`index-inclusion-verdict-timeline` 是 40 个 console scripts 的第 40 号。它通过 `git log --follow` 与 `git show <sha>:results/real_tables/cma_hypothesis_verdicts.csv` 把 H1..H7 的历史裁决从仓库 git 史里重建出来，渲染成一张 7 swimlane 时间线，给 PAP 自律一份**视觉的演化档案**——配合现有的 `pap-diff` 偏离审计（commit `48a22f0`），从“静态对比 PAP 基线”补到“动态展示研究迭代”。
+
+- `results/figures/verdict_timeline.png` — 14×8 in @ 100 dpi 主图，每个 H 一行 swimlane；每个 commit 一个圆点（裁决保持）或方块（裁决文本改变）；颜色按裁决类别（绿=支持，黄=部分支持，红=证据不足）；2026-05-16 PAP baseline 画一条虚线；右侧 annotation 标注每条 H 的最新裁决。
+- `results/figures/verdict_timeline.pdf` — 矢量版同图。
+
+```bash
+# 默认产出
+index-inclusion-verdict-timeline
+
+# 限制只走最近 N 个 commit（默认 50，足够覆盖当前历史）
+index-inclusion-verdict-timeline --max-history 20
+
+# 自定义 PAP baseline 日期 / 输出路径 / 跳过 PDF
+index-inclusion-verdict-timeline --pap-baseline-date 2026-05-16 --no-pdf
+
+# 模块等价调用
+python3 -m index_inclusion_research.outputs.verdict_timeline
+```
+
+`export-public-summary` JSON 同步产出 `verdict_timeline` 段：`total_commits_tracked`、`first_commit_date`、`last_commit_date`、`total_verdict_changes`、`verdict_changes_per_hypothesis`。Doctor `verdict_timeline_artifact` 检查 PNG/PDF 是否比源 CSV (`cma_hypothesis_verdicts.csv`) 新；非 git 仓库（如解压的 tarball）下检查与图生成都会自动跳过，不抛错。
 
 ## Verdicts ↔ Literature 双向链接
 

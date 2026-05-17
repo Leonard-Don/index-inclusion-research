@@ -62,6 +62,7 @@ index-inclusion-build-cma-2d-robustness-heatmap = "index_inclusion_research.cli:
 index-inclusion-export-public-summary = "index_inclusion_research.cli:run_export_public_summary_main"
 index-inclusion-paper-skeleton = "index_inclusion_research.cli:run_paper_skeleton_main"
 index-inclusion-citation-graph = "index_inclusion_research.cli:run_citation_graph_main"
+index-inclusion-verdict-timeline = "index_inclusion_research.cli:run_verdict_timeline_main"
 
 [project.optional-dependencies]
 methods = [

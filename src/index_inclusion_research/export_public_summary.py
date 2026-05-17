@@ -77,6 +77,9 @@ PUBLISHED_FIGURE_RELPATHS: tuple[str, ...] = (
     "results/figures/cma_verdicts_sensitivity.png",
     "results/figures/cma_verdicts_ar_engine.png",
     "results/figures/cma_verdicts_2d_robustness.png",
+    # 40th CLI: H1..H7 verdict-evolution timeline reconstructed from
+    # the git log of cma_hypothesis_verdicts.csv.
+    "results/figures/verdict_timeline.png",
 )
 
 # Snapshot filename pattern (mirrors doctor.PAP_SNAPSHOT_GLOB).
@@ -521,6 +524,35 @@ def _build_literature_section(pyproject_path: Path) -> dict[str, Any]:
     }
 
 
+def _build_verdict_timeline_section() -> dict[str, Any] | None:
+    """Verdict-evolution timeline slice surfaced in the public summary JSON.
+
+    Returns ``{total_commits_tracked, first_commit_date, last_commit_date,
+    total_verdict_changes, verdict_changes_per_hypothesis}`` or ``None``
+    if the timeline module fails to import (defensive: the summary
+    should still serialize on a partial install). Empty git history
+    surfaces as zero counts + ``None`` dates so consumers get a stable
+    schema regardless of checkout state.
+    """
+    try:
+        from index_inclusion_research.outputs import (
+            build_verdict_timeline_from_git,
+            summarize_verdict_timeline_for_public_summary,
+        )
+    except ImportError as exc:
+        logger.warning("verdict_timeline import failed: %s", exc)
+        return None
+    repo_root = paths.project_root()
+    if not (repo_root / ".git").exists():
+        return None
+    try:
+        timeline_df = build_verdict_timeline_from_git(repo_root)
+    except Exception as exc:  # noqa: BLE001 - never break summary on git error
+        logger.warning("verdict timeline reconstruction failed: %s", exc)
+        return None
+    return summarize_verdict_timeline_for_public_summary(timeline_df)
+
+
 def _build_literature_network_section() -> dict[str, Any] | None:
     """Heuristic literature-link slice surfaced in the public summary JSON.
 
@@ -629,6 +661,9 @@ def build_public_summary(
     citation_network = _build_literature_network_section()
     if citation_network is not None:
         payload["literature_network"] = citation_network
+    verdict_timeline = _build_verdict_timeline_section()
+    if verdict_timeline is not None:
+        payload["verdict_timeline"] = verdict_timeline
     payload["figures_published"] = _build_figures_published(figures_dir)
 
     return payload

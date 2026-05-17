@@ -82,6 +82,15 @@ DEFAULT_CITATION_NETWORK_PNG = (
 DEFAULT_CITATION_NETWORK_PDF = (
     ROOT / "results" / "literature" / "citation_network.pdf"
 )
+DEFAULT_VERDICT_TIMELINE_PNG = (
+    ROOT / "results" / "figures" / "verdict_timeline.png"
+)
+DEFAULT_VERDICT_TIMELINE_PDF = (
+    ROOT / "results" / "figures" / "verdict_timeline.pdf"
+)
+DEFAULT_VERDICT_TIMELINE_SOURCE_CSV = (
+    ROOT / "results" / "real_tables" / "cma_hypothesis_verdicts.csv"
+)
 DEFAULT_PAPER_SKELETON_MD = ROOT / "paper" / "skeleton.md"
 PAP_SNAPSHOT_GLOB = "pre-registration-*.csv"
 PAP_SNAPSHOT_STALE_DAYS = 90
@@ -947,6 +956,33 @@ def check_citation_graph_artifact(
             "network figure (PNG + PDF) and centrality CSV together."
         ),
         input_label="citation_centrality.csv",
+    )
+
+
+def check_verdict_timeline_artifact(
+    *,
+    png_path: Path = DEFAULT_VERDICT_TIMELINE_PNG,
+    pdf_path: Path = DEFAULT_VERDICT_TIMELINE_PDF,
+    source_csv_path: Path = DEFAULT_VERDICT_TIMELINE_SOURCE_CSV,
+) -> CheckResult:
+    """Warn if the H1..H7 verdict-evolution timeline figure is missing or stale.
+
+    Mirrors :func:`check_citation_graph_artifact`: the PNG / PDF twins
+    must exist and both have an mtime ≥ the verdicts CSV they were
+    rendered from. Re-run ``index-inclusion-verdict-timeline`` to refresh
+    both artifacts (idempotent — overwrites in place).
+    """
+    return _forest_artifact_status(
+        name="verdict_timeline_artifact",
+        png_path=png_path,
+        pdf_path=pdf_path,
+        input_csv_path=source_csv_path,
+        fix_command=(
+            "Run `index-inclusion-verdict-timeline` to refresh the verdict "
+            "timeline figure (PNG + PDF) reconstructed from the git log "
+            "of cma_hypothesis_verdicts.csv."
+        ),
+        input_label="cma_hypothesis_verdicts.csv",
     )
 
 
@@ -1950,6 +1986,7 @@ DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_console_scripts_importable,
     check_heuristic_citation_centrality_schema,
     check_citation_graph_artifact,
+    check_verdict_timeline_artifact,
     check_paper_audit,
 )
 
