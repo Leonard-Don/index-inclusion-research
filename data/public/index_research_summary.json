@@ -4,9 +4,10 @@
     "results/figures/cma_verdicts_forest.png",
     "results/figures/cma_verdicts_sensitivity.png",
     "results/figures/cma_verdicts_ar_engine.png",
-    "results/figures/cma_verdicts_2d_robustness.png"
+    "results/figures/cma_verdicts_2d_robustness.png",
+    "results/figures/verdict_timeline.png"
   ],
-  "generated_at": "2026-05-17T03:39:04+00:00",
+  "generated_at": "2026-05-17T09:26:28+00:00",
   "hs300_rdd": {
     "main_bandwidth": 0.0600000000000022,
     "main_n_obs": 120,
@@ -22,7 +23,7 @@
     ]
   },
   "literature": {
-    "console_scripts_count": 39,
+    "console_scripts_count": 43,
     "papers_indexed": 16,
     "research_thread_names": [
       "price_pressure",
@@ -96,6 +97,21 @@
     }
   },
   "source_codebase_version": "0.1.0",
+  "verdict_timeline": {
+    "first_commit_date": "2026-05-05",
+    "last_commit_date": "2026-05-16",
+    "total_commits_tracked": 4,
+    "total_verdict_changes": 1,
+    "verdict_changes_per_hypothesis": {
+      "H1": 0,
+      "H2": 1,
+      "H3": 0,
+      "H4": 0,
+      "H5": 0,
+      "H6": 0,
+      "H7": 0
+    }
+  },
   "verdicts": {
     "H1": {
       "confidence": "中",

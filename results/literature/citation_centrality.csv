@@ -1,0 +1,17 @@
+paper_id,in_degree,out_degree,betweenness,eigenvector,top_linked_by,top_links_to
+harris_gurel_1986,12,0,0.166508,0.551503,lynch_mendenhall_1997|kaul_mehrotra_morck_2000|denis_et_al_2003,
+shleifer_1986,14,0,0.254603,0.610625,lynch_mendenhall_1997|kaul_mehrotra_morck_2000|denis_et_al_2003,
+lynch_mendenhall_1997,6,2,0.045556,0.264060,kaul_mehrotra_morck_2000|denis_et_al_2003|madhavan_2003,shleifer_1986|harris_gurel_1986
+kaul_mehrotra_morck_2000,1,3,0.002698,0.167542,wurgler_zhuravskaya_2002,shleifer_1986|harris_gurel_1986|lynch_mendenhall_1997
+denis_et_al_2003,1,4,0.007460,0.130785,kasch_sarkar_2011,shleifer_1986|harris_gurel_1986|lynch_mendenhall_1997
+wurgler_zhuravskaya_2002,7,3,0.071746,0.270145,denis_et_al_2003|petajisto_2011|ahn_patatoukas_2022,shleifer_1986|harris_gurel_1986|kaul_mehrotra_morck_2000
+madhavan_2003,0,3,0.000794,0.091001,,shleifer_1986|harris_gurel_1986|lynch_mendenhall_1997
+petajisto_2011,3,3,0.017460,0.142568,ahn_patatoukas_2022|coakley_et_al_2022|greenwood_sammon_2022,shleifer_1986|harris_gurel_1986|wurgler_zhuravskaya_2002
+kasch_sarkar_2011,2,3,0.009841,0.140417,greenwood_sammon_2022|chang_hong_liskovich_2014,shleifer_1986|lynch_mendenhall_1997|denis_et_al_2003
+ahn_patatoukas_2022,0,4,0.002381,0.091001,,shleifer_1986|wurgler_zhuravskaya_2002|petajisto_2011
+coakley_et_al_2022,0,4,0.003175,0.091001,,shleifer_1986|harris_gurel_1986|lynch_mendenhall_1997
+greenwood_sammon_2022,0,6,0.014603,0.091001,,shleifer_1986|harris_gurel_1986|lynch_mendenhall_1997
+chang_hong_liskovich_2014,4,4,0.043651,0.171880,ahn_patatoukas_2022|chu_et_al_2021|yao_zhang_li_hs300,shleifer_1986|harris_gurel_1986|wurgler_zhuravskaya_2002
+chu_et_al_2021,2,4,0.005556,0.125808,yao_zhang_li_hs300|yao_zhou_chen_2022,shleifer_1986|harris_gurel_1986|wurgler_zhuravskaya_2002
+yao_zhang_li_hs300,0,4,0.000794,0.091001,,shleifer_1986|harris_gurel_1986|chang_hong_liskovich_2014
+yao_zhou_chen_2022,0,5,0.000794,0.091001,,shleifer_1986|harris_gurel_1986|wurgler_zhuravskaya_2002
