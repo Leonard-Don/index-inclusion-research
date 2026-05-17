@@ -68,6 +68,7 @@ index-inclusion-paper-integrity = "index_inclusion_research.cli:run_paper_integr
 index-inclusion-tex-export = "index_inclusion_research.cli:run_tex_export_main"
 index-inclusion-submission-ready = "index_inclusion_research.cli:run_submission_ready_main"
 index-inclusion-enrich-bib = "index_inclusion_research.cli:run_enrich_bib_main"
+index-inclusion-add-paper = "index_inclusion_research.cli:run_add_paper_main"
 
 [project.optional-dependencies]
 methods = [
