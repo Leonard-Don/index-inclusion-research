@@ -521,6 +521,27 @@ def _build_literature_section(pyproject_path: Path) -> dict[str, Any]:
     }
 
 
+def _build_literature_network_section() -> dict[str, Any] | None:
+    """Heuristic literature-link slice surfaced in the public summary JSON.
+
+    Returns a small ``{edge_count, node_count, edge_semantics,
+    top_3_most_linked, top_3_central_papers}`` dict or ``None`` if the graph
+    module fails to import (defensive: the summary should still
+    serialize on a partial install). Mirrors the rest of the public
+    summary sections in tolerating missing inputs.
+    """
+    try:
+        from index_inclusion_research.citation_graph import (
+            build_citation_graph,
+            summarize_for_public_summary,
+        )
+    except ImportError as exc:
+        logger.warning("citation_graph import failed: %s", exc)
+        return None
+    graph = build_citation_graph()
+    return summarize_for_public_summary(graph)
+
+
 def _build_figures_published(figures_dir: Path) -> list[str]:
     """Filter ``PUBLISHED_FIGURE_RELPATHS`` to the entries that actually exist.
 
@@ -605,6 +626,9 @@ def build_public_summary(
         payload["hs300_rdd"] = hs300_rdd
 
     payload["literature"] = _build_literature_section(pyproject_path)
+    citation_network = _build_literature_network_section()
+    if citation_network is not None:
+        payload["literature_network"] = citation_network
     payload["figures_published"] = _build_figures_published(figures_dir)
 
     return payload

@@ -149,6 +149,19 @@ def _coerce_str(value: Any, default: str = "") -> str:
     return str(value).strip()
 
 
+def _coerce_float(value: Any) -> float | None:
+    """Return a finite-ish float value or ``None`` for absent/invalid inputs."""
+
+    if value is None:
+        return None
+    if isinstance(value, float) and pd.isna(value):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Section builders
 # ---------------------------------------------------------------------------
@@ -221,22 +234,17 @@ def _hs300_main_block(rdd_df: pd.DataFrame) -> dict[str, Any]:
     if main_rows.empty:
         return {}
     main = main_rows.iloc[0]
-    try:
-        tau = float(main.get("tau"))
-    except (TypeError, ValueError):
+    tau = _coerce_float(main.get("tau"))
+    if tau is None:
         return {}
-    try:
-        p_value = float(main.get("p_value"))
-    except (TypeError, ValueError):
-        p_value = float("nan")
+    p_value = _coerce_float(main.get("p_value"))
+    bandwidth = _coerce_float(main.get("bandwidth"))
     return {
         "tau_pct": round(tau * 100.0, 2),
-        "p_value": round(p_value, 4) if p_value == p_value else None,  # NaN guard
+        "p_value": round(p_value, 4) if p_value is not None else None,
         "n_obs": _coerce_int(main.get("n_obs")),
         "outcome": _coerce_str(main.get("outcome")) or None,
-        "bandwidth": float(main.get("bandwidth"))
-        if main.get("bandwidth") is not None
-        else None,
+        "bandwidth": bandwidth,
         "robustness_count": int(len(rdd_df)),
     }
 
@@ -353,6 +361,32 @@ def _literature_section(public_summary: dict[str, Any]) -> dict[str, Any]:
         "research_threads": lit.get("research_threads"),
         "thread_names": lit.get("research_thread_names") or [],
     }
+
+
+def _citation_network_block() -> dict[str, Any]:
+    """Distill the 16-paper heuristic literature-link graph into one sentence.
+
+    Returns ``{edge_count, node_count, most_linked_label,
+    bridge_papers_label}`` ready to drop into the §References auto-sentence.
+    Tolerant: if the catalog can't be imported (stripped-down test env)
+    or the module raises, returns zeros / TODO labels so the skeleton
+    keeps rendering.
+    """
+    try:
+        from index_inclusion_research.citation_graph import (
+            build_citation_graph,
+            summarize_for_paper_skeleton,
+        )
+    except ImportError as exc:
+        logger.warning("citation_graph import failed: %s", exc)
+        return {
+            "edge_count": 0,
+            "node_count": 0,
+            "most_linked_label": "TODO",
+            "bridge_papers_label": "TODO",
+        }
+    graph = build_citation_graph()
+    return summarize_for_paper_skeleton(graph)
 
 
 def _figures_available(figures_dir: Path) -> set[str]:
@@ -553,6 +587,8 @@ PAP 偏离审计自动汇总：
 
 下列 {{ references | length }} 篇文献来自 `literature_catalog.PAPER_LIBRARY`（项目核心文献库）：
 
+启发式文献关联网络（自动）：本项目文献库共 {{ citation_network.node_count }} 篇，共 {{ citation_network.edge_count }} 条“主题/方法/年代”关联边；关联最多：{{ citation_network.most_linked_label }}；桥梁文献（betweenness）：{{ citation_network.bridge_papers_label }}。这不是逐条 bibliography 引用核验，只用于文献综述导航。可视化见 `results/literature/citation_network.png`（中心性 CSV：`results/literature/citation_centrality.csv`，由 `index-inclusion-citation-graph` 生成）。
+
 {% for ref in references -%}
 {{ loop.index }}. {{ ref.authors }} ({{ ref.year }}). *{{ ref.title }}*. {{ ref.market_focus }}. `paper_id={{ ref.paper_id }}`.
 {% endfor %}
@@ -666,6 +702,7 @@ def build_paper_skeleton(
         "pap": _pap_block(public_summary, pap_df),
         "references": _references_block(),
         "literature": _literature_section(public_summary),
+        "citation_network": _citation_network_block(),
         "limitations_text": limitations_text,
         "schema_version": public_summary.get("schema_version", 1),
     }

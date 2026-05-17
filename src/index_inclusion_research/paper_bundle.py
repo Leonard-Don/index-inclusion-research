@@ -432,6 +432,42 @@ def _regenerate_artifacts(root: Path, dest: Path | None = None) -> dict[str, str
     else:
         status["pap_deviation_report"] = "skipped"
 
+    # ── 5b) Heuristic literature-link network (PNG + PDF + CSV) ────
+    # Source: PAPER_LIBRARY (no on-disk dependency); always re-render so
+    # the bundle ships a fresh figure aligned with the current
+    # ``related_paper_ids`` data. Failure is logged + skipped (consistent with the surrounding
+    # regeneration steps).
+    try:
+        from index_inclusion_research.citation_graph import (
+            build_citation_graph,
+            default_csv_path,
+            default_pdf_path,
+            default_png_path,
+            render_citation_network_plot,
+            write_centrality_csv,
+        )
+
+        cit_png = root / "results" / "literature" / "citation_network.png"
+        cit_pdf = root / "results" / "literature" / "citation_network.pdf"
+        cit_csv = root / "results" / "literature" / "citation_centrality.csv"
+        # If the user passed a custom ``root``, redirect outputs there;
+        # otherwise default_* paths already live under ``root``.
+        if root != project_paths.project_root():
+            cit_png = root / "results" / "literature" / "citation_network.png"
+            cit_pdf = root / "results" / "literature" / "citation_network.pdf"
+            cit_csv = root / "results" / "literature" / "citation_centrality.csv"
+        else:
+            cit_png = default_png_path()
+            cit_pdf = default_pdf_path()
+            cit_csv = default_csv_path()
+        cit_graph = build_citation_graph()
+        render_citation_network_plot(cit_graph, cit_png, cit_pdf)
+        write_centrality_csv(cit_graph, cit_csv)
+        status["citation_network"] = "ok"
+    except Exception as exc:  # noqa: BLE001 - never break bundle on render error
+        logger.warning("heuristic literature-link network regeneration skipped: %s", exc)
+        status["citation_network"] = "error"
+
     # ── 6) Paper skeleton (paper/skeleton.md) ─────────────────────
     # The skeleton is a top-level bundle artifact — author fills the
     # ``[TODO: prose]`` markers directly in this file, so it lands at

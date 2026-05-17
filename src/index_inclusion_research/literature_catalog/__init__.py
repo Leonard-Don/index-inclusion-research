@@ -26,6 +26,7 @@ from ._data import (
     PDF_ROOT,
     TRACK_LABELS,
     LiteraturePaper,
+    build_linked_by_map,
     get_literature_paper,
     list_literature_papers,
 )
@@ -55,6 +56,7 @@ __all__ = [
     "PDF_ROOT",
     "TRACK_LABELS",
     "build_camp_summary_frame",
+    "build_linked_by_map",
     "build_grouped_literature_frame",
     "build_literature_catalog_frame",
     "build_literature_dashboard_frame",
