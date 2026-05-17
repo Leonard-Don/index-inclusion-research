@@ -1,6 +1,6 @@
 # 命令行入口参考
 
-37 个 console scripts 按用途分组：
+38 个 console scripts 按用途分组：
 
 - **数据流水线**：`build-event-sample` / `build-price-panel` / `match-controls` / `match-robustness` / `run-event-study` / `run-regressions`
 - **样本数据**：`generate-sample-data` / `download-real-data`
@@ -8,7 +8,7 @@
 - **Dashboard 与三条主线**：`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - **HS300 RDD 工具链**：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`（详见 [docs/hs300_rdd_workflow.md](hs300_rdd_workflow.md)）
 - **跨市场不对称 + 假说证据**：`cma`（7 条假说 verdict）/ `prepare-passive-aum` / `download-passive-aum-cn` / `download-cn-passive-aum-proxy` / `compute-h6-weight-change` / `refresh-real-evidence`
-- **总入口**：`rebuild-all`（10 步流水线一键跑）/ `verdict-summary`（终端速览）/ `pap-diff`（PAP 偏离审计）/ `doctor`（项目健康检查）/ `export-public-summary`（生成 data/public/index_research_summary.json）
+- **总入口**：`rebuild-all`（10 步流水线一键跑）/ `verdict-summary`（终端速览）/ `pap-diff`（PAP 偏离审计）/ `doctor`（项目健康检查）/ `export-public-summary`（生成 data/public/index_research_summary.json）/ `paper-skeleton`（自动生成 paper/skeleton.md 论文骨架）
 
 所有入口都通过 `pyproject.toml` 的 console scripts 或 `python3 -m index_inclusion_research.<module>` 调用，也可以用 `make rebuild` / `make verdicts` / `make doctor` / `make sync` 简写。安装时使用 `make sync` 会按 `uv.lock` 装锁定版本（CI 也走这条路径）。
 
@@ -314,6 +314,7 @@ index-inclusion-pap-diff --no-write
 - `hs300_rdd_forest_artifact` — `results/figures/hs300_rdd_robustness_forest.{png,pdf}` 存在且 mtime ≥ `rdd_robustness.csv`；缺失或 stale 触发 `make figures-tables` 提示
 - `cma_verdicts_forest_artifact` — `results/figures/cma_verdicts_forest.{png,pdf}` vs `cma_hypothesis_verdicts.csv` 的同款 mtime 检查
 - `public_summary_freshness` — `data/public/index_research_summary.json` 存在且 mtime ≥ `cma_hypothesis_verdicts.csv` / `pap_deviation_report.csv` / `rdd_robustness.csv`；缺失或 stale 触发 `index-inclusion-export-public-summary` 提示
+- `paper_skeleton_freshness` — `paper/skeleton.md` 存在且 mtime ≥ `cma_hypothesis_verdicts.csv` / `pap_deviation_report.csv` / `rdd_robustness.csv` / `index_research_summary.json`；缺失或 stale 触发 `index-inclusion-paper-skeleton --force` 提示
 - `chart_builders_register` — `CHART_BUILDERS` ≥ 12 项
 - `console_scripts_importable` — 所有 `pyproject.toml` 入口都能 import
 - `paper_audit_claims` — `paper_audit` 不报 warn/fail
@@ -354,6 +355,46 @@ index-inclusion-export-public-summary --print
 # 通过 module 调用（与 console script 等价）
 python3 -m index_inclusion_research.export_public_summary
 ```
+
+## 15. 论文骨架生成（`paper-skeleton`）
+
+`index-inclusion-paper-skeleton` 把当前 verdict CSV / PAP 偏离报告 / HS300 RDD 主结果 / sensitivity 公开摘要 / `docs/limitations.md` / 16 篇文献库蒸馏为一份完整的 Markdown 论文骨架 `paper/skeleton.md`（约 21 KB）。论文写作者只需逐节填写 `[TODO: prose]` 标记的段落，所有数据表、figure 引用、稳健性结论、PAP 合规块都已自动填好。
+
+设计要点：
+
+- **永不编造内容**：每一处需要散文的位置都标注 `[TODO: prose]`，作者可以 `grep "TODO" paper/skeleton.md` 找到所有待写章节。
+- **数据自动同步**：H1-H7 verdict 表、HS300 τ/p/n、阈值/AR 引擎/2D 稳健性结论、PAP 偏离 5 类计数与 16 篇参考文献全部来自当前 artifact，不需要手动同步。
+- **doctor 守护**：`paper_skeleton_freshness` 检查任意一个输入 (`cma_hypothesis_verdicts.csv` / `pap_deviation_report.csv` / `rdd_robustness.csv` / `index_research_summary.json`) 比 skeleton 新 → `warn`，提示 `index-inclusion-paper-skeleton --force` 漏跑。
+- **paper-bundle 集成**：`make paper` (即 `index-inclusion-paper-bundle`) 在 `_regenerate_artifacts` 里自动重生成 skeleton，保证 bundle 永远 self-consistent。
+- **sanity 门**：渲染出的 markdown 字节数被 `[6 KB, 28 KB]` 区间约束，越界报 warn，提示骨架被截断或被输入污染。
+
+```bash
+# 写入 paper/skeleton.md（已存在则报错）
+index-inclusion-paper-skeleton
+
+# 覆盖现有骨架
+index-inclusion-paper-skeleton --force
+
+# 自定义输出位置
+index-inclusion-paper-skeleton --output /tmp/skeleton.md --force
+
+# 不写盘，直接打印到 stdout
+index-inclusion-paper-skeleton --print
+
+# 通过 module 调用（与 console script 等价）
+python3 -m index_inclusion_research.paper_skeleton
+```
+
+骨架结构（节选）：
+
+- `# 标题 / 摘要 (TODO)`
+- §1 引言（3 个 TODO prose 子段）
+- §2 文献综述（自动指向 `docs/literature_review_author_year_cn.md`）
+- §3 研究设计 + §3.3 H1-H7 假说表（自动填）
+- §4 实证结果：§4.1 主结果 figure 引用 + §4.2 H1-H7 逐条 prose TODO + §4.3 HS300 RDD τ/p/n 自动填 + §4.4 稳健性 3 张图 + 自动结论
+- §5 限制（`docs/limitations.md` 全文嵌入）
+- §6 结论 TODO + §7 PAP 合规自动表
+- §参考文献（16 篇自动枚举）+ §附录 ABC
 
 ## Verdicts ↔ Literature 双向链接
 

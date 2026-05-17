@@ -215,7 +215,7 @@ def _read_csv_safe(path: Path) -> pd.DataFrame:
 # ── Pre-bundle regeneration ──────────────────────────────────────────
 
 
-def _regenerate_artifacts(root: Path) -> dict[str, str]:
+def _regenerate_artifacts(root: Path, dest: Path | None = None) -> dict[str, str]:
     """Refresh the paper-bundled visualizations + PAP audit from current CSVs.
 
     The bundle copies whatever exists under ``results/``. If the user
@@ -229,6 +229,11 @@ def _regenerate_artifacts(root: Path) -> dict[str, str]:
     3. CMA sensitivity forest (PNG + PDF) ← existing threshold cache only
     4. CMA AR-engine forest (PNG + PDF) ← existing engine cache only
     5. PAP deviation report CSV ← latest snapshot + verdicts CSV
+    6. paper/skeleton.md ← verdicts CSV + PAP CSV + RDD CSV + public summary
+
+    The skeleton (step 6) lands at ``dest / "skeleton.md"`` rather than
+    a copy from a results/ subdir — it's natively a paper-folder
+    artifact, so the bundle generates it in place inside ``dest``.
 
     Each step is wrapped so a single failure (missing input, broken
     CSV) only logs a warning and never aborts the whole bundle. The
@@ -426,6 +431,29 @@ def _regenerate_artifacts(root: Path) -> dict[str, str]:
             status["pap_deviation_report"] = "error"
     else:
         status["pap_deviation_report"] = "skipped"
+
+    # ── 6) Paper skeleton (paper/skeleton.md) ─────────────────────
+    # The skeleton is a top-level bundle artifact — author fills the
+    # ``[TODO: prose]`` markers directly in this file, so it lands at
+    # the bundle root (``dest / "skeleton.md"``), not inside any
+    # tables/ or narrative/ subdir. We render in place rather than
+    # copy because the canonical location IS the paper folder.
+    if dest is not None and verdicts_csv.exists():
+        try:
+            from index_inclusion_research.paper_skeleton import (
+                build_paper_skeleton,
+            )
+
+            skeleton_path = dest / "skeleton.md"
+            skeleton_path.parent.mkdir(parents=True, exist_ok=True)
+            rendered = build_paper_skeleton()
+            skeleton_path.write_text(rendered, encoding="utf-8")
+            status["paper_skeleton"] = "ok"
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("paper skeleton regeneration skipped: %s", exc)
+            status["paper_skeleton"] = "error"
+    else:
+        status["paper_skeleton"] = "skipped"
 
     return status
 
@@ -643,7 +671,7 @@ def build_paper_bundle(
     dest.mkdir(parents=True, exist_ok=True)
 
     regenerated: dict[str, str] = (
-        _regenerate_artifacts(root) if regenerate else {}
+        _regenerate_artifacts(root, dest=dest) if regenerate else {}
     )
 
     copies_by_section: dict[str, list[CopyRecord]] = {}

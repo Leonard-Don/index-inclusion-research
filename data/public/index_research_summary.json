@@ -6,7 +6,7 @@
     "results/figures/cma_verdicts_ar_engine.png",
     "results/figures/cma_verdicts_2d_robustness.png"
   ],
-  "generated_at": "2026-05-17T02:36:32+00:00",
+  "generated_at": "2026-05-17T03:03:28+00:00",
   "hs300_rdd": {
     "main_bandwidth": 0.0600000000000022,
     "main_n_obs": 120,
@@ -22,7 +22,7 @@
     ]
   },
   "literature": {
-    "console_scripts_count": 37,
+    "console_scripts_count": 38,
     "papers_indexed": 16,
     "research_thread_names": [
       "price_pressure",

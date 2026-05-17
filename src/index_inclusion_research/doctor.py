@@ -73,6 +73,7 @@ DEFAULT_PUBLIC_SUMMARY_JSON = (
 DEFAULT_RDD_ROBUSTNESS_CSV_FOR_SUMMARY = (
     ROOT / "results" / "literature" / "hs300_rdd" / "rdd_robustness.csv"
 )
+DEFAULT_PAPER_SKELETON_MD = ROOT / "paper" / "skeleton.md"
 PAP_SNAPSHOT_GLOB = "pre-registration-*.csv"
 PAP_SNAPSHOT_STALE_DAYS = 90
 
@@ -1715,6 +1716,99 @@ def check_public_summary_freshness(
     )
 
 
+def check_paper_skeleton_freshness(
+    *,
+    skeleton_path: Path = DEFAULT_PAPER_SKELETON_MD,
+    verdicts_csv_path: Path = DEFAULT_VERDICTS_CSV,
+    pap_csv_path: Path = DEFAULT_PAP_DEVIATION_REPORT_CSV,
+    rdd_csv_path: Path = DEFAULT_RDD_ROBUSTNESS_CSV_FOR_SUMMARY,
+    public_summary_path: Path = DEFAULT_PUBLIC_SUMMARY_JSON,
+) -> CheckResult:
+    """Warn if ``paper/skeleton.md`` is missing or older than any of its
+    auto-populated input artifacts.
+
+    The skeleton is the 38th-CLI deliverable — a paper template that bakes
+    in the current verdict table, sensitivity counts, HS300 RDD headline,
+    and PAP deviation block. If any input CSV has been refreshed but the
+    skeleton was not regenerated, the rendered template will misrepresent
+    the current research state. Mirrors the freshness pattern used by
+    :func:`check_public_summary_freshness`.
+    """
+    name = "paper_skeleton_freshness"
+    fix_command = (
+        "Run `index-inclusion-paper-skeleton --force` to regenerate "
+        "paper/skeleton.md."
+    )
+    if not skeleton_path.exists():
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"paper skeleton {_relative_label(skeleton_path)} is missing."
+            ),
+            fix=fix_command,
+        )
+    if not verdicts_csv_path.exists():
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"paper skeleton input {_relative_label(verdicts_csv_path)} "
+                "is missing; cannot verify freshness."
+            ),
+            fix=fix_command,
+        )
+    if (
+        os.getenv("CI", "").lower() == "true"
+        and skeleton_path.is_relative_to(ROOT)
+        and verdicts_csv_path.is_relative_to(ROOT)
+    ):
+        return CheckResult(
+            name=name,
+            status="pass",
+            message=(
+                f"paper skeleton {_relative_label(skeleton_path)} is present; "
+                "skipping mtime freshness in CI because checkout mtimes are "
+                "not generation times."
+            ),
+        )
+    skeleton_mtime = skeleton_path.stat().st_mtime
+    stale_inputs: list[Path] = []
+    for csv in (
+        verdicts_csv_path,
+        pap_csv_path,
+        rdd_csv_path,
+        public_summary_path,
+    ):
+        if csv.exists() and csv.stat().st_mtime > skeleton_mtime:
+            stale_inputs.append(csv)
+    if stale_inputs:
+        details = tuple(
+            f"{_relative_label(p)} mtime newer than "
+            f"{_relative_label(skeleton_path)}"
+            for p in stale_inputs
+        )
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"{len(stale_inputs)} input(s) newer than "
+                f"{_relative_label(skeleton_path)}; re-run of "
+                f"`index-inclusion-paper-skeleton --force` overdue."
+            ),
+            fix=fix_command,
+            details=details,
+        )
+    return CheckResult(
+        name=name,
+        status="pass",
+        message=(
+            f"paper skeleton {_relative_label(skeleton_path)} is fresher "
+            f"than {_relative_label(verdicts_csv_path)} and siblings."
+        ),
+    )
+
+
 DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_hypothesis_paper_ids_resolve,
     check_verdicts_csv_health,
@@ -1736,6 +1830,7 @@ DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_cma_ar_engine_forest_artifact,
     check_cma_2d_robustness_heatmap_artifact,
     check_public_summary_freshness,
+    check_paper_skeleton_freshness,
     check_chart_builders_register,
     check_console_scripts_importable,
     check_paper_audit,
