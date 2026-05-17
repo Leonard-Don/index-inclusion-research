@@ -156,3 +156,7 @@ def run_build_cma_2d_robustness_heatmap_main() -> int | None:
     return _run_package_main(
         "index_inclusion_research.build_cma_2d_robustness_heatmap"
     )
+
+
+def run_export_public_summary_main() -> int | None:
+    return _run_package_main("index_inclusion_research.export_public_summary")

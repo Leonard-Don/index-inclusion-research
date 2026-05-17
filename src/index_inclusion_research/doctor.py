@@ -67,6 +67,12 @@ DEFAULT_CMA_2D_ROBUSTNESS_HEATMAP_PNG = (
 DEFAULT_CMA_2D_ROBUSTNESS_HEATMAP_PDF = (
     ROOT / "results" / "figures" / "cma_verdicts_2d_robustness.pdf"
 )
+DEFAULT_PUBLIC_SUMMARY_JSON = (
+    ROOT / "data" / "public" / "index_research_summary.json"
+)
+DEFAULT_RDD_ROBUSTNESS_CSV_FOR_SUMMARY = (
+    ROOT / "results" / "literature" / "hs300_rdd" / "rdd_robustness.csv"
+)
 PAP_SNAPSHOT_GLOB = "pre-registration-*.csv"
 PAP_SNAPSHOT_STALE_DAYS = 90
 
@@ -1620,6 +1626,95 @@ def check_cma_sensitivity_forest_artifact(
     )
 
 
+def check_public_summary_freshness(
+    *,
+    summary_path: Path = DEFAULT_PUBLIC_SUMMARY_JSON,
+    verdicts_csv_path: Path = DEFAULT_VERDICTS_CSV,
+    pap_csv_path: Path = DEFAULT_PAP_DEVIATION_REPORT_CSV,
+    rdd_csv_path: Path = DEFAULT_RDD_ROBUSTNESS_CSV_FOR_SUMMARY,
+) -> CheckResult:
+    """Warn if ``data/public/index_research_summary.json`` is missing or older
+    than any of the CSVs it summarizes.
+
+    The public summary is a committed downstream artifact for external
+    consumers (cn-altdata-brief, GitHub Pages digests). If the upstream
+    CSVs have changed but the summary was not regenerated, downstream will
+    serve stale numbers. Mirrors the freshness pattern used by
+    :func:`check_cma_verdicts_forest_artifact`.
+    """
+    name = "public_summary_freshness"
+    fix_command = (
+        "Run `index-inclusion-export-public-summary` to regenerate "
+        "data/public/index_research_summary.json."
+    )
+    if not summary_path.exists():
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"public summary {_relative_label(summary_path)} is missing."
+            ),
+            fix=fix_command,
+        )
+    # Verdicts CSV is the only HARD-required input; everything else is
+    # optional (sensitivity / pap / rdd may legitimately not exist on a
+    # fresh checkout). If verdicts is also missing we can't judge staleness.
+    if not verdicts_csv_path.exists():
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"public summary input {_relative_label(verdicts_csv_path)} "
+                "is missing; cannot verify freshness."
+            ),
+            fix=fix_command,
+        )
+    if (
+        os.getenv("CI", "").lower() == "true"
+        and summary_path.is_relative_to(ROOT)
+        and verdicts_csv_path.is_relative_to(ROOT)
+    ):
+        return CheckResult(
+            name=name,
+            status="pass",
+            message=(
+                f"public summary {_relative_label(summary_path)} is present; "
+                "skipping mtime freshness in CI because checkout mtimes are "
+                "not generation times."
+            ),
+        )
+    summary_mtime = summary_path.stat().st_mtime
+    stale_inputs: list[Path] = []
+    for csv in (verdicts_csv_path, pap_csv_path, rdd_csv_path):
+        if csv.exists() and csv.stat().st_mtime > summary_mtime:
+            stale_inputs.append(csv)
+    if stale_inputs:
+        details = tuple(
+            f"{_relative_label(p)} mtime newer than "
+            f"{_relative_label(summary_path)}"
+            for p in stale_inputs
+        )
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"{len(stale_inputs)} input CSV(s) newer than "
+                f"{_relative_label(summary_path)}; re-run of "
+                f"`index-inclusion-export-public-summary` overdue."
+            ),
+            fix=fix_command,
+            details=details,
+        )
+    return CheckResult(
+        name=name,
+        status="pass",
+        message=(
+            f"public summary {_relative_label(summary_path)} is fresher "
+            f"than {_relative_label(verdicts_csv_path)} and siblings."
+        ),
+    )
+
+
 DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_hypothesis_paper_ids_resolve,
     check_verdicts_csv_health,
@@ -1640,6 +1735,7 @@ DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_cma_sensitivity_forest_artifact,
     check_cma_ar_engine_forest_artifact,
     check_cma_2d_robustness_heatmap_artifact,
+    check_public_summary_freshness,
     check_chart_builders_register,
     check_console_scripts_importable,
     check_paper_audit,

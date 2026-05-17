@@ -162,7 +162,22 @@ make smoke
 
 PAP 纪律现在由 `index-inclusion-doctor` 主动把关——`pap_deviation_no_flips` 检查见到任何 `flipped` 假说直接 `fail`（PAP §7 需签字），`tightened` / `weakened` 报 `warn`；`pap_snapshot_freshness` 在最新 `snapshots/pre-registration-YYYY-MM-DD.csv` 超过 90 天时 `warn`，提示季度 re-baseline。两张森林图（HS300 RDD + CMA verdicts）的 PNG/PDF 也被 doctor 追 mtime——比对应的输入 CSV 旧就 `warn` 提示 `make figures-tables` 漏跑。`make doctor-strict` 让这些 `warn` 全部转成非零退出码。
 
-## 7. 更新规则
+## 7. Public Summary Artifact
+
+`data/public/index_research_summary.json` 是一份小而稳定（3–5 KB）的 schema-versioned JSON，蒸馏自 `results/real_tables/cma_hypothesis_verdicts.csv` / `pap_deviation_report.csv` / `results/literature/hs300_rdd/rdd_robustness.csv` / 最新 `snapshots/pre-registration-*.csv` / `results/figures/*.png`。它是这份交付包对**外部消费者**（例如 sibling 项目 `cn-altdata-brief`、未来的 GitHub Pages 日报、CI 集成）的标准入口。
+
+**关键属性**：
+
+- **不需要跑任何东西**：消费者只需 `requests.get(raw_github_url)`（或 `git pull` + `open(path)`）即可拿到最新一次提交时的 7 条假说裁决、PAP 偏离五类计数、threshold × AR-engine 稳健性、HS300 RDD 主结果与文献覆盖。
+- **schema 稳定**：顶层 `schema_version`（当前 1）控制破坏性变更；additive 字段不 bump。
+- **NO file path / debug 字段泄露**：`path_ref` 是相对 repo root 的字面值，没有 absolute path、没有 raw narrative text；CSV 多行 `evidence_summary` / `metric_snapshot` 只保留 4 sig figs 的 `headline_metric`。
+- **figures_published** manifest 列出所有 doctor 守护的 PNG 路径，消费者据此渲染预览。
+- **doctor 守护**：`public_summary_freshness` 检查在任何输入 CSV mtime 比 summary 新时 `warn`，提示 `index-inclusion-export-public-summary` 漏跑。
+- **deterministic**：同输入 → 同输出（除 `generated_at`），`git diff` 只显示真实数据变化。
+
+更新触发条件：每次 `index-inclusion-cma` / `pap-diff` / `make figures-tables` 后，跑一次 `index-inclusion-export-public-summary` 即可刷新；CI 也可以把这一步纳入 paper-bundle 之后的同一条 pipeline。
+
+## 8. 更新规则
 
 - 修改 verdict 计算逻辑、阈值、样本边界或 evidence_tier 前，先更新
   [docs/pre_registration.md](pre_registration.md) §7 决策日志。

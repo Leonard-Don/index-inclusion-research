@@ -1,0 +1,149 @@
+{
+  "figures_published": [
+    "results/figures/hs300_rdd_robustness_forest.png",
+    "results/figures/cma_verdicts_forest.png",
+    "results/figures/cma_verdicts_sensitivity.png",
+    "results/figures/cma_verdicts_ar_engine.png",
+    "results/figures/cma_verdicts_2d_robustness.png"
+  ],
+  "generated_at": "2026-05-17T02:36:32+00:00",
+  "hs300_rdd": {
+    "main_bandwidth": 0.0600000000000022,
+    "main_n_obs": 120,
+    "main_outcome": "car_m1_p1",
+    "main_p_value": 0.0483433406989583,
+    "main_tau_pct": 3.9188,
+    "robustness_specs_count": 5,
+    "spec_kinds": [
+      "donut",
+      "main",
+      "placebo",
+      "polynomial"
+    ]
+  },
+  "literature": {
+    "console_scripts_count": 37,
+    "papers_indexed": 16,
+    "research_thread_names": [
+      "price_pressure",
+      "demand_curve",
+      "identification"
+    ],
+    "research_threads": 3
+  },
+  "pap_baseline": {
+    "frozen_for_days": 1,
+    "path_ref": "snapshots/pre-registration-2026-05-16.csv",
+    "snapshot_date": "2026-05-16"
+  },
+  "pap_deviation_summary": {
+    "all_unchanged": true,
+    "flipped_count": 0,
+    "tightened_count": 0,
+    "unchanged_count": 7,
+    "unverifiable_count": 0,
+    "weakened_count": 0
+  },
+  "schema_version": 1,
+  "sensitivity_robustness": {
+    "ar_engine_axis": {
+      "ar_models_tested": [
+        "adjusted",
+        "market"
+      ],
+      "cell_count": 2,
+      "flip_count": 2,
+      "flipping_hypotheses": [
+        "H1",
+        "H2"
+      ],
+      "stable_count": 5
+    },
+    "threshold_axis": {
+      "cell_count": 4,
+      "flip_count": 0,
+      "stable_count": 7,
+      "thresholds_tested": [
+        0.05,
+        0.1,
+        0.15,
+        0.2
+      ]
+    },
+    "two_dimensional": {
+      "cell_count": 8,
+      "flip_count": 2,
+      "flipping_hypotheses": [
+        "H1",
+        "H2"
+      ],
+      "stable_count": 5
+    }
+  },
+  "source_codebase_version": "0.1.0",
+  "verdicts": {
+    "H1": {
+      "confidence": "中",
+      "evidence_tier": "core",
+      "headline_metric": "bootstrap p = 0.8748",
+      "n_obs": 436,
+      "name": "信息泄露与预运行",
+      "track": "identification",
+      "verdict": "证据不足"
+    },
+    "H2": {
+      "confidence": "中",
+      "evidence_tier": "core",
+      "headline_metric": "US AUM ratio = 13.48",
+      "n_obs": 17,
+      "name": "被动基金 AUM 差异",
+      "track": "demand_curve",
+      "verdict": "部分支持"
+    },
+    "H3": {
+      "confidence": "高",
+      "evidence_tier": "supplementary",
+      "headline_metric": "双通道命中率 = 0.75",
+      "n_obs": 4,
+      "name": "散户 vs 机构结构",
+      "track": "price_pressure",
+      "verdict": "支持"
+    },
+    "H4": {
+      "confidence": "中",
+      "evidence_tier": "supplementary",
+      "headline_metric": "regression p = 0.5366",
+      "n_obs": 436,
+      "name": "卖空约束",
+      "track": "identification",
+      "verdict": "证据不足"
+    },
+    "H5": {
+      "confidence": "高",
+      "evidence_tier": "core",
+      "headline_metric": "limit_coef p = 0.00824",
+      "n_obs": 936,
+      "name": "涨跌停限制",
+      "track": "identification",
+      "verdict": "支持"
+    },
+    "H6": {
+      "confidence": "中",
+      "evidence_tier": "supplementary",
+      "headline_metric": "heavy−light spread = -0.01903",
+      "n_obs": 67,
+      "name": "指数权重可预测性",
+      "track": "demand_curve",
+      "verdict": "证据不足"
+    },
+    "H7": {
+      "confidence": "中",
+      "evidence_tier": "core",
+      "headline_metric": "US sector spread = 5.954",
+      "n_obs": 187,
+      "name": "行业结构差异",
+      "track": "identification",
+      "verdict": "支持"
+    }
+  }
+}
