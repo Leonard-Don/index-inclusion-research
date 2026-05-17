@@ -168,3 +168,9 @@ def run_paper_skeleton_main() -> int | None:
 
 def run_citation_graph_main() -> int | None:
     return _run_package_main("index_inclusion_research.citation_graph")
+
+
+def run_verdict_timeline_main() -> int | None:
+    return _run_package_main(
+        "index_inclusion_research.outputs.verdict_timeline"
+    )

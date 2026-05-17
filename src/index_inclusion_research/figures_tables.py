@@ -79,6 +79,44 @@ def _maybe_build_hs300_rdd_forest_plot(
     mirror_path.write_bytes(png_path.read_bytes())
 
 
+def _maybe_build_verdict_timeline(
+    *,
+    figures_dir: Path | None,
+    repo_root: Path | None = None,
+) -> None:
+    """Refresh the H1..H7 verdict-evolution swimlane figure.
+
+    Mirrors the other ``_maybe_*`` helpers: the renderer already
+    tolerates an empty git history by emitting a placeholder PNG, so we
+    just guard against an outright import / OSError and let
+    figures_tables continue.
+    """
+    if figures_dir is None:
+        figures_dir = ROOT / "results" / "figures"
+    root = (repo_root or ROOT).resolve()
+    if not (root / ".git").exists():
+        # Not a git checkout — skip silently; downstream doctor checks
+        # surface the missing artifact rather than this code path.
+        return
+    png_path = figures_dir / "verdict_timeline.png"
+    pdf_path = figures_dir / "verdict_timeline.pdf"
+    try:
+        from index_inclusion_research.outputs import (
+            build_verdict_timeline_from_git,
+            render_verdict_timeline_plot,
+        )
+
+        timeline_df = build_verdict_timeline_from_git(root)
+        render_verdict_timeline_plot(
+            timeline_df,
+            output_png_path=png_path,
+            output_pdf_path=pdf_path,
+        )
+    except (ValueError, OSError) as exc:
+        logger.warning("verdict timeline figure skipped: %s", exc)
+        return
+
+
 def _maybe_build_cma_verdicts_forest(
     *,
     tables_dir: Path | None,
@@ -409,6 +447,15 @@ def main(argv: list[str] | None = None) -> None:
     # only re-render here; the explicit refresh CLI is
     # `index-inclusion-build-cma-2d-robustness-heatmap`.
     _maybe_build_cma_2d_robustness_heatmap(
+        figures_dir=Path(args.figures_dir) if args.figures_dir else None,
+    )
+
+    # CMA verdict-evolution timeline (40th CLI). Pulls verdict history
+    # from the git log of cma_hypothesis_verdicts.csv and renders a
+    # 7-swimlane figure. Skipped silently if the repo isn't a git
+    # working tree or the CSV has no recorded history (the renderer
+    # already emits a placeholder figure in that case).
+    _maybe_build_verdict_timeline(
         figures_dir=Path(args.figures_dir) if args.figures_dir else None,
     )
 

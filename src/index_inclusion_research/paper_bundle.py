@@ -67,6 +67,11 @@ def _section_specs(root: Path) -> tuple[BundleSection, ...]:
                 "cma_verdicts_sensitivity.pdf",
                 "cma_verdicts_ar_engine.pdf",
                 "cma_verdicts_2d_robustness.pdf",
+                # 40th CLI — verdict-evolution timeline reconstructed
+                # from the git log of cma_hypothesis_verdicts.csv. Shows
+                # reviewers how each H1..H7 verdict evolved across
+                # commits and where the PAP baseline freeze line sits.
+                "verdict_timeline.pdf",
             ),
         ),
         BundleSection(
@@ -403,6 +408,33 @@ def _regenerate_artifacts(root: Path, dest: Path | None = None) -> dict[str, str
             status["cma_verdicts_2d_robustness_heatmap"] = "error"
     else:
         status["cma_verdicts_2d_robustness_heatmap"] = "skipped"
+
+    # ── 2e) CMA verdict-evolution timeline (40th CLI) ─────────────
+    # Walks the git log of cma_hypothesis_verdicts.csv and renders the
+    # 7-swimlane figure. Skipped silently if the bundle was built from
+    # a non-git checkout (e.g. tarball extract). Mirrors the surrounding
+    # opt-in steps — never crashes the bundle on a missing repo.
+    if (root / ".git").exists():
+        try:
+            from index_inclusion_research.outputs import (
+                build_verdict_timeline_from_git,
+                render_verdict_timeline_plot,
+            )
+
+            timeline_png = root / "results" / "figures" / "verdict_timeline.png"
+            timeline_pdf = root / "results" / "figures" / "verdict_timeline.pdf"
+            timeline_df = build_verdict_timeline_from_git(root)
+            render_verdict_timeline_plot(
+                timeline_df,
+                output_png_path=timeline_png,
+                output_pdf_path=timeline_pdf,
+            )
+            status["verdict_timeline"] = "ok"
+        except Exception as exc:  # noqa: BLE001 - never break bundle on render error
+            logger.warning("verdict timeline regeneration skipped: %s", exc)
+            status["verdict_timeline"] = "error"
+    else:
+        status["verdict_timeline"] = "skipped"
 
     # ── 3) PAP deviation report ───────────────────────────────────
     snapshots_dir = root / "snapshots"

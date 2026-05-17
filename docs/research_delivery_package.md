@@ -110,6 +110,7 @@ Federal Reserve Z.1。论文写作时必须披露：
 | 附录 C | HS300 RDD | `results/literature/hs300_rdd/`；稳健性森林图 `results/figures/hs300_rdd_robustness_forest.png`（同名 `.pdf` 为论文用矢量版本） |
 | 附录 D | 数据与方法限制 | `docs/limitations.md` |
 | 附录 E | PAP 与 verdict diff | `docs/pre_registration.md`、`docs/verdict_iteration.md`、`results/real_tables/pap_deviation_report.csv`（每行一条假说 unchanged/tightened/weakened/flipped/unverifiable 分类） |
+| 附录 F | 假说裁决演进时间线 | `results/figures/verdict_timeline.{png,pdf}`（从 git log 重建 H1-H7 swimlane 图，配合 PAP 静态 diff 提供视觉化研究迭代档案；由 `index-inclusion-verdict-timeline` 生成） |
 
 `make paper` 会把上述核心材料聚合到 `paper/` 目录，其中叙事文件在
 `paper/narrative/`，表格在 `paper/tables/`（含 `pap_deviation_report.csv` PAP 偏离审计

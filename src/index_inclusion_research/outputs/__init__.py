@@ -41,6 +41,30 @@ from .reports import (
     export_latex_tables,
     plot_average_paths,
 )
+from .verdict_timeline import (
+    DEFAULT_MAX_HISTORY as DEFAULT_VERDICT_TIMELINE_MAX_HISTORY,
+)
+from .verdict_timeline import (
+    DEFAULT_TARGET_CSV as DEFAULT_VERDICT_TIMELINE_TARGET_CSV,
+)
+from .verdict_timeline import (
+    PAP_BASELINE_DATE as VERDICT_TIMELINE_PAP_BASELINE_DATE,
+)
+from .verdict_timeline import (
+    build_verdict_timeline_from_git,
+    count_verdict_changes,
+    render_verdict_timeline_plot,
+    total_verdict_changes,
+)
+from .verdict_timeline import (
+    default_pdf_path as default_verdict_timeline_pdf_path,
+)
+from .verdict_timeline import (
+    default_png_path as default_verdict_timeline_png_path,
+)
+from .verdict_timeline import (
+    summarize_for_public_summary as summarize_verdict_timeline_for_public_summary,
+)
 
 __all__ = [
     "DEFAULT_2D_AR_MODELS",
@@ -78,4 +102,15 @@ __all__ = [
     "render_2d_robustness_heatmap",
     "render_ar_engine_forest_plot",
     "render_sensitivity_forest_plot",
+    # Verdict-evolution timeline (40th CLI)
+    "DEFAULT_VERDICT_TIMELINE_MAX_HISTORY",
+    "DEFAULT_VERDICT_TIMELINE_TARGET_CSV",
+    "VERDICT_TIMELINE_PAP_BASELINE_DATE",
+    "build_verdict_timeline_from_git",
+    "count_verdict_changes",
+    "default_verdict_timeline_pdf_path",
+    "default_verdict_timeline_png_path",
+    "render_verdict_timeline_plot",
+    "summarize_verdict_timeline_for_public_summary",
+    "total_verdict_changes",
 ]
