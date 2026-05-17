@@ -65,6 +65,7 @@ index-inclusion-citation-graph = "index_inclusion_research.cli:run_citation_grap
 index-inclusion-verdict-timeline = "index_inclusion_research.cli:run_verdict_timeline_main"
 index-inclusion-methodology-summary = "index_inclusion_research.cli:run_methodology_summary_main"
 index-inclusion-paper-integrity = "index_inclusion_research.cli:run_paper_integrity_main"
+index-inclusion-tex-export = "index_inclusion_research.cli:run_tex_export_main"
 
 [project.optional-dependencies]
 methods = [

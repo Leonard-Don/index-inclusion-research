@@ -4,6 +4,16 @@ All notable, user-visible changes to `index-inclusion-research`.
 
 ## Unreleased
 
+- feat(paper): LaTeX / Overleaf export CLI. New
+  `index-inclusion-tex-export` console script (the 43rd) converts
+  `paper/skeleton.md` and `paper/methodology_summary.md` into
+  `paper/manuscript.tex` plus `paper/references.bib`. The exporter keeps
+  the existing paper-integrity gate read-only and downstream: it consumes
+  the already generated Markdown paper artifacts, preserves TODO markers
+  as `\TODO{...}` by default for Overleaf editing, supports
+  `--include-todos false` for review drafts, and offers `ctex` or
+  `xeCJK` CJK preambles. README / CLI reference counts are bumped 42→43.
+
 - feat(paper): cross-document integrity gate. New
   `index-inclusion-paper-integrity` console script (the 42nd) is the
   publication-time gate that the paper bundle's artifacts are mutually
