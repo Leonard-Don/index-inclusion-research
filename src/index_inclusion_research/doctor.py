@@ -1739,6 +1739,21 @@ def check_paper_skeleton_freshness(
         "Run `index-inclusion-paper-skeleton --force` to regenerate "
         "paper/skeleton.md."
     )
+    if (
+        os.getenv("CI", "").lower() == "true"
+        and skeleton_path.is_relative_to(ROOT)
+        and verdicts_csv_path.is_relative_to(ROOT)
+    ):
+        return CheckResult(
+            name=name,
+            status="pass",
+            message=(
+                f"paper skeleton {_relative_label(skeleton_path)} is "
+                "generated/gitignored; skipping presence and mtime freshness "
+                "in CI because fresh checkouts do not include paper/ and "
+                "checkout mtimes are not generation times."
+            ),
+        )
     if not skeleton_path.exists():
         return CheckResult(
             name=name,
@@ -1757,20 +1772,6 @@ def check_paper_skeleton_freshness(
                 "is missing; cannot verify freshness."
             ),
             fix=fix_command,
-        )
-    if (
-        os.getenv("CI", "").lower() == "true"
-        and skeleton_path.is_relative_to(ROOT)
-        and verdicts_csv_path.is_relative_to(ROOT)
-    ):
-        return CheckResult(
-            name=name,
-            status="pass",
-            message=(
-                f"paper skeleton {_relative_label(skeleton_path)} is present; "
-                "skipping mtime freshness in CI because checkout mtimes are "
-                "not generation times."
-            ),
         )
     skeleton_mtime = skeleton_path.stat().st_mtime
     stale_inputs: list[Path] = []
