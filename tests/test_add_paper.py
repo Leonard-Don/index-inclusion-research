@@ -530,3 +530,44 @@ def test_run_integrity_failure_returns_report(
     assert report.bibtex_updated is True
     assert report.paper_integrity_exit_code == 1
     assert "paper-integrity failed" in str(excinfo.value)
+
+
+def test_print_json_template_is_valid_and_side_effect_free(
+    tmp_catalog: Path, tmp_bibtex: Path, capsys
+) -> None:
+    """``--print-json-template`` prints a valid payload and never writes files."""
+    catalog_before = tmp_catalog.read_text(encoding="utf-8")
+    bibtex_before = tmp_bibtex.read_text(encoding="utf-8")
+
+    rc = ap.main(
+        [
+            "--print-json-template",
+            "--catalog-path",
+            str(tmp_catalog),
+            "--bibtex-path",
+            str(tmp_bibtex),
+        ]
+    )
+
+    assert rc == 0
+    captured = capsys.readouterr()
+    assert captured.err == ""
+    payload = json.loads(captured.out)
+    assert payload["paper_id"] == "greenwood_sammon_2024"
+    assert set(payload) == {
+        "paper_id",
+        "authors",
+        "year",
+        "title",
+        "position",
+        "market_focus",
+        "journal",
+        "abstract",
+        "methodology",
+        "research_thread",
+        "related_paper_ids",
+        "camp",
+    }
+    assert isinstance(ap.NewPaper(**payload), ap.NewPaper)
+    assert tmp_catalog.read_text(encoding="utf-8") == catalog_before
+    assert tmp_bibtex.read_text(encoding="utf-8") == bibtex_before

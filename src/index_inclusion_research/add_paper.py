@@ -51,6 +51,7 @@ import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from index_inclusion_research import paths
 
@@ -104,6 +105,21 @@ VALID_CAMPS = (
 )
 
 PLACEHOLDER_LITERAL = "[TODO: not provided]"
+
+JSON_TEMPLATE: dict[str, Any] = {
+    "paper_id": "greenwood_sammon_2024",
+    "authors": "Robin Greenwood; Marco Sammon",
+    "year": "2024",
+    "title": "The Disappearing Index Effect (Extended Sample)",
+    "position": "contra",
+    "market_focus": "US",
+    "journal": "Journal of Finance (working paper)",
+    "abstract": "One-sentence core logic or abstract excerpt.",
+    "methodology": "event_study",
+    "research_thread": "price_pressure",
+    "related_paper_ids": ["greenwood_sammon_2022", "shleifer_1986"],
+    "camp": DEFAULT_CAMP,
+}
 
 
 # ---------------------------------------------------------------------------
@@ -968,6 +984,17 @@ def interactive_add_paper(
 # ---------------------------------------------------------------------------
 
 
+def render_json_template() -> str:
+    """Return a copy-pasteable ``--from-json`` starter payload.
+
+    This mode is intentionally side-effect free: it does not import or read the
+    live catalog, and it never prompts. Researchers can save the printed JSON,
+    edit the fields, then run ``index-inclusion-add-paper --from-json``.
+    """
+
+    return json.dumps(JSON_TEMPLATE, ensure_ascii=False, indent=2) + "\n"
+
+
 def _load_from_json(path: Path) -> NewPaper:
     """Load a NewPaper from a JSON file (non-interactive add)."""
     if not path.exists():
@@ -1021,6 +1048,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Read paper fields from a JSON file instead of prompting.",
     )
     parser.add_argument(
+        "--print-json-template",
+        action="store_true",
+        help="Print a side-effect-free starter JSON payload for --from-json and exit.",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Show what would change without writing anything.",
@@ -1055,6 +1087,10 @@ def main(argv: list[str] | None = None) -> int:
         help="Override the BibTeX path (default: paper/references.bib).",
     )
     args = parser.parse_args(argv)
+
+    if args.print_json_template:
+        print(render_json_template(), end="")
+        return 0
 
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
