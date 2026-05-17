@@ -204,3 +204,34 @@ PAP 纪律现在由 `index-inclusion-doctor` 主动把关——`pap_deviation_no
 - 如果新增外部 HS300 L3 数据，先跑 `index-inclusion-prepare-hs300-rdd --check-only`，
   再跑 `make doctor-strict`。
 - 如果 README、paper outline 和 CSV 不一致，以 CSV + PAP 为准，随后同步文档。
+
+## 附录 G. Methodology summary card
+
+`paper/methodology_summary.md` 是项目内置的单页方法论摘要卡，由 console script `index-inclusion-methodology-summary` 自动生成。和 `paper/skeleton.md` 不同，摘要卡**完全不出 `[TODO: prose]` 标记**——它把当前 verdicts CSV、事件研究面板行数 (894 / 212,757)、`data/public/index_research_summary.json` 的阈值 / AR 引擎 / 联合二维稳健性、PAP 偏离五类计数、`results/literature/citation_centrality.csv` 的 top-5 eigenvector 中心节点、`pyproject.toml` console-scripts 总数与 `doctor.DEFAULT_CHECKS` 健康检查总数蒸馏成一份 ~3-5 KB 的速查卡。
+
+**面向场景**：答辩 / 评审 / 课程汇报 / 同行简短问答（「你到底做了什么？」「样本多大？」「稳健性覆盖几个轴？」「PAP 还守着吗？」），不需要拉开论文 §3 prose。
+
+**8 节速览**：
+
+1. 样本规模（H1-H7 假说表 + 事件研究面板 + 匹配对照面板 + 时间窗）
+2. 估计方法（AR 模型 / 标准化 / 多重检验 / Bootstrap / RDD）
+3. 稳健性覆盖（阈值 / AR 引擎 / 联合二维，自动派生 stable/cell 计数）
+4. PAP 纪律（基线 + 偏离分类 + 审计 CLI + Doctor 主动监控）
+5. 数据契约（`events.csv` / `prices.csv` / `benchmarks.csv` 字段速览）
+6. 复现命令（`make rebuild` / `make-figures-tables` / `paper-bundle --force` / `methodology-summary`）
+7. 关键文献基础（top-5 中心性 + 立场）
+8. 工具链（CLI / Doctor / Public summary / Paper bundle 计数）
+
+**值与监控**：
+
+- **永不需要手动同步**：所有 8 节的数值都从当前 artifact 自动派生；任何 verdict / 稳健性 / 文献库 / pyproject 变化，跑 `index-inclusion-methodology-summary` 即可同步。
+- **doctor 守护**：`methodology_summary_freshness` 检查在任何输入（verdicts CSV / public summary JSON / citation centrality CSV）mtime 比摘要卡新时 `warn`。
+- **paper-bundle 集成**：`make paper` 在 `_regenerate_artifacts` 第 7 步自动重生成摘要卡，bundle 永远 self-consistent。
+
+**用法**：
+
+```bash
+index-inclusion-methodology-summary            # 默认覆盖 paper/methodology_summary.md
+index-inclusion-methodology-summary --print    # 直接打到 stdout（适合 paper-skeleton 附录嵌入）
+make paper                                     # 与 skeleton.md 一起重生成
+```

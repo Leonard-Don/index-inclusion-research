@@ -1,6 +1,6 @@
 # 命令行入口参考
 
-40 个 console scripts 按用途分组：
+41 个 console scripts 按用途分组：
 
 - **数据流水线**：`build-event-sample` / `build-price-panel` / `match-controls` / `match-robustness` / `run-event-study` / `run-regressions`
 - **样本数据**：`generate-sample-data` / `download-real-data`
@@ -8,7 +8,7 @@
 - **Dashboard 与三条主线**：`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - **HS300 RDD 工具链**：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`（详见 [docs/hs300_rdd_workflow.md](hs300_rdd_workflow.md)）
 - **跨市场不对称 + 假说证据**：`cma`（7 条假说 verdict）/ `prepare-passive-aum` / `download-passive-aum-cn` / `download-cn-passive-aum-proxy` / `compute-h6-weight-change` / `refresh-real-evidence`
-- **总入口**：`rebuild-all`（10 步流水线一键跑）/ `verdict-summary`（终端速览）/ `pap-diff`（PAP 偏离审计）/ `doctor`（项目健康检查）/ `export-public-summary`（生成 data/public/index_research_summary.json）/ `paper-skeleton`（自动生成 paper/skeleton.md 论文骨架）
+- **总入口**：`rebuild-all`（10 步流水线一键跑）/ `verdict-summary`（终端速览）/ `pap-diff`（PAP 偏离审计）/ `doctor`（项目健康检查）/ `export-public-summary`（生成 data/public/index_research_summary.json）/ `paper-skeleton`（自动生成 paper/skeleton.md 论文骨架）/ `methodology-summary`（自动生成 paper/methodology_summary.md 方法论摘要卡）
 
 > `citation-graph` 生成的是启发式文献关联网络（主题/方法/年代链接），不是逐条 bibliography 引用核验。
 
@@ -430,7 +430,7 @@ python3 -m index_inclusion_research.citation_graph
 
 ## 17. 假说裁决演进时间线（`verdict-timeline`）
 
-`index-inclusion-verdict-timeline` 是 40 个 console scripts 的第 40 号。它通过 `git log --follow` 与 `git show <sha>:results/real_tables/cma_hypothesis_verdicts.csv` 把 H1..H7 的历史裁决从仓库 git 史里重建出来，渲染成一张 7 swimlane 时间线，给 PAP 自律一份**视觉的演化档案**——配合现有的 `pap-diff` 偏离审计（commit `48a22f0`），从“静态对比 PAP 基线”补到“动态展示研究迭代”。
+`index-inclusion-verdict-timeline` 是 41 个 console scripts 的第 40 号。它通过 `git log --follow` 与 `git show <sha>:results/real_tables/cma_hypothesis_verdicts.csv` 把 H1..H7 的历史裁决从仓库 git 史里重建出来，渲染成一张 7 swimlane 时间线，给 PAP 自律一份**视觉的演化档案**——配合现有的 `pap-diff` 偏离审计（commit `48a22f0`），从“静态对比 PAP 基线”补到“动态展示研究迭代”。
 
 - `results/figures/verdict_timeline.png` — 14×8 in @ 100 dpi 主图，每个 H 一行 swimlane；每个 commit 一个圆点（裁决保持）或方块（裁决文本改变）；颜色按裁决类别（绿=支持，黄=部分支持，红=证据不足）；2026-05-16 PAP baseline 画一条虚线；右侧 annotation 标注每条 H 的最新裁决。
 - `results/figures/verdict_timeline.pdf` — 矢量版同图。
@@ -450,6 +450,39 @@ python3 -m index_inclusion_research.outputs.verdict_timeline
 ```
 
 `export-public-summary` JSON 同步产出 `verdict_timeline` 段：`total_commits_tracked`、`first_commit_date`、`last_commit_date`、`total_verdict_changes`、`verdict_changes_per_hypothesis`。Doctor `verdict_timeline_artifact` 检查 PNG/PDF 是否比源 CSV (`cma_hypothesis_verdicts.csv`) 新；非 git 仓库（如解压的 tarball）下检查与图生成都会自动跳过，不抛错。
+
+## 18. 方法论摘要卡（`methodology-summary`）
+
+`index-inclusion-methodology-summary` 是 41 个 console scripts 的第 41 号。它把当前 verdicts CSV、`data/processed/real_events_clean.csv` 与 `real_matched_event_panel.csv` 行数、`data/public/index_research_summary.json` 的稳健性 / PAP 偏离块、`results/literature/citation_centrality.csv` 的 top-5 eigenvector 中心性、`pyproject.toml` 的 console-scripts 总数与 `doctor.DEFAULT_CHECKS` 的健康检查总数蒸馏成一份 ~3-5 KB 的单页 Markdown「方法论摘要卡」，落地到 `paper/methodology_summary.md`。
+
+与 `paper-skeleton` 的区别：摘要卡**完全不出 `[TODO: prose]` 标记**，所有数值与表格全部从工件自动派生，是答辩 / 评审「你到底做了什么？」一问的速查页。
+
+```bash
+# 默认产出（覆盖 paper/methodology_summary.md，~3-5 KB）
+index-inclusion-methodology-summary
+
+# 自定义输出位置
+index-inclusion-methodology-summary --output /tmp/methodology.md
+
+# 不写盘，直接打印到 stdout
+index-inclusion-methodology-summary --print
+
+# 模块等价调用
+python3 -m index_inclusion_research.methodology_summary
+```
+
+摘要卡结构（8 节）：
+
+- §1 样本规模（H1-H7 假说表 + 事件研究面板 894/212,757 行）
+- §2 估计方法（AR 模型 / 标准化 / 多重检验 / Bootstrap / RDD）
+- §3 稳健性覆盖（阈值 / AR 引擎 / 联合二维，自动派生 stable/cell 计数）
+- §4 PAP 纪律（基线 + 偏离分类 + 审计 CLI + Doctor 主动监控）
+- §5 数据契约（`events.csv` / `prices.csv` / `benchmarks.csv` 字段速览）
+- §6 复现命令（`make rebuild` / `make-figures-tables` / `paper-bundle --force` / `methodology-summary`）
+- §7 关键文献基础（top-5 中心性 + 立场，链路语义启发式相似性而非 bibliography）
+- §8 工具链（41 CLI / 27 doctor checks / public summary schema v1 / paper bundle 72 artifacts）
+
+Doctor `methodology_summary_freshness` 检查在任何输入（verdicts CSV / public summary JSON / citation centrality CSV）mtime 比摘要卡新时 `warn`；CI 环境下因 checkout mtime 不可信而自动 pass。`make paper` 与 `paper-bundle --force` 在 `_regenerate_artifacts` 第 7 步自动重生成本摘要卡，使 bundle 永远 self-consistent。
 
 ## Verdicts ↔ Literature 双向链接
 

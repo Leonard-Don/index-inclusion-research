@@ -235,10 +235,14 @@ def _regenerate_artifacts(root: Path, dest: Path | None = None) -> dict[str, str
     4. CMA AR-engine forest (PNG + PDF) ← existing engine cache only
     5. PAP deviation report CSV ← latest snapshot + verdicts CSV
     6. paper/skeleton.md ← verdicts CSV + PAP CSV + RDD CSV + public summary
+    7. paper/methodology_summary.md ← verdicts CSV + public summary +
+       citation centrality CSV + real matched panel
 
     The skeleton (step 6) lands at ``dest / "skeleton.md"`` rather than
     a copy from a results/ subdir — it's natively a paper-folder
-    artifact, so the bundle generates it in place inside ``dest``.
+    artifact, so the bundle generates it in place inside ``dest``. The
+    methodology summary (step 7) follows the same convention and lands
+    at ``dest / "methodology_summary.md"``.
 
     Each step is wrapped so a single failure (missing input, broken
     CSV) only logs a warning and never aborts the whole bundle. The
@@ -522,6 +526,29 @@ def _regenerate_artifacts(root: Path, dest: Path | None = None) -> dict[str, str
             status["paper_skeleton"] = "error"
     else:
         status["paper_skeleton"] = "skipped"
+
+    # ── 7) Methodology summary card (paper/methodology_summary.md) ─
+    # One-page methodology card — sample sizes, methods, sensitivity
+    # coverage, PAP discipline, data contracts, reproduction commands,
+    # top-centrality literature, tooling totals. Lands at the bundle
+    # root next to skeleton.md; carries no [TODO] markers (deterministic
+    # values only). Same defensive try/except as step 6.
+    if dest is not None and verdicts_csv.exists():
+        try:
+            from index_inclusion_research.methodology_summary import (
+                build_methodology_summary,
+            )
+
+            summary_path = dest / "methodology_summary.md"
+            summary_path.parent.mkdir(parents=True, exist_ok=True)
+            rendered = build_methodology_summary()
+            summary_path.write_text(rendered, encoding="utf-8")
+            status["methodology_summary"] = "ok"
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("methodology summary regeneration skipped: %s", exc)
+            status["methodology_summary"] = "error"
+    else:
+        status["methodology_summary"] = "skipped"
 
     return status
 
