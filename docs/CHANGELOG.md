@@ -4,6 +4,11 @@ All notable, user-visible changes to `index-inclusion-research`.
 
 ## Unreleased
 
+- feat(literature): `index-inclusion-add-paper --print-json-template`
+  prints a side-effect-free starter payload for `--from-json`. The JSON
+  contains every accepted `NewPaper` field, validates through the same
+  constructor, and exits before catalog/BibTeX paths are read or written.
+
 - feat(literature): interactive add-paper CLI (46th). New
   `index-inclusion-add-paper` console script lets the researcher add a
   new academic paper to the 16-paper `literature_catalog.PAPER_LIBRARY`
