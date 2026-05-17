@@ -26,6 +26,7 @@ from index_inclusion_research.doctor import (
     check_pap_deviation_no_flips,
     check_pap_snapshot_freshness,
     check_paper_audit,
+    check_paper_skeleton_freshness,
     check_paper_verdict_section_synced,
     check_pending_data_verdicts,
     check_public_summary_freshness,
@@ -926,6 +927,23 @@ def test_check_public_summary_freshness_warns_when_missing(tmp_path: Path) -> No
     assert result.status == "warn"
     assert "missing" in result.message
     assert "index-inclusion-export-public-summary" in result.fix
+
+
+def test_check_paper_skeleton_freshness_allows_missing_generated_file_in_ci(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CI", "true")
+
+    missing_skeleton = doctor_module.ROOT / "paper" / "missing_skeleton_for_ci.md"
+    assert not missing_skeleton.exists()
+
+    result = check_paper_skeleton_freshness(
+        skeleton_path=missing_skeleton,
+        verdicts_csv_path=doctor_module.DEFAULT_VERDICTS_CSV,
+    )
+
+    assert result.status == "pass"
+    assert "generated/gitignored" in result.message
 
 
 # ── orchestration ────────────────────────────────────────────────────
