@@ -517,6 +517,8 @@ def audit_paper_bundle(root: Path = ROOT, *, require_bundle: bool = True) -> Aud
         root / "paper" / "tables" / "cma_hypothesis_verdicts.tex",
         root / "paper" / "tables" / "patell_bmp_summary.csv",
         root / "paper" / "figures" / "cma_mechanism_heatmap.png",
+        root / "paper" / "figures" / "cma_verdicts_2d_robustness.png",
+        root / "paper" / "figures" / "cma_verdicts_2d_robustness.pdf",
         root / "paper" / "rdd" / "rdd_robustness.csv",
         root / "paper" / "narrative" / "research_delivery_package.md",
         root / "paper" / "data" / "pre-registration-2026-05-03.csv",
@@ -534,7 +536,7 @@ def audit_paper_bundle(root: Path = ROOT, *, require_bundle: bool = True) -> Aud
         name="paper_bundle_claim",
         status="pass",
         claim=claim,
-        message="Paper bundle contains the expected tables, figures, RDD files, narrative docs, and PAP snapshot.",
+        message="Paper bundle contains the expected tables, figures including the CMA 2D robustness heatmap, RDD files, narrative docs, and PAP snapshot.",
         artifacts=_existing_artifacts(required, root=root),
     )
 

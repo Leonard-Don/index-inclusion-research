@@ -144,6 +144,40 @@ index-inclusion-build-cma-ar-engine-forest \
 
 `make figures-tables` 与 `make paper` 同样只做 cache-only 重绘（不会自动 fire 一次 fresh market-engine 跑）。`index-inclusion-doctor` 的 `cma_ar_engine_forest_artifact` 检查在缓存非空但 PNG/PDF 缺失 / 过期时变 warn，与 `cma_sensitivity_forest_artifact` 平行。
 
+## 7. 2D Robustness 层（阈值 × AR 引擎 同时变）
+
+阈值灵敏度证明 verdict 不依赖于阈值；AR 引擎灵敏度证明 verdict 不依赖于 AR 模型；reviewer 的下一问通常是把两条合成一条：**"两条 axis 同时变会不会翻？"** 2D 稳健性热力图就是回答这一问的 headline 图。
+
+```bash
+# 默认 4 阈值 × 2 引擎 = 8 单元（每假说一行，56 单元）
+index-inclusion-build-cma-2d-robustness-heatmap
+
+# 自定义阈值 / 引擎组合
+index-inclusion-build-cma-2d-robustness-heatmap \
+  --thresholds 0.05 0.10 --ar-models adjusted market
+
+# 显式落盘路径
+index-inclusion-build-cma-2d-robustness-heatmap \
+  --png results/figures/cma_verdicts_2d_robustness.png \
+  --pdf results/figures/cma_verdicts_2d_robustness.pdf
+```
+
+输出图：
+- **行**：H1-H7（同 forest 图）
+- **列**：8 列，左 4 列为 adjusted 引擎（按 threshold 升序排列），右 4 列为 market 引擎，中间用粗黑分隔线区分两个引擎组；列顶部还有一行 `adjusted engine` / `market engine` 文字标签
+- **单元色温**：support-strength 评分，深红 = 0.0（无支持），白 = 0.5（部分），深蓝 = 1.0（强支持）
+- **单元 ASCII tag**：`S+` (支持/高) / `S` (支持/中-低) / `P+` (部分支持) / `I` (证据不足)，greyscale 打印仍可解码
+- **右侧 margin**：每行一个 `stable` / `1 flip` / `2+ flips` 标签，按 8 单元里 distinct verdict 字符串数量算 — 1 种 verdict = `stable`，2 种 = `1 flip`，≥3 种 = `2+ flips`
+- **解释边界**：色温与 verdict tag 都来自单轴 sweep 同一个 `classify_strength`，没有新的统计推断；reviewer 在意的是 "哪些假说在 8 单元里仍 100% 一致"（rock solid）vs "哪些假说仅在某些 (T, engine) 组合下翻"（fragile）
+
+Cache 设计的优先级：
+
+1. **dedicated 2D cache**：`results/sensitivity/grid_<T>_<engine>/cma_hypothesis_verdicts.csv`（同目录的 `cma_2d_robustness_cache_metadata.json` 记录 threshold + engine，threshold metadata mismatch 会被 invalid）。
+2. **single-axis fallback**：(0.10, adjusted) → `ar_adjusted/`；(0.10, market) → `ar_market/`；(T, adjusted) → `threshold_<T>/`。fallback 命中后会同步写一份到 dedicated cache，下次直接命中第一层。
+3. **fresh CMA pass**：只剩 (T≠0.10, market) 三个单元真正需要 fire CMA 一次（市场模型 panel 还要 materialize）；因为复用了 87d624c 和 1a6ba77 的缓存工作，首次跑 8 单元的 wall-clock 大概只是单一 market run 的 3 倍（约 6-10 分钟），之后所有单元都走 cache。
+
+`make figures-tables` 与 `make paper` 都走 cache-only 重绘（`build_cma_2d_robustness_heatmap_from_cache`），自动发现 `grid_*/` 或单轴 fallback，缺失的单元静默跳过（不会触发 fresh CMA）。`index-inclusion-doctor` 的 `cma_2d_robustness_heatmap_artifact` 检查在任意类型 cache 非空但 PNG/PDF 缺失/过期时变 warn，与前两个 robustness 检查平行。
+
 ## Doctor 严格门禁与机器可读输出
 
 `index-inclusion-doctor` 默认只在 `fail` 时返回非零退出码；`warn` 用来标记研究边界、生成物漂移或数据缺口（H2 AUM、H6 weight_change、H7 CN sector、HS300 RDD L2/L3 状态、matched_sample_balance）。常规 CI 让 warning 可见但不阻断；严格模式：

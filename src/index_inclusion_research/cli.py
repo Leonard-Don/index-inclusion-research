@@ -150,3 +150,9 @@ def run_build_cma_ar_engine_forest_main() -> int | None:
     return _run_package_main(
         "index_inclusion_research.build_cma_ar_engine_forest"
     )
+
+
+def run_build_cma_2d_robustness_heatmap_main() -> int | None:
+    return _run_package_main(
+        "index_inclusion_research.build_cma_2d_robustness_heatmap"
+    )

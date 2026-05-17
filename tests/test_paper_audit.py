@@ -112,7 +112,12 @@ def _seed_audit_project(root: Path) -> None:
         (root / "paper" / name).write_text("paper\n", encoding="utf-8")
     for name in ("event_study_summary.tex", "cma_hypothesis_verdicts.tex", "patell_bmp_summary.csv"):
         (root / "paper" / "tables" / name).write_text("x\n", encoding="utf-8")
-    (root / "paper" / "figures" / "cma_mechanism_heatmap.png").write_bytes(b"png")
+    for name in (
+        "cma_mechanism_heatmap.png",
+        "cma_verdicts_2d_robustness.png",
+        "cma_verdicts_2d_robustness.pdf",
+    ):
+        (root / "paper" / "figures" / name).write_bytes(b"png")
     for name in ("rdd_status.csv", "rdd_robustness.csv", "mccrary_density_test.csv"):
         (root / "paper" / "rdd" / name).write_text("x\n", encoding="utf-8")
     for name in (

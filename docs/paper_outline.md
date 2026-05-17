@@ -151,6 +151,23 @@ AR 引擎版证明 verdict 不依赖于 AR 模型选择。详细使用见
 [docs/sensitivity_workflow.md §6 AR Engine Robustness](sensitivity_workflow.md)。
 重绘：`index-inclusion-build-cma-ar-engine-forest`。
 
+**§4.3 正文头条 robustness 图——2D 稳健性热力图**：阈值版与 AR 引擎版是同一稳健性
+论证的两条独立 axis（"换阈值"vs"换 AR 模型"）；reviewer 把两条合起来的 follow-up
+通常是**"两条 axis 同时变会不会让结论翻？"**。把
+`results/figures/cma_verdicts_2d_robustness.png` 作为 §4.3 方法学小节的**正文 headline
+robustness 图**（**而非附录**）插入，让全文一次性回答两条 axis 的交叉：
+7 假说 × (4 阈值 × 2 引擎) = 56 单元；色温=support-strength 评分（深红=0.0 不支持，
+白=0.5 部分，深蓝=1.0 强支持），单元 ASCII tag (`S+`/`S`/`P+`/`I`) 提供 greyscale
+解码，左 4 列=adjusted 引擎、右 4 列=market 引擎，中间用粗黑分隔线区分；右侧 margin
+按 8 单元 distinct verdict 数量标注 `stable` / `1 flip` / `2+ flips`。读者扫描一眼可以
+得到 reviewer 真正想要的答案：
+**哪些假说在 8 单元里 verdict 完全一致**（rock solid，色块整行同色）
+**vs 哪些假说在某些 (T, engine) 组合下翻**（fragile，色块有撞色），
+其中后者是稿件 §5 局限与边界条件那一段需要点名的行。
+详细使用见 [docs/sensitivity_workflow.md §7 2D Robustness](sensitivity_workflow.md)。
+重绘：`index-inclusion-build-cma-2d-robustness-heatmap`（首次跑约 6-10 分钟，因为
+3 个 (T≠0.10, market) 单元需要 fresh CMA pass；其余 5 单元复用既有单轴 cache）。
+
 ### 4.4 中国市场 RDD 识别扩展（HS300）
 
 对应文件：

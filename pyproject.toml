@@ -58,6 +58,7 @@ index-inclusion-build-hs300-rdd-forest = "index_inclusion_research.cli:run_build
 index-inclusion-build-cma-verdicts-forest = "index_inclusion_research.cli:run_build_cma_verdicts_forest_main"
 index-inclusion-build-cma-sensitivity-forest = "index_inclusion_research.cli:run_build_cma_sensitivity_forest_main"
 index-inclusion-build-cma-ar-engine-forest = "index_inclusion_research.cli:run_build_cma_ar_engine_forest_main"
+index-inclusion-build-cma-2d-robustness-heatmap = "index_inclusion_research.cli:run_build_cma_2d_robustness_heatmap_main"
 
 [project.optional-dependencies]
 methods = [

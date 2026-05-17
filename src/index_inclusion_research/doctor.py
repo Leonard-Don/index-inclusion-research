@@ -61,6 +61,12 @@ DEFAULT_CMA_AR_ENGINE_FOREST_PNG = (
 DEFAULT_CMA_AR_ENGINE_FOREST_PDF = (
     ROOT / "results" / "figures" / "cma_verdicts_ar_engine.pdf"
 )
+DEFAULT_CMA_2D_ROBUSTNESS_HEATMAP_PNG = (
+    ROOT / "results" / "figures" / "cma_verdicts_2d_robustness.png"
+)
+DEFAULT_CMA_2D_ROBUSTNESS_HEATMAP_PDF = (
+    ROOT / "results" / "figures" / "cma_verdicts_2d_robustness.pdf"
+)
 PAP_SNAPSHOT_GLOB = "pre-registration-*.csv"
 PAP_SNAPSHOT_STALE_DAYS = 90
 
@@ -1424,6 +1430,97 @@ def check_cma_ar_engine_forest_artifact(
     )
 
 
+def check_cma_2d_robustness_heatmap_artifact(
+    *,
+    png_path: Path = DEFAULT_CMA_2D_ROBUSTNESS_HEATMAP_PNG,
+    pdf_path: Path = DEFAULT_CMA_2D_ROBUSTNESS_HEATMAP_PDF,
+    sensitivity_root: Path = DEFAULT_CMA_SENSITIVITY_ROOT,
+) -> CheckResult:
+    """Warn if the 2D (threshold × AR engine) robustness heatmap is
+    missing or stale.
+
+    Sister of :func:`check_cma_sensitivity_forest_artifact` and
+    :func:`check_cma_ar_engine_forest_artifact`: same three regimes,
+    but the inputs are the union of the dedicated 2D caches under
+    ``results/sensitivity/grid_<T>_<engine>/cma_hypothesis_verdicts.csv``
+    and the single-axis fallback caches under ``threshold_<T>/`` and
+    ``ar_<engine>/``. If no caches exist yet the user simply hasn't
+    opted into any sweep — the check stays a soft warn rather than a
+    fail so a fresh checkout isn't blocked.
+    """
+    fix_command = (
+        "Run `index-inclusion-build-cma-2d-robustness-heatmap` to refresh "
+        "the 2D (threshold × engine) heatmap."
+    )
+    name = "cma_2d_robustness_heatmap_artifact"
+    if not sensitivity_root.exists():
+        return CheckResult(
+            name=name,
+            status="pass",
+            message=(
+                f"sensitivity cache {_relative_label(sensitivity_root)} not "
+                "populated; 2D robustness heatmap is opt-in."
+            ),
+        )
+    cached_csvs = sorted(
+        list(sensitivity_root.glob("grid_*/cma_hypothesis_verdicts.csv"))
+        + list(sensitivity_root.glob("threshold_*/cma_hypothesis_verdicts.csv"))
+        + list(sensitivity_root.glob("ar_*/cma_hypothesis_verdicts.csv"))
+    )
+    if not cached_csvs:
+        return CheckResult(
+            name=name,
+            status="pass",
+            message=(
+                f"sensitivity cache {_relative_label(sensitivity_root)} has "
+                "no per-cell CSVs (grid_*, threshold_*, ar_*); 2D heatmap "
+                "is opt-in."
+            ),
+        )
+    missing_outputs = [p for p in (png_path, pdf_path) if not p.exists()]
+    if missing_outputs:
+        labels = ", ".join(_relative_label(p) for p in missing_outputs)
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"2D robustness heatmap artifact(s) missing despite "
+                f"populated cache ({len(cached_csvs)} cell CSV(s)): {labels}"
+            ),
+            fix=fix_command,
+        )
+    png_mtime = png_path.stat().st_mtime
+    pdf_mtime = pdf_path.stat().st_mtime
+    output_mtime = min(png_mtime, pdf_mtime)
+    stale_inputs = [p for p in cached_csvs if p.stat().st_mtime > output_mtime]
+    if stale_inputs:
+        details = tuple(
+            f"{_relative_label(p)} newer than "
+            f"{_relative_label(png_path)} / {_relative_label(pdf_path)}"
+            for p in stale_inputs
+        )
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"{len(stale_inputs)} cached cell CSV(s) newer than the 2D "
+                "robustness heatmap; re-run of the build CLI overdue."
+            ),
+            fix=fix_command,
+            details=details,
+        )
+    cell_count = len(cached_csvs)
+    return CheckResult(
+        name=name,
+        status="pass",
+        message=(
+            f"2D robustness heatmap artifacts ({_relative_label(png_path)}, "
+            f"{_relative_label(pdf_path)}) are fresher than {cell_count} "
+            "cached cell CSV(s)."
+        ),
+    )
+
+
 def check_cma_sensitivity_forest_artifact(
     *,
     png_path: Path = DEFAULT_CMA_SENSITIVITY_FOREST_PNG,
@@ -1542,6 +1639,7 @@ DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_cma_verdicts_forest_artifact,
     check_cma_sensitivity_forest_artifact,
     check_cma_ar_engine_forest_artifact,
+    check_cma_2d_robustness_heatmap_artifact,
     check_chart_builders_register,
     check_console_scripts_importable,
     check_paper_audit,
