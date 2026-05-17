@@ -92,6 +92,10 @@ DEFAULT_VERDICT_TIMELINE_SOURCE_CSV = (
     ROOT / "results" / "real_tables" / "cma_hypothesis_verdicts.csv"
 )
 DEFAULT_PAPER_SKELETON_MD = ROOT / "paper" / "skeleton.md"
+DEFAULT_METHODOLOGY_SUMMARY_MD = ROOT / "paper" / "methodology_summary.md"
+DEFAULT_CITATION_CENTRALITY_CSV_FOR_SUMMARY = (
+    ROOT / "results" / "literature" / "citation_centrality.csv"
+)
 PAP_SNAPSHOT_GLOB = "pre-registration-*.csv"
 PAP_SNAPSHOT_STALE_DAYS = 90
 
@@ -1960,6 +1964,99 @@ def check_paper_skeleton_freshness(
     )
 
 
+def check_methodology_summary_freshness(
+    *,
+    summary_path: Path = DEFAULT_METHODOLOGY_SUMMARY_MD,
+    verdicts_csv_path: Path = DEFAULT_VERDICTS_CSV,
+    public_summary_path: Path = DEFAULT_PUBLIC_SUMMARY_JSON,
+    centrality_csv_path: Path = DEFAULT_CITATION_CENTRALITY_CSV_FOR_SUMMARY,
+) -> CheckResult:
+    """Warn if ``paper/methodology_summary.md`` is missing or older than any
+    of its auto-populated input artifacts.
+
+    The methodology summary is a generated paper artifact that bakes in
+    the current verdict sample-sizes, public-summary robustness coverage,
+    PAP deviation block, and top-5 centrality citations. If any input has
+    been refreshed but the summary was not regenerated, the rendered card
+    will misrepresent the current research state. Mirrors the freshness
+    pattern used by :func:`check_paper_skeleton_freshness` and
+    :func:`check_public_summary_freshness`.
+    """
+    name = "methodology_summary_freshness"
+    fix_command = (
+        "Run `index-inclusion-methodology-summary` to regenerate "
+        "paper/methodology_summary.md."
+    )
+    if (
+        os.getenv("CI", "").lower() == "true"
+        and summary_path.is_relative_to(ROOT)
+        and verdicts_csv_path.is_relative_to(ROOT)
+    ):
+        return CheckResult(
+            name=name,
+            status="pass",
+            message=(
+                f"methodology summary {_relative_label(summary_path)} is "
+                "generated/gitignored; skipping presence and mtime freshness "
+                "in CI because fresh checkouts may not include paper/ and "
+                "checkout mtimes are not generation times."
+            ),
+        )
+    if not summary_path.exists():
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"methodology summary {_relative_label(summary_path)} is missing."
+            ),
+            fix=fix_command,
+        )
+    if not verdicts_csv_path.exists():
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"methodology summary input {_relative_label(verdicts_csv_path)} "
+                "is missing; cannot verify freshness."
+            ),
+            fix=fix_command,
+        )
+    summary_mtime = summary_path.stat().st_mtime
+    stale_inputs: list[Path] = []
+    for csv in (
+        verdicts_csv_path,
+        public_summary_path,
+        centrality_csv_path,
+    ):
+        if csv.exists() and csv.stat().st_mtime > summary_mtime:
+            stale_inputs.append(csv)
+    if stale_inputs:
+        details = tuple(
+            f"{_relative_label(p)} mtime newer than "
+            f"{_relative_label(summary_path)}"
+            for p in stale_inputs
+        )
+        return CheckResult(
+            name=name,
+            status="warn",
+            message=(
+                f"{len(stale_inputs)} input(s) newer than "
+                f"{_relative_label(summary_path)}; re-run of "
+                f"`index-inclusion-methodology-summary` overdue."
+            ),
+            fix=fix_command,
+            details=details,
+        )
+    return CheckResult(
+        name=name,
+        status="pass",
+        message=(
+            f"methodology summary {_relative_label(summary_path)} is fresher "
+            f"than {_relative_label(verdicts_csv_path)} and siblings."
+        ),
+    )
+
+
 DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_hypothesis_paper_ids_resolve,
     check_verdicts_csv_health,
@@ -1982,6 +2079,7 @@ DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_cma_2d_robustness_heatmap_artifact,
     check_public_summary_freshness,
     check_paper_skeleton_freshness,
+    check_methodology_summary_freshness,
     check_chart_builders_register,
     check_console_scripts_importable,
     check_heuristic_citation_centrality_schema,

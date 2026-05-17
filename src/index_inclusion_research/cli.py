@@ -174,3 +174,9 @@ def run_verdict_timeline_main() -> int | None:
     return _run_package_main(
         "index_inclusion_research.outputs.verdict_timeline"
     )
+
+
+def run_methodology_summary_main() -> int | None:
+    return _run_package_main(
+        "index_inclusion_research.methodology_summary"
+    )

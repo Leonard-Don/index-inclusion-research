@@ -4,6 +4,29 @@ All notable, user-visible changes to `index-inclusion-research`.
 
 ## Unreleased
 
+- feat(paper): methodology summary auto-generator. New
+  `index-inclusion-methodology-summary` console script (the 41st)
+  renders a single-page methodology card to
+  `paper/methodology_summary.md` by combining
+  `results/real_tables/cma_hypothesis_verdicts.csv` (§1 sample sizes),
+  `data/processed/real_events_clean.csv` and
+  `real_matched_event_panel.csv` (event-panel + matched-control row
+  counts), `data/public/index_research_summary.json` (§3 stability
+  counts per threshold / AR engine / 2D axis and §4 PAP deviation
+  classification), `results/literature/citation_centrality.csv` (top-5
+  eigenvector centrality + literature_catalog stance/year join), and
+  `pyproject.toml` + `doctor.DEFAULT_CHECKS` (toolchain counts). The
+  card carries NO `[TODO: prose]` markers — every value is
+  deterministically derived — so it answers "what did you actually
+  do?" in 3-5 KB without making the reader walk through the full
+  paper §3. Doctor gains `check_methodology_summary_freshness` (warns
+  when any input mtime is newer than the rendered card; CI auto-passes
+  because checkout mtimes are not generation times).
+  `paper-bundle --force` and `make paper` add a 7th regeneration step
+  so the bundle stays self-consistent. README CLI badge bumped 40→41,
+  `docs/cli_reference.md` gains §18, `docs/research_delivery_package.md`
+  gains 附录 G.
+
 - feat(figures): verdict evolution timeline reconstructed from git log.
   New `index-inclusion-verdict-timeline` console script (the 40th) walks
   `git log --follow -- results/real_tables/cma_hypothesis_verdicts.csv`
