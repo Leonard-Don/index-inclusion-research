@@ -26,6 +26,9 @@ Design contract:
 - **paper_id discipline.** Must match ``[a-z][a-z0-9_]*`` (lowercase
   underscore_only). Duplicates of an existing ``paper_id`` are rejected
   with a helpful error so re-runs are idempotent / never silently double.
+- **related_paper_ids discipline.** Related ids accept a list/tuple or
+  comma-separated string, but must be unique and must not reference the new
+  paper itself.
 - **Catalog mutation is text-edit.** We rewrite ``_data.py`` with a new
   ``LiteraturePaper(...)`` literal inserted by a lexicographic scan of the
   existing thematic tuple. Import-time mutation would be impossible
@@ -166,7 +169,7 @@ def _normalize_related_paper_ids(value: object) -> tuple[str, ...]:
                     "[a-z][a-z0-9_]*."
                 )
             normalized.append(cleaned)
-        return tuple(normalized)
+        return _reject_duplicate_related_paper_ids(tuple(normalized))
 
     if not isinstance(value, (list, tuple)):
         raise AddPaperError(
@@ -192,7 +195,22 @@ def _normalize_related_paper_ids(value: object) -> tuple[str, ...]:
                 f"invalid {field} {cleaned!r}: must match [a-z][a-z0-9_]*."
             )
         normalized.append(cleaned)
-    return tuple(normalized)
+    return _reject_duplicate_related_paper_ids(tuple(normalized))
+
+
+def _reject_duplicate_related_paper_ids(
+    related_paper_ids: tuple[str, ...],
+) -> tuple[str, ...]:
+    """Reject repeated related paper ids while preserving input order."""
+    seen: set[str] = set()
+    for paper_id in related_paper_ids:
+        if paper_id in seen:
+            raise AddPaperError(
+                "related_paper_ids contains duplicate paper_id "
+                f"{paper_id!r}; values must be unique."
+            )
+        seen.add(paper_id)
+    return related_paper_ids
 
 
 @dataclass
@@ -290,6 +308,11 @@ class NewPaper:
         self.related_paper_ids = _normalize_related_paper_ids(
             self.related_paper_ids
         )
+        if self.paper_id in self.related_paper_ids:
+            raise AddPaperError(
+                "related_paper_ids self-reference is not allowed: current "
+                f"paper_id {self.paper_id!r} appears in related_paper_ids."
+            )
 
 
 @dataclass

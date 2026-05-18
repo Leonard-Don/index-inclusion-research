@@ -192,7 +192,10 @@ def test_duplicate_paper_id_rejected_with_helpful_message(
     tmp_catalog: Path, tmp_bibtex: Path
 ) -> None:
     """Adding an existing paper_id surfaces a clear ``already exists`` error."""
-    duplicate_data = _sample_paper_data(paper_id="shleifer_1986")
+    duplicate_data = _sample_paper_data(
+        paper_id="shleifer_1986",
+        related_paper_ids=("greenwood_sammon_2022",),
+    )
     with pytest.raises(ap.AddPaperError) as excinfo:
         ap.add_paper(
             duplicate_data,
@@ -433,6 +436,96 @@ def test_from_json_rejects_non_string_related_paper_ids(tmp_path: Path) -> None:
     assert "expected string" in message
 
 
+def test_related_paper_ids_reject_duplicate_list_values() -> None:
+    """List input must not repeat the same related paper id."""
+    with pytest.raises(ap.AddPaperError) as excinfo:
+        ap.NewPaper(
+            **_sample_paper_data(
+                related_paper_ids=[
+                    "greenwood_sammon_2022",
+                    "shleifer_1986",
+                    "greenwood_sammon_2022",
+                ],
+            )
+        )
+
+    message = str(excinfo.value)
+    assert "related_paper_ids" in message
+    assert "greenwood_sammon_2022" in message
+
+
+def test_from_json_rejects_duplicate_comma_related_paper_ids(
+    tmp_path: Path,
+) -> None:
+    """Comma-separated ``related_paper_ids`` must also be unique."""
+    payload = _sample_paper_data(
+        related_paper_ids=(
+            "greenwood_sammon_2022, shleifer_1986, greenwood_sammon_2022"
+        ),
+    )
+    json_path = tmp_path / "duplicate_comma_related.json"
+    json_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ap.AddPaperError) as excinfo:
+        ap._load_from_json(json_path)
+
+    message = str(excinfo.value)
+    assert "related_paper_ids" in message
+    assert "greenwood_sammon_2022" in message
+
+
+def test_related_paper_ids_reject_self_reference() -> None:
+    """A new paper cannot list itself as a related paper."""
+    with pytest.raises(ap.AddPaperError) as excinfo:
+        ap.NewPaper(
+            **_sample_paper_data(
+                paper_id="greenwood_sammon_2024",
+                related_paper_ids=[
+                    "shleifer_1986",
+                    "greenwood_sammon_2024",
+                ],
+            )
+        )
+
+    message = str(excinfo.value)
+    assert "related_paper_ids" in message
+    assert "greenwood_sammon_2024" in message
+
+
+def test_cli_main_rejects_self_related_paper_id_before_writes(
+    tmp_catalog: Path, tmp_bibtex: Path, tmp_path: Path, capsys
+) -> None:
+    """Self-referential JSON exits 2 before catalog/BibTeX writes."""
+    catalog_before = tmp_catalog.read_text(encoding="utf-8")
+    bibtex_before = tmp_bibtex.read_text(encoding="utf-8")
+    payload = _sample_paper_data(
+        paper_id="greenwood_sammon_2024",
+        related_paper_ids=["shleifer_1986", "greenwood_sammon_2024"],
+    )
+    bad_json = tmp_path / "self_related.json"
+    bad_json.write_text(json.dumps(payload), encoding="utf-8")
+
+    rc = ap.main(
+        [
+            "--from-json",
+            str(bad_json),
+            "--catalog-path",
+            str(tmp_catalog),
+            "--bibtex-path",
+            str(tmp_bibtex),
+            "--skip-downstream",
+        ]
+    )
+
+    assert rc == 2
+    captured = capsys.readouterr()
+    assert "add-paper error" in captured.err
+    assert "related_paper_ids" in captured.err
+    assert "greenwood_sammon_2024" in captured.err
+    assert tmp_catalog.read_text(encoding="utf-8") == catalog_before
+    assert tmp_bibtex.read_text(encoding="utf-8") == bibtex_before
+
+
 def test_cli_main_rejects_blank_related_paper_ids_from_json(
     tmp_catalog: Path, tmp_bibtex: Path, tmp_path: Path, capsys
 ) -> None:
@@ -481,6 +574,28 @@ def test_from_json_accepts_comma_separated_related_paper_ids(
         "greenwood_sammon_2022",
         "shleifer_1986",
     )
+
+
+def test_add_paper_keeps_valid_related_paper_ids_successful(
+    tmp_catalog: Path, tmp_bibtex: Path
+) -> None:
+    """Distinct related paper ids still add successfully."""
+    report = ap.add_paper(
+        _sample_paper_data(
+            related_paper_ids=["greenwood_sammon_2022", "shleifer_1986"]
+        ),
+        catalog_path=tmp_catalog,
+        bibtex_path=tmp_bibtex,
+        skip_downstream=True,
+    )
+
+    assert report.paper_id == "greenwood_sammon_2024"
+    assert report.related_paper_ids == (
+        "greenwood_sammon_2022",
+        "shleifer_1986",
+    )
+    assert report.catalog_updated is True
+    assert report.bibtex_updated is True
 
 
 def test_alphabetical_insertion_position(
