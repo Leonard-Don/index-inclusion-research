@@ -4,6 +4,36 @@ All notable, user-visible changes to `index-inclusion-research`.
 
 ## Unreleased
 
+- feat(figures): literature chronology timeline (47th CLI). New
+  `index-inclusion-literature-timeline` console script renders the
+  16-paper `PAPER_LIBRARY` as a single figure: X-axis is publication
+  year (1986→2026), Y-axis is one swimlane per research thread
+  (短期价格压力 / 需求曲线效应 / 沪深300论文复现), marker color
+  encodes position (正方=蓝, 反方=红, 中性=灰) sourced from the
+  catalog's `stance` field, marker size linearly maps the heuristic
+  in-degree centrality column from `results/literature/citation_centrality.csv`
+  (anchor papers like Shleifer 1986 sit at the top end; freshly added
+  2022 contra papers at the floor — still visible). Three light era
+  bands annotate the chronology behind the markers: 1986-2002
+  classical, 2002-2014 skeptics, 2014+ China + identification. Source
+  is read-only — no paper metadata is fabricated; `年份待核验` falls
+  back to 2014 with an INFO log so future catalog fixes auto-correct.
+  Defaults write `results/literature/literature_timeline.{png,pdf}`;
+  `paper-bundle` ships the PDF in the figures/ section so reviewers
+  pick it up automatically. `export-public-summary` adds a
+  `literature_timeline` block (years_covered, n_papers_pre_2002/
+  2002_to_2014/post_2014, dominant_position_by_era, anchors_by_era top-2
+  per era). `figures_tables` re-renders the timeline as a `_maybe_*`
+  step; `paper-bundle._regenerate_artifacts` does the same in step 5a.
+  Doctor `check_literature_timeline_artifact` warns when the PNG/PDF
+  twins are missing or older than `citation_centrality.csv`. README
+  CLI badge bumped 46→47 (3 places), `docs/cli_reference.md` 头部
+  count + new §24, `docs/literature_to_project_guide.md` §1 文献综述
+  cross-reference. 18 new tests in `tests/test_literature_timeline.py`
+  (catalog coverage, PNG ≥800×600, era distribution + dominant-position
+  summary, missing-CSV fallback, synthetic 3-paper render, pyproject
+  registration, parametrized era-bucket boundary).
+
 - feat(literature): `index-inclusion-add-paper --print-json-template`
   prints a side-effect-free starter payload for `--from-json`. The JSON
   contains every accepted `NewPaper` field, validates through the same

@@ -55,11 +55,17 @@ def _section_specs(root: Path) -> tuple[BundleSection, ...]:
             target_subdir="figures",
             # ``results/figures/`` is the canonical home for the cross-cutting
             # paper-grade forest plots (HS300 RDD robustness, CMA verdicts).
-            # ``results/real_figures/`` keeps CMA / event-study panels. We
-            # ship PNG (raster preview) + PDF (vector, paper-ready) for the
-            # forest plots; the *.png glob below also picks up the PNG, so
-            # the PDF is added explicitly.
-            sources=(root / "results" / "real_figures", root / "results" / "figures"),
+            # ``results/real_figures/`` keeps CMA / event-study panels.
+            # ``results/literature/`` carries the citation network and the
+            # 47th CLI's literature chronology PNG/PDF. We ship PNG (raster
+            # preview) + PDF (vector, paper-ready) for the forest plots;
+            # the *.png glob below also picks up the PNG so PDFs are added
+            # explicitly.
+            sources=(
+                root / "results" / "real_figures",
+                root / "results" / "figures",
+                root / "results" / "literature",
+            ),
             glob_pattern="*.png",
             explicit_files=(
                 "hs300_rdd_robustness_forest.pdf",
@@ -72,6 +78,11 @@ def _section_specs(root: Path) -> tuple[BundleSection, ...]:
                 # reviewers how each H1..H7 verdict evolved across
                 # commits and where the PAP baseline freeze line sits.
                 "verdict_timeline.pdf",
+                # 47th CLI — literature chronology timeline rendered
+                # from PAPER_LIBRARY + citation_centrality.csv. Shows
+                # reviewers the 16-paper debate spread across year ×
+                # research thread with era bands.
+                "literature_timeline.pdf",
             ),
         ),
         BundleSection(
@@ -467,6 +478,35 @@ def _regenerate_artifacts(root: Path, dest: Path | None = None) -> dict[str, str
             status["pap_deviation_report"] = "error"
     else:
         status["pap_deviation_report"] = "skipped"
+
+    # ── 5a) Literature chronology timeline (47th CLI) ─────────────
+    # Renders a year × research-thread scatter for the 16-paper
+    # PAPER_LIBRARY, colored by position and sized by heuristic
+    # in-degree centrality. Source is the static catalog + the
+    # existing citation_centrality.csv (rendered with uniform marker
+    # sizes if the CSV is missing). Never crashes the bundle.
+    try:
+        from index_inclusion_research.outputs import (
+            assemble_literature_timeline_papers,
+            build_literature_timeline_plot,
+            default_literature_timeline_centrality_csv_path,
+            default_literature_timeline_pdf_path,
+            default_literature_timeline_png_path,
+        )
+
+        lit_centrality = default_literature_timeline_centrality_csv_path(root)
+        lit_papers = assemble_literature_timeline_papers(
+            centrality_csv_path=lit_centrality if lit_centrality.exists() else None
+        )
+        build_literature_timeline_plot(
+            lit_papers,
+            output_png_path=default_literature_timeline_png_path(root),
+            output_pdf_path=default_literature_timeline_pdf_path(root),
+        )
+        status["literature_timeline"] = "ok"
+    except Exception as exc:  # noqa: BLE001 - never break bundle on render error
+        logger.warning("literature timeline regeneration skipped: %s", exc)
+        status["literature_timeline"] = "error"
 
     # ── 5b) Heuristic literature-link network (PNG + PDF + CSV) ────
     # Source: PAPER_LIBRARY (no on-disk dependency); always re-render so

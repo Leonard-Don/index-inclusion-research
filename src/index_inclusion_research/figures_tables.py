@@ -117,6 +117,41 @@ def _maybe_build_verdict_timeline(
         return
 
 
+def _maybe_build_literature_timeline(
+    *,
+    repo_root: Path | None = None,
+) -> None:
+    """Refresh the 16-paper literature chronology figure.
+
+    Mirrors the other ``_maybe_*`` helpers: the renderer tolerates a
+    missing ``citation_centrality.csv`` (uniform marker sizes), so we
+    just guard against an outright import / OSError so figures_tables
+    keeps going on a corrupt install.
+    """
+    root = (repo_root or ROOT).resolve()
+    try:
+        from index_inclusion_research.outputs import (
+            assemble_literature_timeline_papers,
+            build_literature_timeline_plot,
+            default_literature_timeline_centrality_csv_path,
+            default_literature_timeline_pdf_path,
+            default_literature_timeline_png_path,
+        )
+
+        centrality_csv = default_literature_timeline_centrality_csv_path(root)
+        papers = assemble_literature_timeline_papers(
+            centrality_csv_path=centrality_csv if centrality_csv.exists() else None
+        )
+        build_literature_timeline_plot(
+            papers,
+            output_png_path=default_literature_timeline_png_path(root),
+            output_pdf_path=default_literature_timeline_pdf_path(root),
+        )
+    except (ValueError, OSError) as exc:
+        logger.warning("literature timeline figure skipped: %s", exc)
+        return
+
+
 def _maybe_build_cma_verdicts_forest(
     *,
     tables_dir: Path | None,
@@ -458,6 +493,13 @@ def main(argv: list[str] | None = None) -> None:
     _maybe_build_verdict_timeline(
         figures_dir=Path(args.figures_dir) if args.figures_dir else None,
     )
+
+    # Literature chronology timeline (47th CLI). Reads the static
+    # PAPER_LIBRARY plus citation_centrality.csv (in-degree column) and
+    # renders the 16-paper year × research-thread scatter. Never crashes
+    # the figures pipeline — the renderer tolerates a missing centrality
+    # CSV with uniform marker sizes.
+    _maybe_build_literature_timeline()
 
     frames = {}
     long_event_level = pd.DataFrame()

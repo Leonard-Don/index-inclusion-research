@@ -26,6 +26,42 @@ from .cma_verdicts_sensitivity import (
     render_sensitivity_forest_plot,
 )
 from .hs300_rdd_forest import build_hs300_rdd_forest_plot
+from .literature_timeline import (
+    DEFAULT_YEAR_MAX as DEFAULT_LITERATURE_TIMELINE_YEAR_MAX,
+)
+from .literature_timeline import (
+    DEFAULT_YEAR_MIN as DEFAULT_LITERATURE_TIMELINE_YEAR_MIN,
+)
+from .literature_timeline import (
+    ERA_BANDS as LITERATURE_TIMELINE_ERA_BANDS,
+)
+from .literature_timeline import (
+    POSITION_COLORS as LITERATURE_TIMELINE_POSITION_COLORS,
+)
+from .literature_timeline import (
+    THREAD_ORDER as LITERATURE_TIMELINE_THREAD_ORDER,
+)
+from .literature_timeline import (
+    TimelinePaper as LiteratureTimelinePaper,
+)
+from .literature_timeline import (
+    assemble_timeline_papers as assemble_literature_timeline_papers,
+)
+from .literature_timeline import (
+    build_literature_timeline_plot,
+)
+from .literature_timeline import (
+    default_centrality_csv_path as default_literature_timeline_centrality_csv_path,
+)
+from .literature_timeline import (
+    default_pdf_path as default_literature_timeline_pdf_path,
+)
+from .literature_timeline import (
+    default_png_path as default_literature_timeline_png_path,
+)
+from .literature_timeline import (
+    summarize_for_public_summary as summarize_literature_timeline_for_public_summary,
+)
 from .reports import (
     build_asymmetry_summary,
     build_data_source_table,
@@ -113,4 +149,17 @@ __all__ = [
     "render_verdict_timeline_plot",
     "summarize_verdict_timeline_for_public_summary",
     "total_verdict_changes",
+    # Literature-chronology timeline (47th CLI)
+    "DEFAULT_LITERATURE_TIMELINE_YEAR_MAX",
+    "DEFAULT_LITERATURE_TIMELINE_YEAR_MIN",
+    "LITERATURE_TIMELINE_ERA_BANDS",
+    "LITERATURE_TIMELINE_POSITION_COLORS",
+    "LITERATURE_TIMELINE_THREAD_ORDER",
+    "LiteratureTimelinePaper",
+    "assemble_literature_timeline_papers",
+    "build_literature_timeline_plot",
+    "default_literature_timeline_centrality_csv_path",
+    "default_literature_timeline_pdf_path",
+    "default_literature_timeline_png_path",
+    "summarize_literature_timeline_for_public_summary",
 ]

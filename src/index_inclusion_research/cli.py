@@ -210,3 +210,9 @@ def run_add_paper_main() -> int | None:
     return _run_package_main(
         "index_inclusion_research.add_paper"
     )
+
+
+def run_literature_timeline_main() -> int | None:
+    return _run_package_main(
+        "index_inclusion_research.outputs.literature_timeline"
+    )
