@@ -598,6 +598,59 @@ def test_add_paper_keeps_valid_related_paper_ids_successful(
     assert report.bibtex_updated is True
 
 
+def test_add_paper_rejects_unknown_related_paper_ids_before_writes(
+    tmp_catalog: Path, tmp_bibtex: Path
+) -> None:
+    """Unknown related paper ids fail before catalog/BibTeX mutation."""
+    catalog_before = tmp_catalog.read_text(encoding="utf-8")
+    bibtex_before = tmp_bibtex.read_text(encoding="utf-8")
+
+    with pytest.raises(ap.AddPaperError) as excinfo:
+        ap.add_paper(
+            _sample_paper_data(related_paper_ids=("missing_paper",)),
+            catalog_path=tmp_catalog,
+            bibtex_path=tmp_bibtex,
+            skip_downstream=True,
+        )
+
+    message = str(excinfo.value)
+    assert "related_paper_ids" in message
+    assert "missing_paper" in message
+    assert tmp_catalog.read_text(encoding="utf-8") == catalog_before
+    assert tmp_bibtex.read_text(encoding="utf-8") == bibtex_before
+
+
+def test_cli_main_rejects_unknown_related_paper_ids_before_writes(
+    tmp_catalog: Path, tmp_bibtex: Path, tmp_path: Path, capsys
+) -> None:
+    """``--from-json`` exits 2 on unknown related ids without writing."""
+    catalog_before = tmp_catalog.read_text(encoding="utf-8")
+    bibtex_before = tmp_bibtex.read_text(encoding="utf-8")
+    payload = _sample_paper_data(related_paper_ids=["missing_paper"])
+    bad_json = tmp_path / "unknown_related.json"
+    bad_json.write_text(json.dumps(payload), encoding="utf-8")
+
+    rc = ap.main(
+        [
+            "--from-json",
+            str(bad_json),
+            "--catalog-path",
+            str(tmp_catalog),
+            "--bibtex-path",
+            str(tmp_bibtex),
+            "--skip-downstream",
+        ]
+    )
+
+    assert rc == 2
+    captured = capsys.readouterr()
+    assert "add-paper error" in captured.err
+    assert "related_paper_ids" in captured.err
+    assert "missing_paper" in captured.err
+    assert tmp_catalog.read_text(encoding="utf-8") == catalog_before
+    assert tmp_bibtex.read_text(encoding="utf-8") == bibtex_before
+
+
 def test_alphabetical_insertion_position(
     tmp_catalog: Path, tmp_bibtex: Path
 ) -> None:
