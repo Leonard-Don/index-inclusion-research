@@ -1052,12 +1052,35 @@ def render_json_template() -> str:
     return json.dumps(JSON_TEMPLATE, ensure_ascii=False, indent=2) + "\n"
 
 
+def _reject_duplicate_json_object_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """Build a JSON object while rejecting duplicate keys explicitly."""
+
+    seen: set[str] = set()
+    duplicates: list[str] = []
+    payload: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in seen and key not in duplicates:
+            duplicates.append(key)
+        seen.add(key)
+        payload[key] = value
+    if duplicates:
+        raise AddPaperError(
+            "--from-json contains duplicate field(s): "
+            + ", ".join(sorted(duplicates))
+            + ". Remove duplicate keys so the payload is unambiguous."
+        )
+    return payload
+
+
 def _load_from_json(path: Path) -> NewPaper:
     """Load a NewPaper from a JSON file (non-interactive add)."""
     if not path.exists():
         raise AddPaperError(f"--from-json file not found: {path}")
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = json.loads(
+            path.read_text(encoding="utf-8"),
+            object_pairs_hook=_reject_duplicate_json_object_pairs,
+        )
     except json.JSONDecodeError as exc:
         raise AddPaperError(f"--from-json file is not valid JSON: {exc}") from exc
     if not isinstance(payload, dict):

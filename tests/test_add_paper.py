@@ -714,6 +714,48 @@ def test_cli_main_returns_nonzero_on_validation_error(
     assert "add-paper error" in captured.err
 
 
+def test_cli_main_rejects_duplicate_json_fields_before_writes(
+    tmp_catalog: Path, tmp_bibtex: Path, tmp_path: Path, capsys
+) -> None:
+    """Duplicate JSON keys should not silently overwrite add-paper fields."""
+    catalog_before = tmp_catalog.read_text(encoding="utf-8")
+    bibtex_before = tmp_bibtex.read_text(encoding="utf-8")
+    bad_json = tmp_path / "duplicate_key.json"
+    bad_json.write_text(
+        """
+        {
+          "paper_id": "greenwood_sammon_2024",
+          "paper_id": "overwritten_2024",
+          "authors": "Robin Greenwood; Marco Sammon",
+          "year": "2024",
+          "title": "The Disappearing Index Effect (Extended Sample)",
+          "position": "contra",
+          "market_focus": "US"
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    rc = ap.main(
+        [
+            "--from-json",
+            str(bad_json),
+            "--catalog-path",
+            str(tmp_catalog),
+            "--bibtex-path",
+            str(tmp_bibtex),
+            "--skip-downstream",
+        ]
+    )
+
+    assert rc == 2
+    captured = capsys.readouterr()
+    assert "add-paper error" in captured.err
+    assert "duplicate field(s): paper_id" in captured.err
+    assert tmp_catalog.read_text(encoding="utf-8") == catalog_before
+    assert tmp_bibtex.read_text(encoding="utf-8") == bibtex_before
+
+
 def test_cli_main_rejects_unknown_json_fields(
     tmp_catalog: Path, tmp_bibtex: Path, tmp_path: Path, capsys
 ) -> None:
