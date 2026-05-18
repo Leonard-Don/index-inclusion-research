@@ -480,6 +480,33 @@ def test_cli_main_returns_nonzero_on_validation_error(
     assert "add-paper error" in captured.err
 
 
+def test_cli_main_rejects_unknown_json_fields(
+    tmp_catalog: Path, tmp_bibtex: Path, tmp_path: Path, capsys
+) -> None:
+    """``--from-json`` keeps the template schema explicit and reviewable."""
+    bad_json = tmp_path / "bad_unknown_field.json"
+    payload = _sample_paper_data()
+    payload["notes"] = "local reviewer note that should not enter schema"
+    bad_json.write_text(json.dumps(payload), encoding="utf-8")
+
+    rc = ap.main(
+        [
+            "--from-json",
+            str(bad_json),
+            "--catalog-path",
+            str(tmp_catalog),
+            "--bibtex-path",
+            str(tmp_bibtex),
+            "--skip-downstream",
+        ]
+    )
+
+    assert rc == 2
+    captured = capsys.readouterr()
+    assert "add-paper error" in captured.err
+    assert "unexpected field(s): notes" in captured.err
+
+
 def test_downstream_failure_raises_with_partial_write_report(
     tmp_catalog: Path, tmp_bibtex: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
