@@ -150,6 +150,51 @@ class AddPaperError(ValueError):
         self.report = report
 
 
+def _normalize_related_paper_ids(value: object) -> tuple[str, ...]:
+    """Normalize and validate accepted ``related_paper_ids`` input shapes."""
+    if isinstance(value, str):
+        candidates = (
+            piece.strip()
+            for piece in value.split(",")
+            if piece.strip()
+        )
+        normalized: list[str] = []
+        for cleaned in candidates:
+            if not PAPER_ID_RE.match(cleaned):
+                raise AddPaperError(
+                    f"invalid related_paper_id {cleaned!r}: must match "
+                    "[a-z][a-z0-9_]*."
+                )
+            normalized.append(cleaned)
+        return tuple(normalized)
+
+    if not isinstance(value, (list, tuple)):
+        raise AddPaperError(
+            "related_paper_ids must be a list/tuple of paper_id strings or "
+            "a comma-separated string."
+        )
+
+    normalized = []
+    for index, raw in enumerate(value):
+        field = f"related_paper_ids[{index}]"
+        if not isinstance(raw, str):
+            raise AddPaperError(
+                f"invalid {field}: expected string paper_id, got "
+                f"{type(raw).__name__}."
+            )
+        cleaned = raw.strip()
+        if not cleaned:
+            raise AddPaperError(
+                f"invalid {field}: expected non-empty string paper_id."
+            )
+        if not PAPER_ID_RE.match(cleaned):
+            raise AddPaperError(
+                f"invalid {field} {cleaned!r}: must match [a-z][a-z0-9_]*."
+            )
+        normalized.append(cleaned)
+    return tuple(normalized)
+
+
 @dataclass
 class NewPaper:
     """A typed wrapper for the inputs the add-paper CLI collects.
@@ -241,33 +286,10 @@ class NewPaper:
                 f"invalid camp {self.camp!r}: must be one of "
                 f"{', '.join(VALID_CAMPS)}."
             )
-        # Normalize related_paper_ids to a tuple of stripped strings.
-        related_raw: Sequence[str]
-        if isinstance(self.related_paper_ids, str):
-            related_raw = tuple(
-                piece.strip()
-                for piece in self.related_paper_ids.split(",")
-                if piece.strip()
-            )
-        else:
-            related_raw = self.related_paper_ids
-        normalized: list[str] = []
-        for raw in related_raw:
-            if not isinstance(raw, str):
-                raise AddPaperError(
-                    "invalid related_paper_ids: every value must be a string "
-                    f"paper_id, got {type(raw).__name__}."
-                )
-            cleaned = raw.strip()
-            if cleaned:
-                if not PAPER_ID_RE.match(cleaned):
-                    raise AddPaperError(
-                        f"invalid related_paper_id {cleaned!r}: must match "
-                        "[a-z][a-z0-9_]*."
-                    )
-                normalized.append(cleaned)
         # Use object.__setattr__ to support frozen-like reassignment.
-        self.related_paper_ids = tuple(normalized)
+        self.related_paper_ids = _normalize_related_paper_ids(
+            self.related_paper_ids
+        )
 
 
 @dataclass
@@ -1032,18 +1054,9 @@ def _load_from_json(path: Path) -> NewPaper:
         raise AddPaperError(
             "--from-json missing mandatory field(s): " + ", ".join(missing)
         )
-    # Accept "related_paper_ids" as list or comma-separated string.
-    related = payload.get("related_paper_ids", ())
-    if isinstance(related, str):
-        related = tuple(piece.strip() for piece in related.split(",") if piece.strip())
-    elif isinstance(related, (list, tuple)):
-        related = tuple(related)
-    else:
-        raise AddPaperError(
-            "related_paper_ids must be a list/tuple of paper_id strings or "
-            "a comma-separated string."
-        )
-    payload["related_paper_ids"] = related
+    payload["related_paper_ids"] = _normalize_related_paper_ids(
+        payload.get("related_paper_ids", ())
+    )
     return NewPaper(**payload)
 
 
