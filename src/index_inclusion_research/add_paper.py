@@ -28,7 +28,9 @@ Design contract:
   with a helpful error so re-runs are idempotent / never silently double.
 - **related_paper_ids discipline.** Related ids accept a list/tuple or
   comma-separated string, but must be unique and must not reference the new
-  paper itself.
+  paper itself. Every related id must already exist in ``PAPER_LIBRARY``;
+  unknown ids are rejected before any catalog / BibTeX write so typos cannot
+  be persisted into paper-integrity state.
 - **Catalog mutation is text-edit.** We rewrite ``_data.py`` with a new
   ``LiteraturePaper(...)`` literal inserted by a lexicographic scan of the
   existing thematic tuple. Import-time mutation would be impossible
@@ -802,18 +804,18 @@ def add_paper(
             f"{catalog_path} directly."
         )
 
-    # Validate that related_paper_ids reference existing or the new paper.
+    # Validate related ids against the current catalog before any write.
     unknown_related = [
         rid for rid in paper.related_paper_ids
         if rid not in existing_ids and rid != paper.paper_id
     ]
-    notes: list[str] = []
     if unknown_related:
-        notes.append(
+        raise AddPaperError(
             "related_paper_ids reference unknown paper_id(s): "
             + ", ".join(unknown_related)
-            + " — kept as-is (likely typo or forthcoming paper)"
+            + ". Add those papers first or remove the unresolved relation."
         )
+    notes: list[str] = []
 
     new_catalog_text = _insert_paper_into_catalog(
         catalog_text, paper, existing_ids=existing_ids
