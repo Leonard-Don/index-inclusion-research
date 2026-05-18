@@ -417,6 +417,72 @@ def test_from_json_roundtrip_loads_and_adds(
         ap._load_from_json(bad_path)
 
 
+def test_from_json_rejects_non_string_related_paper_ids(tmp_path: Path) -> None:
+    """``related_paper_ids`` list entries must already be string ids."""
+    payload = _sample_paper_data(
+        related_paper_ids=["greenwood_sammon_2022", 123],
+    )
+    json_path = tmp_path / "non_string_related.json"
+    json_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ap.AddPaperError) as excinfo:
+        ap._load_from_json(json_path)
+
+    message = str(excinfo.value)
+    assert "related_paper_ids[1]" in message
+    assert "expected string" in message
+
+
+def test_cli_main_rejects_blank_related_paper_ids_from_json(
+    tmp_catalog: Path, tmp_bibtex: Path, tmp_path: Path, capsys
+) -> None:
+    """Bad ``related_paper_ids`` JSON fails before catalog/BibTeX writes."""
+    catalog_before = tmp_catalog.read_text(encoding="utf-8")
+    bibtex_before = tmp_bibtex.read_text(encoding="utf-8")
+    payload = _sample_paper_data(
+        related_paper_ids=["greenwood_sammon_2022", "   "],
+    )
+    bad_json = tmp_path / "blank_related.json"
+    bad_json.write_text(json.dumps(payload), encoding="utf-8")
+
+    rc = ap.main(
+        [
+            "--from-json",
+            str(bad_json),
+            "--catalog-path",
+            str(tmp_catalog),
+            "--bibtex-path",
+            str(tmp_bibtex),
+            "--skip-downstream",
+        ]
+    )
+
+    assert rc == 2
+    captured = capsys.readouterr()
+    assert "add-paper error" in captured.err
+    assert "related_paper_ids[1]" in captured.err
+    assert tmp_catalog.read_text(encoding="utf-8") == catalog_before
+    assert tmp_bibtex.read_text(encoding="utf-8") == bibtex_before
+
+
+def test_from_json_accepts_comma_separated_related_paper_ids(
+    tmp_path: Path,
+) -> None:
+    """Comma-separated ``related_paper_ids`` remains a supported JSON shape."""
+    payload = _sample_paper_data(
+        related_paper_ids="greenwood_sammon_2022, shleifer_1986",
+    )
+    json_path = tmp_path / "comma_related.json"
+    json_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    loaded = ap._load_from_json(json_path)
+
+    assert loaded.related_paper_ids == (
+        "greenwood_sammon_2022",
+        "shleifer_1986",
+    )
+
+
 def test_alphabetical_insertion_position(
     tmp_catalog: Path, tmp_bibtex: Path
 ) -> None:
