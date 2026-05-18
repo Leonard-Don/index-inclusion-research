@@ -142,6 +142,8 @@
 - `docs/literature_review_draft_cn.md`
 - `docs/literature_review_author_year_cn.md`
 - 仪表盘 `/review`
+- 文献年表图 `results/literature/literature_timeline.{png,pdf}`（`index-inclusion-literature-timeline` 自动生成；按发表年 × 研究主线渲染 16 篇文献，颜色编码立场，标记大小映射启发式链入度，背景标注 1986-2002 经典 / 2002-2014 怀疑 / 2014+ 中国 + 识别三段时代带）
+- 文献关联网络图 `results/literature/citation_network.{png,pdf}`（`index-inclusion-citation-graph` 自动生成；与年表图互补，时间维度的演化看年表，结构维度的连接看网络）
 
 ### 2. 研究设计
 

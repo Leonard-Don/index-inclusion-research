@@ -91,6 +91,15 @@ DEFAULT_VERDICT_TIMELINE_PDF = (
 DEFAULT_VERDICT_TIMELINE_SOURCE_CSV = (
     ROOT / "results" / "real_tables" / "cma_hypothesis_verdicts.csv"
 )
+DEFAULT_LITERATURE_TIMELINE_PNG = (
+    ROOT / "results" / "literature" / "literature_timeline.png"
+)
+DEFAULT_LITERATURE_TIMELINE_PDF = (
+    ROOT / "results" / "literature" / "literature_timeline.pdf"
+)
+DEFAULT_LITERATURE_TIMELINE_SOURCE_CSV = (
+    ROOT / "results" / "literature" / "citation_centrality.csv"
+)
 DEFAULT_PAPER_SKELETON_MD = ROOT / "paper" / "skeleton.md"
 DEFAULT_METHODOLOGY_SUMMARY_MD = ROOT / "paper" / "methodology_summary.md"
 DEFAULT_CITATION_CENTRALITY_CSV_FOR_SUMMARY = (
@@ -988,6 +997,35 @@ def check_verdict_timeline_artifact(
             "of cma_hypothesis_verdicts.csv."
         ),
         input_label="cma_hypothesis_verdicts.csv",
+        allow_ci_missing_generated=True,
+    )
+
+
+def check_literature_timeline_artifact(
+    *,
+    png_path: Path = DEFAULT_LITERATURE_TIMELINE_PNG,
+    pdf_path: Path = DEFAULT_LITERATURE_TIMELINE_PDF,
+    source_csv_path: Path = DEFAULT_LITERATURE_TIMELINE_SOURCE_CSV,
+) -> CheckResult:
+    """Warn if the 16-paper literature chronology figure is missing or stale.
+
+    Mirrors :func:`check_verdict_timeline_artifact`: the PNG / PDF twins
+    must exist and both have an mtime ≥ the centrality CSV they were
+    rendered from (the renderer's marker-size scale depends on the CSV's
+    ``in_degree`` column). Re-run ``index-inclusion-literature-timeline``
+    to refresh both artifacts (idempotent — overwrites in place).
+    """
+    return _forest_artifact_status(
+        name="literature_timeline_artifact",
+        png_path=png_path,
+        pdf_path=pdf_path,
+        input_csv_path=source_csv_path,
+        fix_command=(
+            "Run `index-inclusion-literature-timeline` to refresh the "
+            "literature chronology figure (PNG + PDF) rendered from "
+            "PAPER_LIBRARY + citation_centrality.csv."
+        ),
+        input_label="citation_centrality.csv",
         allow_ci_missing_generated=True,
     )
 
@@ -2120,6 +2158,7 @@ DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
     check_heuristic_citation_centrality_schema,
     check_citation_graph_artifact,
     check_verdict_timeline_artifact,
+    check_literature_timeline_artifact,
     check_paper_audit,
     check_paper_integrity,
 )

@@ -80,6 +80,8 @@ PUBLISHED_FIGURE_RELPATHS: tuple[str, ...] = (
     # 40th CLI: H1..H7 verdict-evolution timeline reconstructed from
     # the git log of cma_hypothesis_verdicts.csv.
     "results/figures/verdict_timeline.png",
+    # 47th CLI: 16-paper literature chronology timeline.
+    "results/literature/literature_timeline.png",
 )
 
 # Snapshot filename pattern (mirrors doctor.PAP_SNAPSHOT_GLOB).
@@ -553,6 +555,35 @@ def _build_verdict_timeline_section() -> dict[str, Any] | None:
     return summarize_verdict_timeline_for_public_summary(timeline_df)
 
 
+def _build_literature_timeline_section() -> dict[str, Any] | None:
+    """Literature chronology slice surfaced in the public summary JSON.
+
+    Returns ``{years_covered, n_papers, n_papers_pre_2002,
+    n_papers_2002_to_2014, n_papers_post_2014,
+    dominant_position_by_era, anchors_by_era}`` or ``None`` if the
+    timeline module fails to import (defensive: the summary should
+    still serialize on a partial install).
+    """
+    try:
+        from index_inclusion_research.outputs import (
+            assemble_literature_timeline_papers,
+            default_literature_timeline_centrality_csv_path,
+            summarize_literature_timeline_for_public_summary,
+        )
+    except ImportError as exc:
+        logger.warning("literature_timeline import failed: %s", exc)
+        return None
+    try:
+        centrality_csv = default_literature_timeline_centrality_csv_path()
+        papers = assemble_literature_timeline_papers(
+            centrality_csv_path=centrality_csv if centrality_csv.exists() else None
+        )
+    except Exception as exc:  # noqa: BLE001 - never break summary on render error
+        logger.warning("literature timeline assembly failed: %s", exc)
+        return None
+    return summarize_literature_timeline_for_public_summary(papers)
+
+
 def _build_literature_network_section() -> dict[str, Any] | None:
     """Heuristic literature-link slice surfaced in the public summary JSON.
 
@@ -664,6 +695,9 @@ def build_public_summary(
     verdict_timeline = _build_verdict_timeline_section()
     if verdict_timeline is not None:
         payload["verdict_timeline"] = verdict_timeline
+    literature_timeline = _build_literature_timeline_section()
+    if literature_timeline is not None:
+        payload["literature_timeline"] = literature_timeline
     payload["figures_published"] = _build_figures_published(figures_dir)
 
     return payload
