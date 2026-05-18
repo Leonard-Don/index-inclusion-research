@@ -121,6 +121,16 @@ JSON_TEMPLATE: dict[str, Any] = {
     "camp": DEFAULT_CAMP,
 }
 
+JSON_TEMPLATE_FIELDS: tuple[str, ...] = tuple(JSON_TEMPLATE)
+REQUIRED_JSON_FIELDS: tuple[str, ...] = (
+    "paper_id",
+    "authors",
+    "year",
+    "title",
+    "position",
+    "market_focus",
+)
+
 
 # ---------------------------------------------------------------------------
 # Errors and data classes
@@ -1007,6 +1017,20 @@ def _load_from_json(path: Path) -> NewPaper:
         raise AddPaperError(
             f"--from-json file must contain a JSON object at top level "
             f"(got {type(payload).__name__})."
+        )
+    unexpected = sorted(set(payload) - set(JSON_TEMPLATE_FIELDS))
+    if unexpected:
+        raise AddPaperError(
+            "--from-json contains unexpected field(s): "
+            + ", ".join(unexpected)
+            + ". Supported fields: "
+            + ", ".join(JSON_TEMPLATE_FIELDS)
+            + "."
+        )
+    missing = [field for field in REQUIRED_JSON_FIELDS if field not in payload]
+    if missing:
+        raise AddPaperError(
+            "--from-json missing mandatory field(s): " + ", ".join(missing)
         )
     # Accept "related_paper_ids" as list or comma-separated string.
     related = payload.get("related_paper_ids", ())
