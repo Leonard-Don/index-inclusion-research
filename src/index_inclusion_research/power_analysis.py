@@ -104,6 +104,48 @@ FLIP_DIAGNOSIS_COLUMNS: tuple[str, ...] = (
 
 
 # ---------------------------------------------------------------------------
+# Chinese glosses for ``extras`` keys rendered under ``**额外指标**``.
+#
+# The raw English keys stay visible (academic readers grep source code by
+# these identifiers); we add the gloss in parentheses for the Chinese
+# audience. Append-only — if you add an extras key elsewhere in the
+# module, add the Chinese label here too, otherwise the renderer will
+# tag it with a TODO comment and ship the line without the gloss.
+# ---------------------------------------------------------------------------
+
+
+_EXTRA_INDICATOR_LABELS_ZH: dict[str, str] = {
+    # H3 (binomial proportion, exact-binomial + Bayesian extras)
+    "exact_power": "精确二项功效",
+    "bayes_p_gt_0.60": "后验 P(p>0.60)",
+    "bayes_p_gt_0.5": "后验 P(p>0.5)",
+    "successes": "成功次数",
+    # H4 / H5 (regression-coef t-test extras)
+    "coef_observed": "观测系数",
+    "se_observed": "系数标准误",
+    "t_observed": "t 统计量",
+    "p_value_observed": "p 值",
+    "n_covariates": "协变量数",
+    # H6 (one-sample t-test extras)
+    "cohens_d_observed": "Cohen d",
+    "power_at_d_0.20": "d=0.20 功效",
+    "power_at_d_0.50": "d=0.50 功效",
+    "power_at_d_0.80": "d=0.80 功效",
+    # H1 (bootstrap-diff extras)
+    "bootstrap_se": "Bootstrap 标准误",
+    "bootstrap_p_value": "Bootstrap p 值",
+    "ci_low": "CI 下界",
+    "ci_high": "CI 上界",
+    # H2 (rolling-delta t-test extras)
+    "cohens_d": "Cohen d",
+    "trend_sd": "趋势标准差",
+    # Misc — defensive defaults for keys not currently emitted.
+    "normal_power": "正态近似功效",
+    "effect_size": "效应大小",
+}
+
+
+# ---------------------------------------------------------------------------
 # Default file locations
 # ---------------------------------------------------------------------------
 
@@ -763,10 +805,17 @@ def render_markdown(
             lines.append("**额外指标**:")
             lines.append("")
             for k, v in r.extras.items():
+                gloss = _EXTRA_INDICATOR_LABELS_ZH.get(k)
+                # TODO(power-analysis-extras): if ``gloss is None``, add a
+                # Chinese label for the key to ``_EXTRA_INDICATOR_LABELS_ZH``
+                # so the **额外指标** bullet ships with both the raw key
+                # and a Chinese gloss for non-academic readers. The dict
+                # is append-only.
+                suffix = f" ({gloss})" if gloss else ""
                 if isinstance(v, float) and not np.isnan(v):
-                    lines.append(f"- `{k}` = {v:.4f}")
+                    lines.append(f"- `{k}`{suffix} = {v:.4f}")
                 elif not isinstance(v, float):
-                    lines.append(f"- `{k}` = {v}")
+                    lines.append(f"- `{k}`{suffix} = {v}")
             lines.append("")
     lines.append("## 3. 方法学说明")
     lines.append("")
@@ -849,7 +898,21 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--print",
         action="store_true",
-        help="Print the markdown report to stdout instead of writing to disk.",
+        help=(
+            "Deprecated no-op: the markdown body now prints to stdout by "
+            "default. The flag is retained for backward compatibility "
+            "with cron jobs that pass it explicitly. Pass ``--quiet`` to "
+            "suppress the stdout body."
+        ),
+    )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help=(
+            "Suppress the markdown body on stdout. The two ``INFO`` log "
+            "lines (CSV + markdown paths) are still emitted so cron "
+            "logs show where the files landed."
+        ),
     )
     return parser
 
@@ -869,10 +932,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         reports, alpha=args.alpha, target_power=args.target_power
     )
 
-    if args.print:
-        sys.stdout.write(markdown)
-        return 0
-
     csv_path = args.output or _default_csv_output()
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(csv_path, index=False)
@@ -887,6 +946,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             md_path,
             md_path.stat().st_size,
         )
+
+    # Default behaviour: also print the markdown body to stdout so a no-
+    # args invocation surfaces the report without forcing the user to
+    # ``cat`` the file. ``--quiet`` suppresses this for cron jobs; the
+    # legacy ``--print`` flag is a no-op (kept for backward compat).
+    if not args.quiet:
+        sys.stdout.write(markdown)
 
     return 0
 
