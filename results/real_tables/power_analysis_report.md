@@ -1,12 +1,14 @@
 # 假说后验统计功效分析
 
-对低-n 假说 (H3, H6) 做 post-hoc 功效计算，α=0.05, target power = 80%。
+对各假说做 post-hoc 功效计算 (H3 / H4 / H5 / H6 单口径 + H1 / H2 分引擎)，α=0.05, target power = 80%。
 
 ## 1. 功效一览表
 
 | 假说 | 名称 | n | 测试族 | 观测效应 | 在观测效应下的功效 | 80% 功效下的 MDE |
 |---|---|---:|---|---:|---:|---:|
 | H3 | 散户 vs 机构结构 | 4 | binomial_proportion_z_two_sided | +0.250 (hit_rate − 0.5) | 0.134 | 0.499 (proportion_gap_p1_minus_p0) |
+| H4 | 卖空约束 | 436 | regression_coef_t_two_sided | +0.006 (cn_coef_gap_drift) | 0.095 | 0.028 (coef_at_target_power) |
+| H5 | 涨跌停限制 | 936 | regression_coef_t_two_sided | +0.155 (limit_coef_announce_car) | 0.752 | 0.164 (coef_at_target_power) |
 | H6 | 指数权重可预测性 | 67 | one_sample_t_two_sided | -0.728 (cohens_d) | 1.000 | 0.347 (cohens_d_at_target_power) |
 | H1 | 信息泄露与预运行 | 436 | bootstrap_diff_two_sided | +0.005 (cn_minus_us_pre_runup) | 0.057 | 0.057 (diff_at_target_power) |
 | H1 | 信息泄露与预运行 | 436 | bootstrap_diff_two_sided | +0.021 (cn_minus_us_pre_runup) | 0.839 | 0.020 (diff_at_target_power) |
@@ -24,6 +26,30 @@ normal-approx power=0.134 · exact-binomial power=0.000 · posterior P(p>0.60|da
 - `exact_power` = 0.0000
 - `bayes_p_gt_0.60` = 0.6630
 - `successes` = 3.0000
+
+### H4 · 卖空约束 (n=436)
+
+HC3 regression coef=+0.0061 (SE=0.0099, t=+0.618, p=0.5366), df≈433; two-sided t-test power=0.095. MDE@80% = |coef|≈0.0278 (≈ 4.5× the observed coefficient). 严重欠功效 (power=0.09 < 0.30): n=436 下观测系数 +0.0061 太小 (相对 SE=0.0099)，无法在 α=0.05 下稳健检出。证据不足的判定是 n 不够大，不是 H4 一定错，因此保留为 supplementary 是合理的。
+
+**额外指标**:
+
+- `coef_observed` = 0.0061
+- `se_observed` = 0.0099
+- `t_observed` = 0.6179
+- `p_value_observed` = 0.5366
+- `n_covariates` = 2.0000
+
+### H5 · 涨跌停限制 (n=936)
+
+HC3 regression coef=+0.1549 (SE=0.0586, t=+2.642, p=0.0082), df≈934; two-sided t-test power=0.752. MDE@80% = |coef|≈0.1644 (≈ 1.06× the observed coefficient). 功效中等 (power=0.75): 趋势可读但仍存在错过真实小效应的风险。
+
+**额外指标**:
+
+- `coef_observed` = 0.1549
+- `se_observed` = 0.0586
+- `t_observed` = 2.6421
+- `p_value_observed` = 0.0082
+- `n_covariates` = 1.0000
 
 ### H6 · 指数权重可预测性 (n=67)
 
@@ -79,6 +105,7 @@ engine=market: Cohen's d≈-0.365 (empirical deltas (n_used=15, SD=0.0037)); n_c
 ## 3. 方法学说明
 
 - H3 (n=4) 使用比例 z-test（正态近似）；同时提供 exact-binomial 对照。因为正态近似在小样本下偏乐观，**只有当两个计算给出相近结论**时才能把 H3 的判断扣在 normal-approx 上。
+- H4 (n=436) 与 H5 (n=936) 使用 HC3 回归单系数 t-test：观测 ``coef/SE`` 作为非中心 t 的 ncp，``df = n − k − 1`` (k=协变量数)。MDE 是 ``80% 功效下能检出的最小 |coef|``，由非中心 t 反演的二分搜索给出；它和闭式 ``(z_{1-α/2}+z_{power})·SE`` 在 n 足够大时一致。
 - H6 (n=67) 使用单样本 t-test，Cohen's *d* = mean / SD。在面板可用时以中位数 weight 切重/轻 bucket 并算 pooled SD；面板缺失时，回退到 H6 OLS-HC3 r²=0.033 反推的 |d|≈0.18。
 - 80% 功效下的 MDE 由二分搜索求解；当 n 太小，returned MDE 可能超过实际可能的效应上界（H3 即如此：MDE≈0.50 意味着只有 p1≈1.0 才能在 80% 功效下检出）。
 - Bayesian 后验 (H3) 默认采用 uniform Beta(1,1) 先验；先验是 Bayesian 陈述里最有争议的输入，更换需明确说明。
