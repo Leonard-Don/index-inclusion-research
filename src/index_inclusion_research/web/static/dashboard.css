@@ -997,6 +997,12 @@
       padding: 8px 12px;
       background: rgba(255,255,255,0.70);
     }
+    .utility-bar .nav a.active,
+    .utility-bar .nav button.active {
+      background: linear-gradient(180deg, #0d6f7b, #084f5c);
+      color: #fffaf0;
+      border-color: rgba(8, 79, 92, 0.56);
+    }
     .utility-bar .table-density-note {
       max-width: 28ch;
       font-size: 12px;
