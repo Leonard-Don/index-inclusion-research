@@ -1,13 +1,13 @@
 # 命令行入口参考
 
-47 个 console scripts 按用途分组：
+48 个 console scripts 按用途分组：
 
 - **数据流水线**：`build-event-sample` / `build-price-panel` / `match-controls` / `match-robustness` / `run-event-study` / `run-regressions`
 - **样本数据**：`generate-sample-data` / `download-real-data`
 - **报表与图表**：`make-figures-tables` / `generate-research-report` / `paper-bundle` / `paper-audit` / `build-hs300-rdd-forest` / `build-cma-verdicts-forest` / `build-cma-sensitivity-forest` / `build-cma-ar-engine-forest` / `build-cma-2d-robustness-heatmap` / `citation-graph` / `verdict-timeline` / `literature-timeline`
 - **Dashboard 与三条主线**：`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - **HS300 RDD 工具链**：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`（详见 [docs/hs300_rdd_workflow.md](hs300_rdd_workflow.md)）
-- **跨市场不对称 + 假说证据**：`cma`（7 条假说 verdict）/ `prepare-passive-aum` / `download-passive-aum-cn` / `download-cn-passive-aum-proxy` / `compute-h6-weight-change` / `refresh-real-evidence`
+- **跨市场不对称 + 假说证据**：`cma`（7 条假说 verdict）/ `prepare-passive-aum` / `download-passive-aum-cn` / `download-cn-passive-aum-proxy` / `compute-h6-weight-change` / `refresh-real-evidence` / `power-analysis`（H3/H6 post-hoc 功效）
 - **总入口**：`rebuild-all`（10 步流水线一键跑）/ `verdict-summary`（终端速览）/ `pap-diff`（PAP 偏离审计）/ `doctor`（项目健康检查）/ `export-public-summary`（生成 data/public/index_research_summary.json）/ `paper-skeleton`（自动生成 paper/skeleton.md 论文骨架）/ `methodology-summary`（自动生成 paper/methodology_summary.md 方法论摘要卡）/ `paper-integrity`（论文交付前的跨文档一致性发布门禁）/ `tex-export`（生成 Overleaf/XeLaTeX 论文源文件）/ `submission-ready`（论文提交前最后一道发布就绪 go/no-go 门禁）/ `enrich-bib`（用 CrossRef 自动补全 BibTeX 期刊 / 卷 / 页 / DOI）/ `add-paper`（交互式添加新文献到 PAPER_LIBRARY 并同步下游 6 个工件）
 
 > `citation-graph` 生成的是启发式文献关联网络（主题/方法/年代链接），不是逐条 bibliography 引用核验。
@@ -480,7 +480,7 @@ python3 -m index_inclusion_research.methodology_summary
 - §5 数据契约（`events.csv` / `prices.csv` / `benchmarks.csv` 字段速览）
 - §6 复现命令（`make rebuild` / `make-figures-tables` / `paper-bundle --force` / `methodology-summary`）
 - §7 关键文献基础（top-5 中心性 + 立场，链路语义启发式相似性而非 bibliography）
-- §8 工具链（47 CLI / 30 doctor checks / public summary schema v1 / paper bundle 72 artifacts）
+- §8 工具链（48 CLI / 30 doctor checks / public summary schema v1 / paper bundle 72 artifacts）
 
 Doctor `methodology_summary_freshness` 检查在任何输入（verdicts CSV / public summary JSON / citation centrality CSV）mtime 比摘要卡新时 `warn`；CI 环境下因 checkout mtime 不可信而自动 pass。`make paper` 与 `paper-bundle --force` 在 `_regenerate_artifacts` 第 7 步自动重生成本摘要卡，使 bundle 永远 self-consistent。
 
@@ -678,7 +678,7 @@ CI/local 流程建议：每次添加完用 `index-inclusion-paper-integrity --fa
 
 ## 24. 文献年表时间线（`literature-timeline`）
 
-`index-inclusion-literature-timeline` 是 47 个 console scripts 的第 47 号。它把 `PAPER_LIBRARY` 的 16 篇文献按发表年份 × 研究主线（短期价格压力 / 需求曲线效应 / 沪深300论文复现）渲染成一张二维散点图，颜色编码立场（正方=蓝、反方=红、中性=灰），标记大小映射 `results/literature/citation_centrality.csv` 的 `in_degree` 启发式链入度，背景叠加三段「时代带」让综述读者一眼读出场域演化：
+`index-inclusion-literature-timeline` 是 48 个 console scripts 的第 47 号。它把 `PAPER_LIBRARY` 的 16 篇文献按发表年份 × 研究主线（短期价格压力 / 需求曲线效应 / 沪深300论文复现）渲染成一张二维散点图，颜色编码立场（正方=蓝、反方=红、中性=灰），标记大小映射 `results/literature/citation_centrality.csv` 的 `in_degree` 启发式链入度，背景叠加三段「时代带」让综述读者一眼读出场域演化：
 
 - `results/literature/literature_timeline.png` — 14×7 in @ 100 dpi 主图，X 轴 1986→2026，Y 轴三条主线（top-down），每个 marker 标注 `Surname 'YY` 短引用；1986-2002 浅灰带为 classical（Shleifer / Harris-Gurel 创世之战）、2002-2014 浅橙带为 skeptics（Wurgler / Madhavan / Petajisto / Kasch-Sarkar）、2014+ 浅绿带为 China + identification（Chang-Hong-Liskovich / 沪深300 复现 / Greenwood-Sammon）。
 - `results/literature/literature_timeline.pdf` — 矢量版同图，论文 §2 文献综述直接 `\includegraphics` 引入。
@@ -709,6 +709,60 @@ python3 -m index_inclusion_research.outputs.literature_timeline
 - **`年份待核验` 占位安全降级**：Yao-Zhang-Li 沪深300 那篇中文 year_label 解析失败 → fallback 2014 + INFO 日志；未来 catalog 修正后图自动校正。
 - **空输入也出 ≥800×600 PNG**：极端「无文献」分支也能让 `paper-bundle` 拿到合法图，避免半成品交付。
 - **确定性渲染**：matplotlib 后端 `Agg`，`np.random.seed(0)`，同一 catalog 多次跑出字节一致 PNG/PDF（便于 git diff 与 CI 缓存）。
+
+## 25. 低-n 假说后验功效（`power-analysis`）
+
+`index-inclusion-power-analysis` 是 48 个 console scripts 的第 48 号。它解决审稿人对低-n 假说的「**有这么小的 n，你究竟能不能检出真实效应？**」反驳——把"我不知道"变成具体的功效数字（power at observed effect、80% 功效下的 MDE、与小/中/大 Cohen's *d* 的对照）。
+
+输出 `results/real_tables/power_analysis_report.csv` + `power_analysis_report.md`：
+
+- **H3 (n=4, 双通道命中率)**：
+  - 测试族：单比例 z-test（正态近似）+ exact-binomial 对照。
+  - 在观测命中率 75% 下功效 ≈ 0.13（normal-approx）/ 0.00（exact，α=0.05 下不存在 rejection region）。
+  - 80% 功效下的 MDE ≈ +0.50 概率差（即 p1≈1.0）。
+  - Bayesian 后验 P(p > 0.60 \| 3/4 hits, Beta(1,1) uniform prior) ≈ 0.66。
+  - 释义：**严重欠功效**，把 H3 归入 supplementary 是数据驱动的，不是出于偏好。
+- **H6 (n=67, heavy−light spread)**：
+  - 测试族：单样本 t-test，Cohen's *d* = mean/pooled-SD。
+  - 当 H6 weight × event panel 在盘上时，pooled SD 由实际数据重算（n_heavy=34，n_light=33）；缺失时回退到 H6 OLS-HC3 r²=0.033 反推的 \|d\|≈0.18，并在 interpretation 里明文说明。
+  - 在观测 d≈-0.73 下功效 ≈ 1.0；与 d=0.2/0.5/0.8 对比的功效 ≈ 0.36/0.98/1.00。
+  - 80% 功效下的 MDE ≈ \|d\|=0.35。
+  - 释义：**功效充足**，但观测方向 (heavy<light) 与 H6 预测 (heavy>light) 相反 → "证据不足" 是方向不符，**不是** n 太小。
+
+模块 API:
+
+- `binomial_proportion_power(n, p0, p1, alpha=0.05, alternative='two-sided') → PowerResult`
+- `t_test_power(n, effect_size, alpha=0.05, alternative='two-sided') → PowerResult`
+- `mde_at_power(n, test='t'|'proportion', target_power=0.80, alpha=0.05) → float`
+- `bootstrap_observed_power(observed_data, null_value=0.0, alpha=0.05, n_bootstrap=1000) → BootstrapPowerResult`
+- `beta_posterior_probability_above(successes, n, threshold, prior_alpha=1.0, prior_beta=1.0) → float`
+- `compute_h3_power(observed_hit_rate=0.75, n=4) → HypothesisPowerReport`
+- `compute_h6_power(observed_spread=-0.019, observed_sd=None, n=67, ...) → HypothesisPowerReport`
+
+```bash
+# 默认产出
+index-inclusion-power-analysis
+
+# 自定义 α / target power
+index-inclusion-power-analysis --alpha 0.10 --target-power 0.90
+
+# 只看 markdown 报告，不写盘
+index-inclusion-power-analysis --print
+
+# 跳过 markdown 二份，只写 CSV
+index-inclusion-power-analysis --md-output ''
+
+# 模块等价调用
+python3 -m index_inclusion_research.power_analysis
+```
+
+设计契约：
+
+- **scipy 内核，不重新发明轮子**：z-test / nct.cdf / binom.cdf 全走 scipy.stats。
+- **明示 Bayesian 先验**：H3 的 P(p>0.60) 默认使用 Beta(1, 1)（uniform）；任何更换都需要在 interpretation 文字里明说。
+- **小样本警示**：n=4 在 α=0.05 二侧 exact-binomial 不存在 rejection region；这是 H3 "证据不足" 的统计依据，而非审美选择。
+- **方向 vs 强度的分离**：H6 power≈1 与 verdict "证据不足" 同时存在，是因为方向相反——这是 power analysis 区别于 simple p-value reporting 的本质价值。
+- **集成到 `docs/limitations.md` §7**：与 `index-inclusion-export-public-summary` 的 `power_analysis` 段同步：reviewer 看到 "power\<0.30" 这一行不是攻击点，是 n=4 自带的物理限制。
 
 ## Verdicts ↔ Literature 双向链接
 

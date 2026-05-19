@@ -584,6 +584,51 @@ def _build_literature_timeline_section() -> dict[str, Any] | None:
     return summarize_literature_timeline_for_public_summary(papers)
 
 
+def _build_power_analysis_section() -> dict[str, Any] | None:
+    """Per-hypothesis post-hoc power slice surfaced in the public summary.
+
+    Mirrors the on-disk ``results/real_tables/power_analysis_report.csv``:
+    one entry per low-n hypothesis with ``n_obs``, ``power_at_observed``,
+    ``mde_at_80_power`` and the human-readable interpretation. Returns
+    ``None`` if the power_analysis module fails to import or no rows
+    are available (defensive: the summary should still serialize on a
+    partial install).
+    """
+    try:
+        from index_inclusion_research.power_analysis import (
+            build_power_report_rows,
+        )
+    except ImportError as exc:
+        logger.warning("power_analysis import failed: %s", exc)
+        return None
+    try:
+        reports = build_power_report_rows()
+    except Exception as exc:  # noqa: BLE001 - never break summary on error
+        logger.warning("power_analysis report build failed: %s", exc)
+        return None
+    if not reports:
+        return None
+    return {
+        "alpha": 0.05,
+        "target_power": 0.80,
+        "hypotheses": [
+            {
+                "hid": r.hid,
+                "name_cn": r.name_cn,
+                "n_obs": int(r.n_obs),
+                "test_family": r.test_family,
+                "observed_effect": float(r.observed_effect),
+                "observed_effect_label": r.observed_effect_label,
+                "power_at_observed": float(r.power_at_observed),
+                "mde_at_80_power": float(r.mde_at_80_power),
+                "mde_label": r.mde_label,
+                "interpretation": r.interpretation,
+            }
+            for r in reports
+        ],
+    }
+
+
 def _build_literature_network_section() -> dict[str, Any] | None:
     """Heuristic literature-link slice surfaced in the public summary JSON.
 
@@ -689,6 +734,9 @@ def build_public_summary(
         payload["hs300_rdd"] = hs300_rdd
 
     payload["literature"] = _build_literature_section(pyproject_path)
+    power_analysis = _build_power_analysis_section()
+    if power_analysis is not None:
+        payload["power_analysis"] = power_analysis
     citation_network = _build_literature_network_section()
     if citation_network is not None:
         payload["literature_network"] = citation_network

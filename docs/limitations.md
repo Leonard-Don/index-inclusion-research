@@ -71,7 +71,23 @@
   在 PAP §7 决策日志签字之前，仍按 **post-hoc** 表述；签字后可升级为 **confirmatory**。
   详细 verdict 迭代流程见 [`docs/verdict_iteration.md`](verdict_iteration.md)。
 
-## 7. CMA 假说证据强度分层
+## 7. 每假说的统计功效（post-hoc）
+
+`index-inclusion-power-analysis` 会对低-n 假说做后验功效计算并把结果落到
+`results/real_tables/power_analysis_report.csv` 与 `power_analysis_report.md`。
+α=0.05、target power=80%，对当前主裁 H3 / H6 的结论是：
+
+| 假说 | n | 观测效应 | 在观测效应下的功效 | 80% 功效下的 MDE | 解读 |
+|---|---:|---:|---:|---:|---|
+| H3 (双通道命中率) | 4 | hit_rate=0.75（差值 +0.25） | ≈ 0.13（normal-approx）/ 0.00（exact） | 概率差 ≈ +0.50（即 p1≈1.0） | 严重欠功效；exact-binomial 在 α=0.05 下不存在 rejection region。结果按 supplementary 处理是合理的。Bayesian P(p>0.60 \| 3/4, Beta(1,1) 先验) ≈ 0.66 — 给方向性参考。 |
+| H6 (heavy−light spread) | 67 | Cohen's d ≈ −0.73（pooled SD≈0.032） | ≈ 1.00 | \|d\| ≈ 0.35 | 功效充足，n=67 足以检出该规模效应，但观测方向 (heavy<light) 与 H6 预测 (heavy>light) 相反 → "证据不足" 来自方向不符，**不是** n 太小。 |
+
+- **方法学**：H3 使用一比例 z-test（正态近似）+ exact-binomial 对照；H6 使用单样本 t-test，Cohen's d = mean/pooled-SD；MDE 由二分搜索求解。
+- **数据源**：H6 的 pooled SD 由 `data/processed/hs300_weight_change.csv` × `results/real_tables/cma_gap_event_level.csv` 按 weight_proxy 中位数切重/轻 bucket 重算（n_heavy=34，n_light=33）；面板缺失时回退到 H6 OLS-HC3 r²=0.033 反推的 \|d\|≈0.18，并在 interpretation 里明文说明。
+- **可重现**：`index-inclusion-power-analysis` 是 48 个 console scripts 的第 48 号；它会按当前 verdicts CSV 的 `n_obs` / `key_value` 即时重算，不需要单独缓存。
+- **诚实读图**：H3 的 power<0.30 意味着即便真实命中率确实是 75%，本研究在 n=4 下也很难把它"测出来"；这是把 H3 归入 supplementary 的统计学依据，而不是"我们不喜欢这个结论"。H6 的 power≈1 配合 d=−0.73 则说明：**没把 H6 升级为支持**是数据驱动的，不是测试力度不够。
+
+## 8. CMA 假说证据强度分层
 
 - **核心假说（core, n 充足）**：H1（n=436）、H5（n=936）、H7（sector spread n=187；交互回归 n=1882）；
   H2 在补入 CN ETF TNA proxy 后由 supplementary 升级为 core（合并 n=17：US rolling 12 + CN rolling 5,超过 `EVIDENCE_TIER_PROMOTION_FLOOR["H2"]=15` 阈值）。
@@ -84,14 +100,14 @@
   `cma_hypothesis_verdicts.csv` 的 `evidence_tier` 列；H2 是当前唯一启用
   combined-n 数据驱动升级的假说，目的就是在 CN AUM 数据补齐后避免人工硬改。
 
-## 8. 何时不要用本项目结论
+## 9. 何时不要用本项目结论
 
 - 若需要交易所自由流通市值精确口径 → 不要用 Yahoo `mkt_cap`。
 - 若需要中证官方历史排名因果识别 → L3 数据不足以前不要用。
 - 若需要长窗口 [0,+120] 退化效应 → 样本严重缩水，仅作探索性。
 - 若需要时间序列 AUM 推断 → US n=12 且 CN 可比 AUM 缺失，结论以方向参考为主。
 
-## 9. 引用格式建议
+## 10. 引用格式建议
 
 文中或表注中引用本项目结果时，建议同时标注：
 

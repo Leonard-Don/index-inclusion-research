@@ -4,6 +4,41 @@ All notable, user-visible changes to `index-inclusion-research`.
 
 ## Unreleased
 
+- feat(analysis): post-hoc power analysis for low-n hypotheses (48th
+  CLI). New `index-inclusion-power-analysis` console script turns the
+  reviewer attack-surface "could you detect a real effect with n=4
+  (H3) / n=67 (H6)?" into honest numbers. Module
+  `index_inclusion_research.analysis.power_analysis` exposes
+  `binomial_proportion_power`, `exact_binomial_power`,
+  `t_test_power`, `mde_at_power` (binary-search inversion for the
+  minimum detectable effect at a target power), `bootstrap_observed_power`
+  (re-sampling tally for the rejection rate), and
+  `beta_posterior_probability_above` (Bayesian tail with documented
+  Beta(1,1) prior). Per-hypothesis helpers `compute_h3_power` and
+  `compute_h6_power` synthesise these into a `HypothesisPowerReport`
+  with `power_at_observed`, `mde_at_80_power`, an interpretation
+  string, and extras (exact-binomial cross-check, posterior P(p>0.60),
+  power at small/medium/large Cohen's d). CLI reads
+  `cma_hypothesis_verdicts.csv` for `n_obs` + observed effect; when
+  `hs300_weight_change.csv` × `cma_gap_event_level.csv` are present
+  it reconstructs heavy/light bucket means + pooled SD for a proper
+  Cohen's d (n_heavy=34, n_light=33); otherwise falls back to the
+  documented r²-derived |d|≈0.18 and surfaces that fact in the
+  interpretation. Output: `results/real_tables/power_analysis_report.csv`
+  + `power_analysis_report.md` twin. Real-data numbers: **H3 power
+  at observed=0.134 (normal-approx) / 0.000 (exact, no α=0.05
+  rejection region) — supplementary classification is data-driven;
+  H6 power at observed≈1.00 with Cohen's d ≈ −0.73 but direction
+  (heavy<light) contradicts the H6 prediction (heavy>light), so
+  "证据不足" is direction-driven, not n-driven**. 19 new tests in
+  `tests/test_power_analysis.py` (standard sanity at n=20/n=30,
+  edge cases including effect=0 → power=α and n=2 boundary, MDE
+  inversion round-trip, H3/H6 specific bands, bootstrap convergence,
+  CLI smoke against an INDEX_INCLUSION_ROOT override). README CLI
+  badge bumped 47→48 (3 places), `docs/cli_reference.md` 头部 count
+  + new §25 appendix, `docs/limitations.md` 新增 §7 — Statistical
+  Power per Hypothesis (with table) and renumbered §7-9 → §8-10.
+
 - feat(figures): literature chronology timeline (47th CLI). New
   `index-inclusion-literature-timeline` console script renders the
   16-paper `PAPER_LIBRARY` as a single figure: X-axis is publication

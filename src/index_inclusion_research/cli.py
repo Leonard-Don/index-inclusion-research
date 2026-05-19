@@ -216,3 +216,7 @@ def run_literature_timeline_main() -> int | None:
     return _run_package_main(
         "index_inclusion_research.outputs.literature_timeline"
     )
+
+
+def run_power_analysis_main() -> int | None:
+    return _run_package_main("index_inclusion_research.power_analysis")

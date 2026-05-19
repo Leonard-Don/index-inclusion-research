@@ -7,6 +7,19 @@ from .event_study import (
     summarize_market_model_estimation_obs,
     winsorize_event_level_metrics,
 )
+from .power_analysis import (
+    BootstrapPowerResult,
+    HypothesisPowerReport,
+    PowerResult,
+    beta_posterior_probability_above,
+    binomial_proportion_power,
+    bootstrap_observed_power,
+    compute_h3_power,
+    compute_h6_power,
+    exact_binomial_power,
+    mde_at_power,
+    t_test_power,
+)
 from .rdd import (
     fit_donut_rdd,
     fit_local_linear_rdd,
@@ -19,20 +32,31 @@ from .rdd import (
 from .regressions import build_regression_dataset, run_regressions
 
 __all__ = [
+    "BootstrapPowerResult",
+    "HypothesisPowerReport",
+    "PowerResult",
+    "beta_posterior_probability_above",
+    "binomial_proportion_power",
+    "bootstrap_observed_power",
     "build_regression_dataset",
     "compute_event_level_metrics",
     "compute_event_study",
+    "compute_h3_power",
+    "compute_h6_power",
     "compute_patell_bmp_summary",
+    "exact_binomial_power",
     "filter_nonoverlap_event_windows",
     "fit_donut_rdd",
     "fit_local_linear_rdd",
     "fit_placebo_rdd",
     "fit_polynomial_rdd",
+    "mde_at_power",
     "plot_rdd_bins",
     "run_regressions",
     "run_rdd_robustness",
     "run_rdd_suite",
     "summarize_event_level_metrics",
     "summarize_market_model_estimation_obs",
+    "t_test_power",
     "winsorize_event_level_metrics",
 ]
