@@ -303,15 +303,21 @@ def test_dashboard_browser_smoke() -> None:
                 const brandMark = document.querySelector(".brand-mark");
                 const nav = document.querySelector(".nav-sections");
                 const activeLink = document.querySelector(".nav-sections a.active");
+                const activeMode = document.querySelector(".utility-bar .nav-modes a.active");
                 const brandMarkRect = brandMark?.getBoundingClientRect();
                 const navRect = nav?.getBoundingClientRect();
                 const activeRect = activeLink?.getBoundingClientRect();
+                const activeModeStyle = activeMode ? getComputedStyle(activeMode) : null;
                 return {
                     gapBrandToNav:
                         brandMarkRect && navRect ? navRect.left - brandMarkRect.right : 0,
                     brandMarkScrollWidth: brandMark?.scrollWidth ?? 0,
                     brandMarkClientWidth: brandMark?.clientWidth ?? 0,
                     activeLeft: activeRect?.left ?? 0,
+                    activeModeText: activeMode?.textContent?.trim() ?? "",
+                    activeModeBackground: activeModeStyle?.background ?? "",
+                    activeModeColor: activeModeStyle?.color ?? "",
+                    activeModeWidth: activeMode?.getBoundingClientRect().width ?? 0,
                     bodyScrollWidth: document.documentElement.scrollWidth,
                     viewportWidth: window.innerWidth,
                 };
@@ -324,6 +330,10 @@ def test_dashboard_browser_smoke() -> None:
             <= narrow_desktop_metrics["brandMarkClientWidth"] + 1
         )
         assert narrow_desktop_metrics["activeLeft"] >= 270
+        assert narrow_desktop_metrics["activeModeText"] == "展示版"
+        assert "255, 255, 255" not in narrow_desktop_metrics["activeModeBackground"]
+        assert narrow_desktop_metrics["activeModeColor"] == "rgb(255, 250, 240)"
+        assert narrow_desktop_metrics["activeModeWidth"] >= 48
         assert (
             narrow_desktop_metrics["bodyScrollWidth"]
             <= narrow_desktop_metrics["viewportWidth"] + 1
