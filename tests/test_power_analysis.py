@@ -414,3 +414,93 @@ def test_cli_writes_csv_and_markdown(tmp_path: Path, monkeypatch) -> None:
     markdown = md_path.read_text(encoding="utf-8")
     assert "## 1. 功效一览表" in markdown
     assert "H3" in markdown and "H6" in markdown
+
+
+def test_cli_prints_markdown_body_to_stdout_by_default(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """No-args invocation must surface the markdown body on stdout.
+
+    The previous behaviour wrote files silently and forced the user to
+    ``cat`` the report; the regression covers M1 — make the run useful
+    out of the box. The two ``INFO`` log lines stay on stderr (still
+    useful — they tell the user where the files landed); the body goes
+    to stdout so it composes with shell pipes.
+    """
+    fake_root = tmp_path / "root"
+    real_tables = fake_root / "results" / "real_tables"
+    real_tables.mkdir(parents=True)
+    _write_verdicts_csv(real_tables / "cma_hypothesis_verdicts.csv")
+    monkeypatch.setenv("INDEX_INCLUSION_ROOT", str(fake_root))
+
+    rc = cli_module.main([])
+    assert rc == 0
+    captured = capsys.readouterr()
+    # Markdown body on stdout — the headline section header is the
+    # tightest stable substring to anchor on.
+    assert "# 假说后验统计功效分析" in captured.out
+    assert "## 1. 功效一览表" in captured.out
+    # And the files still land on disk (default + stdout, not either-or).
+    assert (real_tables / "power_analysis_report.csv").exists()
+    assert (real_tables / "power_analysis_report.md").exists()
+
+
+def test_cli_quiet_flag_suppresses_stdout_body(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """``--quiet`` must keep the file writes but silence the stdout body.
+
+    Cron jobs that only want the files on disk should not be forced to
+    redirect stdout to ``/dev/null``. The ``INFO`` log lines stay (they
+    tell ops where the files landed); only the body is suppressed.
+    """
+    fake_root = tmp_path / "root"
+    real_tables = fake_root / "results" / "real_tables"
+    real_tables.mkdir(parents=True)
+    _write_verdicts_csv(real_tables / "cma_hypothesis_verdicts.csv")
+    monkeypatch.setenv("INDEX_INCLUSION_ROOT", str(fake_root))
+
+    rc = cli_module.main(["--quiet"])
+    assert rc == 0
+    captured = capsys.readouterr()
+    # No markdown body on stdout — the headline marker must be absent.
+    assert "# 假说后验统计功效分析" not in captured.out
+    assert "## 1. 功效一览表" not in captured.out
+    # Files still land on disk.
+    assert (real_tables / "power_analysis_report.csv").exists()
+    assert (real_tables / "power_analysis_report.md").exists()
+
+
+def test_render_markdown_extras_carry_chinese_gloss(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Each rendered ``**额外指标**`` bullet must carry the raw English
+    key AND the Chinese gloss in parentheses.
+
+    Covers L1 — the report is otherwise fully Chinese; non-academic
+    readers should not have to look up what ``coef_observed`` or
+    ``cohens_d_observed`` means inline. The raw key stays so authors
+    can grep source code for it. Asserts on at least one bullet so the
+    test does not over-constrain the dict (which is append-only).
+    """
+    fake_root = tmp_path / "root"
+    real_tables = fake_root / "results" / "real_tables"
+    real_tables.mkdir(parents=True)
+    _write_verdicts_csv(real_tables / "cma_hypothesis_verdicts.csv")
+    monkeypatch.setenv("INDEX_INCLUSION_ROOT", str(fake_root))
+
+    rc = cli_module.main(["--quiet"])
+    assert rc == 0
+    md_path = real_tables / "power_analysis_report.md"
+    markdown = md_path.read_text(encoding="utf-8")
+
+    # H3 is always present in the minimal verdicts fixture and emits
+    # the ``successes`` extras key — the smallest stable example.
+    assert "`successes` (成功次数) = " in markdown
+    # H6 is also always present and emits ``cohens_d_observed`` —
+    # another stable example covering a different key family.
+    assert "`cohens_d_observed` (Cohen d) = " in markdown

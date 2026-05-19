@@ -23,9 +23,9 @@ normal-approx power=0.134 · exact-binomial power=0.000 · posterior P(p>0.60|da
 
 **额外指标**:
 
-- `exact_power` = 0.0000
-- `bayes_p_gt_0.60` = 0.6630
-- `successes` = 3.0000
+- `exact_power` (精确二项功效) = 0.0000
+- `bayes_p_gt_0.60` (后验 P(p>0.60)) = 0.6630
+- `successes` (成功次数) = 3.0000
 
 ### H4 · 卖空约束 (n=436)
 
@@ -33,11 +33,11 @@ HC3 regression coef=+0.0061 (SE=0.0099, t=+0.618, p=0.5366), df≈433; two-sided
 
 **额外指标**:
 
-- `coef_observed` = 0.0061
-- `se_observed` = 0.0099
-- `t_observed` = 0.6179
-- `p_value_observed` = 0.5366
-- `n_covariates` = 2.0000
+- `coef_observed` (观测系数) = 0.0061
+- `se_observed` (系数标准误) = 0.0099
+- `t_observed` (t 统计量) = 0.6179
+- `p_value_observed` (p 值) = 0.5366
+- `n_covariates` (协变量数) = 2.0000
 
 ### H5 · 涨跌停限制 (n=936)
 
@@ -45,11 +45,11 @@ HC3 regression coef=+0.1549 (SE=0.0586, t=+2.642, p=0.0082), df≈934; two-sided
 
 **额外指标**:
 
-- `coef_observed` = 0.1549
-- `se_observed` = 0.0586
-- `t_observed` = 2.6421
-- `p_value_observed` = 0.0082
-- `n_covariates` = 1.0000
+- `coef_observed` (观测系数) = 0.1549
+- `se_observed` (系数标准误) = 0.0586
+- `t_observed` (t 统计量) = 2.6421
+- `p_value_observed` (p 值) = 0.0082
+- `n_covariates` (协变量数) = 1.0000
 
 ### H6 · 指数权重可预测性 (n=67)
 
@@ -57,10 +57,10 @@ Cohen's d (observed) ≈ -0.728 (bucket-SD=0.0319); two-sided t-test power=1.000
 
 **额外指标**:
 
-- `cohens_d_observed` = -0.7278
-- `power_at_d_0.20` = 0.3646
-- `power_at_d_0.50` = 0.9809
-- `power_at_d_0.80` = 1.0000
+- `cohens_d_observed` (Cohen d) = -0.7278
+- `power_at_d_0.20` (d=0.20 功效) = 0.3646
+- `power_at_d_0.50` (d=0.50 功效) = 0.9809
+- `power_at_d_0.80` (d=0.80 功效) = 1.0000
 
 ### H1 · 信息泄露与预运行 (n=436)
 
@@ -68,10 +68,10 @@ engine=adjusted: diff=+0.0050, bootstrap SE≈0.0203, bootstrap p=0.8748; 在该
 
 **额外指标**:
 
-- `bootstrap_se` = 0.0203
-- `bootstrap_p_value` = 0.8748
-- `ci_low` = -0.0325
-- `ci_high` = 0.0470
+- `bootstrap_se` (Bootstrap 标准误) = 0.0203
+- `bootstrap_p_value` (Bootstrap p 值) = 0.8748
+- `ci_low` (CI 下界) = -0.0325
+- `ci_high` (CI 上界) = 0.0470
 
 ### H1 · 信息泄露与预运行 (n=436)
 
@@ -79,10 +79,10 @@ engine=market: diff=+0.0206, bootstrap SE≈0.0070, bootstrap p=0.0004; 在该 S
 
 **额外指标**:
 
-- `bootstrap_se` = 0.0070
-- `bootstrap_p_value` = 0.0004
-- `ci_low` = 0.0084
-- `ci_high` = 0.0358
+- `bootstrap_se` (Bootstrap 标准误) = 0.0070
+- `bootstrap_p_value` (Bootstrap p 值) = 0.0004
+- `ci_low` (CI 下界) = 0.0084
+- `ci_high` (CI 上界) = 0.0358
 
 ### H2 · 被动基金 AUM 差异 (n=15)
 
@@ -90,8 +90,8 @@ engine=adjusted: Cohen's d≈-0.037 (empirical deltas (n_used=15, SD=0.0029)); n
 
 **额外指标**:
 
-- `cohens_d` = -0.0373
-- `trend_sd` = 0.0029
+- `cohens_d` (Cohen d) = -0.0373
+- `trend_sd` (趋势标准差) = 0.0029
 
 ### H2 · 被动基金 AUM 差异 (n=15)
 
@@ -99,8 +99,8 @@ engine=market: Cohen's d≈-0.365 (empirical deltas (n_used=15, SD=0.0037)); n_c
 
 **额外指标**:
 
-- `cohens_d` = -0.3651
-- `trend_sd` = 0.0037
+- `cohens_d` (Cohen d) = -0.3651
+- `trend_sd` (趋势标准差) = 0.0037
 
 ## 3. 方法学说明
 
@@ -109,3 +109,4 @@ engine=market: Cohen's d≈-0.365 (empirical deltas (n_used=15, SD=0.0037)); n_c
 - H6 (n=67) 使用单样本 t-test，Cohen's *d* = mean / SD。在面板可用时以中位数 weight 切重/轻 bucket 并算 pooled SD；面板缺失时，回退到 H6 OLS-HC3 r²=0.033 反推的 |d|≈0.18。
 - 80% 功效下的 MDE 由二分搜索求解；当 n 太小，returned MDE 可能超过实际可能的效应上界（H3 即如此：MDE≈0.50 意味着只有 p1≈1.0 才能在 80% 功效下检出）。
 - Bayesian 后验 (H3) 默认采用 uniform Beta(1,1) 先验；先验是 Bayesian 陈述里最有争议的输入，更换需明确说明。
+
