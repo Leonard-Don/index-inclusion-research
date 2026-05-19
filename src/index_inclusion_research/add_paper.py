@@ -38,6 +38,9 @@ Design contract:
   Text-edit produces a reviewable diff.
 - **Dry-run** prints the planned diff and exits without writing. Useful
   before committing real catalog growth.
+- **BibTeX cite-key preflight.** A pre-existing ``references.bib`` key for
+  the new ``paper_id`` is rejected before the catalog is written, so partial
+  catalog-only growth cannot happen.
 - **--skip-downstream** updates ``PAPER_LIBRARY`` and ``references.bib``
   but skips citation graph / paper-summary re-rendering. Use for batch
   adds — call the regenerators once at the end.
@@ -608,7 +611,7 @@ def _append_to_bibtex(bibtex_path: Path, paper: NewPaper) -> bool:
     entry = _render_bibtex_entry(paper)
     if bibtex_path.exists():
         existing = bibtex_path.read_text(encoding="utf-8")
-        if f"@article{{{paper.paper_id}," in existing:
+        if _bibtex_has_cite_key(existing, paper.paper_id):
             return False
         sep = "" if existing.endswith("\n\n") else (
             "\n" if existing.endswith("\n") else "\n\n"
@@ -618,6 +621,12 @@ def _append_to_bibtex(bibtex_path: Path, paper: NewPaper) -> bool:
         bibtex_path.parent.mkdir(parents=True, exist_ok=True)
         bibtex_path.write_text(entry, encoding="utf-8")
     return True
+
+
+def _bibtex_has_cite_key(bibtex_text: str, cite_key: str) -> bool:
+    """Return True when any BibTeX entry already owns ``cite_key``."""
+    pattern = rf"@[A-Za-z]+\s*{{\s*{re.escape(cite_key)}\s*,"
+    return re.search(pattern, bibtex_text) is not None
 
 
 # ---------------------------------------------------------------------------
@@ -814,6 +823,14 @@ def add_paper(
             "related_paper_ids reference unknown paper_id(s): "
             + ", ".join(unknown_related)
             + ". Add those papers first or remove the unresolved relation."
+        )
+    if bibtex_path.exists() and _bibtex_has_cite_key(
+        bibtex_path.read_text(encoding="utf-8"), paper.paper_id
+    ):
+        raise AddPaperError(
+            f"BibTeX cite-key {paper.paper_id!r} already exists in "
+            f"{bibtex_path}; refusing to write catalog before the "
+            "references.bib collision is resolved."
         )
     notes: list[str] = []
 
