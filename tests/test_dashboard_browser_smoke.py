@@ -289,6 +289,47 @@ def test_dashboard_browser_smoke() -> None:
         )
         compact_page.close()
 
+        narrow_desktop_page = _new_dashboard_page(
+            browser, viewport={"width": 1175, "height": 647}
+        )
+        narrow_desktop_page.goto(
+            f"{base_url}/?open=demo-design-detail-figures%2Cdemo-price_pressure_track-support-papers%2Cdemo-limits-detail-tables",
+            wait_until="domcontentloaded",
+        )
+        narrow_desktop_page.wait_for_load_state("networkidle")
+        narrow_desktop_metrics = narrow_desktop_page.evaluate(
+            """
+            () => {
+                const brandMark = document.querySelector(".brand-mark");
+                const nav = document.querySelector(".nav-sections");
+                const activeLink = document.querySelector(".nav-sections a.active");
+                const brandMarkRect = brandMark?.getBoundingClientRect();
+                const navRect = nav?.getBoundingClientRect();
+                const activeRect = activeLink?.getBoundingClientRect();
+                return {
+                    gapBrandToNav:
+                        brandMarkRect && navRect ? navRect.left - brandMarkRect.right : 0,
+                    brandMarkScrollWidth: brandMark?.scrollWidth ?? 0,
+                    brandMarkClientWidth: brandMark?.clientWidth ?? 0,
+                    activeLeft: activeRect?.left ?? 0,
+                    bodyScrollWidth: document.documentElement.scrollWidth,
+                    viewportWidth: window.innerWidth,
+                };
+            }
+            """
+        )
+        assert narrow_desktop_metrics["gapBrandToNav"] >= 12
+        assert (
+            narrow_desktop_metrics["brandMarkScrollWidth"]
+            <= narrow_desktop_metrics["brandMarkClientWidth"] + 1
+        )
+        assert narrow_desktop_metrics["activeLeft"] >= 270
+        assert (
+            narrow_desktop_metrics["bodyScrollWidth"]
+            <= narrow_desktop_metrics["viewportWidth"] + 1
+        )
+        narrow_desktop_page.close()
+
         hero_metrics = page.evaluate(
             """
             () => {
