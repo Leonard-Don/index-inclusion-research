@@ -220,6 +220,151 @@ def test_analysis_package_reexports() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Engine diagnostics / edge-case regressions
+# ---------------------------------------------------------------------------
+
+
+def _engine_report(
+    *,
+    hid: str = "H1",
+    engine: str,
+    power: float,
+    observed_effect: float = 0.2,
+    bootstrap_p_value: float | None = None,
+    cohens_d: float | None = None,
+) -> pa.HypothesisPowerReport:
+    extras: dict[str, float] = {}
+    if bootstrap_p_value is not None:
+        extras["bootstrap_p_value"] = bootstrap_p_value
+    if cohens_d is not None:
+        extras["cohens_d"] = cohens_d
+    return pa.HypothesisPowerReport(
+        hid=hid,
+        name_cn="测试假说",
+        n_obs=10,
+        test_family="test",
+        observed_effect=observed_effect,
+        observed_effect_label="effect",
+        alpha=0.05,
+        power_at_observed=power,
+        mde_at_80_power=0.5,
+        mde_label="mde",
+        interpretation="test",
+        extras=extras,
+        engine=engine,
+    )
+
+
+def test_h1_engine_bootstrap_missing_counts_uses_default_n(tmp_path: Path) -> None:
+    """Partial H1 bootstrap CSVs should not turn missing counts into n=0."""
+    path = tmp_path / "bootstrap.csv"
+    pd.DataFrame(
+        [
+            {
+                "diff_mean": 0.02,
+                "boot_ci_low": -0.01,
+                "boot_ci_high": 0.05,
+                "boot_p_value": 0.04,
+                # n_cn / n_us intentionally absent: stripped checkouts may
+                # carry old CSVs before the count columns existed.
+            }
+        ]
+    ).to_csv(path, index=False)
+
+    inputs = cli_module._h1_inputs_from_engine_bootstrap("adjusted", bootstrap_csv=path)
+    assert inputs is not None
+    assert "n_total" not in inputs
+    report = pa.compute_h1_power_per_engine({"adjusted": inputs})["adjusted"]
+    assert report.n_obs == 436
+
+    partial_path = tmp_path / "partial_bootstrap.csv"
+    pd.DataFrame(
+        [
+            {
+                "diff_mean": 0.02,
+                "boot_ci_low": -0.01,
+                "boot_ci_high": 0.05,
+                "boot_p_value": 0.04,
+                "n_cn": 123,
+            }
+        ]
+    ).to_csv(partial_path, index=False)
+    partial = cli_module._h1_inputs_from_engine_bootstrap(
+        "adjusted", bootstrap_csv=partial_path
+    )
+    assert partial is not None
+    assert "n_total" not in partial
+
+
+def test_h2_rolling_n_combined_uses_delta_count(tmp_path: Path) -> None:
+    """H2 power is based on year-over-year deltas, not finite level rows."""
+    path = tmp_path / "rolling.csv"
+    pd.DataFrame(
+        [
+            {"market": "US", "event_phase": "effective", "window_end_year": 2020, "car_mean": 0.03},
+            {"market": "US", "event_phase": "effective", "window_end_year": 2021, "car_mean": 0.02},
+            {"market": "US", "event_phase": "effective", "window_end_year": 2022, "car_mean": 0.01},
+            {"market": "CN", "event_phase": "effective", "window_end_year": 2021, "car_mean": 0.04},
+            {"market": "CN", "event_phase": "effective", "window_end_year": 2022, "car_mean": 0.03},
+        ]
+    ).to_csv(path, index=False)
+
+    inputs = cli_module._h2_inputs_from_engine_rolling("market", rolling_csv=path)
+    assert inputs is not None
+    assert inputs["n_combined"] == 3.0
+    assert len(inputs["deltas"]) == 3
+    report = pa.compute_h2_power_per_engine({"market": {"deltas": inputs["deltas"]}})[
+        "market"
+    ]
+    assert report.n_obs == 3
+
+
+def test_build_engine_flip_diagnoses_skips_single_engine() -> None:
+    """A one-engine row is missing comparison data, not a flip diagnosis."""
+    reports = [_engine_report(engine="adjusted", power=0.9, bootstrap_p_value=0.01)]
+    assert cli_module.build_engine_flip_diagnoses(reports) == []
+
+
+def test_diagnose_engine_flip_no_flip_when_both_engines_agree() -> None:
+    """High power alone must not fabricate a methodology-driven flip."""
+    diag = pa.diagnose_engine_flip(
+        "H1",
+        {
+            "adjusted": _engine_report(engine="adjusted", power=0.9, bootstrap_p_value=0.01),
+            "market": _engine_report(engine="market", power=0.92, bootstrap_p_value=0.02),
+        },
+    )
+    assert diag.classification == "NO_FLIP"
+    assert "no adjusted-vs-market verdict flip" in diag.narrative
+
+
+def test_compare_h1_h2_accepts_delta_vector_inputs() -> None:
+    """Typed callers can pass H2's supported deltas list without casts."""
+    comparison = pa.compare_h1_h2_across_engines(
+        {
+            "adjusted": {
+                "diff_mean": 0.02,
+                "boot_ci_low": -0.01,
+                "boot_ci_high": 0.05,
+                "boot_p_value": 0.04,
+            },
+            "market": {
+                "diff_mean": 0.01,
+                "boot_ci_low": -0.02,
+                "boot_ci_high": 0.04,
+                "boot_p_value": 0.40,
+            },
+        },
+        {
+            "adjusted": {"deltas": [0.03, -0.01, 0.02, -0.02]},
+            "market": {"deltas": [-0.04, -0.02, -0.03, -0.01]},
+        },
+    )
+    assert set(comparison.h2_per_engine) == {"adjusted", "market"}
+    assert comparison.h2_per_engine["adjusted"].n_obs == 4
+
+
+# ---------------------------------------------------------------------------
 # CLI smoke
 # ---------------------------------------------------------------------------
 
