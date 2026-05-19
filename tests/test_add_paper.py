@@ -366,6 +366,33 @@ def test_bibtex_append_idempotent_on_cite_key(
     assert report1.paper_id == "greenwood_sammon_2024"
 
 
+def test_add_paper_rejects_existing_bibtex_cite_key_before_catalog_write(
+    tmp_catalog: Path, tmp_bibtex: Path
+) -> None:
+    """A manual BibTeX collision is rejected before catalog mutation."""
+    catalog_before = tmp_catalog.read_text(encoding="utf-8")
+    bibtex_before = tmp_bibtex.read_text(encoding="utf-8")
+    tmp_bibtex.write_text(
+        bibtex_before
+        + "\n@misc{greenwood_sammon_2024,\n"
+        + "  title = {Manually staged but not catalogued},\n"
+        + "}\n",
+        encoding="utf-8",
+    )
+    bibtex_with_collision = tmp_bibtex.read_text(encoding="utf-8")
+
+    with pytest.raises(ap.AddPaperError, match="BibTeX cite-key"):
+        ap.add_paper(
+            _sample_paper_data(),
+            catalog_path=tmp_catalog,
+            bibtex_path=tmp_bibtex,
+            skip_downstream=True,
+        )
+
+    assert tmp_catalog.read_text(encoding="utf-8") == catalog_before
+    assert tmp_bibtex.read_text(encoding="utf-8") == bibtex_with_collision
+
+
 def test_bibtex_escape_blocks_field_injection() -> None:
     """Braces, slashes, controls and newlines cannot create extra fields."""
     paper = ap.NewPaper(
