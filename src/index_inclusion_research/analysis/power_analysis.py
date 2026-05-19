@@ -49,7 +49,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 from scipy import stats
@@ -103,6 +103,72 @@ class HypothesisPowerReport:
     mde_label: str
     interpretation: str
     extras: dict[str, float] = field(default_factory=dict)
+    engine: str = ""
+
+
+@dataclass(frozen=True)
+class EngineFlipDiagnosis:
+    """Per-hypothesis verdict-flip diagnosis across two AR engines.
+
+    Classifies whether a verdict flip between ``adjusted`` and ``market``
+    AR engines is a **methodology-driven** choice (both engines have
+    adequate power, so the flip is a genuine sensitivity to AR-model
+    specification) or **power-limited** (at least one engine has low
+    power, so the flip might be a statistical artifact rather than a
+    real methodological disagreement).
+
+    Fields
+    ------
+    hid:
+        Hypothesis identifier (H1 or H2).
+    adjusted_power, market_power:
+        Per-engine power at the observed effect size.
+    adjusted_p_or_effect, market_p_or_effect:
+        Headline statistic per engine (p-value for H1, magnitude proxy
+        for H2). Smaller p-value or larger magnitude ⇒ more "support".
+    adjusted_confidence, market_confidence:
+        Composite ``power × significance_indicator`` confidence score in
+        ``[0, 1]``; higher = more defensible verdict per engine. The
+        significance indicator is ``1.0`` when the engine's headline p
+        is below ``alpha`` (or effect magnitude meets the magnitude
+        floor for H2), else ``0.0``.
+    engine_choice_impact:
+        Ratio ``max(power_adjusted, power_market) / max(min(...), eps)``
+        — how much the power differs across engines (1.0 = identical,
+        >>1.0 = one engine dramatically better powered than the other).
+    classification:
+        ``"METHODOLOGY_DRIVEN"`` (both powers >= 0.80, real flip) ·
+        ``"POWER_LIMITED"`` (at least one power < 0.50, flip artifact) ·
+        ``"MIXED"`` (intermediate — flip is partly real, partly power).
+    narrative:
+        One-sentence English summary fit for paper §5.
+    """
+
+    hid: str
+    adjusted_power: float
+    market_power: float
+    adjusted_p_or_effect: float
+    market_p_or_effect: float
+    adjusted_confidence: float
+    market_confidence: float
+    engine_choice_impact: float
+    classification: str
+    narrative: str
+
+
+@dataclass(frozen=True)
+class AcrossEnginePowerComparison:
+    """Per-engine power reports + flip diagnoses for H1 and H2.
+
+    Convenience container so downstream code can iterate over a single
+    object instead of juggling two ``dict[engine, HypothesisPowerReport]``
+    pairs and two diagnoses.
+    """
+
+    h1_per_engine: dict[str, HypothesisPowerReport]
+    h2_per_engine: dict[str, HypothesisPowerReport]
+    h1_diagnosis: EngineFlipDiagnosis
+    h2_diagnosis: EngineFlipDiagnosis
 
 
 # ---------------------------------------------------------------------------
@@ -850,17 +916,584 @@ def compute_h6_power(
     )
 
 
+# ---------------------------------------------------------------------------
+# H1 + H2 per-engine power (AR-engine sensitivity)
+# ---------------------------------------------------------------------------
+
+
+# Canonical engine labels used across the project (matches
+# results/sensitivity/ar_{adjusted,market}/ directory naming).
+ENGINE_LABELS: tuple[str, ...] = ("adjusted", "market")
+
+
+def _bootstrap_se_from_ci(
+    ci_low: float, ci_high: float, *, confidence: float = 0.95
+) -> float:
+    """Recover an approximate bootstrap SE from a symmetric (1−α) CI.
+
+    For a 95 % bootstrap CI under normal-approximation symmetry, the SE
+    is ``(CI_high − CI_low) / (2 · z_{1−α/2})`` with ``z_{0.975} ≈ 1.96``.
+    The recovered SE is a *normal-approximation* read of the bootstrap
+    spread; it agrees with the empirical SE up to bootstrap noise when
+    the bootstrap distribution is symmetric, which the diff-of-means
+    statistic always is asymptotically.
+    """
+    if not (0.0 < confidence < 1.0):
+        raise ValueError(f"confidence={confidence} must be in (0, 1)")
+    half_width = (float(ci_high) - float(ci_low)) / 2.0
+    if half_width <= 0:
+        return float("nan")
+    z = stats.norm.ppf(0.5 + confidence / 2.0)
+    return float(half_width / z)
+
+
+def bootstrap_test_power(
+    observed_diff: float,
+    bootstrap_se: float,
+    *,
+    n_total: int,
+    alpha: float = 0.05,
+    alternative: Alternative = "two-sided",
+) -> PowerResult:
+    """Power of a bootstrap-based two-sample diff-of-means test.
+
+    Uses the normal-approximation power formula on the observed test
+    statistic ``Z = diff / SE``. This is exactly what the bootstrap
+    p-value is approximating in the limit, so post-hoc power computed
+    this way is the natural counterpart of the bootstrap p in the
+    verdict CSV.
+
+    Parameters
+    ----------
+    observed_diff:
+        The point estimate (CN_mean − US_mean for H1).
+    bootstrap_se:
+        Bootstrap standard error of ``observed_diff`` (typically
+        :func:`_bootstrap_se_from_ci` of the published CI).
+    n_total:
+        Combined sample size (n_cn + n_us); recorded on the
+        :class:`PowerResult` for transparency. The SE already encodes
+        the sample-size effect, so it is *not* used to rescale the
+        non-centrality.
+    alpha, alternative:
+        Standard arguments; default two-sided.
+    """
+    if n_total < 1:
+        raise ValueError(f"n_total={n_total} must be >= 1")
+    if not (0.0 < alpha < 1.0):
+        raise ValueError(f"alpha={alpha} must be in (0, 1)")
+    if not math.isfinite(bootstrap_se) or bootstrap_se <= 0:
+        return PowerResult(
+            test=f"bootstrap_diff_{alternative.replace('-', '_')}",
+            n=n_total,
+            effect_size=float(observed_diff),
+            alpha=alpha,
+            alternative=alternative,
+            power=float("nan"),
+            detail="non-positive or non-finite bootstrap SE",
+        )
+    ncp = float(observed_diff) / float(bootstrap_se)
+    if alternative == "two-sided":
+        z = stats.norm.ppf(1.0 - alpha / 2.0)
+        # P(|Z| > z) under H1 ~ N(ncp, 1)
+        upper = float(1.0 - stats.norm.cdf(z - ncp))
+        lower = float(stats.norm.cdf(-z - ncp))
+        power = upper + lower
+    elif alternative == "greater":
+        z = stats.norm.ppf(1.0 - alpha)
+        power = float(1.0 - stats.norm.cdf(z - ncp))
+    elif alternative == "less":
+        z = stats.norm.ppf(1.0 - alpha)
+        power = float(stats.norm.cdf(-z - ncp))
+    else:  # pragma: no cover - guarded by Literal
+        raise ValueError(f"alternative={alternative!r} not recognised")
+    power = max(0.0, min(1.0, power))
+    return PowerResult(
+        test=f"bootstrap_diff_{alternative.replace('-', '_')}",
+        n=n_total,
+        effect_size=float(observed_diff),
+        alpha=alpha,
+        alternative=alternative,
+        power=power,
+        detail=f"normal-approx via Z={ncp:.4f}; bootstrap SE={bootstrap_se:.4f}",
+    )
+
+
+def mde_bootstrap_test(
+    bootstrap_se: float,
+    *,
+    target_power: float = 0.80,
+    alpha: float = 0.05,
+    alternative: Alternative = "two-sided",
+) -> float:
+    """Minimum-detectable diff for a bootstrap test at ``target_power``.
+
+    For the normal-approximation form, the analytic MDE is
+    ``(z_{1-α/2} + z_{target_power}) · SE`` two-sided (or the obvious
+    one-sided variants). Returns ``nan`` for non-finite / non-positive
+    SE.
+    """
+    if not math.isfinite(bootstrap_se) or bootstrap_se <= 0:
+        return float("nan")
+    if not (0.0 < alpha < 1.0):
+        raise ValueError(f"alpha={alpha} must be in (0, 1)")
+    if not (0.0 < target_power < 1.0):
+        raise ValueError(f"target_power={target_power} must be in (0, 1)")
+    z_beta = stats.norm.ppf(target_power)
+    if alternative == "two-sided":
+        z_alpha = stats.norm.ppf(1.0 - alpha / 2.0)
+    else:
+        z_alpha = stats.norm.ppf(1.0 - alpha)
+    return float((z_alpha + z_beta) * bootstrap_se)
+
+
+def compute_h1_power_per_engine(
+    engine_inputs: dict[str, dict[str, float]],
+    *,
+    n: int = 436,
+    alpha: float = 0.05,
+    target_power: float = 0.80,
+) -> dict[str, HypothesisPowerReport]:
+    """Per-engine H1 (pre-runup) power reports.
+
+    H1's headline test is the bootstrap-distribution of the cross-market
+    diff-of-means ``CN_pre_runup − US_pre_runup``. With both engines'
+    bootstrap CSVs we can compute the post-hoc power *per engine* and
+    detect whether the verdict flip reflects a real methodological
+    choice or low power under one engine.
+
+    Parameters
+    ----------
+    engine_inputs:
+        Mapping ``engine_label → dict`` with at minimum the keys
+        ``diff_mean``, ``boot_ci_low``, ``boot_ci_high``,
+        ``boot_p_value``. Missing entries return ``nan`` power.
+    n:
+        Combined sample size (default 436 = n_cn + n_us in the headline
+        run).
+    """
+    out: dict[str, HypothesisPowerReport] = {}
+    for engine, row in engine_inputs.items():
+        diff = float(row.get("diff_mean", float("nan")))
+        ci_low = float(row.get("boot_ci_low", float("nan")))
+        ci_high = float(row.get("boot_ci_high", float("nan")))
+        p_value = float(row.get("boot_p_value", float("nan")))
+        n_engine = int(row.get("n_total", n))
+        se = _bootstrap_se_from_ci(ci_low, ci_high)
+        power_res = bootstrap_test_power(
+            diff, se, n_total=n_engine, alpha=alpha
+        )
+        mde = mde_bootstrap_test(se, target_power=target_power, alpha=alpha)
+        if not math.isfinite(power_res.power):
+            verdict = (
+                "无法计算 (bootstrap SE 不可用)，请确认 cma_pre_runup_bootstrap.csv "
+                "存在并含 boot_ci_low/high 列。"
+            )
+        elif power_res.power >= 0.80:
+            verdict = (
+                f"功效充足 (power={power_res.power:.2f} >= 0.80): "
+                f"{engine} 引擎下 n={n_engine} 足以检出 |diff|≈{abs(diff):.4f} "
+                "的真实效应。"
+            )
+        elif power_res.power >= 0.50:
+            verdict = (
+                f"功效中等 (power={power_res.power:.2f}): {engine} 引擎下 "
+                "可见趋势但仍存在错过真实小效应的风险。"
+            )
+        else:
+            verdict = (
+                f"功效偏低 (power={power_res.power:.2f} < 0.50): "
+                f"{engine} 引擎下 bootstrap SE={se:.4f} 太宽，"
+                "差异需达到 |diff|≈" + (f"{mde:.4f}" if math.isfinite(mde) else "—")
+                + " 才能在 80% 功效下被检出。"
+            )
+        interpretation = (
+            f"engine={engine}: diff={diff:+.4f}, bootstrap SE≈{se:.4f}, "
+            f"bootstrap p={p_value:.4f}; 在该 SE 与 n={n_engine} 下，"
+            f"两侧 z-test 功效={power_res.power:.3f}; "
+            f"MDE@{int(target_power * 100)}%≈|diff|={mde:.4f}. {verdict}"
+        )
+        extras = {
+            "bootstrap_se": float(se) if math.isfinite(se) else float("nan"),
+            "bootstrap_p_value": p_value,
+            "ci_low": ci_low,
+            "ci_high": ci_high,
+        }
+        out[engine] = HypothesisPowerReport(
+            hid="H1",
+            name_cn="信息泄露与预运行",
+            n_obs=n_engine,
+            test_family="bootstrap_diff_two_sided",
+            observed_effect=diff,
+            observed_effect_label="cn_minus_us_pre_runup",
+            alpha=alpha,
+            power_at_observed=float(power_res.power)
+            if math.isfinite(power_res.power)
+            else float("nan"),
+            mde_at_80_power=float(mde),
+            mde_label="diff_at_target_power",
+            interpretation=interpretation,
+            extras=extras,
+            engine=engine,
+        )
+    return out
+
+
+def compute_h2_power_per_engine(
+    engine_inputs: dict[str, dict[str, Any]],
+    *,
+    n_combined: int = 17,
+    alpha: float = 0.05,
+    target_power: float = 0.80,
+) -> dict[str, HypothesisPowerReport]:
+    """Per-engine H2 (passive-AUM AUM up + effective CAR decline) power.
+
+    H2's verdict is a direction-match test on the rolling effective-day
+    CAR time-series (does CAR decline as AUM rises?). We treat the
+    sequence of year-over-year ``car_effective`` deltas as the data
+    vector and run a one-sample t-test against ``H0: mean change = 0``
+    (the per-engine direction). Cohen's *d* is ``mean / SD`` of the
+    deltas, ``n = n_combined`` for the matched US+CN pooled series.
+
+    Parameters
+    ----------
+    engine_inputs:
+        Mapping ``engine_label → dict`` with optional keys ``deltas``
+        (an iterable of year-over-year changes in ``car_effective``)
+        and ``aum_ratio`` (the US AUM ratio headline). When ``deltas``
+        is missing we fall back to a derived effect size built from
+        ``car_first``, ``car_last``, ``n_roll`` plus the magnitude
+        proxy ``|car_last − car_first| / max(|first|, |last|, 1e-3)``.
+    n_combined:
+        Total rolling-CAR observations (US n_roll + CN n_roll). The
+        published "n=17" comes from US 12 + CN 5.
+    """
+    out: dict[str, HypothesisPowerReport] = {}
+    for engine, row in engine_inputs.items():
+        n_engine = int(row.get("n_combined", n_combined))
+        if "deltas" in row and row["deltas"] is not None:
+            deltas = np.asarray(row["deltas"], dtype=float)
+            deltas = deltas[np.isfinite(deltas)]
+            n_engine = int(deltas.size)
+            if deltas.size < 2:
+                d_observed = float("nan")
+                sd = float("nan")
+                source = "deltas insufficient"
+            else:
+                mean = float(deltas.mean())
+                sd = float(deltas.std(ddof=1))
+                d_observed = mean / sd if sd > 0 else float("nan")
+                source = f"empirical deltas (n_used={deltas.size}, SD={sd:.4f})"
+        else:
+            # Fallback: derive |d| from the trend magnitude.
+            car_first = float(row.get("car_first", float("nan")))
+            car_last = float(row.get("car_last", float("nan")))
+            trend_sd = float(row.get("trend_sd", float("nan")))
+            if (
+                math.isfinite(car_first)
+                and math.isfinite(car_last)
+                and math.isfinite(trend_sd)
+                and trend_sd > 0
+            ):
+                d_observed = (car_last - car_first) / trend_sd
+                sd = trend_sd
+                source = (
+                    f"trend slope (car_first={car_first:+.4f} → "
+                    f"car_last={car_last:+.4f}, sd={trend_sd:.4f})"
+                )
+            else:
+                d_observed = float("nan")
+                sd = float("nan")
+                source = "no deltas + trend SD missing"
+        if math.isfinite(d_observed) and n_engine >= 2:
+            power_res = t_test_power(
+                n_engine, abs(d_observed), alpha=alpha, alternative="two-sided"
+            )
+            mde = mde_at_power(
+                n_engine, test="t", target_power=target_power, alpha=alpha
+            )
+            power_val = float(power_res.power)
+        else:
+            power_val = float("nan")
+            mde = float("nan")
+        if not math.isfinite(power_val):
+            verdict = (
+                "无法计算 (deltas / trend SD 不可用)，"
+                "请确认 cma_time_series_rolling.csv 完整。"
+            )
+        elif power_val >= 0.80:
+            verdict = (
+                f"功效充足 (power={power_val:.2f} >= 0.80): {engine} 引擎下 "
+                f"n_combined={n_engine} 足以检出 |d|≈{abs(d_observed):.2f} "
+                "的真实方向效应。"
+            )
+        elif power_val >= 0.50:
+            verdict = (
+                f"功效中等 (power={power_val:.2f}): {engine} 引擎下 "
+                "趋势可读，但 n=17 仅能稳健检出中等以上效应。"
+            )
+        else:
+            verdict = (
+                f"功效偏低 (power={power_val:.2f} < 0.50): {engine} 引擎下 "
+                f"样本 n={n_engine} 太小，"
+                f"|d| 必须 ≥{mde:.3f} 才能在 80% 功效下检出。"
+            )
+        interpretation = (
+            f"engine={engine}: Cohen's d≈{d_observed:+.3f} ({source}); "
+            f"n_combined={n_engine}, two-sided t-test power="
+            f"{power_val:.3f}, MDE@{int(target_power * 100)}%=|d|={mde:.3f}. "
+            f"{verdict}"
+        )
+        extras = {
+            "cohens_d": float(d_observed)
+            if math.isfinite(d_observed)
+            else float("nan"),
+            "trend_sd": float(sd) if math.isfinite(sd) else float("nan"),
+        }
+        out[engine] = HypothesisPowerReport(
+            hid="H2",
+            name_cn="被动基金 AUM 差异",
+            n_obs=n_engine,
+            test_family="one_sample_t_two_sided",
+            observed_effect=float(d_observed)
+            if math.isfinite(d_observed)
+            else float("nan"),
+            observed_effect_label="cohens_d_car_delta",
+            alpha=alpha,
+            power_at_observed=power_val,
+            mde_at_80_power=float(mde),
+            mde_label="cohens_d_at_target_power",
+            interpretation=interpretation,
+            extras=extras,
+            engine=engine,
+        )
+    return out
+
+
+def diagnose_engine_flip(
+    hid: str,
+    per_engine: dict[str, HypothesisPowerReport],
+    *,
+    alpha: float = 0.05,
+    h2_magnitude_floor: float = 0.50,
+) -> EngineFlipDiagnosis:
+    """Classify an engine flip as METHODOLOGY-DRIVEN, POWER-LIMITED, or MIXED.
+
+    Rules
+    -----
+    - **NO_FLIP**: both engines are present but their verdict indicators
+      do not disagree, so no flip should be diagnosed.
+    - **METHODOLOGY_DRIVEN**: both engines have power >= 0.80, the
+      engines disagree, AND at least one engine clearly rejects
+      (p < α / magnitude exceeds the floor). Flip is a real, defensible
+      methodological-choice signal.
+    - **POWER_LIMITED**: at least one engine has power < 0.50 AND the
+      ratio ``max_power / min_power`` >= 2.0 (clear power asymmetry).
+      Flip is most likely an artifact of low power under one engine.
+    - **MIXED**: anything else (one engine 0.50-0.80, or both engines
+      moderate power, or both have power >=0.80 but neither rejects).
+
+    H1 uses ``bootstrap_p_value`` as significance indicator (< α). H2
+    uses |Cohen's d| >= ``h2_magnitude_floor`` because the H2 verdict
+    is direction-based rather than p-gated.
+    """
+    if not per_engine or not all(engine in per_engine for engine in ENGINE_LABELS):
+        return EngineFlipDiagnosis(
+            hid=hid,
+            adjusted_power=float("nan"),
+            market_power=float("nan"),
+            adjusted_p_or_effect=float("nan"),
+            market_p_or_effect=float("nan"),
+            adjusted_confidence=float("nan"),
+            market_confidence=float("nan"),
+            engine_choice_impact=float("nan"),
+            classification="MISSING",
+            narrative=(
+                f"{hid}: both engine inputs are required — cannot diagnose engine flip."
+            ),
+        )
+    adj = per_engine.get("adjusted")
+    mkt = per_engine.get("market")
+    adj_power = (
+        float(adj.power_at_observed)
+        if adj is not None and math.isfinite(adj.power_at_observed)
+        else float("nan")
+    )
+    mkt_power = (
+        float(mkt.power_at_observed)
+        if mkt is not None and math.isfinite(mkt.power_at_observed)
+        else float("nan")
+    )
+
+    def _significance(report: HypothesisPowerReport | None) -> tuple[float, float]:
+        if report is None:
+            return (float("nan"), float("nan"))
+        if hid == "H1":
+            p = float(report.extras.get("bootstrap_p_value", float("nan")))
+            indicator = 1.0 if math.isfinite(p) and p < alpha else 0.0
+            return (p, indicator)
+        # H2: magnitude-based — use |Cohen's d|.
+        d = float(report.extras.get("cohens_d", float("nan")))
+        if not math.isfinite(d):
+            d = float(report.observed_effect)
+        magnitude = abs(d) if math.isfinite(d) else float("nan")
+        indicator = (
+            1.0 if math.isfinite(magnitude) and magnitude >= h2_magnitude_floor
+            else 0.0
+        )
+        return (magnitude, indicator)
+
+    adj_stat, adj_ind = _significance(adj)
+    mkt_stat, mkt_ind = _significance(mkt)
+    has_signal = bool(adj_ind > 0.0 or mkt_ind > 0.0)
+
+    if hid == "H2":
+        adj_effect = float(adj.observed_effect) if adj is not None else float("nan")
+        mkt_effect = float(mkt.observed_effect) if mkt is not None else float("nan")
+        has_disagreement = (
+            math.isfinite(adj_effect)
+            and math.isfinite(mkt_effect)
+            and adj_effect != 0.0
+            and mkt_effect != 0.0
+            and math.copysign(1.0, adj_effect) != math.copysign(1.0, mkt_effect)
+        )
+    else:
+        has_disagreement = bool(adj_ind != mkt_ind)
+
+    adj_conf = (
+        adj_power * adj_ind if math.isfinite(adj_power * adj_ind) else float("nan")
+    )
+    mkt_conf = (
+        mkt_power * mkt_ind if math.isfinite(mkt_power * mkt_ind) else float("nan")
+    )
+
+    if math.isfinite(adj_power) and math.isfinite(mkt_power):
+        eps = 1e-6
+        max_pow = max(adj_power, mkt_power)
+        min_pow = max(min(adj_power, mkt_power), eps)
+        impact = float(max_pow / min_pow)
+    else:
+        impact = float("nan")
+
+    if not has_disagreement:
+        classification = "NO_FLIP"
+        narrative = (
+            f"{hid} shows no adjusted-vs-market verdict flip: "
+            f"adjusted_indicator={adj_ind:.0f}, market_indicator={mkt_ind:.0f}. "
+            "Do not interpret the engine comparison as a methodological flip."
+        )
+    elif (
+        math.isfinite(adj_power)
+        and math.isfinite(mkt_power)
+        and adj_power >= 0.80
+        and mkt_power >= 0.80
+        and has_signal
+    ):
+        classification = "METHODOLOGY_DRIVEN"
+        narrative = (
+            f"{hid} flip is METHODOLOGY-DRIVEN: both engines have "
+            f"power ≥ 0.80 (adjusted={adj_power:.2f}, "
+            f"market={mkt_power:.2f}). The verdict difference is a "
+            "real methodological-choice signal, not a power artifact; "
+            "paper §5 should report both engines transparently."
+        )
+    elif (
+        math.isfinite(adj_power)
+        and math.isfinite(mkt_power)
+        and (adj_power < 0.50 or mkt_power < 0.50)
+        and impact >= 2.0
+    ):
+        classification = "POWER_LIMITED"
+        narrative = (
+            f"{hid} flip is POWER-LIMITED: at least one engine has "
+            f"power < 0.50 (adjusted={adj_power:.2f}, "
+            f"market={mkt_power:.2f}); engine_choice_impact={impact:.1f}× "
+            "indicates the flip likely reflects the under-powered "
+            "engine missing the effect, not a real methodological "
+            "disagreement. Paper §5 should default to the better-"
+            "powered engine."
+        )
+    else:
+        classification = "MIXED"
+        narrative = (
+            f"{hid} flip is MIXED: power split (adjusted={adj_power:.2f}, "
+            f"market={mkt_power:.2f}) sits between strong methodological "
+            "and pure power regimes; report both engines + power numbers "
+            "in paper §5."
+        )
+    return EngineFlipDiagnosis(
+        hid=hid,
+        adjusted_power=adj_power,
+        market_power=mkt_power,
+        adjusted_p_or_effect=adj_stat,
+        market_p_or_effect=mkt_stat,
+        adjusted_confidence=float(adj_conf)
+        if math.isfinite(adj_conf)
+        else float("nan"),
+        market_confidence=float(mkt_conf)
+        if math.isfinite(mkt_conf)
+        else float("nan"),
+        engine_choice_impact=impact,
+        classification=classification,
+        narrative=narrative,
+    )
+
+
+def compare_h1_h2_across_engines(
+    h1_inputs: dict[str, dict[str, float]],
+    h2_inputs: dict[str, dict[str, Any]],
+    *,
+    h1_n: int = 436,
+    h2_n_combined: int = 17,
+    alpha: float = 0.05,
+    target_power: float = 0.80,
+) -> AcrossEnginePowerComparison:
+    """Build the cross-engine power-comparison container for H1 + H2.
+
+    Convenience wrapper over :func:`compute_h1_power_per_engine`,
+    :func:`compute_h2_power_per_engine`, and
+    :func:`diagnose_engine_flip`. Intended as the headline entry-point
+    for the CLI and for tests.
+    """
+    h1_per = compute_h1_power_per_engine(
+        h1_inputs, n=h1_n, alpha=alpha, target_power=target_power
+    )
+    h2_per = compute_h2_power_per_engine(
+        h2_inputs,
+        n_combined=h2_n_combined,
+        alpha=alpha,
+        target_power=target_power,
+    )
+    h1_diag = diagnose_engine_flip("H1", h1_per, alpha=alpha)
+    h2_diag = diagnose_engine_flip("H2", h2_per, alpha=alpha)
+    return AcrossEnginePowerComparison(
+        h1_per_engine=h1_per,
+        h2_per_engine=h2_per,
+        h1_diagnosis=h1_diag,
+        h2_diagnosis=h2_diag,
+    )
+
+
 __all__ = [
+    "AcrossEnginePowerComparison",
     "Alternative",
     "BootstrapPowerResult",
+    "ENGINE_LABELS",
+    "EngineFlipDiagnosis",
     "HypothesisPowerReport",
     "PowerResult",
     "beta_posterior_probability_above",
     "binomial_proportion_power",
     "bootstrap_observed_power",
+    "bootstrap_test_power",
+    "compare_h1_h2_across_engines",
+    "compute_h1_power_per_engine",
+    "compute_h2_power_per_engine",
     "compute_h3_power",
     "compute_h6_power",
+    "diagnose_engine_flip",
     "exact_binomial_power",
     "mde_at_power",
+    "mde_bootstrap_test",
     "t_test_power",
 ]
