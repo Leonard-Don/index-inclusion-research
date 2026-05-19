@@ -362,6 +362,13 @@ def test_dashboard_static_assets_are_served() -> None:
     assert "createSurfaceContext" in context_groups_js
     assert "createRuntimeContext" in context_groups_js
 
+    interactive_charts_response = client.get("/static/dashboard/interactive_charts.js")
+    assert interactive_charts_response.status_code == 200
+    interactive_charts_js = interactive_charts_response.get_data(as_text=True)
+    assert "${ann.car_pct}\\n${ann.stars}" not in interactive_charts_js
+    assert "${ann.t.toFixed(2)}\\n${ann.stars}" not in interactive_charts_js
+    assert "${ann.car_pct} ${ann.stars}" not in interactive_charts_js
+
     surface_response = client.get("/static/dashboard/surface.js")
     assert surface_response.status_code == 200
     surface_js = surface_response.get_data(as_text=True)

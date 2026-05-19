@@ -217,7 +217,7 @@ function buildCarHeatmapOption(payload) {
         if (!ann) return '';
         return `<strong>${payload.row_labels[ann.row]}</strong><br>` +
           `窗口 ${payload.col_labels[ann.col]}<br>` +
-          `CAR（累计异常收益率）: ${ann.car_pct} ${ann.stars}<br>` +
+          `CAR（累计异常收益率）: ${ann.car_pct}<br>` +
           `p 值（显著性）= ${ann.p_value.toFixed(4)}`;
       },
     },
@@ -253,7 +253,7 @@ function buildCarHeatmapOption(payload) {
           const ann = payload.annotations.find(
             a => a.col === params.value[0] && a.row === params.value[1]
           );
-          return ann ? `${ann.car_pct}\n${ann.stars}` : '';
+          return ann ? ann.car_pct : '';
         },
         fontSize: 13,
         fontWeight: 'bold',
@@ -462,10 +462,9 @@ function buildMainRegressionOption(payload) {
         if (!d || d.value == null) return '';
         const coef = d.value[0];
         return `<strong>${labels[d.value[1]] ?? ''}</strong><br>` +
-          `系数（处理效应）: ${(coef * 100).toFixed(3)}% ${d.stars ?? ''}<br>` +
+          `系数（处理效应）: ${(coef * 100).toFixed(3)}%<br>` +
           `95% 置信区间: [${(d.ci_lo * 100).toFixed(3)}%, ${(d.ci_hi * 100).toFixed(3)}%]<br>` +
-          `p 值（显著性）= ${d.p_value?.toFixed(4) ?? '—'}<br>` +
-          `<span style="color:#5c6b77;font-size:11px">*p<0.10 **p<0.05 ***p<0.01</span>`;
+          `p 值（显著性）= ${d.p_value?.toFixed(4) ?? '—'}`;
       },
     },
     grid: { left: 150, right: 42, top: 70, bottom: 76, containLabel: true },
@@ -738,9 +737,8 @@ function buildCmaMechanismHeatmapOption(payload) {
         if (!ann) return '';
         return `<strong>${payload.row_labels[ann.row]}</strong><br>` +
           `${payload.col_labels[ann.col]}<br>` +
-          `t 值（系数/标准误）= ${ann.t.toFixed(2)} ${ann.stars ?? ''}<br>` +
-          (ann.p_value != null ? `p 值（显著性）= ${ann.p_value.toFixed(4)}<br>` : '') +
-          `<span style="color:#5c6b77;font-size:11px">*p<0.10 **p<0.05 ***p<0.01</span>`;
+          `t 值（系数/标准误）= ${ann.t.toFixed(2)}<br>` +
+          (ann.p_value != null ? `p 值（显著性）= ${ann.p_value.toFixed(4)}` : '');
       },
     },
     grid: { left: 170, right: 118, top: 76, bottom: 76, containLabel: true },
@@ -775,7 +773,7 @@ function buildCmaMechanismHeatmapOption(payload) {
           const ann = payload.annotations.find(
             a => a.col === params.value[0] && a.row === params.value[1]
           );
-          return ann ? `${ann.t.toFixed(2)}\n${ann.stars}` : '';
+          return ann ? ann.t.toFixed(2) : '';
         },
         fontSize: 12,
         fontWeight: 'bold',

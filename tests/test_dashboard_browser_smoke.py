@@ -867,6 +867,78 @@ def test_dashboard_browser_smoke() -> None:
     assert console_errors == []
 
 
+def test_car_heatmap_labels_omit_significance_stars() -> None:
+    with (
+        _running_dashboard_server() as base_url,
+        playwright_sync_api.sync_playwright() as playwright,
+    ):
+        browser = _launch_chromium(playwright)
+        try:
+            page = _new_dashboard_page(browser, viewport={"width": 1175, "height": 647})
+            page.goto(
+                f"{base_url}/?open=demo-design-detail-figures%2Cdemo-price_pressure_track-support-papers%2Cdemo-limits-detail-tables#design",
+                wait_until="domcontentloaded",
+            )
+            page.wait_for_load_state("networkidle")
+            car_heatmap = page.locator('[data-echart="car_heatmap"]')
+            assert car_heatmap.count() == 1
+            car_heatmap.scroll_into_view_if_needed()
+            page.wait_for_function(
+                """
+                () => {
+                    if (typeof echarts === "undefined") return false;
+                    const el = document.querySelector('[data-echart="car_heatmap"]');
+                    if (!el) return false;
+                    const inst = echarts.getInstanceByDom(el);
+                    return inst != null && !el.classList.contains("echart-loading");
+                }
+                """,
+                timeout=10_000,
+            )
+            labels = page.evaluate(
+                """
+                () => {
+                    const el = document.querySelector('[data-echart="car_heatmap"]');
+                    const inst = echarts.getInstanceByDom(el);
+                    const option = inst.getOption();
+                    const dataPoints = option.series?.[0]?.data ?? [];
+                    const labelConfig = option.series?.[0]?.label;
+                    const labelFormatter = Array.isArray(labelConfig)
+                        ? labelConfig[0]?.formatter
+                        : labelConfig?.formatter;
+                    return dataPoints
+                        .filter((point) => Array.isArray(point) && point.length >= 3)
+                        .map((point) => labelFormatter({ value: point }));
+                }
+                """
+            )
+            tooltip = page.evaluate(
+                """
+                () => {
+                    const el = document.querySelector('[data-echart="car_heatmap"]');
+                    const inst = echarts.getInstanceByDom(el);
+                    const option = inst.getOption();
+                    const dataPoint = option.series?.[0]?.data?.find(
+                        (point) => Array.isArray(point) && point.length >= 3
+                    );
+                    const tooltipConfig = option.tooltip;
+                    const tooltipFormatter = Array.isArray(tooltipConfig)
+                        ? tooltipConfig[0]?.formatter
+                        : tooltipConfig?.formatter;
+                    return tooltipFormatter({ value: dataPoint });
+                }
+                """
+            )
+            percent_labels = [label for label in labels if isinstance(label, str) and "%" in label]
+            assert "1.06%" in percent_labels
+            assert all("*" not in label for label in percent_labels)
+            assert all("\n" not in label for label in percent_labels)
+            assert "**" not in tooltip
+            assert "p 值（显著性）" in tooltip
+        finally:
+            browser.close()
+
+
 def test_dashboard_bottom_scroll_does_not_snap_back_to_top() -> None:
     with (
         _running_dashboard_server() as base_url,
