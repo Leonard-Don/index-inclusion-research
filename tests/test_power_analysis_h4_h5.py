@@ -32,7 +32,6 @@ from statsmodels.stats.power import TTestPower
 from index_inclusion_research import power_analysis as cli_module
 from index_inclusion_research.analysis import power_analysis as pa
 
-
 # ---------------------------------------------------------------------------
 # Regression-coef power: agreement with statsmodels gold standard
 # ---------------------------------------------------------------------------
