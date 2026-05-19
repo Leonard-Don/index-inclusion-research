@@ -60,7 +60,7 @@ def test_build_track_section_view_uses_anchor_and_counts() -> None:
         support_papers_count=5,
     )
 
-    assert view["meta"]["refresh_running_label"] == "主线刷新中…"
+    assert "refresh_running_label" not in view["meta"]
     assert view["primary"]["key"] == "demo-price_pressure_track-primary-tables"
     assert view["detail"]["demo_title"] == "价格压力主线补充明细（4 张）"
     assert view["support_demo_title"] == "支撑文献（5 篇）"

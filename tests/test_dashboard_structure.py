@@ -282,7 +282,8 @@ def test_home_dashboard_demo_mode_collapses_secondary_material_and_marks_lazy_me
     assert "data-refresh-state-label" in html
     assert "data-refresh-scope-label" in html
     assert "data-refresh-artifact-list" in html
-    assert "只刷新本主线" in html
+    assert "只刷新本主线" not in html
+    assert "单模块结果更新后" not in html
     assert 'data-details-key="demo-design-detail-figures"' in html
     assert 'data-details-key="demo-framework-detail-tables"' in html
     assert "data-details-toggle" in html

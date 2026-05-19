@@ -426,9 +426,6 @@ class DesignSectionView(TypedDict):
 class TrackMetaView(TypedDict):
     takeaway_label: str
     summary_label: str
-    refresh_button_label: str
-    refresh_running_label: str
-    refresh_help_copy: str
     surface_title: str
 
 

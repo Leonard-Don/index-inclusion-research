@@ -92,7 +92,7 @@ def test_prepare_track_display_splits_tables_and_keeps_demo_note() -> None:
     assert display["display_support_papers"] == section["support_papers"]
     assert "公开超额收益" in display["display_summary"]
     assert "短期冲击未消失" in display["takeaway"]
-    assert display["track_view"]["meta"]["refresh_button_label"] == "只刷新本主线"
+    assert "refresh_button_label" not in display["track_view"]["meta"]
     assert (
         display["track_view"]["primary"]["key"]
         == "demo-price_pressure_track-primary-tables"

@@ -127,9 +127,6 @@ def build_track_meta_view() -> TrackMetaView:
     return {
         "takeaway_label": "先看判断",
         "summary_label": "一句话背景",
-        "refresh_button_label": "只刷新本主线",
-        "refresh_running_label": "主线刷新中…",
-        "refresh_help_copy": "单模块结果更新后，只刷新这条主线即可。",
         "surface_title": "阅读提示",
     }
 
