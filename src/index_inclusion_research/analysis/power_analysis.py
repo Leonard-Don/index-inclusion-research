@@ -1047,6 +1047,390 @@ def mde_bootstrap_test(
     return float((z_alpha + z_beta) * bootstrap_se)
 
 
+def regression_coef_power(
+    coef: float,
+    se: float,
+    *,
+    n: int,
+    n_covariates: int = 1,
+    alpha: float = 0.05,
+    alternative: Alternative = "two-sided",
+) -> PowerResult:
+    """Power of a single-coefficient t-test in an OLS / robust-SE regression.
+
+    H4 and H5's headline tests are exactly this shape: a published
+    ``(coef, se, n)`` triple from an HC3 (heteroskedasticity-robust)
+    regression. Under the standard asymptotic Gaussian approximation,
+    the test statistic is ``t = coef / se`` against
+    ``H0: coef = 0`` with degrees of freedom ``df = n − n_covariates − 1``.
+    Post-hoc power is the non-central t survival probability at the
+    critical t-value, with non-centrality ``ncp = coef / se``.
+
+    Parameters
+    ----------
+    coef:
+        Observed coefficient (point estimate).
+    se:
+        Robust (HC3) standard error of ``coef``.
+    n:
+        Regression sample size (rows used to fit the model).
+    n_covariates:
+        Number of regressors *excluding* the intercept. The
+        ``cma_gap_drift_market_regression`` table fits ``announce_jump
+        ~ cn_dummy + gap_length_days`` so ``n_covariates = 2``; the H5
+        ``cma_h5_limit_predictive_regression`` table fits the lone
+        ``limit_hit_rate`` predictor so ``n_covariates = 1``. With
+        ``n`` in the hundreds the choice of ``df`` only matters at the
+        third decimal; we still pass it through so callers stay honest.
+    alpha, alternative:
+        Standard arguments.
+
+    Returns
+    -------
+    PowerResult
+        ``power`` in ``[0, 1]`` with ``df`` and ``ncp`` in the detail
+        string. Returns ``nan`` power when ``se`` is non-positive /
+        non-finite — the regression was rank-deficient or the upstream
+        CSV column was missing.
+    """
+    if n < 2:
+        raise ValueError(f"n={n} must be >= 2 (regression needs df >= 1)")
+    if n_covariates < 0:
+        raise ValueError(f"n_covariates={n_covariates} must be >= 0")
+    if not (0.0 < alpha < 1.0):
+        raise ValueError(f"alpha={alpha} must be in (0, 1)")
+    if not math.isfinite(se) or se <= 0:
+        return PowerResult(
+            test=f"regression_coef_t_{alternative.replace('-', '_')}",
+            n=n,
+            effect_size=float(coef),
+            alpha=alpha,
+            alternative=alternative,
+            power=float("nan"),
+            detail="non-positive or non-finite SE; regression rank-deficient?",
+        )
+    df = max(n - n_covariates - 1, 1)
+    ncp = float(coef) / float(se)
+    if alternative == "two-sided":
+        tcrit = stats.t.ppf(1.0 - alpha / 2.0, df)
+        upper = float(1.0 - stats.nct.cdf(tcrit, df, ncp))
+        lower = float(stats.nct.cdf(-tcrit, df, ncp))
+        power = upper + lower
+    elif alternative == "greater":
+        tcrit = stats.t.ppf(1.0 - alpha, df)
+        power = float(1.0 - stats.nct.cdf(tcrit, df, ncp))
+    elif alternative == "less":
+        tcrit = stats.t.ppf(alpha, df)
+        power = float(stats.nct.cdf(tcrit, df, ncp))
+    else:  # pragma: no cover - guarded by Literal
+        raise ValueError(f"alternative={alternative!r} not recognised")
+    power = max(0.0, min(1.0, power))
+    return PowerResult(
+        test=f"regression_coef_t_{alternative.replace('-', '_')}",
+        n=n,
+        effect_size=float(coef),
+        alpha=alpha,
+        alternative=alternative,
+        power=power,
+        detail=f"df={df}, ncp={ncp:.4f}, se={se:.4g}",
+    )
+
+
+def mde_regression_coef(
+    se: float,
+    *,
+    n: int,
+    n_covariates: int = 1,
+    target_power: float = 0.80,
+    alpha: float = 0.05,
+    alternative: Alternative = "two-sided",
+) -> float:
+    """Minimum-detectable regression coefficient at ``target_power``.
+
+    Two equivalent formulations are common: the standard (normal-approx)
+    closed form ``(z_{1-α/2} + z_{target_power}) · SE`` and the exact
+    non-central t inversion (slightly larger at very small df). We use
+    the **non-central t inversion** — bisection over the same range as
+    :func:`mde_at_power` — so the returned MDE matches the actual
+    :func:`regression_coef_power` at that effect.
+
+    Returns ``nan`` for non-finite / non-positive SE.
+    """
+    if not math.isfinite(se) or se <= 0:
+        return float("nan")
+    if not (0.0 < alpha < 1.0):
+        raise ValueError(f"alpha={alpha} must be in (0, 1)")
+    if not (0.0 < target_power < 1.0):
+        raise ValueError(f"target_power={target_power} must be in (0, 1)")
+    if n < 2:
+        raise ValueError(f"n={n} must be >= 2")
+
+    def power_at(coef: float) -> float:
+        return regression_coef_power(
+            coef,
+            se,
+            n=n,
+            n_covariates=n_covariates,
+            alpha=alpha,
+            alternative=alternative,
+        ).power
+
+    # Bisection across a generous absolute-coef range, scaled by SE so
+    # very small or very large SEs both converge.
+    lo, hi = 1e-12, max(se * 50.0, 1.0)
+    if power_at(hi) < target_power:
+        return float(hi)
+    if power_at(lo) >= target_power:
+        return float(lo)
+    for _ in range(80):
+        mid = (lo + hi) / 2.0
+        if power_at(mid) < target_power:
+            lo = mid
+        else:
+            hi = mid
+    return float((lo + hi) / 2.0)
+
+
+def compute_h4_power(
+    coef: float = 0.006111113589099461,
+    se: float = 0.00989025033185132,
+    p_value: float = 0.5366460641588349,
+    n: int = 436,
+    *,
+    n_covariates: int = 2,
+    alpha: float = 0.05,
+    target_power: float = 0.80,
+) -> HypothesisPowerReport:
+    """Build the H4 (short-sale constraint / 卖空约束) power report.
+
+    H4's headline test is the t-test on the ``cn_dummy`` coefficient in
+    the HC3 regression of ``gap_drift`` on ``cn_dummy + gap_length_days``.
+    Verdict source: ``results/real_tables/cma_gap_drift_market_regression.csv``
+    — ``cn_coef``, ``cn_se``, ``cn_p_value``, ``n_obs``.
+
+    The expected sign under H4 is **positive** (CN should drift more
+    than US during the gap window because short-sale constraints
+    prevent arbitrageurs from leaning against the inclusion-driven
+    over-pricing). The observed coefficient is positive but with a wide
+    SE — exactly the scenario where post-hoc power matters: we need to
+    quantify how small an effect we could realistically have detected
+    with n=436.
+
+    Parameters
+    ----------
+    coef, se, p_value:
+        Headline statistics from the cn_coef row of the gap-drift
+        regression CSV. Defaults match the frozen verdicts (HC3 SE).
+    n:
+        Regression sample size.
+    n_covariates:
+        Regressors excluding the intercept (default 2: cn_dummy +
+        gap_length_days).
+    """
+    if n < 2:
+        raise ValueError(f"n={n} must be >= 2")
+
+    power_at_obs = regression_coef_power(
+        coef,
+        se,
+        n=n,
+        n_covariates=n_covariates,
+        alpha=alpha,
+        alternative="two-sided",
+    )
+    mde = mde_regression_coef(
+        se,
+        n=n,
+        n_covariates=n_covariates,
+        target_power=target_power,
+        alpha=alpha,
+        alternative="two-sided",
+    )
+    t_observed = coef / se if math.isfinite(se) and se > 0 else float("nan")
+
+    if not math.isfinite(power_at_obs.power):
+        verdict = (
+            "无法计算 (SE 不可用)，请检查 cma_gap_drift_market_regression.csv "
+            "的 cn_se 列是否完整。"
+        )
+    elif power_at_obs.power < 0.30:
+        verdict = (
+            f"严重欠功效 (power={power_at_obs.power:.2f} < 0.30): n={n} 下"
+            f"观测系数 {coef:+.4f} 太小 (相对 SE={se:.4f})，"
+            "无法在 α=0.05 下稳健检出。证据不足的判定是 n 不够大，"
+            "不是 H4 一定错，因此保留为 supplementary 是合理的。"
+        )
+    elif power_at_obs.power < 0.50:
+        verdict = (
+            f"功效偏低 (power={power_at_obs.power:.2f} < 0.50): "
+            f"n={n} 下可见方向性证据，但需扩样本(或加更强协变量)才能升级。"
+        )
+    elif power_at_obs.power < 0.80:
+        verdict = (
+            f"功效中等 (power={power_at_obs.power:.2f}): n={n} 已能稳健"
+            "区分中等以上效应，但当前观测效应仍存在错过真实小效应的风险。"
+        )
+    else:
+        verdict = (
+            f"功效充足 (power={power_at_obs.power:.2f} >= 0.80): "
+            f"n={n} 下已能稳健检出 |coef|≈{abs(coef):.4f} 的效应。"
+        )
+
+    extras = {
+        "coef_observed": float(coef),
+        "se_observed": float(se),
+        "t_observed": float(t_observed) if math.isfinite(t_observed) else float("nan"),
+        "p_value_observed": float(p_value),
+        "n_covariates": float(n_covariates),
+    }
+    power_val = (
+        float(power_at_obs.power)
+        if math.isfinite(power_at_obs.power)
+        else float("nan")
+    )
+    interpretation = (
+        f"HC3 regression coef={coef:+.4f} (SE={se:.4f}, t={t_observed:+.3f}, "
+        f"p={p_value:.4f}), df≈{n - n_covariates - 1}; "
+        f"two-sided t-test power={power_val:.3f}. "
+        f"MDE@{int(target_power * 100)}% = |coef|≈{mde:.4f} "
+        f"(≈ {mde / max(abs(coef), 1e-12):.1f}× the observed coefficient). "
+        f"{verdict}"
+    )
+    return HypothesisPowerReport(
+        hid="H4",
+        name_cn="卖空约束",
+        n_obs=n,
+        test_family="regression_coef_t_two_sided",
+        observed_effect=float(coef),
+        observed_effect_label="cn_coef_gap_drift",
+        alpha=alpha,
+        power_at_observed=power_val,
+        mde_at_80_power=float(mde),
+        mde_label="coef_at_target_power",
+        interpretation=interpretation,
+        extras=extras,
+    )
+
+
+def compute_h5_power(
+    coef: float = 0.15489137456100996,
+    se: float = 0.05862470933497476,
+    p_value: float = 0.008239775013213406,
+    n: int = 936,
+    *,
+    n_covariates: int = 1,
+    alpha: float = 0.05,
+    target_power: float = 0.80,
+) -> HypothesisPowerReport:
+    """Build the H5 (涨跌停限制 / limit-up-down constraint) power report.
+
+    H5's headline test is the t-test on the ``limit_coef`` coefficient
+    in the regression of ``announce-day CAR`` on the limit-hit rate.
+    Verdict source: ``results/real_tables/cma_h5_limit_predictive_regression.csv``
+    — ``limit_coef``, ``limit_se``, ``limit_p_value``, ``n_obs``.
+
+    The expected sign under H5 is **positive**: CN-style limit-up
+    days truncate the price-discovery process, so heavier limit
+    exposure → larger announce-day CAR. The observed coefficient is
+    +0.1549 (significant at α=0.05), so we expect post-hoc power near 1
+    — but we report the number explicitly rather than asserting it, and
+    we surface the MDE so reviewers can see how small an effect H5's
+    n=936 could *have* detected.
+
+    Parameters
+    ----------
+    coef, se, p_value:
+        Headline statistics from the limit-predictive regression CSV.
+        Defaults match the frozen verdicts.
+    n:
+        Regression sample size (event-level CN sample, n=936).
+    n_covariates:
+        Regressors excluding the intercept (default 1: limit_hit_rate).
+    """
+    if n < 2:
+        raise ValueError(f"n={n} must be >= 2")
+
+    power_at_obs = regression_coef_power(
+        coef,
+        se,
+        n=n,
+        n_covariates=n_covariates,
+        alpha=alpha,
+        alternative="two-sided",
+    )
+    mde = mde_regression_coef(
+        se,
+        n=n,
+        n_covariates=n_covariates,
+        target_power=target_power,
+        alpha=alpha,
+        alternative="two-sided",
+    )
+    t_observed = coef / se if math.isfinite(se) and se > 0 else float("nan")
+
+    if not math.isfinite(power_at_obs.power):
+        verdict = (
+            "无法计算 (SE 不可用)，请检查 cma_h5_limit_predictive_regression.csv "
+            "的 limit_se 列是否完整。"
+        )
+    elif power_at_obs.power < 0.30:
+        verdict = (
+            f"严重欠功效 (power={power_at_obs.power:.2f} < 0.30): n={n} "
+            "下仍无法稳健检出该效应。"
+        )
+    elif power_at_obs.power < 0.50:
+        verdict = (
+            f"功效偏低 (power={power_at_obs.power:.2f} < 0.50): "
+            "可作为方向性证据保留，但扩样本会带来明显增益。"
+        )
+    elif power_at_obs.power < 0.80:
+        verdict = (
+            f"功效中等 (power={power_at_obs.power:.2f}): 趋势可读但仍"
+            "存在错过真实小效应的风险。"
+        )
+    else:
+        verdict = (
+            f"功效充足 (power={power_at_obs.power:.2f} >= 0.80): "
+            f"n={n} 足以稳健检出 |coef|≈{abs(coef):.4f} 的效应；"
+            "H5 的 'supportive' 裁决在统计功效层面是站得住脚的。"
+        )
+
+    extras = {
+        "coef_observed": float(coef),
+        "se_observed": float(se),
+        "t_observed": float(t_observed) if math.isfinite(t_observed) else float("nan"),
+        "p_value_observed": float(p_value),
+        "n_covariates": float(n_covariates),
+    }
+    power_val = (
+        float(power_at_obs.power)
+        if math.isfinite(power_at_obs.power)
+        else float("nan")
+    )
+    interpretation = (
+        f"HC3 regression coef={coef:+.4f} (SE={se:.4f}, t={t_observed:+.3f}, "
+        f"p={p_value:.4f}), df≈{n - n_covariates - 1}; "
+        f"two-sided t-test power={power_val:.3f}. "
+        f"MDE@{int(target_power * 100)}% = |coef|≈{mde:.4f} "
+        f"(≈ {mde / max(abs(coef), 1e-12):.2f}× the observed coefficient). "
+        f"{verdict}"
+    )
+    return HypothesisPowerReport(
+        hid="H5",
+        name_cn="涨跌停限制",
+        n_obs=n,
+        test_family="regression_coef_t_two_sided",
+        observed_effect=float(coef),
+        observed_effect_label="limit_coef_announce_car",
+        alpha=alpha,
+        power_at_observed=power_val,
+        mde_at_80_power=float(mde),
+        mde_label="coef_at_target_power",
+        interpretation=interpretation,
+        extras=extras,
+    )
+
+
 def compute_h1_power_per_engine(
     engine_inputs: dict[str, dict[str, float]],
     *,
@@ -1490,10 +1874,14 @@ __all__ = [
     "compute_h1_power_per_engine",
     "compute_h2_power_per_engine",
     "compute_h3_power",
+    "compute_h4_power",
+    "compute_h5_power",
     "compute_h6_power",
     "diagnose_engine_flip",
     "exact_binomial_power",
     "mde_at_power",
     "mde_bootstrap_test",
+    "mde_regression_coef",
+    "regression_coef_power",
     "t_test_power",
 ]
