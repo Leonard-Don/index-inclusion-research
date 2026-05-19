@@ -73,19 +73,35 @@
 
 ## 7. 每假说的统计功效（post-hoc）
 
-`index-inclusion-power-analysis` 会对低-n 假说做后验功效计算并把结果落到
+`index-inclusion-power-analysis` 会对各假说做后验功效计算并把结果落到
 `results/real_tables/power_analysis_report.csv` 与 `power_analysis_report.md`。
-α=0.05、target power=80%，对当前主裁 H3 / H6 的结论是：
+α=0.05、target power=80%，覆盖 H3 / H4 / H5 / H6 单口径以及 H1 / H2 分引擎。
+当前主裁结论：
 
 | 假说 | n | 观测效应 | 在观测效应下的功效 | 80% 功效下的 MDE | 解读 |
 |---|---:|---:|---:|---:|---|
 | H3 (双通道命中率) | 4 | hit_rate=0.75（差值 +0.25） | ≈ 0.13（normal-approx）/ 0.00（exact） | 概率差 ≈ +0.50（即 p1≈1.0） | 严重欠功效；exact-binomial 在 α=0.05 下不存在 rejection region。结果按 supplementary 处理是合理的。Bayesian P(p>0.60 \| 3/4, Beta(1,1) 先验) ≈ 0.66 — 给方向性参考。 |
+| H4 (cn_coef on gap_drift) | 436 | coef=+0.0061（SE=0.0099，t=+0.62，p=0.537） | ≈ 0.09 | \|coef\| ≈ 0.028（≈ 4.5× 观测效应） | 严重欠功效。n=436 听起来不少，但观测系数只有 SE 的 0.6 倍，离 α=0.05 显著很远；若 H4 真正的卖空约束效应只有现在观测的规模，本研究无法把它和零区分。**保留为 supplementary，并把裁决文字从"证据不足支持 H4"改述为"现有 n 下证据不足以拒零，需要 n≈n_now × (0.028/0.006)² ≈ 9000 才能可靠检出此规模效应"**。 |
+| H5 (limit_coef on announce CAR) | 936 | coef=+0.155（SE=0.059，t=+2.64，p=0.008） | ≈ 0.75 | \|coef\| ≈ 0.164（≈ 1.06× 观测效应） | **功效中等且落在 0.80 阈值正下方**。p=0.008 的 supportive 裁决在 frequentist 层面成立，但观测系数刚好等于 MDE 量级（power ≈ target_power 临界）：把 H5 写在 main findings 是合理的，**但应在 §5 加一句"该效应处于 n=936 的可检验边界，若真实 coef 略低于 +0.155 即可能被错过"**，避免读者把 0.75 误读为"压倒性证据"。 |
 | H6 (heavy−light spread) | 67 | Cohen's d ≈ −0.73（pooled SD≈0.032） | ≈ 1.00 | \|d\| ≈ 0.35 | 功效充足，n=67 足以检出该规模效应，但观测方向 (heavy<light) 与 H6 预测 (heavy>light) 相反 → "证据不足" 来自方向不符，**不是** n 太小。 |
 
-- **方法学**：H3 使用一比例 z-test（正态近似）+ exact-binomial 对照；H6 使用单样本 t-test，Cohen's d = mean/pooled-SD；MDE 由二分搜索求解。
-- **数据源**：H6 的 pooled SD 由 `data/processed/hs300_weight_change.csv` × `results/real_tables/cma_gap_event_level.csv` 按 weight_proxy 中位数切重/轻 bucket 重算（n_heavy=34，n_light=33）；面板缺失时回退到 H6 OLS-HC3 r²=0.033 反推的 \|d\|≈0.18，并在 interpretation 里明文说明。
-- **可重现**：`index-inclusion-power-analysis` 是 48 个 console scripts 的第 48 号；它会按当前 verdicts CSV 的 `n_obs` / `key_value` 即时重算，不需要单独缓存。
-- **诚实读图**：H3 的 power<0.30 意味着即便真实命中率确实是 75%，本研究在 n=4 下也很难把它"测出来"；这是把 H3 归入 supplementary 的统计学依据，而不是"我们不喜欢这个结论"。H6 的 power≈1 配合 d=−0.73 则说明：**没把 H6 升级为支持**是数据驱动的，不是测试力度不够。
+- **方法学**：H3 使用一比例 z-test（正态近似）+ exact-binomial 对照；H4 / H5 使用 HC3 回归单系数 t-test（ncp = coef/SE，df = n − k − 1）；H6 使用单样本 t-test，Cohen's d = mean/pooled-SD；MDE 由二分搜索求解（H4/H5 与闭式 (z_{1-α/2}+z_β)·SE 一致）。
+- **数据源**：
+  - H4 → `results/real_tables/cma_gap_drift_market_regression.csv`（`cn_coef`, `cn_se`, `cn_p_value`, `n_obs`，n_covariates=2: cn_dummy + gap_length_days）。
+  - H5 → `results/real_tables/cma_h5_limit_predictive_regression.csv`（`limit_coef`, `limit_se`, `limit_p_value`, `n_obs`，n_covariates=1）。
+  - H6 的 pooled SD 由 `data/processed/hs300_weight_change.csv` × `results/real_tables/cma_gap_event_level.csv` 按 weight_proxy 中位数切重/轻 bucket 重算（n_heavy=34，n_light=33）；面板缺失时回退到 H6 OLS-HC3 r²=0.033 反推的 \|d\|≈0.18，并在 interpretation 里明文说明。
+- **可重现**：`index-inclusion-power-analysis` 是 48 个 console scripts 的第 48 号；它会按当前 verdicts / 回归 CSV 即时重算，不需要单独缓存。
+- **诚实读图**：
+  - **H3** 的 power<0.30 意味着即便真实命中率确实是 75%，本研究在 n=4 下也很难把它"测出来"；这是把 H3 归入 supplementary 的统计学依据，而不是"我们不喜欢这个结论"。
+  - **H4** 的 power≈0.09 同样不允许"证据不足 ⇒ H4 错"的反推。n=436 看似充足，但**观测效应**太小（coef 仅 0.6 倍 SE）使 post-hoc 功效塌到 < 0.10；MDE/coef ≈ 4.5 表示：要把这一项升级为"支持"，需要 effect 翻 4-5 倍**或** n 翻 ~20 倍。
+  - **H5** 的 power≈0.75 是"恰好低于 0.80"——p=0.008 在 frequentist 上仍然是显著的，但**不该把它当成"功效充足"**：观测系数处在 MDE 临界，若样本里的极端观察点稍有抖动，效应就可能跌进无法识别的区间。建议 §5 显式标注。
+  - **H6** 的 power≈1 配合 d=−0.73 则说明：**没把 H6 升级为支持**是数据驱动的，不是测试力度不够。
+
+### 7.1 各假说功效裁决（paper-ready 摘要）
+
+- **H4 is severely underpowered (n=436, observed power ≈ 0.09)**。 paper §5 应保留为 supplementary 并把口径写成"在当前样本下证据不足以拒零，**不构成对 H4 的反证**"。
+- **H5 is moderately powered (n=936, observed power ≈ 0.75)**，恰好落在 0.80 阈值之下。 frequentist 显著（p=0.008）+ 方向正确，可继续作为 main finding，**但在 §5 局限性段落明示"观测效应处于可检测边界"**。
+- **H3 is severely underpowered (n=4, power ≈ 0.13)** + **H6 is direction-mismatched (power ≈ 1.0, d=−0.73)**：保留既有处理（H3 supplementary，H6 reframed as 'evidence against' rather than 'evidence for'）。
 
 ## 8. CMA 假说证据强度分层
 

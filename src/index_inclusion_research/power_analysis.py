@@ -5,14 +5,21 @@ readable) plus an optional markdown twin (``power_analysis_report.md``)
 that callers can paste into the paper § 5 limitations or
 ``docs/limitations.md``.
 
-The CLI reads the published verdicts CSV to recover ``n_obs`` and the
-``key_value`` for the two low-n hypotheses (H3 and H6) and then calls
-:func:`index_inclusion_research.analysis.power_analysis.compute_h3_power`
-and :func:`compute_h6_power` to render the per-hypothesis table. When
-the H6 weight-event panel is available on disk, the CLI also derives a
-proper heavy-vs-light bucket SD to replace the back-derivation from
-r²; otherwise it falls back to a documented default (see the analysis
-module docstring).
+Coverage:
+
+- **H3** (双通道命中率, n=4) — :func:`pa.compute_h3_power` from the
+  verdicts CSV.
+- **H4** (卖空约束 / gap-drift cn_coef, n=436) — :func:`pa.compute_h4_power`
+  from ``cma_gap_drift_market_regression.csv``.
+- **H5** (涨跌停限制 / limit-predictive coef, n=936) —
+  :func:`pa.compute_h5_power` from
+  ``cma_h5_limit_predictive_regression.csv``.
+- **H6** (heavy − light spread, n=67) — :func:`pa.compute_h6_power`
+  with bucket-SD reconstructed from the on-disk weight panel when
+  available, otherwise falling back to the r²-derived |d|≈0.18.
+- **H1, H2** per AR engine — bootstrap / rolling-CAR CSVs under
+  ``results/sensitivity/ar_{adjusted,market}/``; flip diagnoses appended
+  to ``power_analysis_engine_flip.csv``.
 """
 
 from __future__ import annotations
@@ -56,6 +63,10 @@ CSV_COLUMNS: tuple[str, ...] = (
     "bootstrap_se",
     "bootstrap_p_value",
     "trend_sd",
+    "coef_observed",
+    "se_observed",
+    "t_observed",
+    "p_value_observed",
 )
 
 
@@ -107,6 +118,14 @@ def _default_h6_weight_csv() -> Path:
 
 def _default_gap_event_csv() -> Path:
     return paths.real_tables_dir() / "cma_gap_event_level.csv"
+
+
+def _default_h4_regression_csv() -> Path:
+    return paths.real_tables_dir() / "cma_gap_drift_market_regression.csv"
+
+
+def _default_h5_regression_csv() -> Path:
+    return paths.real_tables_dir() / "cma_h5_limit_predictive_regression.csv"
 
 
 def _default_csv_output() -> Path:
@@ -186,6 +205,96 @@ def _h6_inputs_from_verdicts(
     except (TypeError, ValueError, KeyError):
         n = 67
     return (spread, n)
+
+
+def _h4_inputs_from_regression(
+    *,
+    regression_csv: Path | None = None,
+    verdicts_df: pd.DataFrame | None = None,
+) -> dict[str, float] | None:
+    """Read H4 gap-drift regression CSV → inputs for :func:`pa.compute_h4_power`.
+
+    Pulls the headline ``cn_coef`` row from
+    ``results/real_tables/cma_gap_drift_market_regression.csv``. Falls
+    back to the cn_p_value column in the verdicts CSV when the
+    regression CSV is missing — but only the p-value carries across, so
+    callers should treat the regression CSV as the canonical source.
+
+    Returns ``None`` when neither source is available; the CLI then
+    silently skips H4 (matching the H1 / H2 pattern in stripped checkouts).
+    """
+    csv = regression_csv or _default_h4_regression_csv()
+    df = _safe_read_csv(csv)
+    if df is not None and not df.empty:
+        needed = ("cn_coef", "cn_se", "cn_p_value", "n_obs")
+        if all(col in df.columns for col in needed):
+            row = df.iloc[0]
+            try:
+                return {
+                    "coef": float(row["cn_coef"]),
+                    "se": float(row["cn_se"]),
+                    "p_value": float(row["cn_p_value"]),
+                    "n": float(row["n_obs"]),
+                }
+            except (TypeError, ValueError):
+                pass
+    # Fallback to verdicts CSV (only p_value + n; coef + se are not
+    # surfaced there, so we cannot compute power without the regression
+    # CSV).
+    if verdicts_df is not None and not verdicts_df.empty:
+        h4 = verdicts_df.loc[verdicts_df["hid"] == "H4"]
+        if not h4.empty:
+            row = h4.iloc[0]
+            try:
+                p_value = float(row["p_value"])
+                n = int(row["n_obs"])
+            except (TypeError, ValueError, KeyError):
+                return None
+            return {"p_value": p_value, "n": float(n)}
+    return None
+
+
+def _h5_inputs_from_regression(
+    *,
+    regression_csv: Path | None = None,
+    verdicts_df: pd.DataFrame | None = None,
+) -> dict[str, float] | None:
+    """Read H5 limit-predictive regression CSV → inputs for
+    :func:`pa.compute_h5_power`.
+
+    Pulls the ``limit_coef`` / ``limit_se`` / ``limit_p_value`` / ``n_obs``
+    row from ``results/real_tables/cma_h5_limit_predictive_regression.csv``.
+    Falls back to the verdicts CSV's ``p_value`` + ``n_obs`` when the
+    regression CSV is missing; like H4 we cannot compute power without
+    the SE, so the fallback yields a partial payload that callers must
+    treat as missing.
+    """
+    csv = regression_csv or _default_h5_regression_csv()
+    df = _safe_read_csv(csv)
+    if df is not None and not df.empty:
+        needed = ("limit_coef", "limit_se", "limit_p_value", "n_obs")
+        if all(col in df.columns for col in needed):
+            row = df.iloc[0]
+            try:
+                return {
+                    "coef": float(row["limit_coef"]),
+                    "se": float(row["limit_se"]),
+                    "p_value": float(row["limit_p_value"]),
+                    "n": float(row["n_obs"]),
+                }
+            except (TypeError, ValueError):
+                pass
+    if verdicts_df is not None and not verdicts_df.empty:
+        h5 = verdicts_df.loc[verdicts_df["hid"] == "H5"]
+        if not h5.empty:
+            row = h5.iloc[0]
+            try:
+                p_value = float(row["p_value"])
+                n = int(row["n_obs"])
+            except (TypeError, ValueError, KeyError):
+                return None
+            return {"p_value": p_value, "n": float(n)}
+    return None
 
 
 def _h1_inputs_from_engine_bootstrap(
@@ -351,6 +460,8 @@ def build_power_report_rows(
     verdicts_csv: Path | None = None,
     h6_weight_csv: Path | None = None,
     h6_events_csv: Path | None = None,
+    h4_regression_csv: Path | None = None,
+    h5_regression_csv: Path | None = None,
     h1_engine_bootstraps: dict[str, Path] | None = None,
     h2_engine_rollings: dict[str, Path] | None = None,
     alpha: float = 0.05,
@@ -361,15 +472,21 @@ def build_power_report_rows(
     Layout (matches the published CSV row order):
 
     1. H3 (single row, no engine split) — :func:`pa.compute_h3_power`.
-    2. H6 (single row, no engine split) — :func:`pa.compute_h6_power`.
-    3. H1 per engine (one row per ``adjusted`` / ``market``) —
+    2. H4 (single row, regression-coef t-test) — :func:`pa.compute_h4_power`.
+    3. H5 (single row, regression-coef t-test) — :func:`pa.compute_h5_power`.
+    4. H6 (single row, no engine split) — :func:`pa.compute_h6_power`.
+    5. H1 per engine (one row per ``adjusted`` / ``market``) —
        :func:`pa.compute_h1_power_per_engine`. Each row has the
        ``engine`` field populated.
-    4. H2 per engine (one row per ``adjusted`` / ``market``).
+    6. H2 per engine (one row per ``adjusted`` / ``market``).
 
-    Rows 3-4 are silently skipped when the sensitivity CSVs are absent
+    Rows 5-6 are silently skipped when the sensitivity CSVs are absent
     so the CLI keeps working in stripped checkouts; the markdown
-    renderer surfaces "(engine data missing)" in that case.
+    renderer surfaces "(engine data missing)" in that case. Rows 2-3
+    (H4 / H5) are skipped when the regression CSVs are missing AND the
+    verdicts CSV does not carry a fallback p-value + n; otherwise the
+    function returns the row anyway with ``NaN`` power so reviewers see
+    that the hypothesis was at least looked at.
     """
     verdicts_csv = verdicts_csv or _default_verdicts_csv()
     h6_weight_csv = h6_weight_csv or _default_h6_weight_csv()
@@ -406,7 +523,41 @@ def build_power_report_rows(
             target_power=target_power,
         )
 
-    reports: list[pa.HypothesisPowerReport] = [h3_report, h6_report]
+    reports: list[pa.HypothesisPowerReport] = [h3_report]
+
+    # ── H4 (gap-drift cn_coef t-test) ─────────────────────────────
+    h4_inputs = _h4_inputs_from_regression(
+        regression_csv=h4_regression_csv, verdicts_df=verdicts_df
+    )
+    if h4_inputs is not None and "coef" in h4_inputs and "se" in h4_inputs:
+        reports.append(
+            pa.compute_h4_power(
+                coef=h4_inputs["coef"],
+                se=h4_inputs["se"],
+                p_value=h4_inputs["p_value"],
+                n=int(h4_inputs["n"]),
+                alpha=alpha,
+                target_power=target_power,
+            )
+        )
+
+    # ── H5 (limit-predictive coef t-test) ─────────────────────────
+    h5_inputs = _h5_inputs_from_regression(
+        regression_csv=h5_regression_csv, verdicts_df=verdicts_df
+    )
+    if h5_inputs is not None and "coef" in h5_inputs and "se" in h5_inputs:
+        reports.append(
+            pa.compute_h5_power(
+                coef=h5_inputs["coef"],
+                se=h5_inputs["se"],
+                p_value=h5_inputs["p_value"],
+                n=int(h5_inputs["n"]),
+                alpha=alpha,
+                target_power=target_power,
+            )
+        )
+
+    reports.append(h6_report)
 
     # ── H1 per engine ────────────────────────────────────────────
     h1_inputs: dict[str, dict[str, float]] = {}
@@ -519,6 +670,10 @@ def reports_to_dataframe(
             "bootstrap_se",
             "bootstrap_p_value",
             "trend_sd",
+            "coef_observed",
+            "se_observed",
+            "t_observed",
+            "p_value_observed",
         ):
             row[k] = extras.get(k, float("nan"))
         rows.append(row)
@@ -575,8 +730,8 @@ def render_markdown(
     lines.append("# 假说后验统计功效分析")
     lines.append("")
     lines.append(
-        f"对低-n 假说 (H3, H6) 做 post-hoc 功效计算，α={alpha}, "
-        f"target power = {int(target_power * 100)}%。"
+        f"对各假说做 post-hoc 功效计算 (H3 / H4 / H5 / H6 单口径 + H1 / H2 "
+        f"分引擎)，α={alpha}, target power = {int(target_power * 100)}%。"
     )
     lines.append("")
     lines.append("## 1. 功效一览表")
@@ -621,6 +776,12 @@ def render_markdown(
         "把 H3 的判断扣在 normal-approx 上。"
     )
     lines.append(
+        "- H4 (n=436) 与 H5 (n=936) 使用 HC3 回归单系数 t-test：观测 "
+        "``coef/SE`` 作为非中心 t 的 ncp，``df = n − k − 1`` (k=协变量数)。"
+        "MDE 是 ``80% 功效下能检出的最小 |coef|``，由非中心 t 反演的二分搜索"
+        "给出；它和闭式 ``(z_{1-α/2}+z_{power})·SE`` 在 n 足够大时一致。"
+    )
+    lines.append(
         "- H6 (n=67) 使用单样本 t-test，Cohen's *d* = mean / SD。"
         "在面板可用时以中位数 weight 切重/轻 bucket 并算 pooled SD；"
         "面板缺失时，回退到 H6 OLS-HC3 r²=0.033 反推的 |d|≈0.18。"
@@ -646,12 +807,12 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="index-inclusion-power-analysis",
         description=(
-            "Post-hoc statistical power analysis for the low-n CMA "
-            "hypotheses (H3 n=4, H6 n=67). Writes "
-            "results/real_tables/power_analysis_report.csv + markdown "
-            "twin; reads cma_hypothesis_verdicts.csv for n_obs and "
-            "observed effect-size; falls back to documented defaults "
-            "if the verdicts CSV is missing."
+            "Post-hoc statistical power analysis for the CMA hypotheses "
+            "(H3 n=4, H4 n=436, H5 n=936, H6 n=67; plus H1 / H2 per AR "
+            "engine). Writes results/real_tables/power_analysis_report.csv "
+            "+ markdown twin; reads the published regression / verdict "
+            "CSVs for observed effect-size and SE; falls back to documented "
+            "defaults if a regression CSV is missing."
         ),
     )
     parser.add_argument(
