@@ -68,3 +68,17 @@ def config_path() -> Path:
 
 def docs_dir() -> Path:
     return project_root() / "docs"
+
+
+def sensitivity_dir(label: str | None = None) -> Path:
+    """Return the sensitivity cache root, or a labelled subdirectory.
+
+    ``sensitivity_dir()`` → ``results/sensitivity/``;
+    ``sensitivity_dir("ar_adjusted")`` → ``results/sensitivity/ar_adjusted/``.
+    Used by the post-hoc power analysis CLI to find per-engine
+    pre-runup bootstrap + rolling-CAR CSVs.
+    """
+    root = results_dir() / "sensitivity"
+    if label is None:
+        return root
+    return root / label
