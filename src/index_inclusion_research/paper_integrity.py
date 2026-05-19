@@ -87,6 +87,10 @@ def _default_cli_reference_md() -> Path:
     return paths.docs_dir() / "cli_reference.md"
 
 
+def _default_power_analysis_csv() -> Path:
+    return paths.real_tables_dir() / "power_analysis_report.csv"
+
+
 EXPECTED_HIDS: tuple[str, ...] = ("H1", "H2", "H3", "H4", "H5", "H6", "H7")
 EXPECTED_MIN_PAPER_LIBRARY_COUNT: int = 16
 
@@ -902,6 +906,70 @@ def check_skeleton_pap_matches_report(
     return issues
 
 
+def check_power_analysis_report_exists(
+    *,
+    power_analysis_csv: Path | None = None,
+) -> list[IntegrityIssue]:
+    """Require ``power_analysis_report.csv`` to exist with H3 + H6 rows.
+
+    The paper § 5 Limitations table cites per-hypothesis power numbers
+    for the low-n hypotheses; without the CSV that table is empty and
+    reviewers can dismiss either hypothesis on power grounds. The
+    check warns (rather than fails) when the CSV is missing — runtime
+    artifacts can lag behind a fresh checkout — and fails only when
+    the CSV exists but H3/H6 rows are absent (i.e. the run was broken).
+    """
+    power_analysis_csv = (
+        power_analysis_csv or _default_power_analysis_csv()
+    )
+    issues: list[IntegrityIssue] = []
+    if not power_analysis_csv.exists():
+        issues.append(
+            IntegrityIssue(
+                severity="warn",
+                category="power_analysis",
+                description=(
+                    f"power analysis report not found at "
+                    f"{_relative(power_analysis_csv)}; "
+                    "reviewer-facing power numbers in paper § 5 "
+                    "Limitations will be missing."
+                ),
+                fix_command="index-inclusion-power-analysis",
+            )
+        )
+        return issues
+    df = _read_csv_safe(power_analysis_csv)
+    if df is None or "hid" not in df.columns:
+        issues.append(
+            IntegrityIssue(
+                severity="fail",
+                category="power_analysis",
+                description=(
+                    f"power analysis report at {_relative(power_analysis_csv)}"
+                    " is unreadable or missing the 'hid' column."
+                ),
+                fix_command="index-inclusion-power-analysis",
+            )
+        )
+        return issues
+    present_hids = {str(h).strip() for h in df["hid"].tolist()}
+    missing = {"H3", "H6"} - present_hids
+    if missing:
+        issues.append(
+            IntegrityIssue(
+                severity="fail",
+                category="power_analysis",
+                description=(
+                    f"power analysis report at {_relative(power_analysis_csv)}"
+                    f" is missing required hypotheses: {sorted(missing)}."
+                ),
+                evidence=(f"present hids: {sorted(present_hids)}",),
+                fix_command="index-inclusion-power-analysis",
+            )
+        )
+    return issues
+
+
 DEFAULT_INTEGRITY_CHECKS: tuple[
     Callable[..., list[IntegrityIssue]], ...
 ] = (
@@ -915,6 +983,7 @@ DEFAULT_INTEGRITY_CHECKS: tuple[
     check_sensitivity_coverage_match,
     check_doctor_checks_listed_in_cli_reference,
     check_skeleton_pap_matches_report,
+    check_power_analysis_report_exists,
 )
 
 

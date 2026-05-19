@@ -5,9 +5,10 @@
     "results/figures/cma_verdicts_sensitivity.png",
     "results/figures/cma_verdicts_ar_engine.png",
     "results/figures/cma_verdicts_2d_robustness.png",
-    "results/figures/verdict_timeline.png"
+    "results/figures/verdict_timeline.png",
+    "results/literature/literature_timeline.png"
   ],
-  "generated_at": "2026-05-17T09:26:28+00:00",
+  "generated_at": "2026-05-19T01:23:58+00:00",
   "hs300_rdd": {
     "main_bandwidth": 0.0600000000000022,
     "main_n_obs": 120,
@@ -23,7 +24,7 @@
     ]
   },
   "literature": {
-    "console_scripts_count": 43,
+    "console_scripts_count": 48,
     "papers_indexed": 16,
     "research_thread_names": [
       "price_pressure",
@@ -47,8 +48,37 @@
       "wurgler_zhuravskaya_2002"
     ]
   },
+  "literature_timeline": {
+    "anchors_by_era": {
+      "2002_to_2014": [
+        "wurgler_zhuravskaya_2002",
+        "petajisto_2011"
+      ],
+      "post_2014": [
+        "chang_hong_liskovich_2014",
+        "chu_et_al_2021"
+      ],
+      "pre_2002": [
+        "shleifer_1986",
+        "harris_gurel_1986"
+      ]
+    },
+    "dominant_position_by_era": {
+      "2002_to_2014": "neutral",
+      "post_2014": "pro",
+      "pre_2002": "pro"
+    },
+    "n_papers": 16,
+    "n_papers_2002_to_2014": 5,
+    "n_papers_post_2014": 7,
+    "n_papers_pre_2002": 4,
+    "years_covered": [
+      1986,
+      2022
+    ]
+  },
   "pap_baseline": {
-    "frozen_for_days": 1,
+    "frozen_for_days": 3,
     "path_ref": "snapshots/pre-registration-2026-05-16.csv",
     "snapshot_date": "2026-05-16"
   },
@@ -59,6 +89,36 @@
     "unchanged_count": 7,
     "unverifiable_count": 0,
     "weakened_count": 0
+  },
+  "power_analysis": {
+    "alpha": 0.05,
+    "hypotheses": [
+      {
+        "hid": "H3",
+        "interpretation": "normal-approx power=0.134 · exact-binomial power=0.000 · posterior P(p>0.60|data)=0.663 (Beta(1,1) uniform prior). MDE@80%=+0.499 概率差（p1≈0.999）。严重欠功效 (power=0.13 < 0.30): n=4 无法在 α=0.05 检出真实命中率 75%；结果按 supplementary 处理是合理的。",
+        "mde_at_80_power": 0.4994901759579069,
+        "mde_label": "proportion_gap_p1_minus_p0",
+        "n_obs": 4,
+        "name_cn": "散户 vs 机构结构",
+        "observed_effect": 0.25,
+        "observed_effect_label": "hit_rate − 0.5",
+        "power_at_observed": 0.13414480741204104,
+        "test_family": "binomial_proportion_z_two_sided"
+      },
+      {
+        "hid": "H6",
+        "interpretation": "Cohen's d (observed) ≈ -0.728 (bucket-SD=0.0319); two-sided t-test power=1.000. 对比小/中/大效应 (d=0.2/0.5/0.8) 的功效 = 0.36 / 0.98 / 1.00. MDE@80% = |d|=0.347. 功效充足 (power=1.00 >= 0.80) — n 足以检出该效应，但观测方向 (heavy<light) 与 H6 预测 (heavy>light) 相反，所以 verdict='证据不足' 并不是 n 不够，而是方向不符。",
+        "mde_at_80_power": 0.34734949720719577,
+        "mde_label": "cohens_d_at_target_power",
+        "n_obs": 67,
+        "name_cn": "指数权重可预测性",
+        "observed_effect": -0.727791289222424,
+        "observed_effect_label": "cohens_d",
+        "power_at_observed": 0.9999536209269687,
+        "test_family": "one_sample_t_two_sided"
+      }
+    ],
+    "target_power": 0.8
   },
   "schema_version": 1,
   "sensitivity_robustness": {

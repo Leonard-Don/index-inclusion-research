@@ -270,6 +270,29 @@ def consistent_project(tmp_path: Path, monkeypatch) -> Path:
     _make_pap_report_df().to_csv(
         real_tables / "pap_deviation_report.csv", index=False
     )
+    # Power analysis report (H3 + H6 minimal rows for the cross-doc gate).
+    pd.DataFrame(
+        [
+            {
+                "hid": "H3",
+                "name_cn": "散户 vs 机构结构",
+                "n_obs": 4,
+                "test_family": "binomial_proportion_z_two_sided",
+                "power_at_observed": 0.13,
+                "mde_at_80_power": 0.50,
+                "mde_label": "proportion_gap_p1_minus_p0",
+            },
+            {
+                "hid": "H6",
+                "name_cn": "指数权重可预测性",
+                "n_obs": 67,
+                "test_family": "one_sample_t_two_sided",
+                "power_at_observed": 1.00,
+                "mde_at_80_power": 0.35,
+                "mde_label": "cohens_d_at_target_power",
+            },
+        ]
+    ).to_csv(real_tables / "power_analysis_report.csv", index=False)
 
     # Paper artifacts
     paper_dir = tmp_path / "paper"

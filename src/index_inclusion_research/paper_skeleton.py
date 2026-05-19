@@ -85,6 +85,10 @@ def _default_limitations_md() -> Path:
     return paths.docs_dir() / "limitations.md"
 
 
+def _default_power_analysis_csv() -> Path:
+    return paths.real_tables_dir() / "power_analysis_report.csv"
+
+
 def _default_figures_dir() -> Path:
     return paths.results_dir() / "figures"
 
@@ -178,6 +182,58 @@ class VerdictRow:
     n_obs: int
     headline_metric: str
     track: str
+
+
+@dataclass(frozen=True)
+class PowerAnalysisRow:
+    """One row of the §5 Limitations post-hoc power table."""
+
+    hid: str
+    n_obs: int
+    test_family: str
+    power_at_observed: float
+    mde_at_80_power: float
+    interpretation: str
+
+
+def _power_analysis_rows(power_csv: Path) -> list[PowerAnalysisRow]:
+    """Render the on-disk power-analysis report as a list of rows.
+
+    Returns ``[]`` when the file is missing or columns are
+    insufficient; the template falls through to a "[TODO]" branch.
+    """
+    df = _read_csv_or_empty(power_csv)
+    needed = {
+        "hid",
+        "n_obs",
+        "test_family",
+        "power_at_observed",
+        "mde_at_80_power",
+        "interpretation",
+    }
+    if df.empty or not needed.issubset(df.columns):
+        return []
+    rows: list[PowerAnalysisRow] = []
+    for _, row in df.iterrows():
+        hid = _coerce_str(row.get("hid"))
+        if not hid:
+            continue
+        try:
+            power = float(row.get("power_at_observed", float("nan")))
+            mde = float(row.get("mde_at_80_power", float("nan")))
+        except (TypeError, ValueError):
+            continue
+        rows.append(
+            PowerAnalysisRow(
+                hid=hid,
+                n_obs=_coerce_int(row.get("n_obs")),
+                test_family=_coerce_str(row.get("test_family")),
+                power_at_observed=power,
+                mde_at_80_power=mde,
+                interpretation=_coerce_str(row.get("interpretation")),
+            )
+        )
+    return rows
 
 
 def _verdict_rows(verdicts_df: pd.DataFrame) -> list[VerdictRow]:
@@ -540,6 +596,20 @@ HS300 主结果（局部线性 RDD）：
 
 [TODO: 在 docs/limitations.md 之外，补充论文层面的讨论，特别是 AR 引擎敏感性带来的 {{ sensitivity.ar_engine.flipping_hypotheses | join("/") if sensitivity.ar_engine and sensitivity.ar_engine.flipping_hypotheses else "无" }} 假说脆弱性。]
 
+### 5.1 低-n 假说后验统计功效
+
+{% if power_analysis_rows %}
+| 假说 | n | 测试族 | 在观测效应下的功效 | 80% 功效下的 MDE | 解读 |
+|---|---:|---|---:|---:|---|
+{% for row in power_analysis_rows -%}
+| {{ row.hid }} | {{ row.n_obs }} | {{ row.test_family }} | {{ "%.3f"|format(row.power_at_observed) }} | {{ "%.3f"|format(row.mde_at_80_power) }} | {{ row.interpretation }} |
+{% endfor %}
+
+完整 CSV + markdown twin 见 `results/real_tables/power_analysis_report.{csv,md}`；方法学与可重现命令见 `docs/limitations.md` §7 与 `docs/cli_reference.md` §25。
+{% else %}
+[TODO: 后验功效表 — 跑 `index-inclusion-power-analysis` 生成 `results/real_tables/power_analysis_report.csv` 再重生成本骨架。]
+{% endif %}
+
 下文为 `docs/limitations.md` 的自动嵌入，便于审稿人无须翻附录直接阅读：
 
 ---
@@ -631,6 +701,7 @@ def build_paper_skeleton(
     public_summary_json: Path | None = None,
     limitations_md: Path | None = None,
     figures_dir: Path | None = None,
+    power_analysis_csv: Path | None = None,
     generated_at: datetime | None = None,
 ) -> str:
     """Render the paper skeleton markdown from current research artifacts.
@@ -656,6 +727,9 @@ def build_paper_skeleton(
     public_summary_json = public_summary_json or _default_public_summary_json()
     limitations_md = limitations_md or _default_limitations_md()
     figures_dir = figures_dir or _default_figures_dir()
+    power_analysis_csv = (
+        power_analysis_csv or _default_power_analysis_csv()
+    )
 
     verdicts_df = _read_csv_or_empty(verdicts_csv)
     pap_df = _read_csv_or_empty(pap_csv)
@@ -666,6 +740,7 @@ def build_paper_skeleton(
     )
 
     verdict_rows = _verdict_rows(verdicts_df)
+    power_rows = _power_analysis_rows(power_analysis_csv)
 
     # Verdict distribution for §4.1 prose summary.
     distribution_counts: dict[str, int] = {}
@@ -703,6 +778,7 @@ def build_paper_skeleton(
         "literature": _literature_section(public_summary),
         "citation_network": _citation_network_block(),
         "limitations_text": limitations_text,
+        "power_analysis_rows": power_rows,
         "schema_version": public_summary.get("schema_version", 1),
     }
 

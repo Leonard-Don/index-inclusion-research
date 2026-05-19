@@ -331,6 +331,66 @@ class CentralityRow:
     eigenvector: float
 
 
+@dataclass(frozen=True)
+class PowerAnalysisRow:
+    """One row of §3.1 per-hypothesis post-hoc power table."""
+
+    hid: str
+    n_obs: int
+    test_family: str
+    power_at_observed: float
+    mde_at_80_power: float
+    mde_label: str
+
+
+def _power_analysis_rows(power_csv: Path) -> list[PowerAnalysisRow]:
+    """Read the on-disk power-analysis report into renderable rows.
+
+    Returns ``[]`` if the file is missing so the template falls through
+    to the "(未生成)" branch. Each row pulls hid / n_obs / test_family
+    / power_at_observed / mde_at_80_power / mde_label — exactly the
+    five fields the template needs.
+    """
+    df = _read_csv_or_empty(power_csv)
+    if df.empty:
+        return []
+    needed = {
+        "hid",
+        "n_obs",
+        "test_family",
+        "power_at_observed",
+        "mde_at_80_power",
+        "mde_label",
+    }
+    if not needed.issubset(df.columns):
+        return []
+    rows: list[PowerAnalysisRow] = []
+    for _, row in df.iterrows():
+        hid = _coerce_str(row.get("hid"))
+        if not hid:
+            continue
+        try:
+            power = float(row.get("power_at_observed", float("nan")))
+            mde = float(row.get("mde_at_80_power", float("nan")))
+        except (TypeError, ValueError):
+            continue
+        rows.append(
+            PowerAnalysisRow(
+                hid=hid,
+                n_obs=_coerce_int(row.get("n_obs")),
+                test_family=_coerce_str(row.get("test_family")),
+                power_at_observed=power,
+                mde_at_80_power=mde,
+                mde_label=_coerce_str(row.get("mde_label")),
+            )
+        )
+    return rows
+
+
+def _default_power_analysis_csv() -> Path:
+    return paths.real_tables_dir() / "power_analysis_report.csv"
+
+
 def _top_centrality_rows(
     centrality_df: pd.DataFrame, *, top_n: int = 5
 ) -> list[CentralityRow]:
@@ -472,6 +532,24 @@ _TEMPLATE = r"""# 指数纳入效应跨市场不对称研究 · 方法论摘要
 | (公共摘要未生成) | — | — |
 {% endif %}
 
+### 3.1 低-n 假说后验功效（H3 n=4 · H6 n=67）
+
+{% if power_analysis_rows %}
+| 假说 | n | 测试族 | 在观测效应下的功效 | 80% 功效下的 MDE |
+|---|---:|---|---:|---:|
+{% for row in power_analysis_rows -%}
+| {{ row.hid }} | {{ row.n_obs }} | {{ row.test_family }} | {{ "%.3f"|format(row.power_at_observed) }} | {{ "%.3f"|format(row.mde_at_80_power) }} ({{ row.mde_label }}) |
+{% endfor %}
+
+完整解读见 `results/real_tables/power_analysis_report.md` 与 `docs/limitations.md` §7。
+{% else %}
+| 假说 | n | 测试族 | 在观测效应下的功效 | 80% 功效下的 MDE |
+|---|---:|---|---:|---:|
+| (power_analysis_report.csv 未生成) | — | — | — | — |
+
+跑 `index-inclusion-power-analysis` 重生成该表。
+{% endif %}
+
 ## 4. PAP 纪律
 
 | 项 | 状态 |
@@ -533,6 +611,7 @@ def build_methodology_summary(
     real_events_csv: Path | None = None,
     real_matched_panel_csv: Path | None = None,
     pyproject_path: Path | None = None,
+    power_analysis_csv: Path | None = None,
     generated_at: datetime | None = None,
 ) -> str:
     """Render the methodology summary markdown from current research artifacts.
@@ -560,6 +639,7 @@ def build_methodology_summary(
         real_matched_panel_csv or _default_real_matched_panel_csv()
     )
     pyproject_path = pyproject_path or _default_pyproject_toml()
+    power_analysis_csv = power_analysis_csv or _default_power_analysis_csv()
 
     verdicts_df = _read_csv_or_empty(verdicts_csv)
     public_summary = _read_json_or_empty(public_summary_json)
@@ -572,6 +652,7 @@ def build_methodology_summary(
     robustness_rows = _robustness_rows(public_summary)
     pap_status_rows = _pap_status_rows(public_summary)
     top_centrality_rows = _top_centrality_rows(centrality_df, top_n=5)
+    power_analysis_rows = _power_analysis_rows(power_analysis_csv)
 
     baseline = public_summary.get("pap_baseline") or {}
     pap_baseline_date = baseline.get("snapshot_date") or "未冻结"
@@ -604,6 +685,7 @@ def build_methodology_summary(
         "robustness_rows": robustness_rows,
         "pap_status_rows": pap_status_rows,
         "top_centrality_rows": top_centrality_rows,
+        "power_analysis_rows": power_analysis_rows,
         "paper_count": paper_count,
         "console_scripts_count": console_scripts_count,
         "doctor_check_count": doctor_check_count,
