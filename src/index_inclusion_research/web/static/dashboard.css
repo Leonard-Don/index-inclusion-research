@@ -1219,37 +1219,6 @@
       text-transform: uppercase;
       margin-bottom: 5px;
     }
-    .track-actions {
-      margin-top: 8px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-    }
-    .track-actions form {
-      margin: 0;
-    }
-    .track-actions button {
-      border: 1px solid rgba(24,33,43,0.10);
-      background: rgba(255,255,255,0.62);
-      color: #223546;
-      padding: 8px 12px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
-    }
-    .track-actions button:hover {
-      transform: translateY(-1px);
-      background: rgba(255,255,255,0.82);
-      border-color: rgba(15,92,110,0.26);
-    }
-    .track-actions-copy {
-      color: var(--muted);
-      font-size: 11px;
-      line-height: 1.4;
-    }
     .support-band {
       display: grid;
       gap: 14px;

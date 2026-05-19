@@ -791,12 +791,6 @@
       <div class="track-summary-label">{{ view.meta.summary_label }}</div>
       <div class="track-summary">{{ section.display_summary }}</div>
     </div>
-    {% if mode != "brief" %}
-    <div class="track-actions">
-      {{ shared.render_refresh_form(url_for('run_analysis', analysis_id=section.anchor, mode=mode), section.anchor, view.meta.refresh_button_label, section.anchor, view.meta.refresh_running_label) }}
-      <div class="track-actions-copy">{{ view.meta.refresh_help_copy }}</div>
-    </div>
-    {% endif %}
   </div>
 </div>
 {%- endmacro %}
