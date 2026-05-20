@@ -358,25 +358,37 @@
   {% endif %}
 
   {% if cma_section.quadrant_table and cma_section.quadrant_table.rows %}
-  <div class="result-card primary">
-    <div class="table-label">四象限 CAR[-1,+1] 摘要</div>
-    <div class="table-wrap">
+  <div class="result-card primary cma-quadrant-card">
+    <div class="cma-quadrant-card-head">
+      <div>
+        <div class="table-label">四象限 CAR[-1,+1] 摘要</div>
+        <div class="cma-quadrant-card-copy">中国 A 股 / 美国 × 公告日 / 生效日，对比 CAR 集中点和统计强度。</div>
+      </div>
+      <div class="cma-quadrant-card-badge">公告日共同显著</div>
+    </div>
+    <div class="table-wrap cma-quadrant-wrap">
       <table class="cma-quadrant-table">
         <thead>
           <tr>
-            {% for col in cma_section.quadrant_table.columns %}
-            <th>{{ col }}</th>
-            {% endfor %}
+            <th scope="col">市场</th>
+            <th scope="col">事件阶段</th>
+            <th scope="col">平均 CAR</th>
+            <th scope="col">t 值</th>
+            <th scope="col">事件数</th>
           </tr>
         </thead>
         <tbody>
           {% for row in cma_section.quadrant_table.rows %}
           <tr>
-            <td>{{ {'CN': '中国 A 股', 'US': '美国'}.get(row.market, row.market) }}</td>
-            <td>{{ {'announce': '公告日', 'effective': '生效日'}.get(row.event_phase, row.event_phase) }}</td>
-            <td>{{ row.car_mean|display_cell('car_mean') }}</td>
-            <td>{{ row.car_t|display_cell('car_t') }}</td>
-            <td>{{ row.n_events|display_cell('n_events') }}</td>
+            <td>
+              <span class="cma-market-chip">{{ {'CN': '中国 A 股', 'US': '美国'}.get(row.market, row.market) }}</span>
+            </td>
+            <td>
+              <span class="cma-event-chip">{{ {'announce': '公告日', 'effective': '生效日'}.get(row.event_phase, row.event_phase) }}</span>
+            </td>
+            <td class="cma-number-cell">{{ row.car_mean|display_cell('car_mean') }}</td>
+            <td class="cma-number-cell">{{ row.car_t|display_cell('car_t') }}</td>
+            <td class="cma-number-cell">{{ row.n_events|display_cell('n_events') }}</td>
           </tr>
           {% endfor %}
         </tbody>

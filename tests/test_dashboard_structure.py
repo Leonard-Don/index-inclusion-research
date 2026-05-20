@@ -621,6 +621,29 @@ def test_cross_market_header_keeps_title_and_intro_in_stable_columns() -> None:
     assert header.find("p", class_="section-intro", recursive=False) is None
 
 
+def test_cross_market_quadrant_table_uses_readable_chinese_layout() -> None:
+    response = dashboard.app.test_client().get("/?mode=demo#cross_market_asymmetry")
+    assert response.status_code == 200
+    soup = BeautifulSoup(response.get_data(as_text=True), "html.parser")
+
+    card = soup.select_one("section#cross_market_asymmetry .cma-quadrant-card")
+    assert card is not None
+    assert "中国 A 股 / 美国 × 公告日 / 生效日" in card.select_one(
+        ".cma-quadrant-card-copy"
+    ).get_text()
+    assert card.select_one(".cma-quadrant-card-badge").get_text(strip=True) == "公告日共同显著"
+    table = card.select_one("table.cma-quadrant-table")
+    assert table is not None
+    headers = [header.get_text(strip=True) for header in table.select("thead th")]
+    assert headers == ["市场", "事件阶段", "平均 CAR", "t 值", "事件数"]
+    assert not {"market", "event_phase", "car_mean", "car_t", "n_events"} & set(headers)
+    first_row_cells = [
+        cell.get_text(" ", strip=True) for cell in table.select("tbody tr")[0].select("td")
+    ]
+    assert first_row_cells[:2] == ["中国 A 股", "公告日"]
+    assert table.select(".cma-number-cell")
+
+
 def test_full_mode_cma_wide_tables_explain_scroll_and_frozen_columns() -> None:
     response = dashboard.app.test_client().get("/?mode=full#cross_market_asymmetry")
     assert response.status_code == 200
