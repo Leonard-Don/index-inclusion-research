@@ -92,6 +92,9 @@ def _seed_audit_project(root: Path) -> None:
                 "generated_at": "2026-05-20T21:12:12+08:00",
                 "candidate_rows": 356,
                 "candidate_batches": 11,
+                "treated_rows": 191,
+                "control_rows": 165,
+                "crossing_batches": 11,
             }
         ]
     ).to_csv(rdd / "rdd_status.csv", index=False)
@@ -117,6 +120,9 @@ def _seed_audit_project(root: Path) -> None:
                 "rdd_generated_at": "2026-05-20T21:12:12+08:00",
                 "rdd_candidate_rows": 356,
                 "rdd_candidate_batches": 11,
+                "rdd_treated_rows": 191,
+                "rdd_control_rows": 165,
+                "rdd_crossing_batches": 11,
             }
         ]
     ).to_csv(root / "results" / "real_tables" / "results_manifest.csv", index=False)
@@ -306,3 +312,16 @@ def test_reference_manifest_audit_accepts_equivalent_numeric_counts(tmp_path: Pa
     result = paper_audit.audit_reference_manifest(tmp_path, require_bundle=False)
 
     assert result.status == "pass"
+
+
+def test_reference_manifest_audit_flags_extended_rdd_count_drift(tmp_path: Path) -> None:
+    _seed_audit_project(tmp_path)
+    manifest_path = tmp_path / "results" / "real_tables" / "results_manifest.csv"
+    manifest = pd.read_csv(manifest_path)
+    manifest["rdd_treated_rows"] = 190
+    manifest.to_csv(manifest_path, index=False)
+
+    result = paper_audit.audit_reference_manifest(tmp_path, require_bundle=False)
+
+    assert result.status == "fail"
+    assert any("treated_rows != rdd_treated_rows" in detail for detail in result.details)

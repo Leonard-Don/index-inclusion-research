@@ -143,10 +143,16 @@ def _manifest_matches_status(status: pd.DataFrame, manifest: pd.DataFrame) -> tu
         ("generated_at", "rdd_generated_at"),
         ("candidate_rows", "rdd_candidate_rows"),
         ("candidate_batches", "rdd_candidate_batches"),
+        ("treated_rows", "rdd_treated_rows"),
+        ("control_rows", "rdd_control_rows"),
+        ("crossing_batches", "rdd_crossing_batches"),
     )
     numeric_pairs = {
         ("candidate_rows", "rdd_candidate_rows"),
         ("candidate_batches", "rdd_candidate_batches"),
+        ("treated_rows", "rdd_treated_rows"),
+        ("control_rows", "rdd_control_rows"),
+        ("crossing_batches", "rdd_crossing_batches"),
     }
     mismatches: list[str] = []
     for status_col, manifest_col in pairs:
