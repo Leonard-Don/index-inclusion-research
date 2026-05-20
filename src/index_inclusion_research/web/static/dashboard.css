@@ -2298,6 +2298,9 @@
         margin-top: 8px;
         padding-top: 12px;
       }
+      #design .result-group .table-wrap {
+        max-height: 380px;
+      }
       #design .table-block + .table-block {
         margin-top: 14px;
       }
