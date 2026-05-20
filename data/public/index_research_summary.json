@@ -8,13 +8,13 @@
     "results/figures/verdict_timeline.png",
     "results/literature/literature_timeline.png"
   ],
-  "generated_at": "2026-05-20T02:25:19+00:00",
+  "generated_at": "2026-05-20T14:07:50+00:00",
   "hs300_rdd": {
     "main_bandwidth": 0.0600000000000022,
-    "main_n_obs": 120,
+    "main_n_obs": 118,
     "main_outcome": "car_m1_p1",
-    "main_p_value": 0.0483433406989583,
-    "main_tau_pct": 3.9188,
+    "main_p_value": 0.0450271671641052,
+    "main_tau_pct": 4.0085,
     "robustness_specs_count": 5,
     "spec_kinds": [
       "donut",

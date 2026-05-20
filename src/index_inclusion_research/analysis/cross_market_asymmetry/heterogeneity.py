@@ -30,21 +30,24 @@ def _within_market_quintile(values: pd.Series, markets: pd.Series) -> pd.Series:
     for market in markets.dropna().unique():
         mask = markets == market
         sub = values.loc[mask]
-        if sub.dropna().nunique() <= 1:
-            result.loc[mask] = "Q1"
+        valid = sub.dropna()
+        if valid.empty:
+            continue
+        if valid.nunique() <= 1:
+            result.loc[valid.index] = "Q1"
             continue
         try:
             bins = pd.qcut(
-                sub,
+                valid,
                 5,
                 labels=["Q1", "Q2", "Q3", "Q4", "Q5"],
                 duplicates="drop",
             )
-            result.loc[mask] = bins.astype(str).to_numpy()
+            result.loc[valid.index] = bins.astype(str).to_numpy()
         except ValueError:
-            ranks = sub.rank(method="first")
+            ranks = valid.rank(method="first")
             bins = pd.qcut(ranks, 5, labels=["Q1", "Q2", "Q3", "Q4", "Q5"])
-            result.loc[mask] = bins.astype(str).to_numpy()
+            result.loc[valid.index] = bins.astype(str).to_numpy()
     return result
 
 
@@ -86,7 +89,7 @@ def build_heterogeneity_panel(
         )
 
     events["dim"] = dim
-    return events[["event_id", "market", "dim", "bucket"]]
+    return events.dropna(subset=["bucket"])[["event_id", "market", "dim", "bucket"]]
 
 
 def _event_window_car(panel: pd.DataFrame, phase: str, lo: int, hi: int) -> pd.Series:

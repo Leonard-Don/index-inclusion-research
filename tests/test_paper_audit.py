@@ -13,7 +13,7 @@ def _seed_audit_project(root: Path) -> None:
     for name, text in {
         "research_delivery_package.md": "RDD preliminary，不进主表。",
         "paper_outline.md": "outline",
-        "paper_outline_verdicts.md": "verdicts",
+        "paper_outline_verdicts.md": "verdicts +4.01% 0.045 118",
         "pre_registration.md": "pap",
         "limitations.md": "limitations",
         "verdict_iteration.md": "iteration",
@@ -81,17 +81,75 @@ def _seed_audit_project(root: Path) -> None:
     rdd = root / "results" / "literature" / "hs300_rdd"
     rdd.mkdir(parents=True)
     pd.DataFrame(
-        [{"evidence_tier": "L3", "candidate_rows": 356, "candidate_batches": 11}]
+        [
+            {
+                "status": "real",
+                "evidence_tier": "L3",
+                "evidence_status": "正式边界样本",
+                "source_kind": "official",
+                "source_label": "正式候选样本文件",
+                "source_file": "data/raw/hs300_rdd_candidates.csv",
+                "generated_at": "2026-05-20T21:12:12+08:00",
+                "candidate_rows": 356,
+                "candidate_batches": 11,
+            }
+        ]
     ).to_csv(rdd / "rdd_status.csv", index=False)
     pd.DataFrame(
         [
-            {"spec_kind": "main"},
-            {"spec_kind": "donut"},
-            {"spec_kind": "placebo"},
-            {"spec_kind": "polynomial"},
+            {"spec_kind": "main", "tau": 0.0401, "p_value": 0.045, "n_obs": 118},
+            {"spec_kind": "donut", "tau": 0.0512, "p_value": 0.094, "n_obs": 100},
+            {"spec_kind": "placebo", "tau": -0.0213, "p_value": 0.165, "n_obs": 128},
+            {"spec_kind": "polynomial", "tau": 0.0025, "p_value": 0.946, "n_obs": 118},
         ]
     ).to_csv(rdd / "rdd_robustness.csv", index=False)
     pd.DataFrame([{"p_value": 0.68}]).to_csv(rdd / "mccrary_density_test.csv", index=False)
+    pd.DataFrame(
+        [
+            {
+                "profile": "real",
+                "rdd_mode": "real",
+                "rdd_evidence_tier": "L3",
+                "rdd_evidence_status": "正式边界样本",
+                "rdd_source_kind": "official",
+                "rdd_source_label": "正式候选样本文件",
+                "rdd_source_file": "data/raw/hs300_rdd_candidates.csv",
+                "rdd_generated_at": "2026-05-20T21:12:12+08:00",
+                "rdd_candidate_rows": 356,
+                "rdd_candidate_batches": 11,
+            }
+        ]
+    ).to_csv(root / "results" / "real_tables" / "results_manifest.csv", index=False)
+
+    source_figures = (
+        root / "results" / "figures",
+        root / "results" / "literature" / "hs300_rdd" / "figures",
+    )
+    for directory in source_figures:
+        directory.mkdir(parents=True, exist_ok=True)
+    for name in (
+        "cma_verdicts_forest.png",
+        "cma_verdicts_forest.pdf",
+        "cma_verdicts_sensitivity.png",
+        "cma_verdicts_sensitivity.pdf",
+        "cma_verdicts_ar_engine.png",
+        "cma_verdicts_ar_engine.pdf",
+        "cma_verdicts_2d_robustness.png",
+        "cma_verdicts_2d_robustness.pdf",
+        "hs300_rdd_robustness_forest.png",
+        "hs300_rdd_robustness_forest.pdf",
+    ):
+        (root / "results" / "figures" / name).write_bytes(b"fig")
+    for name in (
+        "car_m1_p1_rdd_main.png",
+        "car_m1_p1_rdd_bins.png",
+        "car_m3_p3_rdd_bins.png",
+        "turnover_change_rdd_bins.png",
+        "volume_change_rdd_bins.png",
+        "l3_coverage_timeline.png",
+        "rdd_robustness_forest.png",
+    ):
+        (root / "results" / "literature" / "hs300_rdd" / "figures" / name).write_bytes(b"fig")
 
     (root / "snapshots").mkdir()
     pd.DataFrame(
@@ -138,10 +196,10 @@ def test_run_paper_audit_passes_seeded_project(tmp_path: Path) -> None:
 
     assert {result.status for result in results} == {"pass"}
     assert paper_audit.summarize_audit(results) == {
-        "pass": 6,
+        "pass": 7,
         "warn": 0,
         "fail": 0,
-        "total": 6,
+        "total": 7,
     }
     assert paper_audit.audit_exit_code(results, fail_on_warn=True) == 0
 
@@ -164,7 +222,7 @@ def test_source_only_audit_does_not_require_ignored_paper_dir(tmp_path: Path) ->
 
     results = paper_audit.run_paper_audit(tmp_path, require_bundle=False)
 
-    assert len(results) == 5
+    assert len(results) == 6
     assert {result.status for result in results} == {"pass"}
 
 
@@ -172,7 +230,7 @@ def test_render_audit_json_is_machine_readable(tmp_path: Path) -> None:
     _seed_audit_project(tmp_path)
     payload = json.loads(paper_audit.render_audit_json(paper_audit.run_paper_audit(tmp_path)))
 
-    assert payload["summary"]["total"] == 6
+    assert payload["summary"]["total"] == 7
     assert payload["checks"][0]["claim"]
 
 
@@ -218,3 +276,20 @@ def test_rdd_appendix_audit_warns_when_preliminary_wording_dropped(tmp_path: Pat
 
     assert result.status == "warn"
     assert "preliminary" in result.message
+
+
+def test_reference_manifest_audit_flags_missing_rdd_dashboard_figure(tmp_path: Path) -> None:
+    _seed_audit_project(tmp_path)
+    (
+        tmp_path
+        / "results"
+        / "literature"
+        / "hs300_rdd"
+        / "figures"
+        / "car_m1_p1_rdd_main.png"
+    ).unlink()
+
+    result = paper_audit.audit_reference_manifest(tmp_path, require_bundle=False)
+
+    assert result.status == "fail"
+    assert "car_m1_p1_rdd_main.png" in "\n".join(result.details)

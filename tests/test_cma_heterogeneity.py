@@ -47,6 +47,16 @@ def test_build_heterogeneity_panel_size_adds_bucket():
     assert len(cn_counts) <= 5
 
 
+def test_build_heterogeneity_panel_size_drops_missing_bucket_events():
+    panel = _make_panel()
+    panel.loc[panel["event_id"] == 1, "mkt_cap"] = np.nan
+
+    buckets = build_heterogeneity_panel(panel, dim="size")
+
+    assert "nan" not in set(buckets["bucket"].astype(str))
+    assert 1 not in set(buckets["event_id"])
+
+
 def test_build_heterogeneity_panel_sector_uses_sector_values():
     panel = _make_panel()
     out = build_heterogeneity_panel(panel, dim="sector")

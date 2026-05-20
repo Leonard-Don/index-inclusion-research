@@ -29,6 +29,26 @@ DEFAULT_RDD_STATUS = ROOT / "results" / "literature" / "hs300_rdd" / "rdd_status
 DEFAULT_RDD_ROBUSTNESS = ROOT / "results" / "literature" / "hs300_rdd" / "rdd_robustness.csv"
 DEFAULT_MCCRARY = ROOT / "results" / "literature" / "hs300_rdd" / "mccrary_density_test.csv"
 
+REFERENCE_MANIFEST_FIGURES = (
+    "results/figures/cma_verdicts_forest.png",
+    "results/figures/cma_verdicts_forest.pdf",
+    "results/figures/cma_verdicts_sensitivity.png",
+    "results/figures/cma_verdicts_sensitivity.pdf",
+    "results/figures/cma_verdicts_ar_engine.png",
+    "results/figures/cma_verdicts_ar_engine.pdf",
+    "results/figures/cma_verdicts_2d_robustness.png",
+    "results/figures/cma_verdicts_2d_robustness.pdf",
+    "results/figures/hs300_rdd_robustness_forest.png",
+    "results/figures/hs300_rdd_robustness_forest.pdf",
+    "results/literature/hs300_rdd/figures/car_m1_p1_rdd_main.png",
+    "results/literature/hs300_rdd/figures/car_m1_p1_rdd_bins.png",
+    "results/literature/hs300_rdd/figures/car_m3_p3_rdd_bins.png",
+    "results/literature/hs300_rdd/figures/turnover_change_rdd_bins.png",
+    "results/literature/hs300_rdd/figures/volume_change_rdd_bins.png",
+    "results/literature/hs300_rdd/figures/l3_coverage_timeline.png",
+    "results/literature/hs300_rdd/figures/rdd_robustness_forest.png",
+)
+
 
 @dataclass(frozen=True)
 class AuditResult:
@@ -80,6 +100,48 @@ def _fail_missing(
         artifacts=_existing_artifacts(paths_, root=root),
         details=missing,
     )
+
+
+def _format_pct(value: Any) -> str:
+    return f"{float(value) * 100:+.2f}%"
+
+
+def _format_p(value: Any) -> str:
+    return f"{float(value):.3f}"
+
+
+def _format_count(value: Any) -> str:
+    return str(int(float(value)))
+
+
+def _first_value(frame: pd.DataFrame, column: str) -> str:
+    if frame.empty or column not in frame.columns:
+        return ""
+    value = frame.iloc[0].get(column, "")
+    if pd.isna(value):
+        return ""
+    return str(value)
+
+
+def _manifest_matches_status(status: pd.DataFrame, manifest: pd.DataFrame) -> tuple[str, ...]:
+    pairs = (
+        ("status", "rdd_mode"),
+        ("evidence_tier", "rdd_evidence_tier"),
+        ("evidence_status", "rdd_evidence_status"),
+        ("source_kind", "rdd_source_kind"),
+        ("source_label", "rdd_source_label"),
+        ("source_file", "rdd_source_file"),
+        ("generated_at", "rdd_generated_at"),
+        ("candidate_rows", "rdd_candidate_rows"),
+        ("candidate_batches", "rdd_candidate_batches"),
+    )
+    mismatches: list[str] = []
+    for status_col, manifest_col in pairs:
+        left = _first_value(status, status_col)
+        right = _first_value(manifest, manifest_col)
+        if left != right:
+            mismatches.append(f"{status_col} != {manifest_col}: {left!r} vs {right!r}")
+    return tuple(mismatches)
 
 
 def audit_main_event_study(root: Path = ROOT, *, require_bundle: bool = True) -> AuditResult:
@@ -433,6 +495,98 @@ def audit_rdd_appendix(root: Path = ROOT, *, require_bundle: bool = True) -> Aud
     )
 
 
+def audit_reference_manifest(root: Path = ROOT, *, require_bundle: bool = True) -> AuditResult:
+    del require_bundle
+    claim = "引用一致性：paper_outline_verdicts、结果 manifest、CMA/RDD 图表引用指向同一套当前产物。"
+    required: tuple[Path, ...] = (
+        root / "docs" / "paper_outline_verdicts.md",
+        root / "results" / "real_tables" / "results_manifest.csv",
+        root / "results" / "literature" / "hs300_rdd" / "rdd_status.csv",
+        root / "results" / "literature" / "hs300_rdd" / "rdd_robustness.csv",
+        *(root / relative for relative in REFERENCE_MANIFEST_FIGURES),
+    )
+    missing = _fail_missing(
+        name="reference_manifest_claim",
+        claim=claim,
+        paths_=required,
+        root=root,
+        fix=(
+            "Run `index-inclusion-hs300-rdd`, refresh dashboard RDD figures, "
+            "then run `make figures-tables` / `make paper` before citing the paper outline."
+        ),
+    )
+    if missing:
+        return missing
+
+    try:
+        status = _read_csv(root / "results" / "literature" / "hs300_rdd" / "rdd_status.csv")
+        manifest = _read_csv(root / "results" / "real_tables" / "results_manifest.csv")
+        robustness = _read_csv(root / "results" / "literature" / "hs300_rdd" / "rdd_robustness.csv")
+    except Exception as exc:  # noqa: BLE001
+        return AuditResult(
+            name="reference_manifest_claim",
+            status="fail",
+            claim=claim,
+            message=f"Reference manifest inputs are unreadable: {exc}",
+            fix="Regenerate the result tables before running the paper audit.",
+            artifacts=_existing_artifacts(required, root=root),
+        )
+
+    mismatches = list(_manifest_matches_status(status, manifest))
+    required_cols = {"spec_kind", "tau", "p_value", "n_obs"}
+    missing_cols = required_cols - set(robustness.columns)
+    if missing_cols:
+        return AuditResult(
+            name="reference_manifest_claim",
+            status="fail",
+            claim=claim,
+            message=f"rdd_robustness.csv is missing column(s): {sorted(missing_cols)}.",
+            fix="Regenerate RDD robustness outputs with the current schema.",
+            artifacts=_existing_artifacts(required, root=root),
+        )
+
+    main = robustness.loc[robustness["spec_kind"].astype(str) == "main"].head(1)
+    if main.empty:
+        mismatches.append("rdd_robustness.csv has no main spec row.")
+    else:
+        outline = (root / "docs" / "paper_outline_verdicts.md").read_text(encoding="utf-8")
+        main_row = main.iloc[0]
+        expected_fragments = (
+            _format_pct(main_row["tau"]),
+            _format_p(main_row["p_value"]),
+            _format_count(main_row["n_obs"]),
+        )
+        missing_fragments = tuple(fragment for fragment in expected_fragments if fragment not in outline)
+        if missing_fragments:
+            mismatches.append(
+                "paper_outline_verdicts.md is missing current RDD main fragments: "
+                + ", ".join(missing_fragments)
+            )
+
+    if mismatches:
+        return AuditResult(
+            name="reference_manifest_claim",
+            status="fail",
+            claim=claim,
+            message="Paper references and generated result manifests are out of sync.",
+            fix="Regenerate the affected artifacts or update docs/paper_outline_verdicts.md from current CSVs.",
+            artifacts=_existing_artifacts(required, root=root),
+            details=tuple(mismatches),
+        )
+
+    return AuditResult(
+        name="reference_manifest_claim",
+        status="pass",
+        claim=claim,
+        message="Paper outline, RDD/CMA figure references, and results_manifest.csv agree with current source outputs.",
+        artifacts=_existing_artifacts(required, root=root),
+        details=(
+            f"checked_figures={len(REFERENCE_MANIFEST_FIGURES)}",
+            f"rdd_generated_at={_first_value(status, 'generated_at')}",
+        ),
+    )
+
+
 def audit_pap_limitations(root: Path = ROOT, *, require_bundle: bool = True) -> AuditResult:
     claim = "写作边界：PAP、局限说明、裁决差异与当前裁决保持同一套口径。"
     required: tuple[Path, ...] = (
@@ -546,6 +700,7 @@ SOURCE_AUDITS: tuple[Callable[..., AuditResult], ...] = (
     audit_patell_bmp,
     audit_cma_core,
     audit_rdd_appendix,
+    audit_reference_manifest,
     audit_pap_limitations,
 )
 
