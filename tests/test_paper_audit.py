@@ -399,6 +399,28 @@ def test_reference_manifest_audit_accepts_case_equivalent_rdd_mode(
     assert result.status == "pass"
 
 
+def test_reference_manifest_audit_flags_duplicate_rdd_mode_row_drift(
+    tmp_path: Path,
+) -> None:
+    _seed_audit_project(tmp_path)
+    manifest_path = tmp_path / "results" / "real_tables" / "results_manifest.csv"
+    manifest = pd.read_csv(manifest_path)
+    stale_duplicate = manifest.iloc[0].copy()
+    stale_duplicate["profile"] = "real_stale_duplicate"
+    stale_duplicate["rdd_evidence_tier"] = "L2"
+    stale_duplicate["rdd_candidate_rows"] = 355
+    pd.concat([manifest, stale_duplicate.to_frame().T], ignore_index=True).to_csv(
+        manifest_path,
+        index=False,
+    )
+
+    result = paper_audit.audit_reference_manifest(tmp_path, require_bundle=False)
+
+    assert result.status == "fail"
+    assert any("matching manifest row 2" in detail for detail in result.details)
+    assert any("evidence_tier != rdd_evidence_tier" in detail for detail in result.details)
+
+
 def test_reference_manifest_audit_flags_extended_rdd_count_drift(tmp_path: Path) -> None:
     _seed_audit_project(tmp_path)
     manifest_path = tmp_path / "results" / "real_tables" / "results_manifest.csv"

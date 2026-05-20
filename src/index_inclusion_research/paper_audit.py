@@ -149,7 +149,7 @@ def _numeric_values_match(left: str, right: str) -> bool:
         return False
 
 
-def _manifest_row_for_status(status: pd.DataFrame, manifest: pd.DataFrame) -> pd.DataFrame:
+def _manifest_rows_for_status(status: pd.DataFrame, manifest: pd.DataFrame) -> tuple[tuple[str, pd.DataFrame], ...]:
     status_mode = _normalize_manifest_scalar(_first_value(status, "status"), "status")
     if status_mode and "rdd_mode" in manifest.columns:
         matches = manifest.loc[
@@ -159,12 +159,15 @@ def _manifest_row_for_status(status: pd.DataFrame, manifest: pd.DataFrame) -> pd
             == status_mode
         ]
         if not matches.empty:
-            return matches.head(1).reset_index(drop=True)
-    return manifest.head(1).reset_index(drop=True)
+            return tuple(
+                (f"matching manifest row {position}", row.to_frame().T.reset_index(drop=True))
+                for position, (_, row) in enumerate(matches.iterrows(), start=1)
+            )
+    return (("manifest row 1", manifest.head(1).reset_index(drop=True)),)
 
 
 def _manifest_matches_status(status: pd.DataFrame, manifest: pd.DataFrame) -> tuple[str, ...]:
-    manifest = _manifest_row_for_status(status, manifest)
+    manifest_rows = _manifest_rows_for_status(status, manifest)
     pairs = (
         ("status", "rdd_mode"),
         ("evidence_tier", "rdd_evidence_tier"),
@@ -187,18 +190,22 @@ def _manifest_matches_status(status: pd.DataFrame, manifest: pd.DataFrame) -> tu
         ("crossing_batches", "rdd_crossing_batches"),
     }
     mismatches: list[str] = []
-    for status_col, manifest_col in pairs:
-        left = _first_value(status, status_col)
-        right = _first_value(manifest, manifest_col)
-        if (status_col, manifest_col) in numeric_pairs and _numeric_values_match(left, right):
-            continue
-        if _normalize_manifest_scalar(left, status_col) == _normalize_manifest_scalar(
-            right,
-            manifest_col,
-        ):
-            continue
-        if left != right:
-            mismatches.append(f"{status_col} != {manifest_col}: {left!r} vs {right!r}")
+    for row_label, manifest_row in manifest_rows:
+        for status_col, manifest_col in pairs:
+            left = _first_value(status, status_col)
+            right = _first_value(manifest_row, manifest_col)
+            if (status_col, manifest_col) in numeric_pairs and _numeric_values_match(left, right):
+                continue
+            if _normalize_manifest_scalar(left, status_col) == _normalize_manifest_scalar(
+                right,
+                manifest_col,
+            ):
+                continue
+            if left != right:
+                detail = f"{status_col} != {manifest_col}: {left!r} vs {right!r}"
+                if len(manifest_rows) > 1:
+                    detail = f"{row_label}: {detail}"
+                mismatches.append(detail)
     return tuple(mismatches)
 
 
