@@ -133,8 +133,27 @@ CASE_NORMALIZED_MANIFEST_COLUMNS = {
 }
 
 
+PATH_NORMALIZED_MANIFEST_COLUMNS = {
+    "source_file",
+    "rdd_source_file",
+    "input_file",
+    "rdd_input_file",
+    "audit_file",
+    "rdd_audit_file",
+}
+
+
+def _normalize_manifest_path(value: str) -> str:
+    value = value.replace("\\", "/")
+    while value.startswith("./"):
+        value = value[2:]
+    return value
+
+
 def _normalize_manifest_scalar(value: str, column: str) -> str:
     value = value.strip()
+    if column in PATH_NORMALIZED_MANIFEST_COLUMNS:
+        return _normalize_manifest_path(value)
     if column in CASE_NORMALIZED_MANIFEST_COLUMNS:
         return value.casefold()
     return value
