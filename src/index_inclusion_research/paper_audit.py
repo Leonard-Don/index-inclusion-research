@@ -132,7 +132,17 @@ def _numeric_values_match(left: str, right: str) -> bool:
         return False
 
 
+def _manifest_row_for_status(status: pd.DataFrame, manifest: pd.DataFrame) -> pd.DataFrame:
+    status_mode = _first_value(status, "status")
+    if status_mode and "rdd_mode" in manifest.columns:
+        matches = manifest.loc[manifest["rdd_mode"].astype(str) == status_mode]
+        if not matches.empty:
+            return matches.head(1).reset_index(drop=True)
+    return manifest.head(1).reset_index(drop=True)
+
+
 def _manifest_matches_status(status: pd.DataFrame, manifest: pd.DataFrame) -> tuple[str, ...]:
+    manifest = _manifest_row_for_status(status, manifest)
     pairs = (
         ("status", "rdd_mode"),
         ("evidence_tier", "rdd_evidence_tier"),
