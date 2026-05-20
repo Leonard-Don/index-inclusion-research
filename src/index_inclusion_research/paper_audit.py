@@ -145,6 +145,8 @@ PATH_NORMALIZED_MANIFEST_COLUMNS = {
 
 def _normalize_manifest_path(value: str) -> str:
     value = value.replace("\\", "/")
+    while "//" in value:
+        value = value.replace("//", "/")
     while value.startswith("./"):
         value = value[2:]
     return value

@@ -465,3 +465,23 @@ def test_reference_manifest_audit_normalizes_repo_relative_rdd_paths(tmp_path: P
     result = paper_audit.audit_reference_manifest(tmp_path, require_bundle=False)
 
     assert result.status == "pass"
+
+
+def test_reference_manifest_audit_normalizes_repeated_path_separators(tmp_path: Path) -> None:
+    _seed_audit_project(tmp_path)
+    status_path = tmp_path / "results" / "literature" / "hs300_rdd" / "rdd_status.csv"
+    status = pd.read_csv(status_path)
+    status["input_file"] = "data/raw/hs300_rdd_candidates.csv"
+    status["audit_file"] = "results/literature/hs300_rdd/candidate_batch_audit.csv"
+    status.to_csv(status_path, index=False)
+
+    manifest_path = tmp_path / "results" / "real_tables" / "results_manifest.csv"
+    manifest = pd.read_csv(manifest_path)
+    manifest["rdd_source_file"] = "data//raw/hs300_rdd_candidates.csv"
+    manifest["rdd_input_file"] = "data/raw//hs300_rdd_candidates.csv"
+    manifest["rdd_audit_file"] = "results//literature/hs300_rdd//candidate_batch_audit.csv"
+    manifest.to_csv(manifest_path, index=False)
+
+    result = paper_audit.audit_reference_manifest(tmp_path, require_bundle=False)
+
+    assert result.status == "pass"
