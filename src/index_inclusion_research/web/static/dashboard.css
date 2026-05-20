@@ -1064,6 +1064,107 @@
       line-height: 1.62;
       font-size: 14px;
     }
+    .cma-section-head h2 {
+      max-width: 760px;
+      font-size: clamp(30px, 3.2vw, 44px);
+      line-height: 1.1;
+    }
+    .cma-quadrant-card {
+      display: grid;
+      gap: 14px;
+    }
+    .cma-quadrant-card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: start;
+    }
+    .cma-quadrant-card-head .table-label {
+      margin-bottom: 5px;
+    }
+    .cma-quadrant-card-copy {
+      max-width: 68ch;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .cma-quadrant-card-badge {
+      flex: 0 0 auto;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(15, 92, 110, 0.10);
+      color: #0f5c6e;
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .cma-quadrant-wrap {
+      overflow-x: auto;
+      overflow-y: hidden;
+      border-radius: 12px;
+      border-color: rgba(15, 92, 110, 0.12);
+      background: rgba(255, 255, 255, 0.86);
+    }
+    .cma-quadrant-table {
+      width: 100%;
+      min-width: 620px;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 14px;
+      font-variant-numeric: tabular-nums;
+    }
+    .cma-quadrant-table th,
+    .cma-quadrant-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(15, 92, 110, 0.08);
+      text-align: left;
+      vertical-align: middle;
+    }
+    .cma-quadrant-table th {
+      background: rgba(15, 92, 110, 0.06);
+      color: #385063;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+    }
+    .cma-quadrant-table tbody tr:last-child td {
+      border-bottom: 0;
+    }
+    .cma-quadrant-table tbody tr:nth-child(even) td {
+      background: rgba(15, 92, 110, 0.025);
+    }
+    .cma-market-chip,
+    .cma-event-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-weight: 800;
+      line-height: 1.25;
+      white-space: nowrap;
+    }
+    .cma-market-chip {
+      background: rgba(24, 33, 43, 0.06);
+      color: #223546;
+    }
+    .cma-event-chip {
+      background: rgba(141, 116, 80, 0.10);
+      color: #7b603b;
+    }
+    .cma-number-cell {
+      text-align: right;
+      color: #1f3448;
+      font-weight: 850;
+    }
+    @media (max-width: 720px) {
+      .cma-quadrant-card-head {
+        flex-direction: column;
+      }
+      .cma-quadrant-card-badge {
+        align-self: flex-start;
+      }
+    }
     .abstract-panel {
       display: grid;
       grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
@@ -2196,6 +2297,9 @@
       #design .table-shell {
         margin-top: 8px;
         padding-top: 12px;
+      }
+      #design .result-group .table-wrap {
+        max-height: 380px;
       }
       #design .table-block + .table-block {
         margin-top: 14px;
@@ -4602,3 +4706,88 @@
         transition: none;
       }
     }
+
+/* UX audit: glossary + wide-table reading aids */
+.method-glossary {
+  margin: 18px 0 24px;
+  padding: 18px;
+  border: 1px solid rgba(11, 99, 116, 0.16);
+  border-radius: 22px;
+  background: rgba(255, 253, 247, 0.78);
+  box-shadow: 0 16px 36px rgba(24, 33, 43, 0.08);
+}
+.method-glossary-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.method-glossary-kicker {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.method-glossary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+.method-glossary-item {
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(24, 33, 43, 0.08);
+}
+.method-glossary-term {
+  display: block;
+  color: var(--ink);
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.method-glossary-definition {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.cma-verdict-semantics {
+  margin: 10px 0 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(11, 99, 116, 0.08);
+  color: #18313a;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.cma-detail-table .table-conclusion {
+  margin: 10px 0 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(11, 99, 116, 0.08);
+  color: #18313a;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.cma-detail-table .table-wrap {
+  position: relative;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.table-scroll-note {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+@media (max-width: 720px) {
+  .method-glossary {
+    padding: 14px;
+  }
+  .method-glossary-head {
+    display: block;
+  }
+  .method-glossary-grid {
+    grid-template-columns: 1fr;
+  }
+}

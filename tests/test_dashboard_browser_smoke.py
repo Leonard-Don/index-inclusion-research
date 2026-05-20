@@ -7,6 +7,7 @@ import socket
 import subprocess
 import sys
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -193,8 +194,27 @@ def _ensure_dashboard_server() -> str:
 
 
 @contextmanager
-def _running_dashboard_server() -> str:
+def _running_dashboard_server() -> Iterator[str]:
     yield _ensure_dashboard_server()
+
+
+@contextmanager
+def _isolated_dashboard_server() -> Iterator[str]:
+    port = _find_free_port()
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "index_inclusion_research.literature_dashboard", "--port", str(port)],
+        cwd=ROOT,
+        env={**os.environ, "DASHBOARD_ECHARTS_TEST_STUB": "1"},
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    base_url = f"http://127.0.0.1:{port}"
+    try:
+        _wait_for_dashboard(f"{base_url}/favicon.ico", proc)
+        yield base_url
+    finally:
+        _stop_dashboard_server(proc)
 
 
 def test_dashboard_browser_smoke() -> None:
@@ -1572,22 +1592,30 @@ def test_rdd_chart_renders_bandwidth_sweep() -> None:
     fit lines (legend acts as bandwidth selector) and a localized subtitle
     reporting τ/p/n at the default bandwidth."""
 
+    # This full-mode chart assertion exercises a lazily initialised chart with
+    # several API payloads nearby. Keep it on a fresh server so it is not
+    # affected by earlier smoke tests that intentionally warm the shared server.
     with (
-        _running_dashboard_server() as base_url,
+        _isolated_dashboard_server() as base_url,
         playwright_sync_api.sync_playwright() as playwright,
     ):
         browser = _launch_chromium(playwright)
         try:
             page = _new_dashboard_page(browser, viewport={"width": 1440, "height": 960})
             page.goto(f"{base_url}/?mode=full", wait_until="domcontentloaded")
-            page.wait_for_load_state("networkidle")
 
+            # Full mode can keep fetching chart/image assets long after the
+            # target chart node is available in CI, so wait on the element and
+            # chart initialization below instead of global network idle.
             container = page.locator('[data-echart="rdd_scatter"]')
+            container.first.wait_for(state="attached", timeout=30_000)
             assert container.count() == 1
             container.first.scroll_into_view_if_needed()
 
             # Wait until interactive_charts.js finishes initializing the
             # chart (echarts.getInstanceByDom returns a non-null instance).
+            # CI can be slower after earlier smoke cases have warmed the
+            # shared dashboard server, so keep the timeout bounded but generous.
             page.wait_for_function(
                 """
                 () => {
@@ -1598,7 +1626,7 @@ def test_rdd_chart_renders_bandwidth_sweep() -> None:
                     return inst != null && !el.classList.contains("echart-loading");
                 }
                 """,
-                timeout=10_000,
+                timeout=60_000,
             )
 
             chart_state = page.evaluate(
@@ -1674,8 +1702,11 @@ def test_regression_forest_plots_use_coefficient_axis_extent() -> None:
         "mechanism_regression": 0.08,
     }
 
+    # Use an isolated server for this late, full-mode smoke: earlier tests
+    # intentionally warm many chart endpoints, and a fresh server keeps this
+    # axis-regression check independent from accumulated browser/API work.
     with (
-        _running_dashboard_server() as base_url,
+        _isolated_dashboard_server() as base_url,
         playwright_sync_api.sync_playwright() as playwright,
     ):
         browser = _launch_chromium(playwright)
@@ -1684,11 +1715,12 @@ def test_regression_forest_plots_use_coefficient_axis_extent() -> None:
             page.goto(
                 f"{base_url}/?mode=full&open=demo-design-detail-figures#design",
                 wait_until="domcontentloaded",
+                timeout=180_000,
             )
-            page.wait_for_load_state("networkidle")
 
             for chart_id, max_abs_extent in chart_thresholds.items():
                 container = page.locator(f'[data-echart="{chart_id}"]')
+                container.first.wait_for(state="attached", timeout=30_000)
                 assert container.count() == 1
                 container.first.scroll_into_view_if_needed()
                 page.wait_for_function(
@@ -1702,7 +1734,7 @@ def test_regression_forest_plots_use_coefficient_axis_extent() -> None:
                     }
                     """,
                     arg=chart_id,
-                    timeout=10_000,
+                    timeout=60_000,
                 )
 
                 chart_state = page.evaluate(

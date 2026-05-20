@@ -920,7 +920,7 @@ function scheduleRetry(container, attempt) {
   const delay = RETRY_DELAYS_MS[Math.min(attempt, RETRY_DELAYS_MS.length - 1)];
   const timer = window.setTimeout(() => {
     retryTimers.delete(container);
-    initChart(container, attempt + 1);
+    initChart(container, attempt + 1, true);
   }, delay);
   retryTimers.set(container, timer);
 }
@@ -931,6 +931,7 @@ function renderChart(container, optionBuilder, payload) {
   instances.set(container, chart);
   clearRetryTimer(container);
   setChartState(container, '');
+  delete container.dataset.echartInitPending;
   delete container.dataset.echartRetryPending;
 
   // hide the static fallback img if present. .echart-fallback is a
@@ -941,12 +942,14 @@ function renderChart(container, optionBuilder, payload) {
   if (fallback) fallback.hidden = true;
 }
 
-function initChart(container, attempt = 0) {
+function initChart(container, attempt = 0, force = false) {
   const chartId = container.dataset.echart;
   const optionBuilder = CHART_OPTION_BUILDERS[chartId];
   if (!optionBuilder) return;
-  if (instances.has(container)) return;
+  if (instances.has(container) || container.dataset.echartInitPending === 'true') return;
+  if (!force && container.dataset.echartRetryPending === 'true') return;
 
+  container.dataset.echartInitPending = 'true';
   setChartState(container, 'echart-loading');
 
   loadChartPayload(chartId)
@@ -955,12 +958,14 @@ function initChart(container, attempt = 0) {
       if (payload.error || !chartPayloadHasContent(payload)) {
         clearRetryTimer(container);
         setChartState(container, 'echart-empty');
+        delete container.dataset.echartInitPending;
         delete container.dataset.echartRetryPending;
         return;
       }
       renderChart(container, optionBuilder, payload);
     })
     .catch(err => {
+      delete container.dataset.echartInitPending;
       if (attempt < RETRY_DELAYS_MS.length) {
         scheduleRetry(container, attempt);
         return;
@@ -975,7 +980,19 @@ function initChart(container, attempt = 0) {
 function retryPendingCharts() {
   if (typeof echarts === 'undefined') return;
   const containers = document.querySelectorAll('[data-echart][data-echart-retry-pending="true"]');
-  containers.forEach(container => initChart(container));
+  containers.forEach(container => initChart(container, 0, true));
+}
+
+function initChartsNearViewport(containers) {
+  if (typeof echarts === 'undefined') return;
+  const margin = 200;
+  containers.forEach(container => {
+    if (instances.has(container)) return;
+    const rect = container.getBoundingClientRect();
+    if (rect.bottom >= -margin && rect.top <= window.innerHeight + margin) {
+      initChart(container);
+    }
+  });
 }
 
 function handleResize() {
@@ -986,6 +1003,7 @@ function handleResize() {
 
 export function createInteractiveChartsController() {
   let resizeHandler = null;
+  let scrollHandler = null;
   let onlineHandler = null;
   let focusHandler = null;
   let visibilityHandler = null;
@@ -1022,7 +1040,10 @@ export function createInteractiveChartsController() {
     }
 
     resizeHandler = handleResize;
+    scrollHandler = () => initChartsNearViewport(containers);
     window.addEventListener('resize', resizeHandler);
+    window.addEventListener('scroll', scrollHandler, { passive: true });
+    window.setTimeout(scrollHandler, 0);
     onlineHandler = retryPendingCharts;
     focusHandler = retryPendingCharts;
     visibilityHandler = () => {
@@ -1036,6 +1057,9 @@ export function createInteractiveChartsController() {
   function dispose() {
     if (resizeHandler) {
       window.removeEventListener('resize', resizeHandler);
+    }
+    if (scrollHandler) {
+      window.removeEventListener('scroll', scrollHandler);
     }
     if (onlineHandler) {
       window.removeEventListener('online', onlineHandler);
