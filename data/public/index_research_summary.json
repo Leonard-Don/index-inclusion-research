@@ -8,7 +8,7 @@
     "results/figures/verdict_timeline.png",
     "results/literature/literature_timeline.png"
   ],
-  "generated_at": "2026-05-19T01:23:58+00:00",
+  "generated_at": "2026-05-20T02:25:19+00:00",
   "hs300_rdd": {
     "main_bandwidth": 0.0600000000000022,
     "main_n_obs": 120,
@@ -78,7 +78,7 @@
     ]
   },
   "pap_baseline": {
-    "frozen_for_days": 3,
+    "frozen_for_days": 4,
     "path_ref": "snapshots/pre-registration-2026-05-16.csv",
     "snapshot_date": "2026-05-16"
   },
@@ -106,6 +106,30 @@
         "test_family": "binomial_proportion_z_two_sided"
       },
       {
+        "hid": "H4",
+        "interpretation": "HC3 regression coef=+0.0061 (SE=0.0099, t=+0.618, p=0.5366), df≈433; two-sided t-test power=0.095. MDE@80% = |coef|≈0.0278 (≈ 4.5× the observed coefficient). 严重欠功效 (power=0.09 < 0.30): n=436 下观测系数 +0.0061 太小 (相对 SE=0.0099)，无法在 α=0.05 下稳健检出。证据不足的判定是 n 不够大，不是 H4 一定错，因此保留为 supplementary 是合理的。",
+        "mde_at_80_power": 0.02776998894496617,
+        "mde_label": "coef_at_target_power",
+        "n_obs": 436,
+        "name_cn": "卖空约束",
+        "observed_effect": 0.0061111135890994,
+        "observed_effect_label": "cn_coef_gap_drift",
+        "power_at_observed": 0.09455514653575463,
+        "test_family": "regression_coef_t_two_sided"
+      },
+      {
+        "hid": "H5",
+        "interpretation": "HC3 regression coef=+0.1549 (SE=0.0586, t=+2.642, p=0.0082), df≈934; two-sided t-test power=0.752. MDE@80% = |coef|≈0.1644 (≈ 1.06× the observed coefficient). 功效中等 (power=0.75): 趋势可读但仍存在错过真实小效应的风险。",
+        "mde_at_80_power": 0.16441103590648404,
+        "mde_label": "coef_at_target_power",
+        "n_obs": 936,
+        "name_cn": "涨跌停限制",
+        "observed_effect": 0.1548913745610099,
+        "observed_effect_label": "limit_coef_announce_car",
+        "power_at_observed": 0.751560496189127,
+        "test_family": "regression_coef_t_two_sided"
+      },
+      {
         "hid": "H6",
         "interpretation": "Cohen's d (observed) ≈ -0.728 (bucket-SD=0.0319); two-sided t-test power=1.000. 对比小/中/大效应 (d=0.2/0.5/0.8) 的功效 = 0.36 / 0.98 / 1.00. MDE@80% = |d|=0.347. 功效充足 (power=1.00 >= 0.80) — n 足以检出该效应，但观测方向 (heavy<light) 与 H6 预测 (heavy>light) 相反，所以 verdict='证据不足' 并不是 n 不够，而是方向不符。",
         "mde_at_80_power": 0.34734949720719577,
@@ -115,6 +139,54 @@
         "observed_effect": -0.727791289222424,
         "observed_effect_label": "cohens_d",
         "power_at_observed": 0.9999536209269687,
+        "test_family": "one_sample_t_two_sided"
+      },
+      {
+        "hid": "H1",
+        "interpretation": "engine=adjusted: diff=+0.0050, bootstrap SE≈0.0203, bootstrap p=0.8748; 在该 SE 与 n=436 下，两侧 z-test 功效=0.057; MDE@80%≈|diff|=0.0569. 功效偏低 (power=0.06 < 0.50): adjusted 引擎下 bootstrap SE=0.0203 太宽，差异需达到 |diff|≈0.0569 才能在 80% 功效下被检出。",
+        "mde_at_80_power": 0.05685450553817207,
+        "mde_label": "diff_at_target_power",
+        "n_obs": 436,
+        "name_cn": "信息泄露与预运行",
+        "observed_effect": 0.004971120740001,
+        "observed_effect_label": "cn_minus_us_pre_runup",
+        "power_at_observed": 0.05690190177736831,
+        "test_family": "bootstrap_diff_two_sided"
+      },
+      {
+        "hid": "H1",
+        "interpretation": "engine=market: diff=+0.0206, bootstrap SE≈0.0070, bootstrap p=0.0004; 在该 SE 与 n=436 下，两侧 z-test 功效=0.839; MDE@80%≈|diff|=0.0196. 功效充足 (power=0.84 >= 0.80): market 引擎下 n=436 足以检出 |diff|≈0.0206 的真实效应。",
+        "mde_at_80_power": 0.019602554349363765,
+        "mde_label": "diff_at_target_power",
+        "n_obs": 436,
+        "name_cn": "信息泄露与预运行",
+        "observed_effect": 0.0206383848457056,
+        "observed_effect_label": "cn_minus_us_pre_runup",
+        "power_at_observed": 0.8388306573103322,
+        "test_family": "bootstrap_diff_two_sided"
+      },
+      {
+        "hid": "H2",
+        "interpretation": "engine=adjusted: Cohen's d≈-0.037 (empirical deltas (n_used=15, SD=0.0029)); n_combined=15, two-sided t-test power=0.052, MDE@80%=|d|=0.778. 功效偏低 (power=0.05 < 0.50): adjusted 引擎下 样本 n=15 太小，|d| 必须 ≥0.778 才能在 80% 功效下检出。",
+        "mde_at_80_power": 0.7780225697856631,
+        "mde_label": "cohens_d_at_target_power",
+        "n_obs": 15,
+        "name_cn": "被动基金 AUM 差异",
+        "observed_effect": -0.037292944594264923,
+        "observed_effect_label": "cohens_d_car_delta",
+        "power_at_observed": 0.05208456833884063,
+        "test_family": "one_sample_t_two_sided"
+      },
+      {
+        "hid": "H2",
+        "interpretation": "engine=market: Cohen's d≈-0.365 (empirical deltas (n_used=15, SD=0.0037)); n_combined=15, two-sided t-test power=0.261, MDE@80%=|d|=0.778. 功效偏低 (power=0.26 < 0.50): market 引擎下 样本 n=15 太小，|d| 必须 ≥0.778 才能在 80% 功效下检出。",
+        "mde_at_80_power": 0.7780225697856631,
+        "mde_label": "cohens_d_at_target_power",
+        "n_obs": 15,
+        "name_cn": "被动基金 AUM 差异",
+        "observed_effect": -0.3650541403353745,
+        "observed_effect_label": "cohens_d_car_delta",
+        "power_at_observed": 0.26091885789902086,
         "test_family": "one_sample_t_two_sided"
       }
     ],
