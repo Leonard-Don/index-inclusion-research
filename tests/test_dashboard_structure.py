@@ -266,6 +266,56 @@ def test_home_dashboard_supports_full_mode() -> None:
     assert "data-mode-link" in html
 
 
+def test_home_dashboard_explains_method_terms_and_status_semantics() -> None:
+    response = dashboard.app.test_client().get("/?mode=full")
+    assert response.status_code == 200
+    soup = BeautifulSoup(response.get_data(as_text=True), "html.parser")
+
+    glossary = soup.select_one("section.method-glossary")
+    assert glossary is not None
+    assert glossary["aria-label"] == "术语速览"
+    glossary_text = glossary.get_text(" ", strip=True)
+    for term in ["RDD", "CAR", "ADV", "bootstrap", "Yahoo Finance"]:
+        assert term in glossary_text
+    assert "断点回归" in glossary_text
+    assert "累计异常收益" in glossary_text
+    assert "日均成交额" in glossary_text
+    assert "自举法" in glossary_text
+    assert "公开价格与成交量数据源" in glossary_text
+
+    semantics = soup.select_one(".cma-verdict-semantics")
+    assert semantics is not None
+    semantics_text = semantics.get_text(" ", strip=True)
+    assert "状态语义" in semantics_text
+    assert "支持 / 部分支持 / 证据不足" in semantics_text
+    assert "通过仅用于数据检查" in semantics_text
+    assert "假说都通过" not in glossary_text + semantics_text
+
+
+def test_home_dashboard_uses_short_mobile_hero_and_light_anchor_menu() -> None:
+    response = dashboard.app.test_client().get("/?mode=demo")
+    assert response.status_code == 200
+    soup = BeautifulSoup(response.get_data(as_text=True), "html.parser")
+
+    mobile_title = soup.select_one(".hero-title-mobile")
+    assert mobile_title is not None
+    assert mobile_title.get_text(strip=True) == "指数纳入效应研究：证据、机制与边界。"
+    assert mobile_title.find("br") is None
+
+    topbar = soup.select_one(".topbar")
+    assert topbar is not None
+    assert topbar.select_one(".nav-sections") is not None
+    mobile_shortcuts = topbar.select_one(".nav-shortcuts.mobile-only")
+    assert mobile_shortcuts is not None
+    current_label = mobile_shortcuts.select_one("[data-waypoint-top-label]")
+    assert current_label is not None
+    assert current_label.get_text(strip=True) == "总览"
+    menu_button = mobile_shortcuts.select_one("[data-waypoint-menu-toggle]")
+    assert menu_button is not None
+    assert menu_button.get("aria-controls") == "chapter-drawer"
+    assert menu_button.get_text(strip=True) == "目录"
+
+
 def test_home_dashboard_demo_mode_collapses_secondary_material_and_marks_lazy_media() -> (
     None
 ):
@@ -333,6 +383,12 @@ def test_dashboard_static_assets_are_served() -> None:
     assert "#design .details-panel .details-copy {" in css
     assert "#design .details-panel + .result-group {" in css
     assert "#design .details-panel .details-toggle {" in css
+    assert ".method-glossary {" in css
+    assert ".method-glossary-grid {" in css
+    assert ".cma-verdict-semantics {" in css
+    assert ".cma-detail-table .table-conclusion {" in css
+    assert "table.dataframe tbody td:first-child" in css
+    assert ".cma-detail-table td:first-child," in css
 
     js_response = client.get("/static/dashboard.js")
     assert js_response.status_code == 200
@@ -459,6 +515,7 @@ def test_dashboard_template_uses_shared_section_and_figure_macros() -> None:
     assert "macro render_summary_cards" in shared_macros
     assert "macro render_details_panel" in shared_macros
     assert "macro render_hero_section" in overview_macros
+    assert "macro render_method_glossary" in overview_macros
     assert "macro render_waypoint_navigation" in overview_macros
     assert "macro render_design_section" in content_macros
     assert "macro render_track_section" in content_macros
@@ -469,6 +526,7 @@ def test_dashboard_template_uses_shared_section_and_figure_macros() -> None:
     assert "macro render_figure_card" in macros
     assert "macro render_figure_cards" in macros
     assert "macro render_hero_metrics" in macros
+    assert "macro render_method_glossary" in macros
     assert "macro render_highlight_grid" in macros
     assert "macro render_refresh_form" in macros
     assert "macro render_refresh_status_panel" in macros
@@ -504,6 +562,7 @@ def test_dashboard_template_uses_shared_section_and_figure_macros() -> None:
     assert "ui.render_hero_section(" in dashboard_template
     assert "ui.render_core_findings_section(" in dashboard_template
     assert "ui.render_utility_bar(" in dashboard_template
+    assert "ui.render_method_glossary(" in dashboard_template
     assert "ui.render_overview_context(" in dashboard_template
     assert "ui.render_design_section(" in dashboard_template
     assert "ui.render_cma_section(" in dashboard_template
@@ -543,6 +602,43 @@ def test_home_dashboard_keeps_mode_tabs_and_refresh_anchor_logic(monkeypatch) ->
     brief_refreshed = client.post("/refresh?mode=brief", data={"anchor": "framework"})
     assert brief_refreshed.status_code == 302
     assert brief_refreshed.headers["Location"].endswith("/?mode=brief#tracks")
+
+
+def test_cross_market_header_keeps_title_and_intro_in_stable_columns() -> None:
+    response = dashboard.app.test_client().get("/?mode=demo#cross_market_asymmetry")
+    assert response.status_code == 200
+    soup = BeautifulSoup(response.get_data(as_text=True), "html.parser")
+
+    header = soup.select_one("section#cross_market_asymmetry > header.section-head")
+    assert header is not None
+    assert "cma-section-head" in header.get("class", [])
+    direct_children = header.find_all(recursive=False)
+    assert [child.name for child in direct_children] == ["div", "div"]
+    assert direct_children[0].select_one(".section-kicker").get_text(strip=True) == "跨市场机制"
+    assert "公告日至生效阶段的不对称集中度" in direct_children[0].select_one("h2").get_text()
+    assert direct_children[1].select_one(".section-side-label").get_text(strip=True) == "核心现象"
+    assert "A 股更集中在公告日拉价" in direct_children[1].select_one(".section-side-copy").get_text()
+    assert header.find("p", class_="section-intro", recursive=False) is None
+
+
+def test_full_mode_cma_wide_tables_explain_scroll_and_frozen_columns() -> None:
+    response = dashboard.app.test_client().get("/?mode=full#cross_market_asymmetry")
+    assert response.status_code == 200
+    soup = BeautifulSoup(response.get_data(as_text=True), "html.parser")
+
+    cma_tables = soup.select("section#cross_market_asymmetry .cma-detail-table")
+    assert cma_tables
+    first_table = cma_tables[0]
+    assert first_table.get("data-wide-table") == "true"
+    explanation = first_table.select_one(".table-conclusion")
+    assert explanation is not None
+    explanation_text = explanation.get_text(" ", strip=True)
+    assert "宽表阅读" in explanation_text
+    assert "横向滚动" in explanation_text
+    assert "首列固定" in explanation_text
+    scroll_note = first_table.select_one(".table-scroll-note[data-table-scroll-note]")
+    assert scroll_note is not None
+    assert "表头与首列已固定" in scroll_note.get_text(strip=True)
 
 
 def test_home_dashboard_async_refresh_returns_json_status(monkeypatch) -> None:

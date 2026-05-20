@@ -159,8 +159,9 @@
 
 {% macro render_cma_generic_table(payload, label) -%}
 {% if payload and payload.rows %}
-<div class="result-card cma-detail-table">
+<div class="result-card cma-detail-table" data-wide-table="true">
   <div class="table-label">{{ label }}</div>
+  <div class="table-conclusion">宽表阅读：先看首列识别对象与核心数值；表头与首列固定，左右横向滚动可查看完整字段。</div>
   <div class="table-wrap">
     <table>
       <thead>
@@ -187,6 +188,7 @@
       </tbody>
     </table>
   </div>
+  <div class="table-scroll-note" data-table-scroll-note hidden>支持左右滚动，表头与首列已固定</div>
 </div>
 {% endif %}
 {%- endmacro %}
@@ -228,6 +230,10 @@
 {% if payload and payload.rows %}
 {% set verdict_tiers_present = payload.rows | map(attribute='verdict') | list | unique | list %}
 {% set evidence_tiers_present = payload.rows | map(attribute='evidence_tier') | list | unique | list %}
+<div class="cma-verdict-semantics" aria-label="裁决与数据检查状态说明">
+  <strong>状态语义：</strong>
+  支持 / 部分支持 / 证据不足描述研究假说的证据强弱；通过仅用于数据检查或文件校验，不代表研究结论通过。
+</div>
   <nav class="cma-verdict-filter" data-active="all" aria-label="按裁决结果筛选假说卡片">
   <span class="cma-verdict-filter-label">假说裁决</span>
   <button type="button" class="cma-verdict-filter-chip is-active" data-filter="all">全部</button>
@@ -334,10 +340,15 @@
 {% macro render_cma_section(mode, cma_section) -%}
 {% if cma_section %}
 <section class="section" id="cross_market_asymmetry" data-waypoint data-waypoint-kind="section" data-waypoint-label="美股 对比 A 股不对称">
-  <header class="section-head">
-    <div class="section-kicker">跨市场机制</div>
-    <h2>{{ cma_section.title }}</h2>
-    <p class="section-intro">{{ cma_section.lead }}</p>
+  <header class="section-head cma-section-head">
+    <div>
+      <div class="section-kicker">跨市场机制</div>
+      <h2>{{ cma_section.title }}</h2>
+    </div>
+    <div class="section-side">
+      <div class="section-side-label">核心现象</div>
+      <div class="section-side-copy">{{ cma_section.lead }}</div>
+    </div>
   </header>
 
   {% if mode != 'brief' %}
