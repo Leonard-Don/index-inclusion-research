@@ -331,6 +331,30 @@ def test_reference_manifest_audit_matches_manifest_row_by_rdd_mode(tmp_path: Pat
     assert result.status == "pass"
 
 
+def test_reference_manifest_audit_trims_rdd_mode_before_matching_manifest_row(
+    tmp_path: Path,
+) -> None:
+    _seed_audit_project(tmp_path)
+    manifest_path = tmp_path / "results" / "real_tables" / "results_manifest.csv"
+    manifest = pd.read_csv(manifest_path)
+    stale = manifest.iloc[0].copy()
+    stale["profile"] = "sample"
+    stale["rdd_mode"] = "demo"
+    stale["rdd_evidence_tier"] = "L1"
+    stale["rdd_candidate_rows"] = 3
+    stale["rdd_candidate_batches"] = 1
+    pd.concat([stale.to_frame().T, manifest], ignore_index=True).to_csv(manifest_path, index=False)
+
+    status_path = tmp_path / "results" / "literature" / "hs300_rdd" / "rdd_status.csv"
+    status = pd.read_csv(status_path)
+    status["status"] = " real "
+    status.to_csv(status_path, index=False)
+
+    result = paper_audit.audit_reference_manifest(tmp_path, require_bundle=False)
+
+    assert result.status == "pass"
+
+
 def test_reference_manifest_audit_flags_extended_rdd_count_drift(tmp_path: Path) -> None:
     _seed_audit_project(tmp_path)
     manifest_path = tmp_path / "results" / "real_tables" / "results_manifest.csv"

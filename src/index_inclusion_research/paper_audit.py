@@ -120,7 +120,7 @@ def _first_value(frame: pd.DataFrame, column: str) -> str:
     value = frame.iloc[0].get(column, "")
     if pd.isna(value):
         return ""
-    return str(value)
+    return str(value).strip()
 
 
 def _numeric_values_match(left: str, right: str) -> bool:
