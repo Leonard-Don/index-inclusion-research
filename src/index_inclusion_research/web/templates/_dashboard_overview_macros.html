@@ -24,7 +24,7 @@
           <div class="topbar-current-kicker">当前位置</div>
           <div class="topbar-current-value" data-waypoint-top-label>总览</div>
         </div>
-        <button type="button" class="waypoint-menu-toggle mobile-only" data-waypoint-menu-toggle aria-expanded="false" aria-controls="chapter-drawer">打开目录</button>
+        <button type="button" class="waypoint-menu-toggle mobile-only" data-waypoint-menu-toggle aria-expanded="false" aria-controls="chapter-drawer">目录</button>
       </div>
     </div>
   </div>
@@ -257,7 +257,7 @@
     <div>
       <h1 aria-label="全景展现指数纳入效应：文献脉络、真实样本与识别边界。">
         <span class="hero-title-desktop" aria-hidden="true">全景展现指数纳入效应：<br class="hero-break">文献脉络、真实样本与识别边界。</span>
-        <span class="hero-title-mobile" aria-hidden="true">全景展现指数<br>纳入效应：文献脉络<br>真实样本与识别边界。</span>
+        <span class="hero-title-mobile" aria-hidden="true">指数纳入效应研究：证据、机制与边界。</span>
       </h1>
       <div class="hero-lead">
         看板遵循“现象、机制、识别”的研究脉络组织材料，旨在阐明指数效应在不同市场、事件阶段与制度环境下的演化逻辑。
@@ -339,6 +339,40 @@
       <div class="table-density-note">长表支持横向滚动并已固定首列；核对数据时建议切换至紧凑视图以提升阅读效率。</div>
     </div>
     {% endif %}
+  </div>
+</section>
+{%- endmacro %}
+
+{% macro render_method_glossary() -%}
+<section class="method-glossary" aria-label="术语速览">
+  <div class="method-glossary-head">
+    <div>
+      <div class="section-kicker">术语速览</div>
+      <h2>先把缩写翻成可读口径。</h2>
+    </div>
+    <p>首次阅读可先扫这里：缩写对应的是研究方法、指标或数据源，不等同于研究结论。</p>
+  </div>
+  <div class="method-glossary-grid">
+    <article class="method-glossary-item">
+      <strong class="method-glossary-term">RDD</strong>
+      <span class="method-glossary-definition">断点回归：在指数排名边界附近比较调入与备选样本，用来降低选择偏差。</span>
+    </article>
+    <article class="method-glossary-item">
+      <strong class="method-glossary-term">CAR</strong>
+      <span class="method-glossary-definition">累计异常收益：事件窗口内相对基准收益的累计表现，是本页最常用结果指标。</span>
+    </article>
+    <article class="method-glossary-item">
+      <strong class="method-glossary-term">ADV</strong>
+      <span class="method-glossary-definition">日均成交额：衡量流动性与资金承接能力，避免只看价格方向。</span>
+    </article>
+    <article class="method-glossary-item">
+      <strong class="method-glossary-term">bootstrap</strong>
+      <span class="method-glossary-definition">自举法：通过重复抽样估计不确定性，常用于稳健性与 p 值复核。</span>
+    </article>
+    <article class="method-glossary-item">
+      <strong class="method-glossary-term">Yahoo Finance</strong>
+      <span class="method-glossary-definition">公开价格与成交量数据源：用于补充美股价格、成交量和近似市值等字段。</span>
+    </article>
   </div>
 </section>
 {%- endmacro %}
