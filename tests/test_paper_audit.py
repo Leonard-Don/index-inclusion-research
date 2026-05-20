@@ -432,3 +432,16 @@ def test_reference_manifest_audit_flags_extended_rdd_count_drift(tmp_path: Path)
 
     assert result.status == "fail"
     assert any("treated_rows != rdd_treated_rows" in detail for detail in result.details)
+
+
+def test_reference_manifest_audit_flags_rdd_audit_file_reference_drift(tmp_path: Path) -> None:
+    _seed_audit_project(tmp_path)
+    manifest_path = tmp_path / "results" / "real_tables" / "results_manifest.csv"
+    manifest = pd.read_csv(manifest_path)
+    manifest["rdd_audit_file"] = "results/literature/hs300_rdd/stale_candidate_audit.csv"
+    manifest.to_csv(manifest_path, index=False)
+
+    result = paper_audit.audit_reference_manifest(tmp_path, require_bundle=False)
+
+    assert result.status == "fail"
+    assert any("audit_file != rdd_audit_file" in detail for detail in result.details)

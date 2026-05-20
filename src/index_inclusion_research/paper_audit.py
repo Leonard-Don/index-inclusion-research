@@ -175,6 +175,8 @@ def _manifest_matches_status(status: pd.DataFrame, manifest: pd.DataFrame) -> tu
         ("source_kind", "rdd_source_kind"),
         ("source_label", "rdd_source_label"),
         ("source_file", "rdd_source_file"),
+        ("input_file", "rdd_input_file"),
+        ("audit_file", "rdd_audit_file"),
         ("generated_at", "rdd_generated_at"),
         ("candidate_rows", "rdd_candidate_rows"),
         ("candidate_batches", "rdd_candidate_batches"),
