@@ -41,6 +41,7 @@
 
     {{ ui.render_paper_audit_section(mode, paper_audit_section) }}
 
+    {{ ui.render_cta_strip(cta_copy, mode) }}
   </main>
   {{ ui.render_waypoint_navigation(nav_sections, track_sections) }}
   <script type="module" src="{{ url_for('static', filename='dashboard.js') }}?v={{ asset_version }}"></script>
