@@ -21,8 +21,8 @@
   <main id="main-content" class="shell" tabindex="-1">
     {{ ui.render_hero_section(overview_summary, overview_metrics, refresh_meta, pap_meta, mode) }}
     {{ ui.render_utility_bar(mode_tabs, mode) }}
-    {{ ui.render_method_glossary() }}
     {{ ui.render_core_findings_section(abstract_lead, abstract_points, highlights) }}
+    {{ ui.render_method_glossary() }}
     {{ ui.render_overview_context(track_sections, overview_notes) }}
     {{ ui.render_design_section(mode, design_section) }}
     {{ ui.render_tracks_section(track_sections, mode) }}
@@ -41,7 +41,6 @@
 
     {{ ui.render_paper_audit_section(mode, paper_audit_section) }}
 
-    {{ ui.render_cta_strip(cta_copy, mode) }}
   </main>
   {{ ui.render_waypoint_navigation(nav_sections, track_sections) }}
   <script type="module" src="{{ url_for('static', filename='dashboard.js') }}?v={{ asset_version }}"></script>
