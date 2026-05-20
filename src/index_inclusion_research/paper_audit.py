@@ -123,6 +123,23 @@ def _first_value(frame: pd.DataFrame, column: str) -> str:
     return str(value).strip()
 
 
+CASE_NORMALIZED_MANIFEST_COLUMNS = {
+    "status",
+    "rdd_mode",
+    "evidence_tier",
+    "rdd_evidence_tier",
+    "source_kind",
+    "rdd_source_kind",
+}
+
+
+def _normalize_manifest_scalar(value: str, column: str) -> str:
+    value = value.strip()
+    if column in CASE_NORMALIZED_MANIFEST_COLUMNS:
+        return value.casefold()
+    return value
+
+
 def _numeric_values_match(left: str, right: str) -> bool:
     if not left or not right:
         return False
@@ -133,10 +150,13 @@ def _numeric_values_match(left: str, right: str) -> bool:
 
 
 def _manifest_row_for_status(status: pd.DataFrame, manifest: pd.DataFrame) -> pd.DataFrame:
-    status_mode = _first_value(status, "status")
+    status_mode = _normalize_manifest_scalar(_first_value(status, "status"), "status")
     if status_mode and "rdd_mode" in manifest.columns:
         matches = manifest.loc[
-            manifest["rdd_mode"].astype(str).str.strip() == status_mode
+            manifest["rdd_mode"]
+            .astype(str)
+            .map(lambda value: _normalize_manifest_scalar(value, "rdd_mode"))
+            == status_mode
         ]
         if not matches.empty:
             return matches.head(1).reset_index(drop=True)
@@ -171,6 +191,11 @@ def _manifest_matches_status(status: pd.DataFrame, manifest: pd.DataFrame) -> tu
         left = _first_value(status, status_col)
         right = _first_value(manifest, manifest_col)
         if (status_col, manifest_col) in numeric_pairs and _numeric_values_match(left, right):
+            continue
+        if _normalize_manifest_scalar(left, status_col) == _normalize_manifest_scalar(
+            right,
+            manifest_col,
+        ):
             continue
         if left != right:
             mismatches.append(f"{status_col} != {manifest_col}: {left!r} vs {right!r}")
