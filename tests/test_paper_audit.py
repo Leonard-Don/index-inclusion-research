@@ -293,3 +293,16 @@ def test_reference_manifest_audit_flags_missing_rdd_dashboard_figure(tmp_path: P
 
     assert result.status == "fail"
     assert "car_m1_p1_rdd_main.png" in "\n".join(result.details)
+
+
+def test_reference_manifest_audit_accepts_equivalent_numeric_counts(tmp_path: Path) -> None:
+    _seed_audit_project(tmp_path)
+    manifest_path = tmp_path / "results" / "real_tables" / "results_manifest.csv"
+    manifest = pd.read_csv(manifest_path)
+    manifest["rdd_candidate_rows"] = 356.0
+    manifest["rdd_candidate_batches"] = 11.0
+    manifest.to_csv(manifest_path, index=False)
+
+    result = paper_audit.audit_reference_manifest(tmp_path, require_bundle=False)
+
+    assert result.status == "pass"

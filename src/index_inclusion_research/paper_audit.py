@@ -123,6 +123,15 @@ def _first_value(frame: pd.DataFrame, column: str) -> str:
     return str(value)
 
 
+def _numeric_values_match(left: str, right: str) -> bool:
+    if not left or not right:
+        return False
+    try:
+        return float(left) == float(right)
+    except ValueError:
+        return False
+
+
 def _manifest_matches_status(status: pd.DataFrame, manifest: pd.DataFrame) -> tuple[str, ...]:
     pairs = (
         ("status", "rdd_mode"),
@@ -135,10 +144,16 @@ def _manifest_matches_status(status: pd.DataFrame, manifest: pd.DataFrame) -> tu
         ("candidate_rows", "rdd_candidate_rows"),
         ("candidate_batches", "rdd_candidate_batches"),
     )
+    numeric_pairs = {
+        ("candidate_rows", "rdd_candidate_rows"),
+        ("candidate_batches", "rdd_candidate_batches"),
+    }
     mismatches: list[str] = []
     for status_col, manifest_col in pairs:
         left = _first_value(status, status_col)
         right = _first_value(manifest, manifest_col)
+        if (status_col, manifest_col) in numeric_pairs and _numeric_values_match(left, right):
+            continue
         if left != right:
             mismatches.append(f"{status_col} != {manifest_col}: {left!r} vs {right!r}")
     return tuple(mismatches)
