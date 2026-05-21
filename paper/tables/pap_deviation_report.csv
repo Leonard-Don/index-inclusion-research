@@ -1,0 +1,8 @@
+hid,name_cn,classification,baseline_verdict,current_verdict,baseline_confidence,current_confidence,baseline_evidence_tier,current_evidence_tier,baseline_n_obs,current_n_obs,baseline_key_label,current_key_label,baseline_key_value,current_key_value,notes
+H1,信息泄露与预运行,unchanged,证据不足,证据不足,中,中,core,core,436,436,bootstrap p,bootstrap p,0.8748,0.8748,
+H2,被动基金 AUM 差异,unchanged,部分支持,部分支持,中,中,core,core,17,17,US AUM ratio,US AUM ratio,13.481185779277794,13.481185779277794,
+H3,散户 vs 机构结构,unchanged,支持,支持,高,高,supplementary,supplementary,4,4,双通道命中率,双通道命中率,0.75,0.75,
+H4,卖空约束,unchanged,证据不足,证据不足,中,中,supplementary,supplementary,436,436,regression p,regression p,0.5366460641588349,0.5366460641588349,
+H5,涨跌停限制,unchanged,支持,支持,高,高,core,core,936,936,limit_coef p,limit_coef p,0.0082397750132134,0.0082397750132134,
+H6,指数权重可预测性,unchanged,证据不足,证据不足,中,中,supplementary,supplementary,67,67,heavy−light spread,heavy−light spread,-0.0190261646196354,-0.0190261646196354,
+H7,行业结构差异,unchanged,支持,支持,中,中,core,core,187,187,US sector spread,US sector spread,5.9539154335275715,5.9539154335275715,
