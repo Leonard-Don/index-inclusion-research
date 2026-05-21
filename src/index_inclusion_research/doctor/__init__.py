@@ -5,23 +5,9 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from . import _checks as _impl
+from . import _common
 from ._checks import (
     DEFAULT_CHECKS as DEFAULT_CHECKS,
-)
-from ._checks import (
-    DEFAULT_CITATION_CENTRALITY_CSV as DEFAULT_CITATION_CENTRALITY_CSV,
-)
-from ._checks import (
-    DEFAULT_VERDICT_TIMELINE_SOURCE_CSV as DEFAULT_VERDICT_TIMELINE_SOURCE_CSV,
-)
-from ._checks import (
-    DEFAULT_VERDICTS_CSV as DEFAULT_VERDICTS_CSV,
-)
-from ._checks import (
-    ROOT as ROOT,
-)
-from ._checks import (
-    CheckResult as CheckResult,
 )
 from ._checks import (
     check_chart_builders_register as check_chart_builders_register,
@@ -60,10 +46,16 @@ from ._checks import (
     check_hypothesis_paper_ids_resolve as check_hypothesis_paper_ids_resolve,
 )
 from ._checks import (
+    check_literature_timeline_artifact as check_literature_timeline_artifact,
+)
+from ._checks import (
     check_match_robustness_grid as check_match_robustness_grid,
 )
 from ._checks import (
     check_matched_sample_balance as check_matched_sample_balance,
+)
+from ._checks import (
+    check_methodology_summary_freshness as check_methodology_summary_freshness,
 )
 from ._checks import (
     check_p_gated_verdict_sensitivity as check_p_gated_verdict_sensitivity,
@@ -76,6 +68,9 @@ from ._checks import (
 )
 from ._checks import (
     check_paper_audit as check_paper_audit,
+)
+from ._checks import (
+    check_paper_integrity as check_paper_integrity,
 )
 from ._checks import (
     check_paper_skeleton_freshness as check_paper_skeleton_freshness,
@@ -91,6 +86,9 @@ from ._checks import (
 )
 from ._checks import (
     check_rdd_l3_sample_readiness as check_rdd_l3_sample_readiness,
+)
+from ._checks import (
+    check_rdd_robustness_panel as check_rdd_robustness_panel,
 )
 from ._checks import (
     check_results_directory_populated as check_results_directory_populated,
@@ -119,10 +117,29 @@ from ._checks import (
 from ._checks import (
     run_all_checks as run_all_checks,
 )
+from ._common import (
+    DEFAULT_CITATION_CENTRALITY_CSV as DEFAULT_CITATION_CENTRALITY_CSV,
+)
+from ._common import (
+    DEFAULT_VERDICT_TIMELINE_SOURCE_CSV as DEFAULT_VERDICT_TIMELINE_SOURCE_CSV,
+)
+from ._common import (
+    DEFAULT_VERDICTS_CSV as DEFAULT_VERDICTS_CSV,
+)
+from ._common import (
+    ROOT as ROOT,
+)
+from ._common import (
+    CheckResult as CheckResult,
+)
 
-for _name, _value in vars(_impl).items():
-    if not _name.startswith("_") and _name not in globals() and _name != "main":
-        globals()[_name] = _value
+# Re-export every remaining public name — all DEFAULT_* constants from
+# _common, every check_* function from _checks — so external callers keep
+# importing from ``index_inclusion_research.doctor`` unchanged.
+for _module in (_common, _impl):
+    for _name, _value in vars(_module).items():
+        if not _name.startswith("_") and _name not in globals() and _name != "main":
+            globals()[_name] = _value
 
 __all__ = [
     _name
