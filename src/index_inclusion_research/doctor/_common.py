@@ -47,9 +47,7 @@ DEFAULT_CMA_2D_ROBUSTNESS_HEATMAP_PDF = (
 DEFAULT_PUBLIC_SUMMARY_JSON = (
     ROOT / "data" / "public" / "index_research_summary.json"
 )
-DEFAULT_RDD_ROBUSTNESS_CSV_FOR_SUMMARY = (
-    ROOT / "results" / "literature" / "hs300_rdd" / "rdd_robustness.csv"
-)
+DEFAULT_RDD_ROBUSTNESS_CSV_FOR_SUMMARY = DEFAULT_HS300_RDD_ROBUSTNESS_CSV
 DEFAULT_CITATION_CENTRALITY_CSV = (
     ROOT / "results" / "literature" / "citation_centrality.csv"
 )
@@ -65,23 +63,17 @@ DEFAULT_VERDICT_TIMELINE_PNG = (
 DEFAULT_VERDICT_TIMELINE_PDF = (
     ROOT / "results" / "figures" / "verdict_timeline.pdf"
 )
-DEFAULT_VERDICT_TIMELINE_SOURCE_CSV = (
-    ROOT / "results" / "real_tables" / "cma_hypothesis_verdicts.csv"
-)
+DEFAULT_VERDICT_TIMELINE_SOURCE_CSV = DEFAULT_VERDICTS_CSV
 DEFAULT_LITERATURE_TIMELINE_PNG = (
     ROOT / "results" / "literature" / "literature_timeline.png"
 )
 DEFAULT_LITERATURE_TIMELINE_PDF = (
     ROOT / "results" / "literature" / "literature_timeline.pdf"
 )
-DEFAULT_LITERATURE_TIMELINE_SOURCE_CSV = (
-    ROOT / "results" / "literature" / "citation_centrality.csv"
-)
+DEFAULT_LITERATURE_TIMELINE_SOURCE_CSV = DEFAULT_CITATION_CENTRALITY_CSV
 DEFAULT_PAPER_SKELETON_MD = ROOT / "paper" / "skeleton.md"
 DEFAULT_METHODOLOGY_SUMMARY_MD = ROOT / "paper" / "methodology_summary.md"
-DEFAULT_CITATION_CENTRALITY_CSV_FOR_SUMMARY = (
-    ROOT / "results" / "literature" / "citation_centrality.csv"
-)
+DEFAULT_CITATION_CENTRALITY_CSV_FOR_SUMMARY = DEFAULT_CITATION_CENTRALITY_CSV
 
 
 Status = str  # one of "pass" / "warn" / "fail"

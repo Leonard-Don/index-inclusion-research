@@ -1,14 +1,13 @@
-"""Project health-check CLI: ``index-inclusion-doctor``.
+"""Doctor check registry, CLI runner, and result rendering.
 
-Runs a set of bounded sanity checks and prints PASS / WARN / FAIL per
-check with a short suggested fix. Useful for:
+``index-inclusion-doctor`` runs a sequence of bounded sanity checks and
+prints PASS / WARN / FAIL per check with a short suggested fix — useful
+for onboarding, CI gates, and "I broke something" debugging.
 
-- onboarding (run after fresh install to verify everything is wired)
-- CI gates (return code = number of failed checks)
-- debugging "I broke something but I'm not sure what" moments
-
-Each check is a small function returning a ``CheckResult`` so they
-stay easily testable in isolation; the CLI just composes them.
+The individual checks live in the themed ``_verdicts`` / ``_readiness``
+/ ``_artifacts`` / ``_paper`` / ``_misc`` submodules. This module owns
+the ``DEFAULT_CHECKS`` registry, the runner, result rendering, and the
+CLI entrypoint.
 """
 
 from __future__ import annotations
@@ -66,81 +65,6 @@ from ._verdicts import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-# ── individual checks ────────────────────────────────────────────────
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# ── orchestrator ─────────────────────────────────────────────────────
-
-
-
-
-
-
-# ── PAP discipline + figure-freshness checks ─────────────────────────
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 DEFAULT_CHECKS: tuple[Callable[[], CheckResult], ...] = (
