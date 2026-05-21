@@ -1,0 +1,209 @@
+# 论文写作模板：为什么股票被纳入指数后会上涨？
+
+> 当前写作总入口见 [docs/research_delivery_package.md](research_delivery_package.md)。
+> 本模板保留论文正文结构和段落写法；正式主表 / 附录划分、答辩口径和交付前验证以该交付包为准。
+> 下方 P1/P2/P3 是论文研究命题，不等同于 CMA 的 H1-H7 机制裁决。
+>
+> **更快的起点**：本文是人工撰写的论文模板（结构 + 段落写法范例）。如果只需要一份**自动从当前 verdict 数据生成**的骨架（每条假说裁决 / HS300 RDD τ/p/n / 稳健性结论已自动填好，只剩 `[TODO: prose]` 标记），跑 `index-inclusion-paper-skeleton --force` 生成 [`paper/skeleton.md`](../paper/skeleton.md)，详见 [docs/cli_reference.md §15](cli_reference.md#15-论文骨架生成paper-skeleton)。
+
+## 题目示例
+
+**股票被纳入指数后为何上涨？基于中美市场指数纳入事件的比较研究**
+
+## 一、引言
+
+可以直接围绕下面这段逻辑展开：
+
+指数纳入事件是资本市场中典型的制度性冲击。当一只股票被纳入重要指数后，市场常观察到其股价在公告日或生效日前后出现显著上涨。这一现象背后可能包含多种机制：一是指数基金、ETF 等被动资金因跟踪误差约束而产生机械性买入需求；二是股票纳入指数后市场关注度提高、流动性改善，从而提升估值；三是投资者可能将“被纳入指数”解读为公司质量、代表性或市场认可度提升的信号，进而推高股价。
+
+本文以中国 A 股与美国股票市场的指数纳入事件为研究对象，构建公告日与生效日双事件窗口，采用市场调整收益法、匹配对照组方法和机制回归，考察指数纳入是否导致显著超额收益，并进一步检验需求冲击、流动性改善与信息效应三类机制在不同市场中的表现差异。
+
+本文的主要贡献有三点：
+
+1. 在同一研究框架下比较中美市场指数纳入效应。
+2. 同时考察公告日与生效日，区分信息效应与被动配置需求冲击。
+3. 将成交量、换手率与波动率变化纳入机制检验，为“为何上涨”提供更细致的证据。
+
+## 二、理论机制与研究假说
+
+### 2.1 被动资金需求冲击
+
+指数成分调整会迫使跟踪指数的被动资金在生效日前后买入新纳入股票。若市场对这部分额外需求无法立即完全吸收，股价会因短期需求上升而上涨。
+
+**命题 P1**：股票在指数纳入公告日或生效日前后会出现显著正向超额收益。
+
+### 2.2 流动性与关注度提升
+
+股票被纳入指数后通常会获得更多机构关注、分析师覆盖和投资者交易，进而提升成交活跃度与市场流动性。流动性改善会降低交易摩擦，提升资产价格。
+
+**命题 P2**：指数纳入后，股票的成交量和换手率显著上升，且流动性改善与股价上涨正相关。
+
+### 2.3 信息背书效应
+
+投资者可能将纳入重要指数解读为公司基本面、代表性或市场地位获得认可，从而在公告阶段就提前反应。
+
+**命题 P3**：若公告日附近的超额收益显著强于生效日，则指数纳入包含较强的信息效应。
+
+## 三、研究设计
+
+### 3.1 样本构建
+
+本文选取中美两国股票市场的重要宽基指数纳入事件，构建事件样本。事件数据包含市场、指数名称、股票代码、公告日与生效日。为减少重复事件干扰，对短期内重复纳入的事件进行去重和冲突标记。
+
+### 3.2 事件研究法
+
+以公告日和生效日分别作为事件时点，构建 `[-20, +20]` 交易日窗口，并采用市场调整收益法计算异常收益：
+
+\[
+AR_{i,t} = R_{i,t} - R_{m,t}
+\]
+
+其中，\(R_{i,t}\) 为个股收益率，\(R_{m,t}\) 为相应市场基准指数收益率。进一步计算累计异常收益：
+
+\[
+CAR_{i,[\tau_1,\tau_2]} = \sum_{t=\tau_1}^{\tau_2} AR_{i,t}
+\]
+
+本文重点报告 `CAR[-1,+1]`、`CAR[-3,+3]` 和 `CAR[-5,+5]`。
+
+### 3.3 匹配对照组
+
+为缓解样本本身特征差异的影响，本文基于市值、行业及事件前收益趋势，为每个纳入事件匹配同市场未纳入指数的对照股票，构造 matched sample，并在事件层面进行比较。
+
+### 3.4 回归模型
+
+主回归可以写为：
+
+\[
+CAR_i = \alpha + \beta Inclusion_i + \gamma_1 Size_i + \gamma_2 PreReturn_i + \varepsilon_i
+\]
+
+其中，`Inclusion` 为是否属于指数纳入样本的虚拟变量；`Size` 为事件前市值对数；`PreReturn` 为事件前累计收益。
+
+机制回归分别以 `turnover_change`、`volume_change` 和 `volatility_change` 为因变量，用于检验被动资金需求与流动性改善机制。
+
+## 四、实证结果写法
+
+### 4.1 描述性统计
+
+先报告每个市场的事件数量、涉及股票数以及面板覆盖情况。这里可直接使用：
+
+- `results/tables/event_counts.csv`
+- `results/tables/panel_coverage.csv`
+
+可写成：
+
+描述性统计结果表明，中美市场样本均覆盖公告日和生效日两个关键事件时点，并形成较完整的事件窗口面板，为后续事件研究和机制检验提供了基础。
+
+### 4.2 事件研究结果
+
+对应文件：
+
+- `results/event_study/event_study_summary.csv`
+- `results/figures/*_car_path.png`
+
+写法模板：
+
+事件研究结果显示，纳入样本在事件窗口内整体呈现正向累计异常收益。若公告日窗口内 CAR 显著为正，说明市场在事件正式生效前已提前定价指数纳入信息；若生效日窗口内 CAR 更强，则说明被动资金在调仓日附近的交易需求是推动股价上涨的重要原因。
+
+跨市场比较显示，两国市场在指数纳入后均存在价格反应，但效应大小和持续性存在差异，这表明制度环境、被动资金占比和投资者结构可能影响指数纳入效应的传导机制。
+
+### 4.3 机制检验结果
+
+对应文件：
+
+- `results/regressions/regression_models.csv`
+- `results/regressions/regression_coefficients.csv`
+- `results/real_tables/cma_hypothesis_verdicts.csv`（CMA 7 条机制假说裁决）
+- `results/figures/cma_verdicts_forest.png` / `.pdf`（**推荐作为 §4.3 证据强度概览图**）
+
+写法模板：
+
+机制回归结果表明，指数纳入与成交量、换手率变化之间呈现显著正相关关系，说明指数纳入带来了明显的交易活跃度提升。若公告阶段系数更显著，可支持信息效应；若生效阶段更显著，则更支持被动资金需求冲击机制。波动率变化结果则有助于判断指数纳入是否伴随短期交易拥挤。
+
+CMA pipeline 把以上机制问题进一步拆成 7 条可裁决假说 (H1-H7)，正文建议把
+`results/figures/cma_verdicts_forest.png`（横轴 0-1 的 support-strength 评分，
+纵轴 H1-H7，颜色按 evidence_tier）作为 §4.3 的**证据强度概览图**插入，让读者一眼
+看到当前结论的分布——H5/H7（涨跌停、行业结构）落在 0.7-1.0 的支持区间，
+H2（被动 AUM）位于 0.5 的"部分支持"位置，而 H1/H4/H6 落在 0-0.3 的不支持区间。
+评分映射 (verdict, confidence) → strength 仅用于可视化对比，不构成新的统计推断
+（详细映射见图脚注）。重绘：`index-inclusion-build-cma-verdicts-forest`。
+
+**附录建议——灵敏度版**：把
+`results/figures/cma_verdicts_sensitivity.png` 作为 §4.3 的附录图加入，专门回应
+审稿人的"verdict 取决于 p 阈值选择"质疑。同一组 H1-H7，把 CMA pipeline 在 0.05
+/ 0.10 / 0.15 / 0.20 四个阈值下重跑，每条假说连成 4 个 dot 的灰线，dot 颜色按
+该阈值下的 evidence_tier 上色、形状区分 stable (circle) 与 flipped at threshold
+(triangle)，右侧 margin 标注每条假说的 flip 计数。读者一眼可见：真正受
+significance threshold 影响的是 H1 / H4 / H5 这三条 p-gated 假说；H2 / H3 / H6 / H7
+的头条 gate 是方向 spread / 命中率 / AUM 比率，留在图中作为 evidence-strength
+参照，不应写成 p 阈值翻转。详细使用见
+[docs/sensitivity_workflow.md §5 Forest visualization](sensitivity_workflow.md)。
+重绘：`index-inclusion-build-cma-sensitivity-forest`。
+
+**附录建议——AR 引擎版（第二条 robustness axis）**：把
+`results/figures/cma_verdicts_ar_engine.png` 与上面的阈值版并列放在 §4.3 附录，
+回应审稿人的另一条经典质疑"verdict 取决于 AR 模型选择"。同一组 H1-H7、固定阈值
+（默认 0.10），把 CMA pipeline 在两条 AR 引擎下分别跑一次：`adjusted`
+（ret − benchmark_ret，文献标准、项目默认）和 `market`（市场模型 β-AR，估计窗口
+(-120, -10) trading days，commit 1e29476）。每条假说 2 个 dot（adjusted=圆形/teal，
+market=方形/purple），strength 不同时由灰色短箭头串起，右侧 margin 标注
+`stable` / `flipped`。两版灵敏度图在结构上对偶：阈值版证明 verdict 不依赖于阈值选择，
+AR 引擎版证明 verdict 不依赖于 AR 模型选择。详细使用见
+[docs/sensitivity_workflow.md §6 AR Engine Robustness](sensitivity_workflow.md)。
+重绘：`index-inclusion-build-cma-ar-engine-forest`。
+
+**§4.3 正文头条 robustness 图——2D 稳健性热力图**：阈值版与 AR 引擎版是同一稳健性
+论证的两条独立 axis（"换阈值"vs"换 AR 模型"）；reviewer 把两条合起来的 follow-up
+通常是**"两条 axis 同时变会不会让结论翻？"**。把
+`results/figures/cma_verdicts_2d_robustness.png` 作为 §4.3 方法学小节的**正文 headline
+robustness 图**（**而非附录**）插入，让全文一次性回答两条 axis 的交叉：
+7 假说 × (4 阈值 × 2 引擎) = 56 单元；色温=support-strength 评分（深红=0.0 不支持，
+白=0.5 部分，深蓝=1.0 强支持），单元 ASCII tag (`S+`/`S`/`P+`/`I`) 提供 greyscale
+解码，左 4 列=adjusted 引擎、右 4 列=market 引擎，中间用粗黑分隔线区分；右侧 margin
+按 8 单元 distinct verdict 数量标注 `stable` / `1 flip` / `2+ flips`。读者扫描一眼可以
+得到 reviewer 真正想要的答案：
+**哪些假说在 8 单元里 verdict 完全一致**（rock solid，色块整行同色）
+**vs 哪些假说在某些 (T, engine) 组合下翻**（fragile，色块有撞色），
+其中后者是稿件 §5 局限与边界条件那一段需要点名的行。
+详细使用见 [docs/sensitivity_workflow.md §7 2D Robustness](sensitivity_workflow.md)。
+重绘：`index-inclusion-build-cma-2d-robustness-heatmap`（首次跑约 6-10 分钟，因为
+3 个 (T≠0.10, market) 单元需要 fresh CMA pass；其余 5 单元复用既有单轴 cache）。
+
+### 4.4 中国市场 RDD 识别扩展（HS300）
+
+对应文件：
+
+- `data/raw/hs300_rdd_candidates.csv`（L3 官方候选边界样本：2020-11 到 2025-11，11 批次 / 356 行）
+- `results/literature/hs300_rdd/rdd_summary.csv`（main 局部线性 RDD，4 个 outcome）
+- `results/literature/hs300_rdd/rdd_robustness.csv`（main / donut / placebo / polynomial）
+- `results/literature/hs300_rdd/figures/car_m1_p1_rdd_main.png` 与 `rdd_robustness_forest.png`
+
+写法模板：
+
+为了在制度识别层面补强结论，我们利用沪深 300 指数样本调整名单的官方排序，
+在 cutoff=300 处构造断点回归（local-linear RDD，bandwidth 自动为 0.06）。
+头条估计为公告日 CAR[-1,+1] 在断点右侧（被纳入）相对左侧的跳跃 τ=3.92%
+(p=0.048, n=120)，与事件研究的方向一致；同时跑了 4 项稳健性检验：donut hole
+(±0.01) 把样本缩到 102 行后落到 marginal (p=0.10)，placebo cutoff
+±0.05 的 τ 都接近 0 (p=0.18 / 0.26)，二次多项式则吸收了断点跳跃 (τ=0.4%, p=0.92)。
+我们如实报告全套面板：main 边界显著、placebo 行为正确、但断点结果对设定敏感，
+论文应将 RDD 识别结果定位为**初步识别证据**，与事件研究 / 匹配回归一同呈现，
+不单独作主表结论。
+
+## 五、结论
+
+结论段可以直接按这个结构写：
+
+本文基于中美市场指数纳入事件的比较研究发现，股票在被纳入指数后通常会出现显著的短期价格上涨。进一步分析表明，这种上涨并非单一机制所致，而是被动资金需求冲击、流动性改善和信息背书效应共同作用的结果。其中，若生效日效应更强，则支持被动配置需求解释；若公告日效应更强，则表明市场更倾向于将指数纳入解读为正面信息。跨市场结果差异则说明，指数纳入效应的强弱与市场结构、被动投资发展程度及交易制度密切相关。
+
+## 六、你现在可以怎样用这套代码写论文
+
+建议顺序：
+
+1. 先看 [docs/research_delivery_package.md](research_delivery_package.md)，确认正文 / 附录边界。
+2. 跑 `make rebuild && make paper && make doctor-strict`。
+3. 打开 `paper/bundle_summary.md`，确认当前结果快照。
+4. 看 `event_study_summary.csv` 和 `*_car_path.png`，判断公告日还是生效日效应更强。
+5. 再看 `cma_hypothesis_verdicts.csv` 的 `evidence_tier=core` 行，写正文机制表。
+6. 最后按上面的写作模板把结果改写成论文语言，supplementary 假说与 HS300 RDD 只进附录。
