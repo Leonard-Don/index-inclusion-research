@@ -142,7 +142,7 @@ src/index_inclusion_research/
   pipeline/            样本构建、匹配（含 covariate balance）
   web/templates/+static/
   literature.py / literature_catalog.py / paths.py
-tests/                 657+ 个单元测试 + 浏览器 smoke
+tests/                 1100+ 个单元测试 + 浏览器 smoke
 ```
 
 `paths.py` 提供 `paths.project_root()` 与 `paths.results_dir()` 等工具，所有模块都用它读项目根。设置 `INDEX_INCLUSION_ROOT` 环境变量可以覆盖默认根（容器化或并行测试时有用）。
@@ -235,7 +235,7 @@ make doctor-strict
 make pre-commit-run       # 在工作树上手动跑所有 pre-commit hooks
 ```
 
-mypy 当前用 baseline 模式(详见 [docs/mypy_rollout.md](docs/mypy_rollout.md)):6 个 pandas-heavy 模块整文件 `ignore_errors`，26 个文件有行级 `# type: ignore`。新增逻辑型错误仍会被 CI 发现，stub 死结被显式标注以便逐文件清理。
+mypy 已清空整文件 `ignore_errors` baseline(详见 [docs/mypy_rollout.md](docs/mypy_rollout.md))，仅剩约 134 处行级 `# type: ignore`(pandas stub 死结，非逻辑 bug)，由 `warn_unused_ignores` 持续守护并推动逐步清理。
 
 浏览器 smoke test 默认不在本地 `pytest` 自动跑：
 

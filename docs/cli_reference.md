@@ -430,7 +430,7 @@ python3 -m index_inclusion_research.citation_graph
 
 ## 17. 假说裁决演进时间线（`verdict-timeline`）
 
-`index-inclusion-verdict-timeline` 是 43 个 console scripts 的第 40 号。它通过 `git log --follow` 与 `git show <sha>:results/real_tables/cma_hypothesis_verdicts.csv` 把 H1..H7 的历史裁决从仓库 git 史里重建出来，渲染成一张 7 swimlane 时间线，给 PAP 自律一份**视觉的演化档案**——配合现有的 `pap-diff` 偏离审计（commit `48a22f0`），从“静态对比 PAP 基线”补到“动态展示研究迭代”。
+`index-inclusion-verdict-timeline` 是 48 个 console scripts 的第 40 号。它通过 `git log --follow` 与 `git show <sha>:results/real_tables/cma_hypothesis_verdicts.csv` 把 H1..H7 的历史裁决从仓库 git 史里重建出来，渲染成一张 7 swimlane 时间线，给 PAP 自律一份**视觉的演化档案**——配合现有的 `pap-diff` 偏离审计（commit `48a22f0`），从“静态对比 PAP 基线”补到“动态展示研究迭代”。
 
 - `results/figures/verdict_timeline.png` — 14×8 in @ 100 dpi 主图，每个 H 一行 swimlane；每个 commit 一个圆点（裁决保持）或方块（裁决文本改变）；颜色按裁决类别（绿=支持，黄=部分支持，红=证据不足）；2026-05-16 PAP baseline 画一条虚线；右侧 annotation 标注每条 H 的最新裁决。
 - `results/figures/verdict_timeline.pdf` — 矢量版同图。
@@ -453,7 +453,7 @@ python3 -m index_inclusion_research.outputs.verdict_timeline
 
 ## 18. 方法论摘要卡（`methodology-summary`）
 
-`index-inclusion-methodology-summary` 是 43 个 console scripts 的第 41 号。它把当前 verdicts CSV、`data/processed/real_events_clean.csv` 与 `real_matched_event_panel.csv` 行数、`data/public/index_research_summary.json` 的稳健性 / PAP 偏离块、`results/literature/citation_centrality.csv` 的 top-5 eigenvector 中心性、`pyproject.toml` 的 console-scripts 总数与 `doctor.DEFAULT_CHECKS` 的健康检查总数蒸馏成一份 ~3-5 KB 的单页 Markdown「方法论摘要卡」，落地到 `paper/methodology_summary.md`。
+`index-inclusion-methodology-summary` 是 48 个 console scripts 的第 41 号。它把当前 verdicts CSV、`data/processed/real_events_clean.csv` 与 `real_matched_event_panel.csv` 行数、`data/public/index_research_summary.json` 的稳健性 / PAP 偏离块、`results/literature/citation_centrality.csv` 的 top-5 eigenvector 中心性、`pyproject.toml` 的 console-scripts 总数与 `doctor.DEFAULT_CHECKS` 的健康检查总数蒸馏成一份 ~3-5 KB 的单页 Markdown「方法论摘要卡」，落地到 `paper/methodology_summary.md`。
 
 与 `paper-skeleton` 的区别：摘要卡**完全不出 `[TODO: prose]` 标记**，所有数值与表格全部从工件自动派生，是答辩 / 评审「你到底做了什么？」一问的速查页。
 
@@ -486,7 +486,7 @@ Doctor `methodology_summary_freshness` 检查在任何输入（verdicts CSV / pu
 
 ## 19. 跨文档一致性发布门禁（`paper-integrity`）
 
-`index-inclusion-paper-integrity` 是 43 个 console scripts 的第 42 号，也是论文交付前的最后一道**跨文档**门禁。每条单独的生成器（`cma`、`paper-skeleton`、`methodology-summary`、`export-public-summary`、`pap-diff` 等）单测都已经通过，本 CLI 不再核对每个工件的内部正确性，而是核对它们**互相之间**是否仍然 self-consistent。
+`index-inclusion-paper-integrity` 是 48 个 console scripts 的第 42 号，也是论文交付前的最后一道**跨文档**门禁。每条单独的生成器（`cma`、`paper-skeleton`、`methodology-summary`、`export-public-summary`、`pap-diff` 等）单测都已经通过，本 CLI 不再核对每个工件的内部正确性，而是核对它们**互相之间**是否仍然 self-consistent。
 
 10 类检查（同源 `paper_integrity.DEFAULT_INTEGRITY_CHECKS`）：
 
@@ -525,7 +525,7 @@ git push                                    # only if integrity passes
 
 ## 20. LaTeX / Overleaf 导出（`tex-export`）
 
-`index-inclusion-tex-export` 是 43 个 console scripts 的第 43 号。它读取 `paper/skeleton.md` 与 `paper/methodology_summary.md`，生成：
+`index-inclusion-tex-export` 是 48 个 console scripts 的第 43 号。它读取 `paper/skeleton.md` 与 `paper/methodology_summary.md`，生成：
 
 - `paper/manuscript.tex`：含 `ctex`（默认）或 `xeCJK` preamble 的完整 LaTeX 稿件；
 - `paper/references.bib`：从 16 篇 `literature_catalog` 条目导出的 BibTeX 草稿。
@@ -542,7 +542,7 @@ index-inclusion-tex-export --cjk-engine xeCJK --force
 
 ## 21. 论文提交就绪发布门禁（`submission-ready`）
 
-`index-inclusion-submission-ready` 是 44 个 console scripts 的第 44 号，也是论文实际提交前的**最后一道 go/no-go 门禁**。`paper-integrity` 检查的是工件之间的一致性（cross-document drift）；`submission-ready` 则把视角放宽到**整个提交包**：
+`index-inclusion-submission-ready` 是 48 个 console scripts 的第 44 号，也是论文实际提交前的**最后一道 go/no-go 门禁**。`paper-integrity` 检查的是工件之间的一致性（cross-document drift）；`submission-ready` 则把视角放宽到**整个提交包**：
 
 - **PAPER STRUCTURE**：`paper/skeleton.md` 存在 + 8 个顶级章节齐全（引言 / 文献综述 / 研究设计 / 实证结果 / 限制与讨论 / 结论与启示 / PAP / 参考文献）。
 - **PROSE**：扫描 `paper/skeleton.md` 的 `[TODO: ...]` 标记，按章节归类。任何 TODO 都是 `warn`（散文未完稿，不阻断流水线但需要写完）。
@@ -596,7 +596,7 @@ index-inclusion-tex-export --include-todos false --force
 
 ## 22. BibTeX CrossRef 补全（`enrich-bib`）
 
-`index-inclusion-enrich-bib` 是 45 个 console scripts 的第 45 号，专门解决一个具体的期刊投稿要求：**主流财经期刊（RFS / JFE / JFQA / JBF / MS / JF）要求 bibliography 中每条 `@article` 必须包含完整的 journal name / volume / issue / pages / DOI，缺失字段 → desk reject**。`tex-export` 默认生成的 `paper/references.bib` 只携带文献库里的 `author`、`title`、`year`、`note`，其他字段全是 `[TODO: journal]` 占位符。
+`index-inclusion-enrich-bib` 是 48 个 console scripts 的第 45 号，专门解决一个具体的期刊投稿要求：**主流财经期刊（RFS / JFE / JFQA / JBF / MS / JF）要求 bibliography 中每条 `@article` 必须包含完整的 journal name / volume / issue / pages / DOI，缺失字段 → desk reject**。`tex-export` 默认生成的 `paper/references.bib` 只携带文献库里的 `author`、`title`、`year`、`note`，其他字段全是 `[TODO: journal]` 占位符。
 
 `enrich-bib` 把每条占位符喂给 CrossRef 的免费 REST API（`https://api.crossref.org/works`），按"作者 surname 重叠 + 标题 token Jaccard + 年份惩罚"打 0–1 的 confidence score。`--min-confidence`（默认 0.7）以上 → 写回 journal / volume / issue / pages / DOI；以下 → 保留 `[TODO: ...]` 占位符。`author` / `title` / `year` **永远不会被 CrossRef 覆盖**——那是研究者亲自选定的版本。
 
@@ -626,7 +626,7 @@ index-inclusion-tex-export --force --enrich-bib
 
 ## 23. 交互式文献库扩展（`add-paper`）
 
-`index-inclusion-add-paper` 是 46 个 console scripts 的第 46 号，专门解决一个具体的研究工作流问题：**论文进入毕业季后，每个月仍会有新的指数效应文献被加入综述（2024-2025 的 JFE/RFS/JF 顶刊出文非常活跃）。手动新增一篇要触碰 6 个文件：`literature_catalog/_data.py` 添加 `LiteraturePaper(...)` 条目、`paper/references.bib` 追加 BibTeX、`citation_graph` 重新渲染 PNG/PDF/CSV、`paper/skeleton.md` 重新生成 §References、`paper/methodology_summary.md` 重新计算 top-5 centrality 引用、`data/public/index_research_summary.json` 更新 `papers_indexed` 计数。手动改一遍要 20-30 分钟且非常容易遗漏其中一处。
+`index-inclusion-add-paper` 是 48 个 console scripts 的第 46 号，专门解决一个具体的研究工作流问题：**论文进入毕业季后，每个月仍会有新的指数效应文献被加入综述（2024-2025 的 JFE/RFS/JF 顶刊出文非常活跃）。手动新增一篇要触碰 6 个文件：`literature_catalog/_data.py` 添加 `LiteraturePaper(...)` 条目、`paper/references.bib` 追加 BibTeX、`citation_graph` 重新渲染 PNG/PDF/CSV、`paper/skeleton.md` 重新生成 §References、`paper/methodology_summary.md` 重新计算 top-5 centrality 引用、`data/public/index_research_summary.json` 更新 `papers_indexed` 计数。手动改一遍要 20-30 分钟且非常容易遗漏其中一处。
 
 `add-paper` 把整套手术封进一个 CLI 入口，使「添加一篇文献」收敛为「填一张表 + 等几秒」：
 
