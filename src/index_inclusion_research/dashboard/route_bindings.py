@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from index_inclusion_research import dashboard_routes
-from index_inclusion_research.dashboard_types import (
+from index_inclusion_research.dashboard import routes as dashboard_routes
+from index_inclusion_research.dashboard.types import (
     AnalysesConfig,
     DashboardRouteRegistrationMap,
     DashboardRuntimeLike,

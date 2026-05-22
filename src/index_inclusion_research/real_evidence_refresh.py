@@ -18,7 +18,7 @@ from pathlib import Path
 import pandas as pd
 
 from index_inclusion_research import doctor, paths
-from index_inclusion_research.dashboard_formatting import display_status_label
+from index_inclusion_research.dashboard.formatting import display_status_label
 from index_inclusion_research.rebuild_all import PipelineStep, filter_steps, run_step
 
 ROOT = paths.project_root()

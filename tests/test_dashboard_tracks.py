@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from index_inclusion_research import dashboard_tracks
-from index_inclusion_research.dashboard_types import AnalysisCache, RddStatus
+from index_inclusion_research.dashboard import tracks as dashboard_tracks
+from index_inclusion_research.dashboard.types import AnalysisCache, RddStatus
 
 ROOT = Path(__file__).resolve().parents[1]
 

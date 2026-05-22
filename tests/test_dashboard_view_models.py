@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from index_inclusion_research import dashboard_view_models
+from index_inclusion_research.dashboard import view_models as dashboard_view_models
 
 
 def test_build_table_suite_section_view_keeps_head_primary_and_detail() -> None:

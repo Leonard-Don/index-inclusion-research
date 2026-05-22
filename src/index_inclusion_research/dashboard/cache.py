@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterator, Mapping, MutableMapping
 from threading import Lock
 
-from index_inclusion_research.dashboard_types import CacheEntry
+from index_inclusion_research.dashboard.types import CacheEntry
 
 
 class AnalysisCacheStore(MutableMapping[str, CacheEntry]):

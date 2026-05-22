@@ -6,18 +6,16 @@ from typing import cast
 
 import pandas as pd
 
-from index_inclusion_research import (
-    dashboard_content,
-    dashboard_figures,
-    dashboard_formatting,
-    dashboard_loaders,
-    dashboard_metrics,
-    dashboard_presenters,
-    dashboard_refresh,
-    dashboard_tracks,
-)
-from index_inclusion_research.dashboard_cache import AnalysisCacheStore
-from index_inclusion_research.dashboard_types import (
+from index_inclusion_research.dashboard import content as dashboard_content
+from index_inclusion_research.dashboard import figures as dashboard_figures
+from index_inclusion_research.dashboard import formatting as dashboard_formatting
+from index_inclusion_research.dashboard import loaders as dashboard_loaders
+from index_inclusion_research.dashboard import metrics as dashboard_metrics
+from index_inclusion_research.dashboard import presenters as dashboard_presenters
+from index_inclusion_research.dashboard import refresh as dashboard_refresh
+from index_inclusion_research.dashboard import tracks as dashboard_tracks
+from index_inclusion_research.dashboard.cache import AnalysisCacheStore
+from index_inclusion_research.dashboard.types import (
     AnalysesConfig,
     AnalysisCache,
     AnalysisDefinition,

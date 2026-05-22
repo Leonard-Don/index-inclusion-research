@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from index_inclusion_research.dashboard_types import (
+from index_inclusion_research.dashboard.types import (
     DesignSectionView,
     SectionHeadView,
     TableDetailView,

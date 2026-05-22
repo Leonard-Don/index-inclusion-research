@@ -1,8 +1,8 @@
-"""PAP deviation auditor: ``index-inclusion-pap-diff``.
+"""Verdict baseline deviation auditor: ``index-inclusion-pap-diff``.
 
-Compare the current 7-hypothesis verdicts against the frozen
-Pre-Analysis Plan (PAP) baseline and classify every hypothesis into one
-of five drift classes:
+Compare the current 7-hypothesis verdicts against the frozen verdict
+baseline snapshot and classify every hypothesis into one of five drift
+classes:
 
 - ``unchanged``    — verdict, confidence, evidence_tier, n_obs, headline
                      metric all match (within tolerance).
@@ -16,8 +16,7 @@ of five drift classes:
 
 The auditor is informational (exit 0) by default. ``--strict`` flips it
 into a gate that returns exit 1 whenever any hypothesis is classified as
-``flipped`` — useful when wiring the check into CI / `make ci` once the
-PAP itself is signed.
+``flipped`` — useful when wiring the check into CI / `make ci`.
 
 Outputs:
 
@@ -26,9 +25,8 @@ Outputs:
   written every run unless ``--no-write`` is passed).
 
 The frozen baseline lives at ``snapshots/pre-registration-2026-05-03.csv``
-(see ``docs/pre_registration.md`` §冻结日期). Override with
-``--baseline PATH`` if you maintain alternative pre-registration
-snapshots.
+(see ``docs/analysis_parameters.md`` §裁决基线). Override with
+``--baseline PATH`` if you maintain alternative verdict baseline snapshots.
 """
 
 from __future__ import annotations

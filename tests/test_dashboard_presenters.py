@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from index_inclusion_research import dashboard_presenters
+from index_inclusion_research.dashboard import presenters as dashboard_presenters
 
 
 def test_nav_sections_for_modes() -> None:

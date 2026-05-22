@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
-from index_inclusion_research import dashboard_loaders
-from index_inclusion_research.dashboard_types import (
+from index_inclusion_research.dashboard import loaders as dashboard_loaders
+from index_inclusion_research.dashboard.types import (
     AbstractLeadBuilder,
     AbstractPointsBuilder,
     AnalysesConfig,
@@ -240,7 +240,7 @@ class DashboardHomeContextBuilder:
     write_cache: AnalysisCache | None = None
 
     def build_pap_meta(self) -> PapMeta:
-        from index_inclusion_research.dashboard_loaders import load_pap_summary
+        from index_inclusion_research.dashboard.loaders import load_pap_summary
 
         return cast(PapMeta, load_pap_summary(self.root))
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from index_inclusion_research.dashboard_types import (
+from index_inclusion_research.dashboard.types import (
     AbstractPoint,
     DisplayTable,
     DisplayTier,
@@ -20,7 +20,7 @@ from index_inclusion_research.dashboard_types import (
     TrackDisplaySection,
     TrackNote,
 )
-from index_inclusion_research.dashboard_view_models import (
+from index_inclusion_research.dashboard.view_models import (
     build_section_head_view,
     build_table_detail_view,
     build_table_primary_view,

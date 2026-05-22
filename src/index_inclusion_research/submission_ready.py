@@ -11,7 +11,7 @@ but "submission ready" is a *broader* question:
   (non-empty + reasonable dimensions)?
 - Does the TeX export exist and is the BibTeX file populated?
 - Does the paper-integrity gate pass?
-- Does PAP report ``all_unchanged``?
+- Does the verdict baseline deviation report show ``all_unchanged``?
 - Does the full doctor pass in strict mode?
 - Are the raw input CSVs schema-valid?
 - Are the sensitivity + verdict-timeline forest plots fresh?
@@ -141,7 +141,7 @@ EXPECTED_PAPER_SECTIONS: tuple[str, ...] = (
     "## 4. 实证结果",
     "## 5. 限制与讨论",
     "## 6. 结论与启示",
-    "## 7. PAP",
+    "## 7. 分析参数",
     "## 参考文献",
 )
 FRESHNESS_STALE_DAYS: int = 30  # used for skeleton vs methodology comparisons
@@ -661,7 +661,7 @@ def check_pap_all_unchanged() -> SubmissionCheck:
         return SubmissionCheck(
             name="pap_all_unchanged",
             status="fail",
-            description="public summary JSON missing — cannot inspect PAP status.",
+            description="public summary JSON missing — cannot inspect verdict baseline deviation status.",
             fix_command="index-inclusion-export-public-summary",
         )
     block = summary.get("pap_deviation_summary")
@@ -684,8 +684,8 @@ def check_pap_all_unchanged() -> SubmissionCheck:
             name="pap_all_unchanged",
             status="fail",
             description=(
-                f"PAP report shows {flipped} flipped hypothesis "
-                "verdict(s); PAP §7 signoff required."
+                f"Verdict baseline report shows {flipped} flipped hypothesis "
+                "verdict(s); document the change before presenting new state."
             ),
             fix_command="index-inclusion-pap-diff",
         )
@@ -698,8 +698,8 @@ def check_pap_all_unchanged() -> SubmissionCheck:
             name="pap_all_unchanged",
             status="warn",
             description=(
-                "PAP report shows non-zero tightened/weakened/unverifiable "
-                "counts; document deviation in PAP §7."
+                "Verdict baseline report shows non-zero tightened/weakened/unverifiable "
+                "counts; document any deviation before presenting new state."
             ),
             evidence=evidence,
             fix_command="index-inclusion-pap-diff",
@@ -709,7 +709,7 @@ def check_pap_all_unchanged() -> SubmissionCheck:
             name="pap_all_unchanged",
             status="warn",
             description=(
-                "PAP report does not assert all_unchanged=True even though "
+                "Verdict baseline report does not assert all_unchanged=True even though "
                 "the per-category counts are zero."
             ),
             fix_command="index-inclusion-pap-diff",
@@ -717,7 +717,7 @@ def check_pap_all_unchanged() -> SubmissionCheck:
     return SubmissionCheck(
         name="pap_all_unchanged",
         status="pass",
-        description="PAP report: all 7 hypotheses unchanged vs baseline.",
+        description="Verdict baseline report: all 7 hypotheses unchanged vs baseline.",
     )
 
 

@@ -7,7 +7,8 @@ from typing import Literal
 
 import pandas as pd
 
-from index_inclusion_research import dashboard_formatting, verdict_summary
+from index_inclusion_research import verdict_summary
+from index_inclusion_research.dashboard import formatting as dashboard_formatting
 
 from . import hypotheses as cma_hypotheses
 from . import verdicts as cma_verdicts

@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from threading import Thread
 
-from index_inclusion_research.dashboard_types import (
+from index_inclusion_research.dashboard.types import (
     AnchorNormalizer,
     HomeUrlBuilder,
     ModeName,

@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from threading import Lock
 
-from index_inclusion_research import dashboard_refresh
+from index_inclusion_research.dashboard import refresh as dashboard_refresh
 
 
 def test_normalize_open_panels_filters_unknown_keys_and_duplicates() -> None:

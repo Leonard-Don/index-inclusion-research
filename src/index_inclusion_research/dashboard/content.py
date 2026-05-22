@@ -5,8 +5,8 @@ from typing import Literal, cast
 
 import pandas as pd
 
-from index_inclusion_research import dashboard_metrics
-from index_inclusion_research.dashboard_types import (
+from index_inclusion_research.dashboard import metrics as dashboard_metrics
+from index_inclusion_research.dashboard.types import (
     DashboardCard,
     EvolutionNavGroup,
     EvolutionNavView,
@@ -900,7 +900,7 @@ def load_paper_detail_result(
         "evolution_nav_cards": evolution_nav_cards,
         "evolution_nav_views": evolution_nav_views,
         "verdict_citations": verdict_citations,
-        "acronym_note": "缩写说明：RDD 是断点回归设计；CAR 是累积异常收益；PAP 是预分析计划；CMA 是跨市场不对称机制分析；CSI 300 指沪深300指数。",
+        "acronym_note": "缩写说明：RDD 是断点回归设计；CAR 是累积异常收益；PAP 是裁决基线快照工具（用于追踪裁决稳定性，非预注册）；CMA 是跨市场不对称机制分析；CSI 300 指沪深300指数。",
         "figure_paths": [],
         "primary_actions": [
             {

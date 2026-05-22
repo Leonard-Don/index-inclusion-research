@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from index_inclusion_research import dashboard_metrics
+from index_inclusion_research.dashboard import metrics as dashboard_metrics
 from index_inclusion_research.results_snapshot import ResultsSnapshot
 
 ROOT = Path(__file__).resolve().parents[1]

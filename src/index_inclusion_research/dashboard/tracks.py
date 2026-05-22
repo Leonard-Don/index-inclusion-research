@@ -3,8 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import cast
 
-from index_inclusion_research import dashboard_metrics, dashboard_presenters
-from index_inclusion_research.dashboard_types import (
+from index_inclusion_research.dashboard import metrics as dashboard_metrics
+from index_inclusion_research.dashboard import presenters as dashboard_presenters
+from index_inclusion_research.dashboard.types import (
     AnalysesConfig,
     AnalysisCache,
     AnalysisDefinition,

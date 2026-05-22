@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 from typing import cast
 
-from index_inclusion_research.dashboard_types import FigureEntry, RelativePathBuilder
+from index_inclusion_research.dashboard.types import FigureEntry, RelativePathBuilder
 
 logger = logging.getLogger(__name__)
 

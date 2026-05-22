@@ -4,7 +4,7 @@ import os
 import time
 from pathlib import Path
 
-from index_inclusion_research import dashboard_figures
+from index_inclusion_research.dashboard import figures as dashboard_figures
 
 
 def _write(path: Path, content: str | bytes) -> Path:

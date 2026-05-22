@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from index_inclusion_research import dashboard_content
+from index_inclusion_research.dashboard import content as dashboard_content
 
 PROJECT_MODULE_DISPLAY = {
     "短期价格压力": "短期价格压力与效应减弱",

@@ -672,7 +672,17 @@ class TimeModuleLike(Protocol):
 
 
 class EndpointUrlBuilder(Protocol):
-    def __call__(self, _endpoint: str, /, **values: Any) -> str: ...
+    def __call__(
+        self,
+        _endpoint: str,
+        /,
+        *,
+        _anchor: str | None = None,
+        _method: str | None = None,
+        _scheme: str | None = None,
+        _external: bool | None = None,
+        **values: Any,
+    ) -> str: ...
 
 
 class HomeUrlBuilder(Protocol):

@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from index_inclusion_research import dashboard_home
-from index_inclusion_research.dashboard_home import DashboardHomeContextBuilder
-from index_inclusion_research.dashboard_types import (
+from index_inclusion_research.dashboard import home as dashboard_home
+from index_inclusion_research.dashboard.home import DashboardHomeContextBuilder
+from index_inclusion_research.dashboard.types import (
     AnalysisCache,
     RefreshStatusPayload,
     SnapshotMeta,

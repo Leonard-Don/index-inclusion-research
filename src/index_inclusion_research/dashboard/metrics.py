@@ -4,8 +4,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from index_inclusion_research import dashboard_formatting, dashboard_loaders
-from index_inclusion_research.dashboard_types import (
+from index_inclusion_research.dashboard import formatting as dashboard_formatting
+from index_inclusion_research.dashboard import loaders as dashboard_loaders
+from index_inclusion_research.dashboard.types import (
     FormatPct,
     FormatPValue,
     RddContractCheck,

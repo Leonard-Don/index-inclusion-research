@@ -6,7 +6,7 @@ from pathlib import Path
 
 from flask import abort, jsonify, redirect, render_template, send_file
 
-from index_inclusion_research.dashboard_types import (
+from index_inclusion_research.dashboard.types import (
     AnalysesConfig,
     AnalysisInvoker,
     AnchorNormalizer,

@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from index_inclusion_research.dashboard_media import build_figure_entry
-from index_inclusion_research.dashboard_types import (
+from index_inclusion_research.dashboard.media import build_figure_entry
+from index_inclusion_research.dashboard.types import (
     FigureEntry,
     FormatPValue,
     FormatShare,

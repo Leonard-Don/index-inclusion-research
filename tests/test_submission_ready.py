@@ -52,7 +52,7 @@ def _make_skeleton_text(*, sections_complete: bool = True, todos: int = 0) -> st
         "## 4. 实证结果",
         "## 5. 限制与讨论",
         "## 6. 结论与启示",
-        "## 7. PAP",
+        "## 7. 分析参数",
         "## 参考文献",
     ]
     if not sections_complete:

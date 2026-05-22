@@ -6,7 +6,7 @@ from typing import Any
 import pandas as pd
 from pandas.api.types import is_object_dtype, is_string_dtype
 
-from index_inclusion_research import dashboard_loaders
+from index_inclusion_research.dashboard import loaders as dashboard_loaders
 
 TABLE_LABELS = {
     "event_study_summary": "事件研究汇总表",
@@ -411,11 +411,11 @@ VALUE_LABELS = {
     "No rows matched the HS300 rebalance title/theme filters.": "没有命中沪深300调样标题或主题过滤条件。",
     "Matched notices exist but fall outside the requested date window.": "有命中公告，但不在当前日期范围内。",
     "PAP baseline, limitations, and verdict-diff workflow are in sync with paper narrative copies.": (
-        "PAP 基线、局限说明和裁决差异流程已与论文叙述口径同步。"
+        "裁决基线快照、局限说明和裁决差异流程已与论文叙述口径同步。"
     ),
     "All 21 paper references across 7 hypotheses resolve.": "7 条假说中的 21 条文献引用均可解析。",
-    "pap limitations claim": "PAP 与局限说明口径",
-    "pap_limitations_claim": "PAP 与局限说明口径",
+    "pap limitations claim": "分析参数与局限说明口径",
+    "pap_limitations_claim": "分析参数与局限说明口径",
     "main_event_study_claim": "正文主结论审计",
     "patell_bmp_claim": "Patell/BMP 稳健性审计",
     "cma_core_claim": "跨市场机制主表审计",
@@ -428,13 +428,13 @@ VALUE_LABELS = {
         "两个市场的公告日调入 Patell/BMP 稳健性行均已生成，并已复制到论文交付包。"
     ),
     "Core mechanism set matches PAP (H1/H5/H7), with paper bundle and narrative copies present.": (
-        "正文机制集合与 PAP 一致（H1/H5/H7），论文表格与叙事副本已齐备。"
+        "正文机制集合（H1/H5/H7）已与分析参数一致，论文表格与叙事副本已齐备。"
     ),
     "RDD appendix artifacts, robustness panel, McCrary output, and preliminary wording are present.": (
         "RDD 附录产物、稳健性面板、McCrary 输出和“附录/探索性”表述均已齐备。"
     ),
     "Paper bundle contains the expected tables, figures, RDD files, narrative docs, and PAP snapshot.": (
-        "论文交付包已包含预期表格、图表、RDD 文件、叙事文档与 PAP 快照。"
+        "论文交付包已包含预期表格、图表、RDD 文件、叙事文档与裁决基线快照。"
     ),
     "hypothesis_paper_ids_resolve": "假说文献引用解析",
     "verdicts_csv_health": "裁决 CSV 健康度",
@@ -507,7 +507,7 @@ TEXT_REPLACEMENTS: tuple[tuple[str, str], ...] = (
     ("paper bundle copies are present", "论文交付包副本已齐备"),
     ("paper bundle", "论文交付包"),
     ("Paper bundle", "论文交付包"),
-    ("tables, figures, RDD files, narrative docs, and PAP snapshot", "表格、图表、RDD 文件、叙事文档和 PAP 快照"),
+    ("tables, figures, RDD files, narrative docs, and PAP snapshot", "表格、图表、RDD 文件、叙事文档和裁决基线快照"),
     ("preliminary", "附录/探索性"),
     ("limitations", "局限说明"),
     ("evidence_tier=core", "正文可引用"),

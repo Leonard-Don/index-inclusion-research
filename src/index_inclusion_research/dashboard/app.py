@@ -5,9 +5,12 @@ from typing import cast
 
 from flask import request, url_for
 
-from index_inclusion_research.dashboard_bootstrap import bootstrap_dashboard_paths
-from index_inclusion_research.dashboard_factory import build_dashboard_application
-from index_inclusion_research.dashboard_types import RequestProxyLike
+from index_inclusion_research.dashboard.bootstrap import bootstrap_dashboard_paths
+from index_inclusion_research.dashboard.factory import build_dashboard_application
+from index_inclusion_research.dashboard.types import (
+    EndpointUrlBuilder,
+    RequestProxyLike,
+)
 
 PATHS = bootstrap_dashboard_paths(__file__)
 ROOT = PATHS.root
@@ -23,6 +26,11 @@ from index_inclusion_research.price_pressure_track import (
     run_analysis as run_price_pressure_track,
 )
 
+# Flask's url_for is structurally compatible with EndpointUrlBuilder: it
+# accepts a positional endpoint name followed by the same optional Flask
+# keyword parameters (_anchor, _method, _scheme, _external) and **values.
+# mypy cannot verify structural compatibility for non-Protocol callables
+# directly, so we narrow with cast here.
 dashboard_application = build_dashboard_application(
     import_name=__name__,
     root=ROOT,
@@ -32,7 +40,7 @@ dashboard_application = build_dashboard_application(
     run_demand_curve_track=run_demand_curve_track,
     run_identification_china_track=run_identification_china_track,
     request_proxy=cast(RequestProxyLike, request),
-    url_builder=url_for,
+    url_builder=cast(EndpointUrlBuilder, url_for),
     time_module=time,
     get_literature_paper=get_literature_paper,
 )

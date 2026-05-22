@@ -5,22 +5,23 @@ from pathlib import Path
 
 from flask import Flask
 
-from index_inclusion_research import dashboard_config, dashboard_formatting
 from index_inclusion_research.chart_data import build_chart_data
-from index_inclusion_research.dashboard_refresh_coordinator import (
+from index_inclusion_research.dashboard import config as dashboard_config
+from index_inclusion_research.dashboard import formatting as dashboard_formatting
+from index_inclusion_research.dashboard.refresh_coordinator import (
     DashboardRefreshCoordinator,
 )
-from index_inclusion_research.dashboard_route_bindings import (
+from index_inclusion_research.dashboard.route_bindings import (
     DashboardRouteViews,
     build_dashboard_route_views,
     build_home_url_builder,
 )
-from index_inclusion_research.dashboard_runtime import DashboardRuntime
-from index_inclusion_research.dashboard_services import (
+from index_inclusion_research.dashboard.runtime import DashboardRuntime
+from index_inclusion_research.dashboard.services import (
     DashboardServices,
     build_dashboard_services,
 )
-from index_inclusion_research.dashboard_types import (
+from index_inclusion_research.dashboard.types import (
     AnalysesConfig,
     AnalysisRunner,
     DashboardCard,

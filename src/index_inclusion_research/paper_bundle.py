@@ -118,7 +118,7 @@ def _section_specs(root: Path) -> tuple[BundleSection, ...]:
                 "paper_outline.md",
                 "paper_outline_verdicts.md",
                 "research_delivery_package.md",
-                "pre_registration.md",
+                "analysis_parameters.md",
                 "limitations.md",
                 "verdict_iteration.md",
                 "hs300_rdd_l3_collection_audit.md",
@@ -597,7 +597,7 @@ def _bundle_summary_lines(root: Path) -> list[str]:
     """Render a research-state snapshot for paper/bundle_summary.md."""
     lines = ["# 研究状态快照", ""]
 
-    # PAP signature info: pull from snapshots/ + docs/pre_registration.md
+    # Analysis parameters info: pull from snapshots/ + docs/analysis_parameters.md
     snapshots = sorted((root / "snapshots").glob("pre-registration-*.csv"))
     if snapshots:
         latest = snapshots[-1]

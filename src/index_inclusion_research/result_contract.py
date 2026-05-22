@@ -6,7 +6,7 @@ from typing import Any, cast
 
 import pandas as pd
 
-from index_inclusion_research.dashboard_types import RddStatus, RddStatusMode
+from index_inclusion_research.dashboard.types import RddStatus, RddStatusMode
 from index_inclusion_research.rdd_evidence import (
     rdd_coverage_note,
     rdd_evidence_tier,
@@ -56,6 +56,26 @@ def _ui_text(value: object) -> str:
         .replace("断点 两侧", "断点两侧")
         .replace("`", "")
     )
+
+
+def _canonicalize_manifest_path(value: str) -> str:
+    """Canonicalize a path field before writing to the results manifest CSV.
+
+    Guarantees consistent format at write time so read-side consumers never
+    need to re-normalize beyond simple string comparison:
+      - Backslashes → forward slashes (Windows path compat)
+      - Collapse repeated separators (//)
+      - Collapse inline ./ segments (/./)
+      - Strip leading ./
+    """
+    value = value.replace("\\", "/")
+    while "//" in value:
+        value = value.replace("//", "/")
+    while "/./" in value:
+        value = value.replace("/./", "/")
+    while value.startswith("./"):
+        value = value[2:]
+    return value
 
 
 def _rdd_status_mode(value: object) -> RddStatusMode:
@@ -230,15 +250,15 @@ def build_results_manifest(profile: str, rdd_status: Mapping[str, Any]) -> pd.Da
                 "rdd_evidence_status": str(rdd_status.get("evidence_status", "")),
                 "rdd_source_kind": str(rdd_status.get("source_kind", "")),
                 "rdd_source_label": str(rdd_status.get("source_label", "")),
-                "rdd_source_file": str(rdd_status.get("source_file", "")),
+                "rdd_source_file": _canonicalize_manifest_path(str(rdd_status.get("source_file", ""))),
                 "rdd_generated_at": str(rdd_status.get("generated_at", "")),
                 "rdd_as_of_date": str(rdd_status.get("as_of_date", "")),
                 "rdd_batch_label": str(rdd_status.get("batch_label", "")),
                 "rdd_coverage_note": str(rdd_status.get("coverage_note", "")),
                 "rdd_message": str(rdd_status.get("message", "")),
                 "rdd_note": str(rdd_status.get("note", "")),
-                "rdd_input_file": str(rdd_status.get("input_file", "")),
-                "rdd_audit_file": str(rdd_status.get("audit_file", "")),
+                "rdd_input_file": _canonicalize_manifest_path(str(rdd_status.get("input_file", ""))),
+                "rdd_audit_file": _canonicalize_manifest_path(str(rdd_status.get("audit_file", ""))),
                 "rdd_candidate_rows": rdd_status.get("candidate_rows"),
                 "rdd_candidate_batches": rdd_status.get("candidate_batches"),
                 "rdd_treated_rows": rdd_status.get("treated_rows"),

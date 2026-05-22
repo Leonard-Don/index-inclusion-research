@@ -4,7 +4,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from index_inclusion_research import dashboard_presenters, dashboard_sections
+from index_inclusion_research.dashboard import presenters as dashboard_presenters
+from index_inclusion_research.dashboard import sections as dashboard_sections
 
 ROOT = Path(__file__).resolve().parents[1]
 

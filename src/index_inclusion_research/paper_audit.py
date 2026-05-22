@@ -252,7 +252,7 @@ def _paper_bundle_required_paths(root: Path) -> tuple[Path, ...]:
         root / "paper" / "rdd" / "rdd_robustness.csv",
         root / "paper" / "rdd" / "mccrary_density_test.csv",
         root / "paper" / "narrative" / "research_delivery_package.md",
-        root / "paper" / "narrative" / "pre_registration.md",
+        root / "paper" / "narrative" / "analysis_parameters.md",
         root / "paper" / "narrative" / "limitations.md",
         root / "paper" / "narrative" / "verdict_iteration.md",
         root / "paper" / "narrative" / "hs300_rdd_l3_collection_audit.md",
@@ -445,7 +445,7 @@ def audit_cma_core(root: Path = ROOT, *, require_bundle: bool = True) -> AuditRe
     required: tuple[Path, ...] = (
         root / "results" / "real_tables" / "cma_hypothesis_verdicts.csv",
         root / "results" / "real_tables" / "cma_hypothesis_verdicts.tex",
-        root / "docs" / "pre_registration.md",
+        root / "docs" / "analysis_parameters.md",
         root / "docs" / "paper_outline_verdicts.md",
         root / "snapshots" / "pre-registration-2026-05-03.csv",
     )
@@ -453,14 +453,14 @@ def audit_cma_core(root: Path = ROOT, *, require_bundle: bool = True) -> AuditRe
         required = (
             *required,
             root / "paper" / "tables" / "cma_hypothesis_verdicts.tex",
-            root / "paper" / "narrative" / "pre_registration.md",
+            root / "paper" / "narrative" / "analysis_parameters.md",
         )
     missing = _fail_missing(
         name="cma_core_claim",
         claim=claim,
         paths_=required,
         root=root,
-        fix="Run `index-inclusion-cma && make paper`; keep docs/pre_registration.md in sync with current verdicts.",
+        fix="Run `index-inclusion-cma && make paper`; keep docs/analysis_parameters.md in sync with current verdicts.",
     )
     if missing:
         return missing
@@ -487,8 +487,9 @@ def audit_cma_core(root: Path = ROOT, *, require_bundle: bool = True) -> AuditRe
             artifacts=_existing_artifacts(required, root=root),
         )
     core = set(verdicts.loc[verdicts["evidence_tier"].astype(str) == "core", "hid"].astype(str))
-    # Baseline PAP core set; plus the H2 promotion path enabled by
-    # EVIDENCE_TIER_PROMOTION_FLOOR once the CN ETF-TNA proxy is in place.
+    # Analysis-parameter baseline core set (post-hoc / exploratory);
+    # plus the H2 promotion path enabled by EVIDENCE_TIER_PROMOTION_FLOOR
+    # once the CN ETF-TNA proxy is in place.
     baseline_core = {"H1", "H5", "H7"}
     promoted_core = baseline_core | {"H2"}
     details = tuple(
@@ -504,7 +505,7 @@ def audit_cma_core(root: Path = ROOT, *, require_bundle: bool = True) -> AuditRe
                 f"Core hypothesis set is {sorted(core)}; expected either baseline "
                 f"{sorted(baseline_core)} or proxy-promoted {sorted(promoted_core)}."
             ),
-            fix="Update docs/pre_registration.md §7 before changing evidence_tier, or restore the frozen tier mapping.",
+            fix="Update docs/analysis_parameters.md before changing evidence_tier, or restore the frozen tier mapping.",
             artifacts=_existing_artifacts(required, root=root),
             details=details,
         )
@@ -514,7 +515,7 @@ def audit_cma_core(root: Path = ROOT, *, require_bundle: bool = True) -> AuditRe
         status="pass",
         claim=claim,
         message=(
-            f"Core mechanism set matches PAP ({matched_label})"
+            f"Core mechanism set matches analysis parameters ({matched_label})"
             + (", with paper bundle and narrative copies present." if require_bundle else ".")
         ),
         artifacts=_existing_artifacts(required, root=root),
@@ -544,7 +545,7 @@ def audit_rdd_appendix(root: Path = ROOT, *, require_bundle: bool = True) -> Aud
         claim=claim,
         paths_=required,
         root=root,
-        fix="Run `index-inclusion-hs300-rdd && make paper`, then keep RDD language preliminary until L3 reaches the PAP threshold.",
+        fix="Run `index-inclusion-hs300-rdd && make paper`, then keep RDD language preliminary until L3 reaches the analysis-parameter threshold.",
     )
     if missing:
         return missing
@@ -704,9 +705,9 @@ def audit_reference_manifest(root: Path = ROOT, *, require_bundle: bool = True) 
 
 
 def audit_pap_limitations(root: Path = ROOT, *, require_bundle: bool = True) -> AuditResult:
-    claim = "写作边界：PAP、局限说明、裁决差异与当前裁决保持同一套口径。"
+    claim = "写作边界：分析参数、局限说明、裁决差异与当前裁决保持同一套口径。"
     required: tuple[Path, ...] = (
-        root / "docs" / "pre_registration.md",
+        root / "docs" / "analysis_parameters.md",
         root / "docs" / "limitations.md",
         root / "docs" / "verdict_iteration.md",
         root / "snapshots" / "pre-registration-2026-05-03.csv",
@@ -714,7 +715,7 @@ def audit_pap_limitations(root: Path = ROOT, *, require_bundle: bool = True) -> 
     if require_bundle:
         required = (
             *required,
-            root / "paper" / "narrative" / "pre_registration.md",
+            root / "paper" / "narrative" / "analysis_parameters.md",
             root / "paper" / "narrative" / "limitations.md",
             root / "paper" / "narrative" / "verdict_iteration.md",
         )
@@ -723,11 +724,11 @@ def audit_pap_limitations(root: Path = ROOT, *, require_bundle: bool = True) -> 
         claim=claim,
         paths_=required,
         root=root,
-        fix="Run `make paper`; if verdicts changed, update docs/pre_registration.md §7 before presenting the new state.",
+        fix="Run `make paper`; if verdicts changed, update docs/analysis_parameters.md before presenting the new state.",
     )
     if missing:
         return missing
-    from index_inclusion_research.dashboard_loaders import load_pap_summary
+    from index_inclusion_research.dashboard.loaders import load_pap_summary
 
     pap = load_pap_summary(root)
     if not pap.get("available"):
@@ -735,8 +736,8 @@ def audit_pap_limitations(root: Path = ROOT, *, require_bundle: bool = True) -> 
             name="pap_limitations_claim",
             status="fail",
             claim=claim,
-            message="No PAP snapshot is available.",
-            fix="Create a snapshots/pre-registration-YYYY-MM-DD.csv baseline before treating hypotheses as confirmatory.",
+            message="No verdict baseline snapshot is available.",
+            fix="Create a snapshots/pre-registration-YYYY-MM-DD.csv verdict baseline snapshot.",
             artifacts=_existing_artifacts(required, root=root),
         )
     drift_state = str(pap.get("drift_state", ""))
@@ -750,8 +751,8 @@ def audit_pap_limitations(root: Path = ROOT, *, require_bundle: bool = True) -> 
             name="pap_limitations_claim",
             status="warn",
             claim=claim,
-            message="Current verdicts drift from the latest PAP snapshot.",
-            fix="Record the change in docs/pre_registration.md §7 or restore the baseline verdicts.",
+            message="Current verdicts drift from the latest verdict baseline snapshot.",
+            fix="Record the change in docs/analysis_parameters.md or restore the baseline verdicts.",
             artifacts=_existing_artifacts(required, root=root),
             details=details,
         )
@@ -760,7 +761,7 @@ def audit_pap_limitations(root: Path = ROOT, *, require_bundle: bool = True) -> 
             name="pap_limitations_claim",
             status="fail",
             claim=claim,
-            message="PAP exists but current cma_hypothesis_verdicts.csv is missing.",
+            message="Verdict baseline snapshot exists but current cma_hypothesis_verdicts.csv is missing.",
             fix="Run `index-inclusion-cma` before building the paper package.",
             artifacts=_existing_artifacts(required, root=root),
             details=details,
@@ -770,7 +771,7 @@ def audit_pap_limitations(root: Path = ROOT, *, require_bundle: bool = True) -> 
         status="pass",
         claim=claim,
         message=(
-            "PAP baseline, limitations, and verdict-diff workflow are in sync"
+            "Analysis parameters baseline, limitations, and verdict-diff workflow are in sync"
             + (" with paper narrative copies." if require_bundle else ".")
         ),
         artifacts=_existing_artifacts(required, root=root),

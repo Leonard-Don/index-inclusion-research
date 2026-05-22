@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import cast
 
-from index_inclusion_research.dashboard_types import RawAnalysisResult
+from index_inclusion_research.dashboard.types import RawAnalysisResult
 from index_inclusion_research.harris_gurel import (
     run_analysis as run_harris_gurel_analysis,
 )

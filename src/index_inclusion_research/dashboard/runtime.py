@@ -3,9 +3,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 from pathlib import Path
 
-from index_inclusion_research.dashboard_page_runtime import DashboardPageRuntime
-from index_inclusion_research.dashboard_track_runtime import DashboardTrackRuntime
-from index_inclusion_research.dashboard_types import (
+from index_inclusion_research.dashboard.page_runtime import DashboardPageRuntime
+from index_inclusion_research.dashboard.track_runtime import DashboardTrackRuntime
+from index_inclusion_research.dashboard.types import (
     AnalysesConfig,
     AnalysisCache,
     DashboardCard,

@@ -3,8 +3,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from threading import Lock
 
-from index_inclusion_research import dashboard_refresh
-from index_inclusion_research.dashboard_types import (
+from index_inclusion_research.dashboard import refresh as dashboard_refresh
+from index_inclusion_research.dashboard.types import (
     HomeUrlBuilder,
     ModeName,
     NavSectionsBuilder,

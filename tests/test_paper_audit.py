@@ -49,7 +49,7 @@ def _seed_audit_project(root: Path) -> None:
         "research_delivery_package.md": "RDD preliminary，不进主表。",
         "paper_outline.md": "outline",
         "paper_outline_verdicts.md": "verdicts +4.01% 0.045 118",
-        "pre_registration.md": "pap",
+        "analysis_parameters.md": "analysis parameters",
         "limitations.md": "limitations",
         "verdict_iteration.md": "iteration",
         "hs300_rdd_l3_collection_audit.md": "rdd audit",
@@ -221,7 +221,7 @@ def _seed_audit_project(root: Path) -> None:
         (root / "paper" / "rdd" / name).write_text("x\n", encoding="utf-8")
     for name in (
         "research_delivery_package.md",
-        "pre_registration.md",
+        "analysis_parameters.md",
         "limitations.md",
         "verdict_iteration.md",
         "hs300_rdd_l3_collection_audit.md",

@@ -3,22 +3,20 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from index_inclusion_research import (
-    dashboard_figures,
-    dashboard_home,
-    dashboard_sections,
-)
 from index_inclusion_research.analysis.cross_market_asymmetry import (
     dashboard_section as cma_dashboard,
 )
 from index_inclusion_research.analysis.cross_market_asymmetry import (
     orchestrator as cma_orchestrator,
 )
-from index_inclusion_research.dashboard_cache import AnalysisCacheStore
-from index_inclusion_research.dashboard_page_outline_runtime import (
+from index_inclusion_research.dashboard import figures as dashboard_figures
+from index_inclusion_research.dashboard import home as dashboard_home
+from index_inclusion_research.dashboard import sections as dashboard_sections
+from index_inclusion_research.dashboard.cache import AnalysisCacheStore
+from index_inclusion_research.dashboard.page_outline_runtime import (
     DashboardPageOutlineRuntime,
 )
-from index_inclusion_research.dashboard_types import (
+from index_inclusion_research.dashboard.types import (
     AnalysisCache,
     DashboardSection,
     FigureEntry,

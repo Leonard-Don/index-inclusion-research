@@ -17,7 +17,7 @@ class DashboardPaths:
 def bootstrap_dashboard_paths(current_file: str | Path) -> DashboardPaths:
     os.environ.setdefault("MPLBACKEND", "Agg")
 
-    root = Path(current_file).resolve().parents[2]
+    root = Path(current_file).resolve().parents[3]
     src = root / "src"
     web = src / "index_inclusion_research" / "web"
     templates = web / "templates"
