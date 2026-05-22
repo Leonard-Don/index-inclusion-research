@@ -285,12 +285,11 @@ def load_pap_summary(
     snapshots_dir: Path | None = None,
     current_verdicts_path: Path | None = None,
 ) -> dict[str, Any]:
-    """Diff the current verdicts CSV against the most recent PAP snapshot.
+    """Diff the current verdicts CSV against the most recent verdict baseline snapshot.
 
-    The dashboard surfaces this as a hero status chip — see the PAP chip in
-    render_refresh_status_panel — to make 'frozen baseline vs current run'
-    visible at a glance. Returns ``{"available": False}`` when no snapshot
-    is on disk.
+    The dashboard surfaces this as a hero status chip to make
+    'verdict baseline vs current run' (verdict stability over time) visible
+    at a glance. Returns ``{"available": False}`` when no snapshot is on disk.
     """
     snap_dir = snapshots_dir or (root / "snapshots")
     if not snap_dir.exists() or not snap_dir.is_dir():
@@ -314,9 +313,9 @@ def load_pap_summary(
             "drift_state": "missing",
             "summary_label": "当前 verdicts 缺失",
             "headline": (
-                f"PAP 冻结 · {baseline_date} · 当前 verdicts 缺失"
+                f"裁决基线快照 · {baseline_date} · 当前 verdicts 缺失"
                 if baseline_date
-                else "PAP 冻结 · 当前 verdicts 缺失"
+                else "裁决基线快照 · 当前 verdicts 缺失"
             ),
             "changed": 0,
             "added": 0,
@@ -330,7 +329,7 @@ def load_pap_summary(
         current = pd.read_csv(current_path)
         previous = pd.read_csv(snapshot_path)
     except Exception as exc:  # pragma: no cover - filesystem availability varies
-        logger.warning("Failed to read PAP snapshot/current verdicts: %s", exc)
+        logger.warning("Failed to read verdict baseline snapshot/current verdicts: %s", exc)
         return {"available": False}
 
     diff = compute_verdict_diff(current, previous)
@@ -352,7 +351,7 @@ def load_pap_summary(
             parts.append(f"{counts['removed']} removed")
         summary_label = " · ".join(parts)
 
-    headline_pieces = ["PAP 冻结"]
+    headline_pieces = ["裁决基线快照"]
     if baseline_date:
         headline_pieces.append(baseline_date)
     headline_pieces.append(f"当前 vs 基线: {summary_label}")

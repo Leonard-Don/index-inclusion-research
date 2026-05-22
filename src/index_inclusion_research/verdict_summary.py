@@ -541,7 +541,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "Shortcut for --compare-with against the most recent "
-            "snapshots/pre-registration-*.csv (PAP baseline). Mutually "
+            "snapshots/pre-registration-*.csv (裁决基线快照 / verdict baseline "
+            "snapshot — tracks verdict stability over time). Mutually "
             "exclusive with --compare-with."
         ),
     )
@@ -671,7 +672,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(
                 "[verdict-summary] --vs-pap: no snapshots/pre-registration-*.csv found. "
                 "Run `index-inclusion-verdict-summary --snapshot snapshots/pre-registration-YYYY-MM-DD.csv` "
-                "first to freeze a PAP baseline."
+                "first to create a verdict baseline snapshot."
             )
             return 1
         compare_path = snapshots[-1]

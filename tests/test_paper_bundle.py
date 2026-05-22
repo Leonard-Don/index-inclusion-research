@@ -79,7 +79,7 @@ def _seed_minimal_project(root: Path) -> None:
     (root / "docs" / "research_delivery_package.md").write_text(
         "# Delivery\n", encoding="utf-8"
     )
-    (root / "docs" / "pre_registration.md").write_text("# PAP\n", encoding="utf-8")
+    (root / "docs" / "analysis_parameters.md").write_text("# 分析参数\n", encoding="utf-8")
 
     (root / "snapshots").mkdir()
     (root / "snapshots" / "pre-registration-2026-05-03.csv").write_text(
@@ -139,7 +139,7 @@ def test_build_paper_bundle_creates_expected_structure(tmp_path: Path) -> None:
     # Narrative + snapshot data
     assert (result.dest / "narrative" / "paper_outline.md").exists()
     assert (result.dest / "narrative" / "research_delivery_package.md").exists()
-    assert (result.dest / "narrative" / "pre_registration.md").exists()
+    assert (result.dest / "narrative" / "analysis_parameters.md").exists()
     assert (result.dest / "data" / "pre-registration-2026-05-03.csv").exists()
     assert (result.dest / "data" / "hs300_rdd_candidates.csv").exists()
 

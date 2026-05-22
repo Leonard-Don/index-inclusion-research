@@ -781,7 +781,7 @@ def test_check_pap_deviation_no_flips_warns_when_baseline_missing(
         snapshots_dir=tmp_path / "missing_snapshots",
     )
     assert result.status == "warn"
-    assert "PAP deviation report not found" in result.message
+    assert "deviation report not found" in result.message
 
 
 def test_check_pap_snapshot_freshness_passes_when_recent(tmp_path: Path) -> None:
@@ -821,7 +821,7 @@ def test_check_pap_snapshot_freshness_fails_when_missing(tmp_path: Path) -> None
         today=_dt.date(2026, 5, 16),
     )
     assert result.status == "fail"
-    assert "No PAP snapshots" in result.message
+    assert "No verdict baseline snapshots" in result.message
 
 
 def test_check_pap_snapshot_freshness_fails_when_dir_missing(tmp_path: Path) -> None:

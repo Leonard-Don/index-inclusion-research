@@ -527,7 +527,7 @@ def test_load_pap_summary_diffs_against_latest_snapshot(tmp_path: Path) -> None:
     assert result["added"] == 0
     assert result["removed"] == 0
     assert result["unchanged"] == 2
-    assert "PAP 冻结" in result["headline"]
+    assert "裁决基线快照" in result["headline"]
     assert "2026-05-03" in result["headline"]
 
 

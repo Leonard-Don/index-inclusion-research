@@ -1,4 +1,4 @@
-"""Verdict, PAP, and hypothesis-set doctor checks."""
+"""Verdict, verdict-baseline snapshot, and hypothesis-set doctor checks."""
 
 from __future__ import annotations
 
@@ -391,13 +391,13 @@ def check_pap_deviation_no_flips(
     verdicts_csv_path: Path = DEFAULT_VERDICTS_CSV,
     snapshots_dir: Path = DEFAULT_SNAPSHOTS_DIR,
 ) -> CheckResult:
-    """Surface PAP drift: warn on tightened/weakened, fail on flipped.
+    """Surface verdict drift: warn on tightened/weakened, fail on flipped.
 
     Reads ``results/real_tables/pap_deviation_report.csv`` (regenerating
     it in-process via :mod:`pap_diff` if missing). Compares every
-    hypothesis row's ``classification`` against the frozen PAP baseline
-    so any verdict that flipped since PAP sign-off shows up as a hard
-    failure — that's the case the referee will hit hardest.
+    hypothesis row's ``classification`` against the frozen verdict baseline
+    snapshot so any verdict that flipped since the baseline shows up as a
+    hard failure — that's the case the referee will hit hardest.
     """
     name = "pap_deviation_no_flips"
     resolved = _ensure_pap_deviation_report(
@@ -410,7 +410,7 @@ def check_pap_deviation_no_flips(
             name=name,
             status="warn",
             message=(
-                f"PAP deviation report not found and could not regenerate: "
+                f"Verdict baseline deviation report not found and could not regenerate: "
                 f"{_relative_label(report_path)}"
             ),
             fix=(
@@ -424,14 +424,14 @@ def check_pap_deviation_no_flips(
         return CheckResult(
             name=name,
             status="warn",
-            message=f"PAP deviation report unreadable: {exc}",
+            message=f"Verdict baseline deviation report unreadable: {exc}",
             fix="Regenerate with `index-inclusion-pap-diff`.",
         )
     if "classification" not in df.columns:
         return CheckResult(
             name=name,
             status="warn",
-            message="PAP deviation report is missing the 'classification' column.",
+            message="Verdict baseline deviation report is missing the 'classification' column.",
             fix="Regenerate with `index-inclusion-pap-diff` to refresh the schema.",
         )
     if df.empty:
@@ -460,9 +460,9 @@ def check_pap_deviation_no_flips(
             status="fail",
             message=(
                 f"{len(flipped_rows)} of {len(df)} hypothesis verdict(s) "
-                f"have flipped vs the frozen PAP baseline."
+                f"have flipped vs the frozen verdict baseline snapshot."
             ),
-            fix="Run `make verdicts && make paper` to inspect changed rows; PAP §7 sign-off required for any flip.",
+            fix="Run `make verdicts && make paper` to inspect changed rows; document any flip before presenting the new state.",
             details=details,
         )
     if not drifted_rows.empty:
@@ -472,7 +472,7 @@ def check_pap_deviation_no_flips(
             status="warn",
             message=(
                 f"{len(drifted_rows)} of {len(df)} hypothesis verdict(s) "
-                f"drifted (tightened/weakened) vs the frozen PAP baseline."
+                f"drifted (tightened/weakened) vs the frozen verdict baseline snapshot."
             ),
             fix="Run `make verdicts && make paper` to inspect changed rows.",
             details=details,
@@ -482,7 +482,7 @@ def check_pap_deviation_no_flips(
         status="pass",
         message=(
             f"All {len(df)} hypothesis verdict(s) are unchanged vs the frozen "
-            f"PAP baseline."
+            f"verdict baseline snapshot."
         ),
     )
 
@@ -504,12 +504,13 @@ def check_pap_snapshot_freshness(
     stale_days: int = PAP_SNAPSHOT_STALE_DAYS,
     today: _dt.date | None = None,
 ) -> CheckResult:
-    """Warn when the latest PAP baseline snapshot is > ``stale_days`` old.
+    """Warn when the latest verdict baseline snapshot is > ``stale_days`` old.
 
-    The PAP should be re-baselined quarterly to keep ``pap-diff`` honest;
-    a snapshot older than 90 days is a sign the team forgot to refresh
-    after a verdict iteration. Missing snapshots entirely is treated as
-    a hard error — there's nothing for ``pap-diff`` to compare against.
+    The verdict baseline snapshot should be re-baselined quarterly to keep
+    ``pap-diff`` honest; a snapshot older than 90 days is a sign the team
+    forgot to refresh after a verdict iteration. Missing snapshots entirely
+    is treated as a hard error — there's nothing for ``pap-diff`` to compare
+    against.
     """
     name = "pap_snapshot_freshness"
     if not snapshots_dir.exists():
@@ -528,12 +529,12 @@ def check_pap_snapshot_freshness(
             name=name,
             status="fail",
             message=(
-                f"No PAP snapshots found under "
+                f"No verdict baseline snapshots found under "
                 f"{_relative_label(snapshots_dir)}/{PAP_SNAPSHOT_GLOB}."
             ),
             fix=(
                 "Copy results/real_tables/cma_hypothesis_verdicts.csv to "
-                "snapshots/pre-registration-YYYY-MM-DD.csv to seed the PAP baseline."
+                "snapshots/pre-registration-YYYY-MM-DD.csv to seed the verdict baseline."
             ),
         )
 
@@ -545,7 +546,7 @@ def check_pap_snapshot_freshness(
             name=name,
             status="warn",
             message=(
-                f"Latest snapshot {_relative_label(latest)} doesn't carry a "
+                f"Latest verdict baseline snapshot {_relative_label(latest)} doesn't carry a "
                 f"YYYY-MM-DD date suffix."
             ),
             fix=(
@@ -559,7 +560,7 @@ def check_pap_snapshot_freshness(
             name=name,
             status="warn",
             message=(
-                f"Latest PAP snapshot {_relative_label(latest)} is "
+                f"Latest verdict baseline snapshot {_relative_label(latest)} is "
                 f"{age_days} days old (> {stale_days}); recommend quarterly "
                 f"re-baselining."
             ),
@@ -573,7 +574,7 @@ def check_pap_snapshot_freshness(
         name=name,
         status="pass",
         message=(
-            f"Latest PAP snapshot {_relative_label(latest)} is {age_days} day(s) old "
+            f"Latest verdict baseline snapshot {_relative_label(latest)} is {age_days} day(s) old "
             f"(≤ {stale_days})."
         ),
     )

@@ -781,7 +781,7 @@ def build_paper_audit_section(
     return {
         "summary": (
             f"当前论文交付审计为 {summary['pass']} 项通过、{summary['warn']} 项需关注、"
-            f"{summary['fail']} 项阻断；它把正文主结论、稳健性、机制主表、RDD 附录和 PAP 边界逐项映射到可追溯产物。"
+            f"{summary['fail']} 项阻断；它把正文主结论、稳健性、机制主表、RDD 附录和分析参数逐项映射到可追溯产物。"
         ),
         "summary_cards": summary_cards,
         "tables": tables,
@@ -793,7 +793,7 @@ def build_paper_audit_section(
                 waypoint_label="论文交付",
                 kicker="论文交付",
                 title="每个论文主张都要能回到一份真实产物。",
-                intro="把写作结论、PAP 边界和交付包状态放在同一张审计表里。",
+                intro="把写作结论、分析参数和交付包状态放在同一张审计表里。",
                 side_label="审计口径",
             ),
             primary=build_table_primary_view(

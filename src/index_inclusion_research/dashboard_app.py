@@ -7,7 +7,10 @@ from flask import request, url_for
 
 from index_inclusion_research.dashboard_bootstrap import bootstrap_dashboard_paths
 from index_inclusion_research.dashboard_factory import build_dashboard_application
-from index_inclusion_research.dashboard_types import EndpointUrlBuilder, RequestProxyLike
+from index_inclusion_research.dashboard_types import (
+    EndpointUrlBuilder,
+    RequestProxyLike,
+)
 
 PATHS = bootstrap_dashboard_paths(__file__)
 ROOT = PATHS.root
