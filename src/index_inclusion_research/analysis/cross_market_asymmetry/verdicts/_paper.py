@@ -79,16 +79,16 @@ def _main_finding_block(event_study_summary: pd.DataFrame | None) -> list[str]:
         if isinstance(row, pd.DataFrame):
             row = row.iloc[0]
         cells[(market, phase)] = {
-            "n": int(row["n_events"]),  # type: ignore[call-overload,index]
-            "mean_car": float(row["mean_car"]),  # type: ignore[call-overload,index]
-            "t": float(row["t_stat"]),  # type: ignore[call-overload,index]
-            "p": float(row["p_value"]),  # type: ignore[call-overload,index]
+            "n": int(row["n_events"]),
+            "mean_car": float(row["mean_car"]),
+            "t": float(row["t_stat"]),
+            "p": float(row["p_value"]),
         }
         rows_md.append(
-            f"| {market} | {phase} | {int(row['n_events'])} | "  # type: ignore[call-overload,index]
-            f"{float(row['mean_car']) * 100:+.2f}% | "  # type: ignore[call-overload,index]
-            f"{float(row['t_stat']):.2f} | "  # type: ignore[call-overload,index]
-            f"{float(row['p_value']):.4f} |"  # type: ignore[call-overload,index]
+            f"| {market} | {phase} | {int(row['n_events'])} | "
+            f"{float(row['mean_car']) * 100:+.2f}% | "
+            f"{float(row['t_stat']):.2f} | "
+            f"{float(row['p_value']):.4f} |"
         )
 
     if not rows_md:
@@ -121,8 +121,9 @@ def _main_finding_block(event_study_summary: pd.DataFrame | None) -> list[str]:
     lines.append(">")
     lines.append(
         "> 论文主表建议**只引用 `evidence_tier=core` 的假说(H1/H5/H7)**,"
-        "supplementary 走附录。下一轮迭代前请按 `docs/verdict_iteration.md` 的"
-        "预注册流程冻结假说与阈值。完整数据与方法限制见 "
+        "supplementary 走附录。这 7 条裁决为 post-hoc 探索性结论;若后续要做 "
+        "confirmatory 检验,须在新样本上事前登记假说与阈值(参见 "
+        "`docs/verdict_iteration.md`)。完整数据与方法限制见 "
         "[docs/limitations.md](limitations.md)。"
     )
     lines.append("")

@@ -310,7 +310,7 @@ def test_skeleton_has_all_top_level_sections(fixture_paths):
         "#### 4.4.3 联合稳健性",
         "## 5. 限制与讨论",
         "## 6. 结论与启示",
-        "## 7. PAP",
+        "## 7. 假说的探索性裁决披露",
         "## 参考文献",
         "## 附录",
         "### A. 数据契约",
@@ -448,11 +448,11 @@ def test_advertised_figure_paths_exist_in_results_figures(fixture_paths):
 
 
 def test_pap_block_pulls_snapshot_date_and_deviation_counts(fixture_paths):
-    """§7 surfaces the PAP snapshot date + deviation 5-class counts."""
+    """§7 surfaces the verdict baseline snapshot date + deviation 5-class counts."""
     rendered = _render(fixture_paths)
     assert "2026-05-16" in rendered
     assert "snapshots/pre-registration-2026-05-16.csv" in rendered
-    assert "基线已冻结 1 天" in rendered
+    assert "该裁决基线快照距今 1 天" in rendered
     assert "全部 unchanged: **True**" in rendered
     assert "unchanged: 7" in rendered
     assert "flipped: 0" in rendered

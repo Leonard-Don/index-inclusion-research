@@ -306,7 +306,7 @@ def _pap_status_rows(public_summary: dict[str, Any]) -> list[PapStatusRow]:
         deviation_status = "未审计"
 
     rows = [
-        PapStatusRow(item="预注册基线", status=baseline_status),
+        PapStatusRow(item="裁决基线快照", status=baseline_status),
         PapStatusRow(item="当前偏离", status=deviation_status),
         PapStatusRow(
             item="偏离审计 CLI",
@@ -492,7 +492,7 @@ def _doctor_check_count() -> int:
 
 _TEMPLATE = r"""# 指数纳入效应跨市场不对称研究 · 方法论摘要
 
-**生成时间**: {{ generated_date }} | **PAP 基线**: {{ pap_baseline_date }}
+**生成时间**: {{ generated_date }} | **裁决基线快照**: {{ pap_baseline_date }}
 
 ## 1. 样本规模
 
@@ -515,7 +515,7 @@ _TEMPLATE = r"""# 指数纳入效应跨市场不对称研究 · 方法论摘要
 | AR 模型 | 默认 `ret - benchmark_ret` (简单市场调整)；可选 market-model β (估计窗口 -120 to -10) |
 | 标准化 | t 检验 (默认) + Patell Z (1976) + BMP t (1991) |
 | 多重检验 | Bonferroni & Benjamini-Hochberg |
-| Bootstrap | Block bootstrap (按 `announce_date` 分块，1000 iterations) |
+| Bootstrap | Block bootstrap (按 `announce_date` 分块，5000 iterations) |
 | RDD (HS300) | Local linear regression (bandwidth 0.06)；donut / polynomial / placebo 稳健性 |
 
 ## 3. 稳健性覆盖
@@ -550,7 +550,9 @@ _TEMPLATE = r"""# 指数纳入效应跨市场不对称研究 · 方法论摘要
 跑 `index-inclusion-power-analysis` 重生成该表。
 {% endif %}
 
-## 4. PAP 纪律
+## 4. 裁决基线快照
+
+H1-H7 为事后探索性假说（在观察到公告日 vs 生效日、中美市场的不对称之后形成），本研究无预注册分析计划；下表的裁决基线快照仅用于裁决稳定性追踪。
 
 | 项 | 状态 |
 |---|---|

@@ -491,8 +491,8 @@ def _l3_coverage_figure_entry(
     threshold_x_start = pd.Timestamp(latest) - pd.DateOffset(years=_L3_COVERAGE_TARGET_YEARS)
     threshold_x_end = pd.Timestamp(latest)
     ax.axvspan(
-        threshold_x_start,  # type: ignore[arg-type]  # matplotlib accepts Timestamp on date axis; stub typed as float
-        threshold_x_end,  # type: ignore[arg-type]
+        threshold_x_start,
+        threshold_x_end,
         ymin=0,
         ymax=1,
         color="#0f5c6e",
@@ -708,8 +708,8 @@ def create_sample_design_figures(
     ax.set_ylabel("市场与事件阶段")
     for i, row_label in enumerate(row_order):
         for j, window in enumerate(window_order):
-            car = float(heat_matrix.loc[row_label, window])  # type: ignore[arg-type]
-            p_value = float(p_matrix.loc[row_label, window])  # type: ignore[arg-type]
+            car = float(heat_matrix.loc[row_label, window])
+            p_value = float(p_matrix.loc[row_label, window])
             color = "white" if abs(car) > vmax * 0.45 else "#18212b"
             ax.text(
                 j,

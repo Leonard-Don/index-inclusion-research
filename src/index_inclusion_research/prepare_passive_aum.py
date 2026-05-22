@@ -96,7 +96,7 @@ def normalize_market_values(frame: pd.DataFrame) -> pd.DataFrame:
     out = frame.copy()
 
     def _map_value(raw: object) -> object:
-        if pd.isna(raw):  # type: ignore[call-overload]
+        if pd.isna(raw):
             return raw
         text = str(raw).strip()
         if text in ALLOWED_MARKETS:

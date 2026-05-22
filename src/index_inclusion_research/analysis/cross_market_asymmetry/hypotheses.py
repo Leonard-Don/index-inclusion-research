@@ -30,13 +30,13 @@ import pandas as pd
 
 
 def _optional_float(value: object, default: float = float("nan")) -> float:
-    if value is None or pd.isna(value):  # type: ignore[call-overload]
+    if value is None or pd.isna(value):
         return default
     return float(str(value))
 
 
 def _optional_int(value: object, default: int = 0) -> int:
-    if value is None or pd.isna(value):  # type: ignore[call-overload]
+    if value is None or pd.isna(value):
         return default
     return int(float(str(value)))
 

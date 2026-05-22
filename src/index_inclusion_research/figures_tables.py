@@ -310,7 +310,7 @@ def _read_csv_if_exists(path: str | Path, parse_dates: list[str] | None = None) 
     csv_path = Path(path)
     if not csv_path.exists():
         return pd.DataFrame()
-    return pd.read_csv(csv_path, parse_dates=parse_dates, low_memory=False)  # type: ignore[arg-type]
+    return pd.read_csv(csv_path, parse_dates=parse_dates, low_memory=False)
 
 
 def _project_relative_label(path: str | Path) -> str:

@@ -91,13 +91,13 @@ def _date_range_from_frame(frame: pd.DataFrame, date_columns: list[str]) -> tupl
 
 
 def _safe_int(value: object) -> object:
-    if value is None or pd.isna(value):  # type: ignore[call-overload]
+    if value is None or pd.isna(value):
         return pd.NA
     return int(float(str(value)))
 
 
 def _display_value(value: object) -> str:
-    if value is None or pd.isna(value):  # type: ignore[call-overload]
+    if value is None or pd.isna(value):
         return "NA"
     return str(value)
 
@@ -472,16 +472,16 @@ def plot_average_paths(average_paths: pd.DataFrame, output_dir: str | Path) -> N
         linestyle = PHASE_LINESTYLES.get(str(event_phase), "-")
         for inclusion, inclusion_group in group.groupby("inclusion", dropna=False):
             inclusion_group = inclusion_group.sort_values("relative_day").copy()
-            label = INCLUSION_LABELS.get(int(inclusion), str(inclusion))  # type: ignore[arg-type]
-            style = INCLUSION_STYLES.get(int(inclusion), {"alpha": 0.9, "marker": "o", "linewidth": 2.0})  # type: ignore[arg-type]
-            line_color = base_color if int(inclusion) == 1 else _lighten(base_color)  # type: ignore[arg-type]
+            label = INCLUSION_LABELS.get(int(inclusion), str(inclusion))
+            style = INCLUSION_STYLES.get(int(inclusion), {"alpha": 0.9, "marker": "o", "linewidth": 2.0})
+            line_color = base_color if int(inclusion) == 1 else _lighten(base_color)
             if {"ci_low_95", "ci_high_95"}.issubset(inclusion_group.columns):
                 ax.fill_between(
                     inclusion_group["relative_day"],
                     inclusion_group["ci_low_95"],
                     inclusion_group["ci_high_95"],
                     color=line_color,
-                    alpha=0.14 if int(inclusion) == 1 else 0.10,  # type: ignore[arg-type]
+                    alpha=0.14 if int(inclusion) == 1 else 0.10,
                     linewidth=0,
                 )
             ax.plot(
@@ -604,7 +604,7 @@ def build_time_series_event_study_summary(event_level: pd.DataFrame) -> pd.DataF
         aggregations[f"mean_{column}"] = (column, "mean")
         aggregations[f"std_{column}"] = (column, lambda series: series.std(ddof=1))
     summary = (
-        work.groupby(["market", "inclusion", "event_phase", "announce_year"], dropna=False)  # type: ignore[call-overload]
+        work.groupby(["market", "inclusion", "event_phase", "announce_year"], dropna=False)
         .agg(**aggregations)
         .reset_index()
         .sort_values(["market", "inclusion", "event_phase", "announce_year"])

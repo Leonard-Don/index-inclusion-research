@@ -597,11 +597,11 @@ def render_summary_json(
         out: dict[str, object] = {}
         for col, value in row.items():
             if isinstance(value, float) and not math.isfinite(value):
-                out[col] = None  # type: ignore[index]
+                out[col] = None
             elif isinstance(value, (int, float, str, bool)) or value is None:
-                out[col] = value  # type: ignore[index]
+                out[col] = value
             else:
-                out[col] = str(value)  # type: ignore[index]
+                out[col] = str(value)
         return out
 
     payload: dict[str, object] = {}

@@ -601,7 +601,7 @@ def _bundle_summary_lines(root: Path) -> list[str]:
     snapshots = sorted((root / "snapshots").glob("pre-registration-*.csv"))
     if snapshots:
         latest = snapshots[-1]
-        lines.append("## 预注册基线 (PAP)")
+        lines.append("## 裁决基线快照")
         lines.append("")
         lines.append(f"- 快照文件：`snapshots/{latest.name}`")
         # Extract date from filename
@@ -612,9 +612,9 @@ def _bundle_summary_lines(root: Path) -> list[str]:
         lines.append(f"- 假说数：{len(verdicts_baseline)} 行")
         lines.append("")
     else:
-        lines.append("## 预注册基线 (PAP)")
+        lines.append("## 裁决基线快照")
         lines.append("")
-        lines.append("- 未找到 `snapshots/pre-registration-*.csv` — PAP 未冻结。")
+        lines.append("- 未找到 `snapshots/pre-registration-*.csv` — 尚未生成裁决基线快照。")
         lines.append("")
 
     # Verdict counts
@@ -698,8 +698,8 @@ def _bundle_readme_lines(copies_by_section: dict[str, list[CopyRecord]]) -> list
         "tables": "## tables/ — LaTeX 表 (\\input 直接用)",
         "figures": "## figures/ — 论文级 PNG 图（CMA + 事件研究 + 跨假说森林图）",
         "rdd": "## rdd/ — HS300 RDD 数据 + 图（含稳健性面板）",
-        "narrative": "## narrative/ — 论文写作叙事 / 边界 / 预注册",
-        "data": "## data/ — 数据来源（候选样本 + PAP snapshot）",
+        "narrative": "## narrative/ — 论文写作叙事 / 边界 / 分析参数",
+        "data": "## data/ — 数据来源（候选样本 + 裁决基线快照）",
     }
     section_orders = ["tables", "figures", "rdd", "narrative", "data"]
     for name in section_orders:

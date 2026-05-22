@@ -626,11 +626,13 @@ HS300 主结果（局部线性 RDD）：
 
 [TODO: 未来研究 — 把 HS300 RDD L3 覆盖期扩展、CN 被动 AUM 官方口径替换、AR 引擎稳健性细化作为后续工作列出。]
 
-## 7. PAP (预注册分析计划) 合规
+## 7. 假说的探索性裁决披露
 
-本文遵循 {{ pap.snapshot_date or "TODO: PAP 日期" }} 冻结的预注册基线（snapshot `{{ pap.snapshot_path or "TODO: snapshot path" }}`）。{% if pap.frozen_for_days is not none %}基线已冻结 {{ pap.frozen_for_days }} 天。{% endif %}
+H1-H7 为事后探索性假说：它们是在观察到「公告日 vs 生效日」「中国 vs 美国市场」的效应不对称之后才形成的。本研究没有预注册分析计划（pre-analysis plan），各项裁决门槛属于在已知结果的情况下选定的分析参数（详见 `docs/analysis_parameters.md`）。
 
-PAP 偏离审计自动汇总：
+为追踪裁决稳定性，项目记录了一份裁决基线快照（verdict baseline snapshot）：{{ pap.snapshot_date or "TODO: 快照日期" }}（snapshot `{{ pap.snapshot_path or "TODO: snapshot path" }}`）。{% if pap.frozen_for_days is not none %}该裁决基线快照距今 {{ pap.frozen_for_days }} 天。{% endif %}该快照在分析之后记录，并非事前承诺，仅用作 verdict-stability（裁决稳定性）工具——检测裁决是否随数据或方法更新而漂移。
+
+裁决基线偏离审计自动汇总：
 
 {% if pap.deviation -%}
 - 全部 unchanged: **{{ pap.deviation.all_unchanged }}**
@@ -641,7 +643,7 @@ PAP 偏离审计自动汇总：
 - unverifiable: {{ pap.deviation.unverifiable_count }}
 
 {% else %}
-[TODO: PAP deviation — `results/real_tables/pap_deviation_report.csv` 缺失，先跑 `index-inclusion-pap-diff`。]
+[TODO: 裁决基线偏离 — `results/real_tables/pap_deviation_report.csv` 缺失，先跑 `index-inclusion-pap-diff`。]
 
 {% endif %}
 下表自动汇总自 `results/real_tables/pap_deviation_report.csv`：

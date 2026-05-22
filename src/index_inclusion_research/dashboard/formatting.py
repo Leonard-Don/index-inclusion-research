@@ -538,7 +538,7 @@ def _is_missing_value(value: object) -> bool:
     if value is None:
         return True
     try:
-        return bool(pd.isna(value))  # type: ignore[call-overload]
+        return bool(pd.isna(value))
     except (TypeError, ValueError):
         return False
 
@@ -659,9 +659,9 @@ def render_table(frame: pd.DataFrame, compact: bool = False) -> str:
         if display[column].dtype == bool:
             display[column] = display[column].map({True: "是", False: "否"})
         if is_object_dtype(display[column]) or is_string_dtype(display[column]):
-            display[column] = display[column].map(lambda value, col=column: format_display_cell(value, col))  # type: ignore[misc]
+            display[column] = display[column].map(lambda value, col=column: format_display_cell(value, col))
         else:
-            display[column] = display[column].map(lambda value, col=column: format_display_cell(value, col))  # type: ignore[misc]
+            display[column] = display[column].map(lambda value, col=column: format_display_cell(value, col))
     return display.to_html(
         index=False,
         classes=classes,
