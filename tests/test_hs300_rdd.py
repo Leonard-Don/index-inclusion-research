@@ -143,7 +143,7 @@ def test_run_analysis_records_validation_error_without_demo_fallback(tmp_path: P
     result = hs300_rdd.run_analysis(verbose=False, allow_demo=True, strict_validation=False)
 
     assert result["mode"] == "missing"
-    assert "校验失败" in result["description"]
+    assert "校验失败" in str(result["description"])
     status_frame = pd.read_csv(output_dir / "rdd_status.csv")
     row = status_frame.iloc[0]
     assert row["status"] == "missing"
@@ -237,6 +237,97 @@ def test_run_analysis_records_reconstructed_status_when_public_candidate_file_is
     assert "批次标签：`2024-11-29`" in summary
     assert "公开数据重建的边界样本" in summary
     assert "中证官方历史候选排名表" in summary
+
+
+def test_run_analysis_regenerates_paper_referenced_dashboard_figures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    real_path = tmp_path / "data" / "raw" / "hs300_rdd_candidates.csv"
+    real_path.parent.mkdir(parents=True, exist_ok=True)
+    _valid_candidate_frame().to_csv(real_path, index=False)
+
+    output_dir = tmp_path / "results" / "literature" / "hs300_rdd"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    figures_dir = output_dir / "figures"
+    figures_dir.mkdir()
+    (figures_dir / "car_m1_p1_rdd_main.png").write_bytes(b"stale")
+    (figures_dir / "l3_coverage_timeline.png").write_bytes(b"stale")
+
+    monkeypatch.setattr(hs300_rdd, "ROOT", tmp_path)
+    monkeypatch.setattr(hs300_rdd, "REAL_INPUT", real_path)
+    monkeypatch.setattr(hs300_rdd, "RECONSTRUCTED_INPUT", tmp_path / "data" / "raw" / "hs300_rdd_candidates.reconstructed.csv")
+    monkeypatch.setattr(hs300_rdd, "DEMO_INPUT", tmp_path / "data" / "raw" / "hs300_rdd_demo.csv")
+    monkeypatch.setattr(hs300_rdd, "OUTPUT_DIR", output_dir)
+    monkeypatch.setattr(hs300_rdd, "STATUS_FILE", output_dir / "rdd_status.csv")
+    monkeypatch.setattr(hs300_rdd, "AUDIT_FILE", output_dir / "candidate_batch_audit.csv")
+    monkeypatch.setattr(
+        hs300_rdd,
+        "_prepare_rdd_event_level",
+        lambda candidates: pd.DataFrame(
+            [
+                {
+                    "event_phase": "announce",
+                    "distance_to_cutoff": -0.1,
+                    "car_m1_p1": 0.01,
+                    "car_m3_p3": 0.02,
+                    "turnover_change": 0.03,
+                    "volume_change": 0.04,
+                },
+                {
+                    "event_phase": "announce",
+                    "distance_to_cutoff": 0.2,
+                    "car_m1_p1": 0.07,
+                    "car_m3_p3": 0.05,
+                    "turnover_change": 0.08,
+                    "volume_change": 0.09,
+                },
+            ]
+        ),
+    )
+    monkeypatch.setattr(
+        hs300_rdd,
+        "run_rdd_suite",
+        lambda event_level, outcome_cols: pd.DataFrame(
+            [
+                {
+                    "outcome": "car_m1_p1",
+                    "bandwidth": 1.0,
+                    "n_obs": 2,
+                    "n_left": 1,
+                    "n_right": 1,
+                    "tau": 0.04,
+                    "std_error": 0.01,
+                    "t_stat": 4.0,
+                    "p_value": 0.01,
+                }
+            ]
+        ),
+    )
+    monkeypatch.setattr(
+        hs300_rdd,
+        "run_rdd_robustness",
+        lambda event_level, outcome_col: pd.DataFrame(
+            [
+                {
+                    "spec": "main",
+                    "spec_kind": "main",
+                    "tau": 0.04,
+                    "std_error": 0.01,
+                    "p_value": 0.01,
+                    "n_obs": 2,
+                }
+            ]
+        ),
+    )
+    monkeypatch.setattr(hs300_rdd, "plot_rdd_bins", lambda *args, **kwargs: None)
+
+    result = hs300_rdd.run_analysis(verbose=False, allow_demo=False, strict_validation=False)
+
+    assert result["mode"] == "real"
+    assert (output_dir / "figures" / "car_m1_p1_rdd_main.png").exists()
+    assert (output_dir / "figures" / "l3_coverage_timeline.png").exists()
+    assert (output_dir / "figures" / "car_m1_p1_rdd_main.png").read_bytes() != b"stale"
+    assert (output_dir / "figures" / "l3_coverage_timeline.png").read_bytes() != b"stale"
 
 
 def test_build_candidate_batch_audit_summarises_cutoff_coverage() -> None:

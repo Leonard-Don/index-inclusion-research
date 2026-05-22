@@ -560,6 +560,36 @@ def _write_summary(
     write_markdown(output_dir / "summary.md", "\n".join(lines) + "\n")
 
 
+def _project_root_for_output_dir(output_dir: Path) -> Path | None:
+    parts = output_dir.parts
+    if len(parts) < 3 or parts[-3:] != ("results", "literature", "hs300_rdd"):
+        return None
+    return Path(*parts[:-3])
+
+
+def _refresh_dashboard_rdd_figures(output_dir: Path) -> list[Path]:
+    """Regenerate RDD figures that dashboard/paper references after cleanup."""
+    root = _project_root_for_output_dir(output_dir)
+    if root is None:
+        return []
+
+    from index_inclusion_research.dashboard_figures import create_identification_figures
+    from index_inclusion_research.dashboard_loaders import load_rdd_status
+
+    def _to_relative(path: Path) -> str:
+        try:
+            return path.resolve().relative_to(root.resolve()).as_posix()
+        except ValueError:
+            return str(path)
+
+    entries = create_identification_figures(
+        root,
+        load_rdd_status=lambda: load_rdd_status(root, output_dir=output_dir),
+        to_relative=_to_relative,
+    )
+    return [root / entry["path"] for entry in entries if isinstance(entry.get("path"), str)]
+
+
 def _prepare_rdd_event_level(candidates: pd.DataFrame) -> pd.DataFrame:
     _, prices, benchmarks = ensure_real_data()
     events = build_event_sample(candidates.copy())
@@ -697,6 +727,7 @@ def run_analysis(
         audit=candidate_audit,
     )
     _write_summary(OUTPUT_DIR, mode=mode, message=message, status_frame=status_frame, audit=candidate_audit)
+    _refresh_dashboard_rdd_figures(OUTPUT_DIR)
 
     figures = sorted((OUTPUT_DIR / "figures").glob("*.png"))
     result = {
