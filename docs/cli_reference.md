@@ -8,7 +8,7 @@
 - **Dashboard 与三条主线**：`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - **HS300 RDD 工具链**：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`（详见 [docs/hs300_rdd_workflow.md](hs300_rdd_workflow.md)）
 - **跨市场不对称 + 假说证据**：`cma`（7 条假说 verdict）/ `prepare-passive-aum` / `download-passive-aum-cn` / `download-cn-passive-aum-proxy` / `compute-h6-weight-change` / `refresh-real-evidence` / `power-analysis`（H3/H6 post-hoc 功效）
-- **总入口**：`rebuild-all`（10 步流水线一键跑）/ `verdict-summary`（终端速览）/ `pap-diff`（PAP 偏离审计）/ `doctor`（项目健康检查）/ `export-public-summary`（生成 data/public/index_research_summary.json）/ `paper-skeleton`（自动生成 paper/skeleton.md 论文骨架）/ `methodology-summary`（自动生成 paper/methodology_summary.md 方法论摘要卡）/ `paper-integrity`（论文交付前的跨文档一致性发布门禁）/ `tex-export`（生成 Overleaf/XeLaTeX 论文源文件）/ `submission-ready`（论文提交前最后一道发布就绪 go/no-go 门禁）/ `enrich-bib`（用 CrossRef 自动补全 BibTeX 期刊 / 卷 / 页 / DOI）/ `add-paper`（交互式添加新文献到 PAPER_LIBRARY 并同步下游 6 个工件）
+- **总入口**：`rebuild-all`（10 步流水线一键跑）/ `verdict-summary`（终端速览）/ `pap-diff`（裁决基线偏离审计）/ `doctor`（项目健康检查）/ `export-public-summary`（生成 data/public/index_research_summary.json）/ `paper-skeleton`（自动生成 paper/skeleton.md 论文骨架）/ `methodology-summary`（自动生成 paper/methodology_summary.md 方法论摘要卡）/ `paper-integrity`（论文交付前的跨文档一致性发布门禁）/ `tex-export`（生成 Overleaf/XeLaTeX 论文源文件）/ `submission-ready`（论文提交前最后一道发布就绪 go/no-go 门禁）/ `enrich-bib`（用 CrossRef 自动补全 BibTeX 期刊 / 卷 / 页 / DOI）/ `add-paper`（交互式添加新文献到 PAPER_LIBRARY 并同步下游 6 个工件）
 
 > `citation-graph` 生成的是启发式文献关联网络（主题/方法/年代链接），不是逐条 bibliography 引用核验。
 
@@ -109,7 +109,7 @@ index-inclusion-run-event-study --ar-model market --estimation-window 250,21
 
 引擎选择建议：
 
-- `adjusted`（默认）：速度快、口径标准，PAP 主表与 CMA verdict 都钉在这一支；
+- `adjusted`（默认）：速度快、口径标准，论文主表与 CMA verdict 都钉在这一支；
   默认仍是这条路径，不要在论文最终稿换。
 - `market`：β 调整后推断力更强，但每个事件至少需要约 30 个估计窗口配对观测
   （`ret` 与 `benchmark_ret` 同时非缺失）才会得到非 NaN 的 AR；样本稀的事件会被
@@ -141,12 +141,12 @@ index-inclusion-generate-research-report
 ## 8b. 聚合并审计论文交付包
 
 ```bash
-index-inclusion-paper-bundle --force            # 默认先刷新衍生图/PAP 审计再拷贝
+index-inclusion-paper-bundle --force            # 默认先刷新衍生图/裁决基线偏离审计再拷贝
 index-inclusion-paper-bundle --force --no-regenerate   # 跳过预刷新（已跑过 make rebuild 时更快）
 index-inclusion-paper-audit --fail-on-warn
 ```
 
-`paper-bundle` 会把正文表、图、叙事、RDD 附录和 PAP snapshot 聚合到 `paper/`，
+`paper-bundle` 会把正文表、图、叙事、RDD 附录和裁决基线快照聚合到 `paper/`，
 默认在拷贝前自动重跑三个会被现有 CSV 驱动的衍生产物（任何一项失败都只 warn，
 不打断 bundle）：
 
@@ -157,7 +157,7 @@ index-inclusion-paper-audit --fail-on-warn
 2. CMA 跨假说证据强度森林图（`build_cma_verdicts_forest_plot`，输入
    `results/real_tables/cma_hypothesis_verdicts.csv`）→
    `results/figures/cma_verdicts_forest.{png,pdf}`。
-3. PAP 偏离审计（`build_pap_diff`，输入最新 `snapshots/pre-registration-*.csv` +
+3. 裁决基线偏离审计（`build_pap_diff`，输入最新 `snapshots/pre-registration-*.csv` +
    当前 verdicts CSV）→ `results/real_tables/pap_deviation_report.csv`。
 
 输出 (`paper/`)：
@@ -165,7 +165,7 @@ index-inclusion-paper-audit --fail-on-warn
 - `paper/tables/` — `*.tex` 主表 + `patell_bmp_summary.csv` + `pap_deviation_report.csv`
 - `paper/figures/` — `*.png`（CMA / 事件研究 / 新增两个森林图）+ 两张森林图的 `.pdf`
 - `paper/rdd/` — HS300 RDD CSV / TeX / 子图
-- `paper/narrative/` — paper_outline / limitations / pre_registration 等
+- `paper/narrative/` — paper_outline / limitations / analysis_parameters 等
 - `paper/data/` — `hs300_rdd_candidates.csv` + `snapshots/pre-registration-*.csv`
 - `paper/README.md` — 人类可读清单
 - `paper/bundle_summary.md` — 研究状态快照
@@ -173,7 +173,7 @@ index-inclusion-paper-audit --fail-on-warn
   size_bytes，外加 ``regenerated`` 字段记录三个预刷新步骤的状态
   (`ok` / `skipped` / `error`)。下游审计 / 归档可比对 sha256 判定 drift。
 
-`paper-audit` 逐项检查正文主结论、Patell/BMP 稳健性、CMA core 机制主表、RDD 附录、PAP/limitations 与 `paper/` 交付包是否都有可追溯产物。机器可读输出：
+`paper-audit` 逐项检查正文主结论、Patell/BMP 稳健性、CMA core 机制主表、RDD 附录、分析参数 / limitations 与 `paper/` 交付包是否都有可追溯产物。机器可读输出：
 
 ```bash
 index-inclusion-paper-audit --format json
@@ -262,16 +262,16 @@ index-inclusion-collect-hs300-rdd-l3 \
 - `online_gap_source_hints.csv`：为每个缺口生成中证详情页、官方附件、Wayback、站内网页搜索和巨潮全文搜索入口
 - `online_collection_report.md`：人类可读汇总和下一步命令
 
-## 12. PAP 偏离审计（`pap-diff`）
+## 12. 裁决基线偏离审计（`pap-diff`）
 
-把当前 7 条假说 verdict 和 [`docs/pre_registration.md`](pre_registration.md) 冻结的 PAP 基线做结构化比对。和 `verdict-summary --vs-pap` 的字段级 diff 不同，`pap-diff` 把每条假说强制分到 5 类之一，并写一份机器可读 CSV，便于 PAP §7 决策签字与审稿人答复：
+把当前 7 条假说 verdict 和某个**裁决基线快照**（`snapshots/pre-registration-*.csv`，文件名为历史命名）做结构化比对，用于跨时间观察 verdict 稳定性。注意这是一个 verdict-stability 工具，**不是 pre-registration**——快照在结果已知之后创建。和 `verdict-summary --vs-pap` 的字段级 diff 不同，`pap-diff` 把每条假说强制分到 5 类之一，并写一份机器可读 CSV，便于在 `docs/analysis_parameters.md` §7 记录裁决口径变更与答复审稿人：
 
 | 分类 | 含义 |
 |---|---|
 | `unchanged` | verdict / confidence / evidence_tier / n_obs / key_value 全部匹配（容差内）|
 | `tightened` | verdict 不变，但 confidence 上升（低 → 中 → 高）或 p-value 显著下降 |
 | `weakened` | verdict 不变，但 confidence 下降或 p-value 显著上升 |
-| `flipped` | verdict 文本变化（如 证据不足 → 支持），**需 PAP §7 签字** |
+| `flipped` | verdict 文本变化（如 证据不足 → 支持），**应在 `docs/analysis_parameters.md` §7 记录这次裁决口径变更** |
 | `unverifiable` | 基线 / 当前缺行，或 key_value 在某一侧为 NaN |
 
 ```bash
@@ -294,7 +294,7 @@ index-inclusion-pap-diff --no-write
 
 输出 CSV `results/real_tables/pap_deviation_report.csv` 每行一条 H1..H7，列：`hid, name_cn, classification, baseline_verdict, current_verdict, baseline_confidence, current_confidence, baseline_evidence_tier, current_evidence_tier, baseline_n_obs, current_n_obs, baseline_key_label, current_key_label, baseline_key_value, current_key_value, notes`。
 
-`verdict-summary --vs-pap` 仍然是日常 diff 的首选（彩色终端 + 字段级前后值）；`pap-diff` 是预注册答辩 / 审计场景的结构化版本。
+`verdict-summary --vs-pap` 仍然是日常 diff 的首选（彩色终端 + 字段级前后值）；`pap-diff` 是答辩 / 审计场景下裁决稳定性比对的结构化版本。
 
 ## 13. 项目健康检查（`doctor`）
 
@@ -311,8 +311,8 @@ index-inclusion-pap-diff --no-write
 - `h6_weight_change_readiness` / `h7_cn_sector_readiness` — 机制数据覆盖
 - `rdd_l3_sample_readiness` / `rdd_robustness_panel` — HS300 RDD L3 + 4-spec 稳健性面板
 - `matched_sample_balance` / `match_robustness_grid` — 配对样本 SMD + 稳健性网格
-- `pap_deviation_no_flips` — PAP 偏离审计：任何 `flipped` 假说 → `fail`（需 PAP §7 签字），`tightened` / `weakened` → `warn`，全部 `unchanged` → `pass`；CSV 缺失时调用 `pap_diff.build_pap_diff` 现场重生成
-- `pap_snapshot_freshness` — `snapshots/pre-registration-YYYY-MM-DD.csv` > 90 天未刷 → `warn`（建议季度 re-baseline），目录或 snapshot 完全缺失 → `fail`
+- `pap_deviation_no_flips` — 裁决基线偏离审计：任何 `flipped` 假说 → `fail`（提示在 `docs/analysis_parameters.md` §7 记录这次裁决口径变更），`tightened` / `weakened` → `warn`，全部 `unchanged` → `pass`；CSV 缺失时调用 `pap_diff.build_pap_diff` 现场重生成
+- `pap_snapshot_freshness` — 裁决基线快照 `snapshots/pre-registration-YYYY-MM-DD.csv` > 90 天未刷 → `warn`（建议季度刷新快照），目录或 snapshot 完全缺失 → `fail`
 - `hs300_rdd_forest_artifact` — `results/figures/hs300_rdd_robustness_forest.{png,pdf}` 存在且 mtime ≥ `rdd_robustness.csv`；缺失或 stale 触发 `make figures-tables` 提示
 - `cma_verdicts_forest_artifact` — `results/figures/cma_verdicts_forest.{png,pdf}` vs `cma_hypothesis_verdicts.csv` 的同款 mtime 检查
 - `citation_graph_artifact` — `results/literature/citation_network.{png,pdf}` vs `citation_centrality.csv` 的同款 mtime 检查；缺失或 stale 触发 `index-inclusion-citation-graph` 提示
@@ -335,7 +335,7 @@ index-inclusion-doctor --format json --fail-on-warn
 
 ## 14. 公开摘要导出（`export-public-summary`）
 
-`index-inclusion-export-public-summary` 把 `results/real_tables/cma_hypothesis_verdicts.csv` / `pap_deviation_report.csv` / `results/literature/hs300_rdd/rdd_robustness.csv` / `snapshots/pre-registration-*.csv` / 已发布 figure 文件汇总为单一精简 JSON `data/public/index_research_summary.json`（~3-5 KB），可安全提交进 Git。下游消费者（例如 sibling 项目 `cn-altdata-brief`、未来的 GitHub Pages 日报）只读这份文件即可拿到 7 条假说裁决、PAP 偏离汇总、threshold × AR-engine 稳健性、HS300 RDD 主结果、文献覆盖、已发布 figure 路径——不需要直接访问 runtime caches、不需要跑 `index-inclusion-cma` 或 `make figures-tables`。
+`index-inclusion-export-public-summary` 把 `results/real_tables/cma_hypothesis_verdicts.csv` / `pap_deviation_report.csv` / `results/literature/hs300_rdd/rdd_robustness.csv` / `snapshots/pre-registration-*.csv` / 已发布 figure 文件汇总为单一精简 JSON `data/public/index_research_summary.json`（~3-5 KB），可安全提交进 Git。下游消费者（例如 sibling 项目 `cn-altdata-brief`、未来的 GitHub Pages 日报）只读这份文件即可拿到 7 条假说裁决、裁决基线偏离汇总、threshold × AR-engine 稳健性、HS300 RDD 主结果、文献覆盖、已发布 figure 路径——不需要直接访问 runtime caches、不需要跑 `index-inclusion-cma` 或 `make figures-tables`。
 
 设计要点：
 
@@ -361,12 +361,12 @@ python3 -m index_inclusion_research.export_public_summary
 
 ## 15. 论文骨架生成（`paper-skeleton`）
 
-`index-inclusion-paper-skeleton` 把当前 verdict CSV / PAP 偏离报告 / HS300 RDD 主结果 / sensitivity 公开摘要 / `docs/limitations.md` / 16 篇文献库蒸馏为一份完整的 Markdown 论文骨架 `paper/skeleton.md`（约 21 KB）。论文写作者只需逐节填写 `[TODO: prose]` 标记的段落，所有数据表、figure 引用、稳健性结论、PAP 合规块都已自动填好。
+`index-inclusion-paper-skeleton` 把当前 verdict CSV / 裁决基线偏离报告 / HS300 RDD 主结果 / sensitivity 公开摘要 / `docs/limitations.md` / 16 篇文献库蒸馏为一份完整的 Markdown 论文骨架 `paper/skeleton.md`（约 21 KB）。论文写作者只需逐节填写 `[TODO: prose]` 标记的段落，所有数据表、figure 引用、稳健性结论、裁决基线偏离块都已自动填好。
 
 设计要点：
 
 - **永不编造内容**：每一处需要散文的位置都标注 `[TODO: prose]`，作者可以 `grep "TODO" paper/skeleton.md` 找到所有待写章节。
-- **数据自动同步**：H1-H7 verdict 表、HS300 τ/p/n、阈值/AR 引擎/2D 稳健性结论、PAP 偏离 5 类计数与 16 篇参考文献全部来自当前 artifact，不需要手动同步。
+- **数据自动同步**：H1-H7 verdict 表、HS300 τ/p/n、阈值/AR 引擎/2D 稳健性结论、裁决基线偏离 5 类计数与 16 篇参考文献全部来自当前 artifact，不需要手动同步。
 - **doctor 守护**：`paper_skeleton_freshness` 检查任意一个输入 (`cma_hypothesis_verdicts.csv` / `pap_deviation_report.csv` / `rdd_robustness.csv` / `index_research_summary.json`) 比 skeleton 新 → `warn`，提示 `index-inclusion-paper-skeleton --force` 漏跑。
 - **paper-bundle 集成**：`make paper` (即 `index-inclusion-paper-bundle`) 在 `_regenerate_artifacts` 里自动重生成 skeleton，保证 bundle 永远 self-consistent。
 - **sanity 门**：渲染出的 markdown 字节数被 `[6 KB, 28 KB]` 区间约束，越界报 warn，提示骨架被截断或被输入污染。
@@ -396,7 +396,7 @@ python3 -m index_inclusion_research.paper_skeleton
 - §3 研究设计 + §3.3 H1-H7 假说表（自动填）
 - §4 实证结果：§4.1 主结果 figure 引用 + §4.2 H1-H7 逐条 prose TODO + §4.3 HS300 RDD τ/p/n 自动填 + §4.4 稳健性 3 张图 + 自动结论
 - §5 限制（`docs/limitations.md` 全文嵌入）
-- §6 结论 TODO + §7 PAP 合规自动表
+- §6 结论 TODO + §7 探索性裁决披露 + 裁决基线偏离自动表
 - §参考文献（16 篇自动枚举）+ §附录 ABC
 
 ## 16. 启发式文献关联网络（`citation-graph`）
@@ -430,9 +430,9 @@ python3 -m index_inclusion_research.citation_graph
 
 ## 17. 假说裁决演进时间线（`verdict-timeline`）
 
-`index-inclusion-verdict-timeline` 是 48 个 console scripts 的第 40 号。它通过 `git log --follow` 与 `git show <sha>:results/real_tables/cma_hypothesis_verdicts.csv` 把 H1..H7 的历史裁决从仓库 git 史里重建出来，渲染成一张 7 swimlane 时间线，给 PAP 自律一份**视觉的演化档案**——配合现有的 `pap-diff` 偏离审计（commit `48a22f0`），从“静态对比 PAP 基线”补到“动态展示研究迭代”。
+`index-inclusion-verdict-timeline` 是 48 个 console scripts 的第 40 号。它通过 `git log --follow` 与 `git show <sha>:results/real_tables/cma_hypothesis_verdicts.csv` 把 H1..H7 的历史裁决从仓库 git 史里重建出来，渲染成一张 7 swimlane 时间线，给裁决稳定性追踪一份**视觉的演化档案**——配合现有的 `pap-diff` 裁决基线偏离审计（commit `48a22f0`），从“静态对比裁决基线快照”补到“动态展示研究迭代”。
 
-- `results/figures/verdict_timeline.png` — 14×8 in @ 100 dpi 主图，每个 H 一行 swimlane；每个 commit 一个圆点（裁决保持）或方块（裁决文本改变）；颜色按裁决类别（绿=支持，黄=部分支持，红=证据不足）；2026-05-16 PAP baseline 画一条虚线；右侧 annotation 标注每条 H 的最新裁决。
+- `results/figures/verdict_timeline.png` — 14×8 in @ 100 dpi 主图，每个 H 一行 swimlane；每个 commit 一个圆点（裁决保持）或方块（裁决文本改变）；颜色按裁决类别（绿=支持，黄=部分支持，红=证据不足）；2026-05-16 裁决基线快照画一条虚线；右侧 annotation 标注每条 H 的最新裁决。
 - `results/figures/verdict_timeline.pdf` — 矢量版同图。
 
 ```bash
@@ -442,7 +442,7 @@ index-inclusion-verdict-timeline
 # 限制只走最近 N 个 commit（默认 50，足够覆盖当前历史）
 index-inclusion-verdict-timeline --max-history 20
 
-# 自定义 PAP baseline 日期 / 输出路径 / 跳过 PDF
+# 自定义裁决基线快照日期 / 输出路径 / 跳过 PDF
 index-inclusion-verdict-timeline --pap-baseline-date 2026-05-16 --no-pdf
 
 # 模块等价调用
@@ -453,7 +453,7 @@ python3 -m index_inclusion_research.outputs.verdict_timeline
 
 ## 18. 方法论摘要卡（`methodology-summary`）
 
-`index-inclusion-methodology-summary` 是 48 个 console scripts 的第 41 号。它把当前 verdicts CSV、`data/processed/real_events_clean.csv` 与 `real_matched_event_panel.csv` 行数、`data/public/index_research_summary.json` 的稳健性 / PAP 偏离块、`results/literature/citation_centrality.csv` 的 top-5 eigenvector 中心性、`pyproject.toml` 的 console-scripts 总数与 `doctor.DEFAULT_CHECKS` 的健康检查总数蒸馏成一份 ~3-5 KB 的单页 Markdown「方法论摘要卡」，落地到 `paper/methodology_summary.md`。
+`index-inclusion-methodology-summary` 是 48 个 console scripts 的第 41 号。它把当前 verdicts CSV、`data/processed/real_events_clean.csv` 与 `real_matched_event_panel.csv` 行数、`data/public/index_research_summary.json` 的稳健性 / 裁决基线偏离块、`results/literature/citation_centrality.csv` 的 top-5 eigenvector 中心性、`pyproject.toml` 的 console-scripts 总数与 `doctor.DEFAULT_CHECKS` 的健康检查总数蒸馏成一份 ~3-5 KB 的单页 Markdown「方法论摘要卡」，落地到 `paper/methodology_summary.md`。
 
 与 `paper-skeleton` 的区别：摘要卡**完全不出 `[TODO: prose]` 标记**，所有数值与表格全部从工件自动派生，是答辩 / 评审「你到底做了什么？」一问的速查页。
 
@@ -476,7 +476,7 @@ python3 -m index_inclusion_research.methodology_summary
 - §1 样本规模（H1-H7 假说表 + 事件研究面板 894/212,757 行）
 - §2 估计方法（AR 模型 / 标准化 / 多重检验 / Bootstrap / RDD）
 - §3 稳健性覆盖（阈值 / AR 引擎 / 联合二维，自动派生 stable/cell 计数）
-- §4 PAP 纪律（基线 + 偏离分类 + 审计 CLI + Doctor 主动监控）
+- §4 裁决基线快照（基线 + 偏离分类 + 审计 CLI + Doctor 主动监控）
 - §5 数据契约（`events.csv` / `prices.csv` / `benchmarks.csv` 字段速览）
 - §6 复现命令（`make rebuild` / `make-figures-tables` / `paper-bundle --force` / `methodology-summary`）
 - §7 关键文献基础（top-5 中心性 + 立场，链路语义启发式相似性而非 bibliography）
@@ -492,7 +492,7 @@ Doctor `methodology_summary_freshness` 检查在任何输入（verdicts CSV / pu
 
 - **hypothesis_set**：`cma_hypothesis_verdicts.csv` 的 7 个 H 行 ⇄ `paper/skeleton.md` 表格 H 行；同样 ⇄ `paper/methodology_summary.md`。
 - **figures**：`paper/skeleton.md` 里 `![]()` 引用的 5 张图 ⇄ `results/figures/` 实际文件是否存在。
-- **pap**：`pap_deviation_report.csv` 各 hid 的 classification ⇄ `data/public/index_research_summary.json` `pap_deviation_summary` 的聚合计数；同时 ⇄ `paper/skeleton.md` §7 PAP 表。
+- **pap**：`pap_deviation_report.csv` 各 hid 的 classification ⇄ `data/public/index_research_summary.json` `pap_deviation_summary` 的聚合计数；同时 ⇄ `paper/skeleton.md` §7 裁决基线偏离表。
 - **references**：`literature_catalog.PAPER_LIBRARY` 的 16 篇 paper_id ⇄ `paper/skeleton.md` 参考文献章节。
 - **cli_count**：`pyproject.toml [project.scripts]` 实际入口数 ⇄ `README.md` CLI shield badge。
 - **sample_sizes**：`paper/methodology_summary.md` §1 n_obs 列 ⇄ `cma_hypothesis_verdicts.csv` n_obs 字段。
@@ -544,13 +544,13 @@ index-inclusion-tex-export --cjk-engine xeCJK --force
 
 `index-inclusion-submission-ready` 是 48 个 console scripts 的第 44 号，也是论文实际提交前的**最后一道 go/no-go 门禁**。`paper-integrity` 检查的是工件之间的一致性（cross-document drift）；`submission-ready` 则把视角放宽到**整个提交包**：
 
-- **PAPER STRUCTURE**：`paper/skeleton.md` 存在 + 8 个顶级章节齐全（引言 / 文献综述 / 研究设计 / 实证结果 / 限制与讨论 / 结论与启示 / PAP / 参考文献）。
+- **PAPER STRUCTURE**：`paper/skeleton.md` 存在 + 8 个顶级章节齐全（引言 / 文献综述 / 研究设计 / 实证结果 / 限制与讨论 / 结论与启示 / 探索性裁决披露 / 参考文献）。
 - **PROSE**：扫描 `paper/skeleton.md` 的 `[TODO: ...]` 标记，按章节归类。任何 TODO 都是 `warn`（散文未完稿，不阻断流水线但需要写完）。
 - **METHODOLOGY**：`paper/methodology_summary.md` 存在；如果它比 `skeleton.md` 旧超过 1 天则 `warn`。
 - **FIGURES**：9 张关键论文图全部存在、非空、宽×高 ≥ 800×600（基于 PNG IHDR 头解析，零额外依赖）。
 - **TEX**：`paper/manuscript.tex` + `paper/references.bib` 都存在；BibTeX 条目数 == 16。如果 `pdflatex` 在 PATH 上，则在临时目录里尝试编译一次（失败则 `fail`；`pdflatex` 不可用则 `warn` 表示跳过）。
 - **INTEGRITY**：调用 `paper_integrity.check_paper_integrity()`，把它的 fail / warn 桥接到本门禁的同级 status。
-- **PAP**：`data/public/index_research_summary.json` 的 `pap_deviation_summary.all_unchanged == true`；任何 `flipped` 直接 `fail`，`tightened` / `weakened` / `unverifiable` 报 `warn`。
+- **裁决基线偏离**：`data/public/index_research_summary.json` 的 `pap_deviation_summary.all_unchanged == true`；任何 `flipped` 直接 `fail`，`tightened` / `weakened` / `unverifiable` 报 `warn`。
 - **DOCTOR**：重跑 `doctor.run_all_checks()`，把全部 health checks 的 fail / warn 一起冒泡。
 - **PUBLIC SUMMARY**：JSON 存在且不比 `cma_hypothesis_verdicts.csv` 旧（1 分钟时钟漂移容忍）。
 - **DATA**：`data/raw/real_events.csv` / `real_prices.csv` / `real_benchmarks.csv` 都存在且必备列 schema 通过。

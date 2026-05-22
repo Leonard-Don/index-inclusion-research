@@ -8,7 +8,7 @@
 > - 多重检验校正(Bonferroni、Benjamini-Hochberg)已在 `cma_hypothesis_verdicts.csv` 中报告,但是在假说选定之**后**应用的。
 > - 样本量限制是数据本身的约束(如 H2 n=12 来自 Federal Reserve Z.1 年度数据),不是看到结果后再剔除样本。
 >
-> 论文主表建议**只引用 `evidence_tier=core` 的假说(H1/H5/H7)**,supplementary 走附录。下一轮迭代前请按 `docs/verdict_iteration.md` 的预注册流程冻结假说与阈值。完整数据与方法限制见 [docs/limitations.md](limitations.md)。
+> 论文主表建议**只引用 `evidence_tier=core` 的假说(H1/H5/H7)**,supplementary 走附录。7 条假说的判据、阈值与样本边界记录在 [docs/analysis_parameters.md](analysis_parameters.md)(透明性文档,非预分析计划);verdict 跨时间稳定性可用 `docs/verdict_iteration.md` 的 verdict-diff 工作流追踪。完整数据与方法限制见 [docs/limitations.md](limitations.md)。
 
 | 市场 | 阶段 | n | mean CAR[-1,+1] | t | p |
 |---|---|---|---|---|---|

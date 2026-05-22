@@ -210,9 +210,9 @@ HS300 主结果（局部线性 RDD）：
 
 **(1) 数据口径的近似性与本文的研究定位。** 本文的价格与市值数据来自 Yahoo Finance：市值由当前流通股数与历史价格近似得到，并不等价于交易所历史自由流通市值；换手率以成交量除以流通股数近似，未过滤大宗与协议交易；中国端被动 AUM 是 ETF TNA 聚合 proxy 而非基金业协会口径的官方"被动 AUM"，且单位为 CNY trillion、与美国行的 USD trillion 不可跨币种直接比较绝对值。这些近似不会污染本文的核心结论（事件研究主结果用的是收益与基准收益，裁决用的是市场内方向趋势），但它们决定了本文的研究定位：本文适合作为机制分析与课程层面的实证研究，而**不宜**被当作可直接进入顶级期刊的强因果证据。任何引用本文结果的场合，都应同时引用本节与 `docs/limitations.md`。
 
-**(2) AR 引擎敏感性与 H1/H2 的脆弱性。** 本文的主表、PAP 与全部裁决均钉在简单市场调整 AR 引擎（ret − benchmark_ret）上。但 §4.4.2 与 §4.4.3 的稳健性检查显示，7 条假说中有 2 条（H1 与 H2）的裁决在切换到带 β 估计的市场模型 AR 引擎时会发生翻转。具体而言，后验功效表显示，H1 在 adjusted 引擎下 pre-runup 差异为 +0.50%、bootstrap p=0.875（证据不足），而在 market 引擎下差异放大到 +2.06%、bootstrap p=0.0004（转为显著）；H2 的 Cohen's d 也在两引擎间从 -0.04 变到 -0.37。这意味着 H1/H2 的裁决并非稳健结论，而是对异常收益模型设定敏感的"边界裁决"。本文如实把这一脆弱性写入正文：H1 与 H2 的结论应被读作"在默认 AR 引擎下成立、但对模型设定敏感"，读者在引用时不应忽略这一条件。相比之下，H5、H7 等核心结论以及阈值轴（4 个 p 阈值下 7/7 稳定）的稳健性不受 AR 引擎影响，可信度更高。
+**(2) AR 引擎敏感性与 H1/H2 的脆弱性。** 本文的主表、裁决基线快照与全部裁决均钉在简单市场调整 AR 引擎（ret − benchmark_ret）上。但 §4.4.2 与 §4.4.3 的稳健性检查显示，7 条假说中有 2 条（H1 与 H2）的裁决在切换到带 β 估计的市场模型 AR 引擎时会发生翻转。具体而言，后验功效表显示，H1 在 adjusted 引擎下 pre-runup 差异为 +0.50%、bootstrap p=0.875（证据不足），而在 market 引擎下差异放大到 +2.06%、bootstrap p=0.0004（转为显著）；H2 的 Cohen's d 也在两引擎间从 -0.04 变到 -0.37。这意味着 H1/H2 的裁决并非稳健结论，而是对异常收益模型设定敏感的"边界裁决"。本文如实把这一脆弱性写入正文：H1 与 H2 的结论应被读作"在默认 AR 引擎下成立、但对模型设定敏感"，读者在引用时不应忽略这一条件。相比之下，H5、H7 等核心结论以及阈值轴（4 个 p 阈值下 7/7 稳定）的稳健性不受 AR 引擎影响，可信度更高。
 
-**(3) 预注册与裁决口径。** 本文 7 条假说的判据与阈值在 2026-05-16 的 PAP 基线中冻结（见 §7）。在 PAP §7 决策日志正式签字之前，本文 7 条裁决仍按 **post-hoc 解释** 表述，而非 confirmatory 验证；多重检验方面，决定层阈值为 p<0.10，输出层附 Bonferroni 与 Benjamini-Hochberg q-value。低 n 假说的后验功效见 §5.1。
+**(3) 裁决口径与 post-hoc 性质。** 本文 7 条机制假说 H1–H7 是 **post-hoc、探索性**的：它们在观察到 announce-vs-effective、CN-vs-US 的不对称结果**之后**才形成，本项目**没有预分析计划 (pre-analysis plan)**，7 条裁决**不是 confirmatory 验证**。裁决阈值（p<0.10、内阈值 0.05）是在已知结果的情况下选定的分析参数，没有事前承诺。多重检验校正（Bonferroni、Benjamini-Hochberg q-value）虽已在输出层报告，但同样是在假说选定之后应用的。这一探索性性质的完整披露见 §7；7 假说的判据与样本边界记录在 `docs/analysis_parameters.md`（透明性文档，非 pre-analysis plan）。低 n 假说的后验功效见 §5.1。
 
 ### 5.1 低-n 假说后验统计功效
 
@@ -281,24 +281,33 @@ HS300 主结果（局部线性 RDD）：
 ## 5. 事件研究方法
 
 - **AR 计算**：默认仍为简单市场调整（`ar = ret − benchmark_ret`，向后兼容；
-  主表、PAP 与 CMA verdict 都钉在这一引擎上）。通过
+  主表与 CMA verdict 都钉在这一引擎上）。通过
   `index-inclusion-run-event-study --ar-model market` 可切换到带 β 估计的市场模型 AR
   （`ar_market_model = ret − (α + β·benchmark_ret)`，估计窗口默认 (-120, -10)，
   与短窗口事件研究文献一致；用 `--estimation-window LOW,HIGH` 改写）。切换引擎
   在 CN 样本上经验上会让 CAR 偏移约 5-15 bps（β 与 1 之差带来的修正），主表
-  保持不变；若要纳入论文需重新跑 PAP §7 决策。
+  保持不变；若要把另一引擎纳入论文，应在 `docs/analysis_parameters.md` 的变更日志中记录这次口径变更。
 - **σ 估计**：默认从 panel 内 `[-window_pre, -2]` 区间估计 (window_pre 默认 20)；
   这是 18 日的 in-panel proxy estimation window，比文献标准（120-250 日）短。
 - **标准化**：`compute_patell_bmp_summary` 在简单 t 之外提供 Patell t 与 BMP t；
   在样本量充足时建议优先看 BMP（不假设零相关）。
 - **长窗口** `[0,+120]`：样本会大幅缩水，仅作探索性结果，不进入主表。
 
-## 6. 多重检验
+## 6. 多重检验与 post-hoc 披露
 
 - **当前阈值**：决定层 p<0.10（默认）；输出层附 Bonferroni 与 Benjamini-Hochberg q-value。
-- **Pre-registration**：7 假说 PAP 草稿见 [`docs/pre_registration.md`](pre_registration.md)（冻结日 2026-05-03）。
-  在 PAP §7 决策日志签字之前，仍按 **post-hoc** 表述；签字后可升级为 **confirmatory**。
-  详细 verdict 迭代流程见 [`docs/verdict_iteration.md`](verdict_iteration.md)。
+- **H1–H7 是 post-hoc、探索性假说**：本项目 **没有预分析计划 (pre-analysis plan)**。
+  7 条 CMA 假说是在观察到 announce-vs-effective、CN-vs-US 的不对称结果**之后**形成的，
+  属于探索性解释，**不是 confirmatory 验证**。裁决阈值（p<0.10、内阈值 0.05）是在
+  已知结果的情况下选定的分析参数，没有事前承诺。多重检验校正
+  （Bonferroni、Benjamini-Hochberg）虽已在 `cma_hypothesis_verdicts.csv` 中报告，
+  但同样是在假说选定**之后**应用的。因此论文与汇报中引用 H1–H7 时，应明确表述为
+  post-hoc 探索性证据，并优先只把 `evidence_tier=core` 的假说放进主表。
+- **分析参数记录**：7 假说的判据、阈值与样本边界集中记录在
+  [`docs/analysis_parameters.md`](analysis_parameters.md)——这是一份透明性文档，
+  **不是 pre-analysis plan**。verdict 跨时间稳定性可用 `index-inclusion-verdict-summary
+  --vs-pap` 对比裁决基线快照查看；详细 verdict 迭代流程见
+  [`docs/verdict_iteration.md`](verdict_iteration.md)。
 
 ## 7. 每假说的统计功效（post-hoc）
 
@@ -361,12 +370,15 @@ HS300 主结果（局部线性 RDD）：
 
 ### 6.3 未来研究
 
-本文有三个清晰的后续工作方向。第一，扩展沪深 300 RDD 的 L3 官方候选边界样本：当前覆盖期仅约 5 年（11 个批次），应扩展到 ≥10 年（约 20 个批次）并补 McCrary 操纵性检验，才能把 RDD 从初步识别证据升级为论文级强因果声明。第二，替换中国被动 AUM 的数据口径：本文 H2 现用 ETF TNA 聚合 proxy，应在数据可得时替换为基金业协会披露的官方"被动 AUM"口径，以消除 ETF 宇宙逐年扩张带来的早年低估偏差。第三，细化 AR 引擎稳健性：H1 与 H2 的裁决对 AR 模型设定敏感，未来应以更长的标准估计窗口（120–250 日）重估异常收益，并在 PAP §7 决策日志中正式记录引擎选择，从而把这两条假说从"边界裁决"推进到稳健结论。此外，统一中美行业分类体系以提升 H7 的跨市场可比性，也是一项有价值的补充工作。
+本文有三个清晰的后续工作方向。第一，扩展沪深 300 RDD 的 L3 官方候选边界样本：当前覆盖期仅约 5 年（11 个批次），应扩展到 ≥10 年（约 20 个批次）并补 McCrary 操纵性检验，才能把 RDD 从初步识别证据升级为论文级强因果声明。第二，替换中国被动 AUM 的数据口径：本文 H2 现用 ETF TNA 聚合 proxy，应在数据可得时替换为基金业协会披露的官方"被动 AUM"口径，以消除 ETF 宇宙逐年扩张带来的早年低估偏差。第三，细化 AR 引擎稳健性：H1 与 H2 的裁决对 AR 模型设定敏感，未来应以更长的标准估计窗口（120–250 日）重估异常收益，并在 `docs/analysis_parameters.md` 的变更日志中记录引擎选择，从而把这两条假说从"边界裁决"推进到稳健结论。此外，统一中美行业分类体系以提升 H7 的跨市场可比性，也是一项有价值的补充工作。
 
-## 7. PAP (预注册分析计划) 合规
+## 7. 假说的探索性裁决披露
 
-本文遵循 2026-05-16 冻结的预注册基线（snapshot `snapshots/pre-registration-2026-05-16.csv`）。基线已冻结 3 天。
-PAP 偏离审计自动汇总：
+**本文 7 条机制假说 H1–H7 是 post-hoc、探索性的，不是预注册裁决。** 它们在观察到事件研究的 announce-vs-effective、CN-vs-US 不对称结果**之后**才形成；本项目**没有预分析计划 (pre-analysis plan)**，7 条裁决**不构成 confirmatory 验证**。裁决阈值（p<0.10、内阈值 0.05）是在已知结果的情况下选定的分析参数，没有事前承诺；多重检验校正（Bonferroni、Benjamini-Hochberg）也是在假说选定之后应用的。因此本文把 H1–H7 严格表述为探索性证据，主表只放 `evidence_tier=core` 的假说，supplementary 走附录。7 假说的判据、阈值与样本边界集中记录在 `docs/analysis_parameters.md`（一份透明性文档，**不是** pre-analysis plan）。
+
+为追踪裁决在研究迭代中的稳定性，本项目保留一份**裁决基线快照**（`snapshots/pre-registration-2026-05-16.csv`，CSV 文件名为历史命名）。下表把当前 7 条 verdict 与该快照逐条比对——这是一个 verdict-stability-over-time 工具，**不是预注册合规检查**：快照本身在结果已知之后创建。
+
+裁决基线偏离审计自动汇总：
 
 - 全部 unchanged: **True**
 - unchanged: 7
@@ -375,7 +387,7 @@ PAP 偏离审计自动汇总：
 - weakened: 0
 - unverifiable: 0
 
-下表自动汇总自 `results/real_tables/pap_deviation_report.csv`：
+下表自动汇总自 `results/real_tables/pap_deviation_report.csv`（`baseline` = 裁决基线快照中的 verdict，`current` = 当前 verdict）：
 
 | 假说 | 名称 | 分类 | baseline | current |
 |---|---|---|---|---|
