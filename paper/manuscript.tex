@@ -88,54 +88,32 @@
 
 样本期为 2010-01-01 至 2025-12-31。事件样本由两个市场的宽基指数纳入事件构成，共 893 个真实事件：中国市场（沪深 300）274 个事件、涉及 233 只股票，美国市场（标普 500）619 个事件、涉及 512 只股票。中国事件清单来自中证指数公司官方调整公告 PDF，并以公开新闻补充转录（来源记录于 \texttt{source} 列）；美国事件清单来自维基百科标普 500 成分股表与 S\&P Dow Jones 官方脚注。增发、分拆事件以及 ticker 变更等纯技术性调整不纳入样本。每个事件记录市场、指数名称、股票代码、公告日与生效日；对短期内重复纳入的事件做去重并标记冲突。
 
-价格、收益、成交量数据来自 Yahoo Finance（yfinance）日频 OHLCV，按当前交易日复权；市值由 Yahoo 当前 \texttt{sharesOutstanding} 与历史价格近似得到，换手率以 volume/shares\_outstanding 近似。基准收益方面，中国用 CSI300 指数收益、美国用标普 500 指数收益。被动基金 AUM 方面，美国采用 Federal Reserve Z.1 系列（\texttt{BOGZ1FL564090005A}，US ETF Total Financial Assets）的 12 个年度观测；中国采用自建的 ETF TNA 聚合 proxy（CSI300 与 CSI500 跟踪 ETF 年终份额$\times$单位净值），共 5 个年终快照。沪深 300 RDD 使用 L3 官方候选边界样本（2020-11 至 2025-11，11 个批次，356 行，含 191 调入与 165 备选对照）。为缓解样本本身特征差异，本文以行业$\times$同期市值分位为口径，为每个纳入事件匹配同市场未纳入对照股票，匹配后协变量平衡门禁要求 $|\text{SMD}|<0.25$。这些数据口径都是近似而非交易所历史精确口径，其含义与边界详见本文 §5 与 \texttt{docs/limitations.md}；本文据此把研究定位为机制分析与课程层面的实证研究，而非顶刊级因果推断。
-
-七条跨市场不对称机制假说所用的事件级样本量分别为：
-
-\begin{itemize}
-  \item \textbf{H1 (信息泄露与预运行)}：n = 436 (core)
-  \item \textbf{H2 (被动基金 AUM 差异)}：n = 17 (core)
-  \item \textbf{H3 (散户 vs 机构结构)}：n = 4 (supplementary)
-  \item \textbf{H4 (卖空约束)}：n = 436 (supplementary)
-  \item \textbf{H5 (涨跌停限制)}：n = 936 (core)
-  \item \textbf{H6 (指数权重可预测性)}：n = 67 (supplementary)
-  \item \textbf{H7 (行业结构差异)}：n = 187 (core)
-\end{itemize}
-数据来源 + 限制详见本文 §5 与 \texttt{docs/limitations.md}。
+价格、收益、成交量数据来自 Yahoo Finance（yfinance）日频 OHLCV，按当前交易日复权；市值由 Yahoo 当前 \texttt{sharesOutstanding} 与历史价格近似得到，换手率以 volume/shares\_outstanding 近似。基准收益方面，中国用 CSI300 指数收益、美国用标普 500 指数收益。被动基金 AUM 方面，美国采用 Federal Reserve Z.1 系列（\texttt{BOGZ1FL564090005A}，US ETF Total Financial Assets）的 12 个年度观测；中国采用自建的 ETF TNA 聚合 proxy（CSI300 与 CSI500 跟踪 ETF 年终份额$\times$单位净值），共 5 个年终快照。为缓解样本本身特征差异，本文以行业$\times$同期市值分位为口径，为每个纳入事件匹配同市场未纳入对照股票，匹配后协变量平衡门禁要求 $|\text{SMD}|<0.25$。中国样本 274 个事件中，价格数据完整、可用于公告窗事件研究的有效样本约 117 个。这些数据口径都是近似而非交易所历史精确口径，其含义与边界详见本文 §5 与 \texttt{docs/limitations.md}；本文据此把研究定位为机制分析与课程层面的实证研究，而非顶刊级因果推断。
 
 \subsection{3.2 实证方法}
 
-本文的实证策略由三层构成，相互印证而非彼此替代。
+本文的实证策略由两层构成，相互印证而非彼此替代。
 
 \textbf{(1) 事件研究。} 以公告日和生效日分别作为事件时点，构建 $[-20,+20]$ 交易日窗口，采用市场调整收益法计算异常收益 $AR_{i,t}=R_{i,t}-R_{m,t}$，其中 $R_{i,t}$ 为个股收益、$R_{m,t}$ 为相应市场基准收益。累计异常收益为 $CAR_{i,[\tau_1,\tau_2]}=\sum_{t=\tau_1}^{\tau_2}AR_{i,t}$，本文重点报告 $CAR[-1,+1]$、$CAR[-3,+3]$ 与 $CAR[-5,+5]$，并以 $CAR[-1,+1]$ 为主窗。AR 计算默认采用简单市场调整引擎（$ar=ret-benchmark\_ret$），主表与全部裁决均钉在这一引擎上；另提供带 $\beta$ 估计的市场模型 AR（$ar=ret-(\alpha+\beta\cdot benchmark\_ret)$，估计窗口默认 $(-120,-10)$ 交易日）作为稳健性引擎。显著性检验默认用简单 t 检验，并辅以 Patell (1976) Z 与 BMP (1991) t。需要说明的是，本文异常收益标准化所用的 $\sigma$ 由面板内 $[-window\_pre,-2]$ 区间估计（约 18 个交易日），短于文献标准的 120–250 日窗口，这一近似的影响在 §5 中讨论。
 
-\textbf{(2) 匹配回归。} 在事件研究之外，本文构造匹配对照面板（212{,}756 行，按 Stuart (2010) 标准化均值差匹配，通过协变量平衡门禁），并以 $CAR_i=\alpha+\beta\,Inclusion_i+\gamma_1 Size_i+\gamma_2 PreReturn_i+\varepsilon_i$ 为主回归，其中 $Inclusion$ 为是否属于纳入样本的虚拟变量。机制回归则分别以换手率变化、成交量变化、波动率变化为因变量。机制层面的七条跨市场不对称假说（H1–H7）由 CMA（cross-market asymmetry）编排统一裁决，决定阈值为 $p<0.10$（"部分支持"边界）与 $p<0.05$（"支持"边界），并在输出层附 Bonferroni 与 Benjamini-Hochberg q-value。Bootstrap 检验采用按公告日分块的 block bootstrap（5000 次迭代）。
+\textbf{(2) 匹配回归。} 在事件研究之外，本文构造匹配对照面板（212{,}756 行，按 Stuart (2010) 标准化均值差匹配，通过协变量平衡门禁），并以 $CAR_i=\alpha+\beta\,Inclusion_i+\gamma_1 Size_i+\gamma_2 PreReturn_i+\varepsilon_i$ 为主回归，其中 $Inclusion$ 为是否属于纳入样本的虚拟变量。机制回归则分别以换手率变化、成交量变化、波动率变化为因变量。Bootstrap 检验采用按公告日分块的 block bootstrap（5000 次迭代）。
 
-\textbf{(3) 沪深 300 断点回归（RDD）。} 为在制度识别层面补强结论，本文利用沪深 300 样本调整名单的官方排序，在 cutoff = 300 处构造局部线性断点回归（带宽自动取 0.06），并辅以 donut hole、placebo cutoff、二次多项式三类稳健性。如 §5 所述，当前 L3 覆盖期仅 5 年（11 个批次），尚不足以支撑论文级的强因果声明，因此 RDD 结果定位为初步识别证据，与事件研究、匹配回归一同呈现，不单独作为主表结论。
+\subsection{3.3 识别策略：公告窗与生效窗的跨市场分解}
 
-需要在方法层面预先澄清的是：本文 §4.1 的主结论（公告日 CAR 显著正向）由事件研究直接给出，而 H1–H7 七条机制假说回答的是"为什么中美两个市场的反应不一致"，并不是回答"是否存在超额收益"本身——这一区分在 §4 与 §6 中将反复强调。
+本文的渠道识别依赖于每个纳入事件天然具备的两个日期：\textbf{公告日}（announcement date）与\textbf{生效日}（effective date）。公告日是指数管理方正式宣布调整名单的日期，信息在此时进入市场，而尚无任何指数基金被要求调仓；生效日是股票正式纳入指数的日期，此后被动基金须机械买入以跟踪成分。关键的不对称在于：生效日的被动调仓完全可以从公告日起提前预期，不含新信息，仅代表机械需求冲击。因此，公告日与生效日对应两种截然不同的经济摩擦——信息内容集中于公告窗，需求压力集中于生效窗。
 
-\subsection{3.3 七条跨市场不对称机制假说}
+两个市场的制度环境形成鲜明对比。美国标普 500 的被动指数基金规模庞大（Federal Reserve Z.1 系列显示 ETF 总资产超过 10 万亿美元），机构投资者主导交易，卖空较为自由；中国沪深 300 的被动基金发展相对滞后（自建 ETF TNA proxy 显示跟踪规模约为 1 万亿元人民币量级），散户投资者比例高，且受涨跌停板制度约束，套利成本更高。这一制度差异为渠道识别提供了独立的辅助维度。
 
-下表自动汇总自 \texttt{results/real\_tables/cma\_hypothesis\_verdicts.csv}，列出 H1-H7 名称、当前裁决、置信度、证据层级 (core/supplementary) 与样本量。
+两种渠道对公告窗与生效窗的预测存在方向性差异：
 
-\begin{table}[ht]
-  \centering
-  \small
-  \begin{tabular}{lllllrll}
-    \toprule
-    假说 & 名称 & 裁决 & 置信度 & 证据层级 & n & 头条指标 & 主线 \\
-    \midrule
-    H1 & 信息泄露与预运行 & 证据不足 & 中 & core & 436 & bootstrap p = 0.8748 & identification \\
-    H2 & 被动基金 AUM 差异 & 部分支持 & 中 & core & 17 & US AUM ratio = 13.48 & demand\_curve \\
-    H3 & 散户 vs 机构结构 & 支持 & 高 & supplementary & 4 & 双通道命中率 = 0.75 & price\_pressure \\
-    H4 & 卖空约束 & 证据不足 & 中 & supplementary & 436 & regression p = 0.5366 & identification \\
-    H5 & 涨跌停限制 & 支持 & 高 & core & 936 & limit\_coef p = 0.00824 & identification \\
-    H6 & 指数权重可预测性 & 证据不足 & 中 & supplementary & 67 & heavy−light spread = -0.01903 & demand\_curve \\
-    H7 & 行业结构差异 & 支持 & 中 & core & 187 & US sector spread = 5.954 & identification \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+\begin{itemize}
+  \item \textbf{需求/价格压力渠道}预测效应集中于生效窗（机械调仓期）而非公告窗，且因美国被动规模更大，生效窗效应应强于中国。
+  \item \textbf{信息/认证渠道}预测效应集中于公告窗（信息定价时点），且因认证信号具有跨制度普遍性，中美两市场的公告窗 CAR 量级应相近。
+\end{itemize}
+
+本文将上述差异化预测作为可检验的识别条件：若观察到公告窗 CAR 在两市场均显著且量级相近、而生效窗 CAR 在两市场均不显著，则与信息渠道预测一致。这一逻辑是 Harris 与 Gurel (1986) 时点分解逻辑的跨市场扩展——原始文献仅在美国单一市场内比较公告日与生效日前后的价格动态；本文将"跨制度相似性"纳入证据集，把两个制度极不相同市场给出量级接近答案的这一事实本身视为支持信息渠道的独立证据维度。
+
+需要预先说明本文识别策略的局限：这是描述性识别，而非准实验因果识别。生效窗效应约为零并不能单独排除需求渠道——一种相容的解释是，市场参与者将调仓需求提前套利，使生效日效应被压平（Greenwood \& Sammon, 2022）。本文如实接受这一局限，并明确以跨制度相似性（而非生效窗约为零）作为支持信息渠道的核心论据。
 
 \section{4. 实证结果}
 
