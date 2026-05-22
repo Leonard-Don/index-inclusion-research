@@ -282,7 +282,7 @@ GitHub Actions 通过 `astral-sh/setup-uv` + `uv sync --extra dev`（按 `uv.loc
 - 假说证据强度分层：`core`（H1/H2/H5/H7）vs `supplementary`（H3/H4/H6），见 `cma_hypothesis_verdicts.csv` 的 `evidence_tier` 列。H2 由 `EVIDENCE_TIER_PROMOTION_FLOOR` 数据驱动升级——补入 CN ETF TNA proxy 后合并 n=17 跨过 15 阈值。
 - H7 现在同时有描述性 sector spread 与 `cma_h7_sector_interaction.csv` 的 sector×phase/treatment 回归；H2 在 2026 年补入 CN ETF TNA proxy（`data/raw/cn_passive_aum_proxy.csv`）后，evidence manifest 中由 `warn` 升级为 `pass`，dashboard 卡片同步更新（详见 [data/raw/README.md](data/raw/README.md) 的 proxy 说明）。
 - 事件研究除简单 t 外提供 Patell Z 与 BMP t（`results/real_event_study/patell_bmp_summary.csv`）。
-- HS300 RDD 主结果 (`car_m1_p1` τ=3.92%, p=0.048, n=120) 同时跑了完整稳健性面板（main / donut / placebo±0.05 / polynomial），见 `results/literature/hs300_rdd/rdd_robustness.csv` 与首页 forest plot；论文应当报告全套面板而非只引用显著的 main spec。
+- HS300 RDD 主结果 (`car_m1_p1` τ=4.01%, p=0.045, n=118) 同时跑了完整稳健性面板（main / donut / placebo±0.05 / polynomial），见 `results/literature/hs300_rdd/rdd_robustness.csv` 与首页 forest plot；论文应当报告全套面板而非只引用显著的 main spec。
 
 ## 论文写作建议
 

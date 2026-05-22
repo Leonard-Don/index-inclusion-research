@@ -27,7 +27,7 @@
 | AR 模型 | 默认 `ret - benchmark_ret` (简单市场调整)；可选 market-model β (估计窗口 -120 to -10) |
 | 标准化 | t 检验 (默认) + Patell Z (1976) + BMP t (1991) |
 | 多重检验 | Bonferroni & Benjamini-Hochberg |
-| Bootstrap | Block bootstrap (按 `announce_date` 分块，1000 iterations) |
+| Bootstrap | Block bootstrap (按 `announce_date` 分块，5000 iterations) |
 | RDD (HS300) | Local linear regression (bandwidth 0.06)；donut / polynomial / placebo 稳健性 |
 
 ## 3. 稳健性覆盖

@@ -21,7 +21,7 @@
 
 ## HS300 RDD 主结果
 
-- main 局部线性 τ = 3.92% (p = 0.048, n = 120)
+- main 局部线性 τ = 4.01% (p = 0.045, n = 118)
 - 完整稳健性面板见 `rdd/rdd_robustness.csv` 与 `rdd/rdd_robustness_forest.png`。
 
 ---
