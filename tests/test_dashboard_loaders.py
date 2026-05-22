@@ -5,7 +5,8 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from index_inclusion_research import dashboard_loaders, dashboard_media
+from index_inclusion_research.dashboard import loaders as dashboard_loaders
+from index_inclusion_research.dashboard import media as dashboard_media
 from index_inclusion_research.result_contract import build_results_manifest
 
 ROOT = Path(__file__).resolve().parents[1]

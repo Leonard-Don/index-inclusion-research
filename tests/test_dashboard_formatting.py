@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from index_inclusion_research import dashboard_formatting
+from index_inclusion_research.dashboard import formatting as dashboard_formatting
 
 
 def test_render_table_applies_column_and_value_labels() -> None:

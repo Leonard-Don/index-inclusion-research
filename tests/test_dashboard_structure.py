@@ -13,7 +13,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-import index_inclusion_research.dashboard_app as dashboard
+import index_inclusion_research.dashboard.app as dashboard
 from index_inclusion_research.literature_dashboard import parse_dashboard_args
 
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import cast
 
-from index_inclusion_research.dashboard_types import RawAnalysisResult, RawFigureEntry
+from index_inclusion_research.dashboard.types import RawAnalysisResult, RawFigureEntry
 from index_inclusion_research.hs300_rdd import run_analysis as run_hs300_rdd_analysis
 from index_inclusion_research.hs300_style import (
     run_analysis as run_hs300_style_analysis,

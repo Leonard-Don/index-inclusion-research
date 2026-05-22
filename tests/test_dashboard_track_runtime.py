@@ -5,8 +5,8 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from index_inclusion_research import dashboard_config
-from index_inclusion_research.dashboard_track_runtime import DashboardTrackRuntime
+from index_inclusion_research.dashboard import config as dashboard_config
+from index_inclusion_research.dashboard.track_runtime import DashboardTrackRuntime
 
 
 def _build_track_runtime() -> DashboardTrackRuntime:

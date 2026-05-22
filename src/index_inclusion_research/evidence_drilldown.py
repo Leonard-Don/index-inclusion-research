@@ -6,10 +6,11 @@ from typing import Any
 
 import pandas as pd
 
-from index_inclusion_research import dashboard_formatting, paths
+from index_inclusion_research import paths
 from index_inclusion_research.analysis.cross_market_asymmetry.h6_robustness import (
     build_h6_weight_joined_frame,
 )
+from index_inclusion_research.dashboard import formatting as dashboard_formatting
 from index_inclusion_research.real_evidence_refresh import compute_cn_sector_coverage
 from index_inclusion_research.result_contract import load_rdd_status
 

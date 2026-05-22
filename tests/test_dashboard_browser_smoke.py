@@ -16,7 +16,7 @@ import pytest
 from bs4 import BeautifulSoup
 
 from index_inclusion_research.chart_data import CHART_BUILDERS
-from index_inclusion_research.dashboard_app import app
+from index_inclusion_research.dashboard.app import app
 
 pytestmark = pytest.mark.browser_smoke
 

@@ -573,8 +573,8 @@ def _refresh_dashboard_rdd_figures(output_dir: Path) -> list[Path]:
     if root is None:
         return []
 
-    from index_inclusion_research.dashboard_figures import create_identification_figures
-    from index_inclusion_research.dashboard_loaders import load_rdd_status
+    from index_inclusion_research.dashboard.figures import create_identification_figures
+    from index_inclusion_research.dashboard.loaders import load_rdd_status
 
     def _to_relative(path: Path) -> str:
         try:

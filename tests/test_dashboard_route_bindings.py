@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 from flask import Flask, request, url_for
 
-from index_inclusion_research.dashboard_route_bindings import (
+from index_inclusion_research.dashboard.route_bindings import (
     DashboardRouteDependencies,
     DashboardRouteFactory,
     build_dashboard_route_dependencies,

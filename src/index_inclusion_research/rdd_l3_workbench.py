@@ -9,7 +9,6 @@ from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
 from index_inclusion_research import (
-    dashboard_formatting,
     doctor,
     hs300_rdd,
     hs300_rdd_l3_collection,
@@ -24,6 +23,7 @@ from index_inclusion_research.analysis.rdd_candidates import (
     summarize_candidate_audit,
     validate_candidate_frame,
 )
+from index_inclusion_research.dashboard import formatting as dashboard_formatting
 from index_inclusion_research.loaders import save_dataframe
 from index_inclusion_research.real_evidence_refresh import (
     build_evidence_manifest,

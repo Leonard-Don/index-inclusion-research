@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 
-from index_inclusion_research.dashboard_app import app
+from index_inclusion_research.dashboard.app import app
 
 
 def parse_dashboard_args(argv: list[str] | None = None) -> argparse.Namespace:

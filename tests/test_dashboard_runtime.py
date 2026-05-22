@@ -4,15 +4,15 @@ from pathlib import Path
 
 import pytest
 
-from index_inclusion_research import dashboard_config
-from index_inclusion_research.dashboard_page_outline_runtime import (
+from index_inclusion_research.dashboard import config as dashboard_config
+from index_inclusion_research.dashboard.page_outline_runtime import (
     DashboardPageOutlineRuntime,
 )
-from index_inclusion_research.dashboard_page_sections_runtime import (
+from index_inclusion_research.dashboard.page_sections_runtime import (
     DashboardPageSectionsRuntime,
 )
-from index_inclusion_research.dashboard_runtime import DashboardRuntime
-from index_inclusion_research.dashboard_track_runtime import DashboardTrackRuntime
+from index_inclusion_research.dashboard.runtime import DashboardRuntime
+from index_inclusion_research.dashboard.track_runtime import DashboardTrackRuntime
 
 
 def _build_runtime() -> DashboardRuntime:

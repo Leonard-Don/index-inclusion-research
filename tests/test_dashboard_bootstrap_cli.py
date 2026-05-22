@@ -6,7 +6,7 @@ import tomllib
 from pathlib import Path
 
 from index_inclusion_research import cli
-from index_inclusion_research.dashboard_bootstrap import bootstrap_dashboard_paths
+from index_inclusion_research.dashboard.bootstrap import bootstrap_dashboard_paths
 from index_inclusion_research.literature_dashboard import (
     parse_dashboard_args,
     run_dashboard_app,
@@ -16,9 +16,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_bootstrap_dashboard_paths_resolves_repo_layout() -> None:
-    current_file = Path("/tmp/example/src/index_inclusion_research/dashboard_app.py")
+    current_file = Path("/tmp/example/src/index_inclusion_research/dashboard/app.py")
     paths = bootstrap_dashboard_paths(current_file)
-    expected_root = current_file.resolve().parents[2]
+    expected_root = current_file.resolve().parents[3]
     expected_web = expected_root / "src" / "index_inclusion_research" / "web"
 
     assert paths.root == expected_root

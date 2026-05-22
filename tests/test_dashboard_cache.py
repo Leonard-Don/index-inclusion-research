@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from index_inclusion_research.dashboard_cache import AnalysisCacheStore
+from index_inclusion_research.dashboard.cache import AnalysisCacheStore
 
 
 def test_analysis_cache_store_snapshot_and_replace_all_are_isolated() -> None:

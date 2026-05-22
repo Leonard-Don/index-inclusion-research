@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from index_inclusion_research import dashboard_refresh
-from index_inclusion_research.dashboard_refresh_coordinator import (
+from index_inclusion_research.dashboard import refresh as dashboard_refresh
+from index_inclusion_research.dashboard.refresh_coordinator import (
     DashboardRefreshCoordinator,
 )
 

@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 from flask import Flask, request
 
-from index_inclusion_research import dashboard_routes
-from index_inclusion_research.dashboard_types import RefreshStatusPayload
+from index_inclusion_research.dashboard import routes as dashboard_routes
+from index_inclusion_research.dashboard.types import RefreshStatusPayload
 from index_inclusion_research.literature_catalog import LiteraturePaper
 
 

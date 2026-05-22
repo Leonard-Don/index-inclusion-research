@@ -728,7 +728,7 @@ def audit_pap_limitations(root: Path = ROOT, *, require_bundle: bool = True) -> 
     )
     if missing:
         return missing
-    from index_inclusion_research.dashboard_loaders import load_pap_summary
+    from index_inclusion_research.dashboard.loaders import load_pap_summary
 
     pap = load_pap_summary(root)
     if not pap.get("available"):

@@ -6,7 +6,7 @@ from typing import Any, cast
 
 import pandas as pd
 
-from index_inclusion_research.dashboard_types import RddStatus, RddStatusMode
+from index_inclusion_research.dashboard.types import RddStatus, RddStatusMode
 from index_inclusion_research.rdd_evidence import (
     rdd_coverage_note,
     rdd_evidence_tier,

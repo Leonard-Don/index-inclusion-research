@@ -5,15 +5,15 @@ from pathlib import Path
 
 from flask import Response, request, url_for
 
-from index_inclusion_research import dashboard_config
-from index_inclusion_research.dashboard_factory import (
+from index_inclusion_research.dashboard import config as dashboard_config
+from index_inclusion_research.dashboard.factory import (
     DashboardShell,
     build_dashboard_application,
     build_dashboard_shell,
     create_dashboard_app,
     register_dashboard_routes,
 )
-from index_inclusion_research.dashboard_route_bindings import DashboardRouteViews
+from index_inclusion_research.dashboard.route_bindings import DashboardRouteViews
 
 
 def test_build_analyses_and_panel_keys() -> None:
