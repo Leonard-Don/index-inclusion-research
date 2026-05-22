@@ -17,7 +17,7 @@ H7_MIN_EVENTS_PER_SECTOR = 10
 
 
 class _SupportsFTest(Protocol):
-    def f_test(self, r_matrix: np.ndarray) -> Any: ...
+    def f_test(self, _r_matrix: np.ndarray, /) -> Any: ...
 
 
 def _pre_event_mean(panel: pd.DataFrame, col: str, lo: int = -20, hi: int = -1) -> pd.Series:
