@@ -1,11 +1,46 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
 import pandas as pd
 
 from index_inclusion_research import paper_audit
+
+
+def _write_seed_manifest(root: Path) -> None:
+    artifacts: list[dict[str, object]] = []
+    paper_root = root / "paper"
+    for section in ("tables", "figures", "rdd", "narrative", "data"):
+        for target in sorted((paper_root / section).rglob("*")):
+            if not target.is_file():
+                continue
+            rel = target.relative_to(paper_root).as_posix()
+            artifacts.append(
+                {
+                    "section": section,
+                    "source": f"seed/{rel}",
+                    "target": rel,
+                    "sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
+                    "size_bytes": target.stat().st_size,
+                }
+            )
+    payload = {
+        "bundle_label": "index-inclusion-paper-bundle",
+        "manifest_schema_version": 1,
+        "artifact_count": len(artifacts),
+        "regenerated": {},
+        "artifacts": artifacts,
+    }
+    _write_manifest_payload(root, payload)
+
+
+def _write_manifest_payload(root: Path, payload: dict[str, object]) -> None:
+    (root / "paper" / "manifest.json").write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _seed_audit_project(root: Path) -> None:
@@ -193,6 +228,7 @@ def _seed_audit_project(root: Path) -> None:
     ):
         (root / "paper" / "narrative" / name).write_text("x\n", encoding="utf-8")
     (root / "paper" / "data" / "pre-registration-2026-05-03.csv").write_text("x\n", encoding="utf-8")
+    _write_seed_manifest(root)
 
 
 def test_run_paper_audit_passes_seeded_project(tmp_path: Path) -> None:
@@ -218,6 +254,80 @@ def test_paper_audit_flags_missing_bundle_copy(tmp_path: Path) -> None:
 
     assert result.status == "fail"
     assert any("patell_bmp_summary.csv" in detail for detail in result.details)
+
+
+def test_paper_bundle_audit_fails_when_manifest_hashes_drift(tmp_path: Path) -> None:
+    _seed_audit_project(tmp_path)
+    (tmp_path / "paper" / "tables" / "patell_bmp_summary.csv").write_text(
+        "changed after manifest\n", encoding="utf-8"
+    )
+
+    result = paper_audit.audit_paper_bundle(tmp_path)
+
+    assert result.status == "fail"
+    assert "manifest" in result.message
+    assert any(
+        "tables/patell_bmp_summary.csv" in detail and "sha256" in detail
+        for detail in result.details
+    )
+
+
+def test_paper_bundle_audit_fails_when_manifest_omits_cross_audit_target(
+    tmp_path: Path,
+) -> None:
+    _seed_audit_project(tmp_path)
+    manifest_path = tmp_path / "paper" / "manifest.json"
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    artifacts = [
+        entry
+        for entry in payload["artifacts"]
+        if entry["target"] != "rdd/mccrary_density_test.csv"
+    ]
+    payload["artifacts"] = artifacts
+    payload["artifact_count"] = len(artifacts)
+    _write_manifest_payload(tmp_path, payload)
+
+    result = paper_audit.audit_paper_bundle(tmp_path)
+
+    assert result.status == "fail"
+    assert any(
+        "rdd/mccrary_density_test.csv" in detail and "missing from manifest" in detail
+        for detail in result.details
+    )
+
+
+def test_paper_bundle_audit_fails_when_manifest_target_escapes_paper_root(
+    tmp_path: Path,
+) -> None:
+    _seed_audit_project(tmp_path)
+    manifest_path = tmp_path / "paper" / "manifest.json"
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload["artifacts"][0]["target"] = "../outside.csv"
+    _write_manifest_payload(tmp_path, payload)
+
+    result = paper_audit.audit_paper_bundle(tmp_path)
+
+    assert result.status == "fail"
+    assert any("../outside.csv" in detail and "under paper/" in detail for detail in result.details)
+
+
+def test_paper_bundle_audit_fails_when_manifest_size_drifts(tmp_path: Path) -> None:
+    _seed_audit_project(tmp_path)
+    manifest_path = tmp_path / "paper" / "manifest.json"
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    for entry in payload["artifacts"]:
+        if entry["target"] == "tables/patell_bmp_summary.csv":
+            entry["size_bytes"] += 1
+            break
+    _write_manifest_payload(tmp_path, payload)
+
+    result = paper_audit.audit_paper_bundle(tmp_path)
+
+    assert result.status == "fail"
+    assert any(
+        "tables/patell_bmp_summary.csv" in detail and "size_bytes" in detail
+        for detail in result.details
+    )
 
 
 def test_source_only_audit_does_not_require_ignored_paper_dir(tmp_path: Path) -> None:

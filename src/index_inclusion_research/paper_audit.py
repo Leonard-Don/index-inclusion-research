@@ -9,6 +9,7 @@ dashboard section so the project has one source of truth for delivery health.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
@@ -232,6 +233,31 @@ def _manifest_matches_status(status: pd.DataFrame, manifest: pd.DataFrame) -> tu
                     detail = f"{row_label}: {detail}"
                 mismatches.append(detail)
     return tuple(mismatches)
+
+
+def _paper_bundle_required_paths(root: Path) -> tuple[Path, ...]:
+    """All files the paper bundle must contain before it is self-contained."""
+
+    return (
+        root / "paper" / "README.md",
+        root / "paper" / "bundle_summary.md",
+        root / "paper" / "manifest.json",
+        root / "paper" / "tables" / "event_study_summary.tex",
+        root / "paper" / "tables" / "cma_hypothesis_verdicts.tex",
+        root / "paper" / "tables" / "patell_bmp_summary.csv",
+        root / "paper" / "figures" / "cma_mechanism_heatmap.png",
+        root / "paper" / "figures" / "cma_verdicts_2d_robustness.png",
+        root / "paper" / "figures" / "cma_verdicts_2d_robustness.pdf",
+        root / "paper" / "rdd" / "rdd_status.csv",
+        root / "paper" / "rdd" / "rdd_robustness.csv",
+        root / "paper" / "rdd" / "mccrary_density_test.csv",
+        root / "paper" / "narrative" / "research_delivery_package.md",
+        root / "paper" / "narrative" / "pre_registration.md",
+        root / "paper" / "narrative" / "limitations.md",
+        root / "paper" / "narrative" / "verdict_iteration.md",
+        root / "paper" / "narrative" / "hs300_rdd_l3_collection_audit.md",
+        root / "paper" / "data" / "pre-registration-2026-05-03.csv",
+    )
 
 
 def audit_main_event_study(root: Path = ROOT, *, require_bundle: bool = True) -> AuditResult:
@@ -752,21 +778,73 @@ def audit_pap_limitations(root: Path = ROOT, *, require_bundle: bool = True) -> 
     )
 
 
+def _validate_paper_bundle_manifest(root: Path, *, required_paths: Sequence[Path]) -> list[str]:
+    paper_root = root / "paper"
+    manifest_path = paper_root / "manifest.json"
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        return [f"manifest unreadable: {exc}"]
+
+    artifacts = payload.get("artifacts")
+    if not isinstance(artifacts, list):
+        return ["manifest artifacts must be a list"]
+
+    problems: list[str] = []
+    if payload.get("bundle_label") != "index-inclusion-paper-bundle":
+        problems.append("manifest bundle_label is not index-inclusion-paper-bundle")
+    if payload.get("manifest_schema_version") != 1:
+        problems.append("manifest_schema_version must be 1")
+    if payload.get("artifact_count") != len(artifacts):
+        problems.append(
+            f"artifact_count={payload.get('artifact_count')} but artifacts={len(artifacts)}"
+        )
+
+    targets_seen: set[str] = set()
+    for index, entry in enumerate(artifacts):
+        if not isinstance(entry, dict):
+            problems.append(f"artifact[{index}] is not an object")
+            continue
+        target_value = entry.get("target")
+        if not isinstance(target_value, str) or not target_value:
+            problems.append(f"artifact[{index}] target is missing")
+            continue
+        target_rel = Path(target_value)
+        if target_rel.is_absolute() or ".." in target_rel.parts:
+            problems.append(f"{target_value}: target must stay under paper/")
+            continue
+        target_path = paper_root / target_rel
+        targets_seen.add(target_rel.as_posix())
+        if not target_path.is_file():
+            problems.append(f"{target_value}: target file is missing")
+            continue
+        expected_hash = entry.get("sha256")
+        actual_hash = hashlib.sha256(target_path.read_bytes()).hexdigest()
+        if expected_hash != actual_hash:
+            problems.append(f"{target_value}: sha256 mismatch")
+        expected_size = entry.get("size_bytes")
+        actual_size = target_path.stat().st_size
+        if expected_size != actual_size:
+            problems.append(f"{target_value}: size_bytes mismatch")
+
+    generated_bundle_files = {
+        "README.md",
+        "bundle_summary.md",
+        "manifest.json",
+    }
+    for required in required_paths:
+        try:
+            target = required.relative_to(paper_root).as_posix()
+        except ValueError:
+            continue
+        if target not in generated_bundle_files and target not in targets_seen:
+            problems.append(f"{target}: required bundle artifact missing from manifest")
+    return problems
+
+
 def audit_paper_bundle(root: Path = ROOT, *, require_bundle: bool = True) -> AuditResult:
     claim = "交付包：paper/ 聚合正文表、图、叙事、RDD 与 PAP 数据，可以独立支撑写作/答辩。"
-    required = (
-        root / "paper" / "README.md",
-        root / "paper" / "bundle_summary.md",
-        root / "paper" / "tables" / "event_study_summary.tex",
-        root / "paper" / "tables" / "cma_hypothesis_verdicts.tex",
-        root / "paper" / "tables" / "patell_bmp_summary.csv",
-        root / "paper" / "figures" / "cma_mechanism_heatmap.png",
-        root / "paper" / "figures" / "cma_verdicts_2d_robustness.png",
-        root / "paper" / "figures" / "cma_verdicts_2d_robustness.pdf",
-        root / "paper" / "rdd" / "rdd_robustness.csv",
-        root / "paper" / "narrative" / "research_delivery_package.md",
-        root / "paper" / "data" / "pre-registration-2026-05-03.csv",
-    )
+    required = _paper_bundle_required_paths(root)
     missing = _fail_missing(
         name="paper_bundle_claim",
         claim=claim,
@@ -776,11 +854,22 @@ def audit_paper_bundle(root: Path = ROOT, *, require_bundle: bool = True) -> Aud
     )
     if missing:
         return missing
+    manifest_problems = _validate_paper_bundle_manifest(root, required_paths=required)
+    if manifest_problems:
+        return AuditResult(
+            name="paper_bundle_claim",
+            status="fail",
+            claim=claim,
+            message="paper/manifest.json is inconsistent with the staged bundle.",
+            fix="Run `make paper` to rewrite the bundle and manifest from current artifacts.",
+            artifacts=_existing_artifacts(required, root=root),
+            details=tuple(manifest_problems),
+        )
     return AuditResult(
         name="paper_bundle_claim",
         status="pass",
         claim=claim,
-        message="Paper bundle contains the expected tables, figures including the CMA 2D robustness heatmap, RDD files, narrative docs, and PAP snapshot.",
+        message="Paper bundle contains the expected tables, figures including the CMA 2D robustness heatmap, RDD files, narrative docs, PAP snapshot, and matching manifest hashes.",
         artifacts=_existing_artifacts(required, root=root),
     )
 
