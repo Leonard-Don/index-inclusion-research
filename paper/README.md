@@ -83,17 +83,17 @@
 - `rdd/l3_coverage_timeline.png`
 - `rdd/rdd_robustness_forest.png`
 
-## narrative/ — 论文写作叙事 / 边界 / 预注册
+## narrative/ — 论文写作叙事 / 边界 / 分析参数
 
 - `narrative/paper_outline.md`
 - `narrative/paper_outline_verdicts.md`
 - `narrative/research_delivery_package.md`
-- `narrative/pre_registration.md`
+- `narrative/analysis_parameters.md`
 - `narrative/limitations.md`
 - `narrative/verdict_iteration.md`
 - `narrative/hs300_rdd_l3_collection_audit.md`
 
-## data/ — 数据来源（候选样本 + PAP snapshot）
+## data/ — 数据来源（候选样本 + 裁决基线快照）
 
 - `data/hs300_rdd_candidates.csv`
 - `data/pre-registration-2026-05-03.csv`

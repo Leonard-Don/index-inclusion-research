@@ -1,10 +1,11 @@
 # 研究状态快照
 
-## 预注册基线 (PAP)
+## 裁决基线快照
 
-- 快照文件：`snapshots/pre-registration-2026-05-16.csv`
+- 快照文件：`snapshots/pre-registration-2026-05-16.csv`（文件名为历史命名）
 - 基线日期：`2026-05-16`
 - 假说数：7 行
+- 说明：H1–H7 为 post-hoc、探索性裁决，此快照用于跨时间观察 verdict 稳定性，非预注册。
 
 ## CMA 假说裁决
 
@@ -21,7 +22,7 @@
 
 ## HS300 RDD 主结果
 
-- main 局部线性 τ = 3.92% (p = 0.048, n = 120)
+- main 局部线性 τ = 4.01% (p = 0.045, n = 118)
 - 完整稳健性面板见 `rdd/rdd_robustness.csv` 与 `rdd/rdd_robustness_forest.png`。
 
 ---

@@ -1,6 +1,6 @@
 # 指数纳入效应跨市场不对称研究 · 方法论摘要
 
-**生成时间**: 2026-05-20 | **PAP 基线**: 2026-05-16
+**生成时间**: 2026-05-20 | **裁决基线快照**: 2026-05-16
 
 ## 1. 样本规模
 
@@ -27,7 +27,7 @@
 | AR 模型 | 默认 `ret - benchmark_ret` (简单市场调整)；可选 market-model β (估计窗口 -120 to -10) |
 | 标准化 | t 检验 (默认) + Patell Z (1976) + BMP t (1991) |
 | 多重检验 | Bonferroni & Benjamini-Hochberg |
-| Bootstrap | Block bootstrap (按 `announce_date` 分块，1000 iterations) |
+| Bootstrap | Block bootstrap (按 `announce_date` 分块，5000 iterations) |
 | RDD (HS300) | Local linear regression (bandwidth 0.06)；donut / polynomial / placebo 稳健性 |
 
 ## 3. 稳健性覆盖
@@ -53,11 +53,13 @@
 
 完整解读见 `results/real_tables/power_analysis_report.md` 与 `docs/limitations.md` §7。
 
-## 4. PAP 纪律
+## 4. 裁决基线快照
+
+> H1–H7 是 post-hoc、探索性裁决，非预注册（详见 `docs/limitations.md` §6）。下表的"裁决基线快照"是跨时间观察 verdict 稳定性的工具，不是 pre-analysis plan。
 
 | 项 | 状态 |
 |---|---|
-| 预注册基线 | 冻结于 2026-05-16 (`snapshots/pre-registration-2026-05-16.csv`) |
+| 裁决基线快照 | 2026-05-16 冻结 (`snapshots/pre-registration-2026-05-16.csv`，文件名为历史命名) |
 | 当前偏离 | 全部未偏离（all_unchanged=True） |
 | 偏离审计 CLI | `index-inclusion-pap-diff` (默认非阻断 / `--strict` 阻断) |
 | Doctor 主动监控 | `check_pap_deviation_no_flips` · `check_pap_snapshot_freshness` |
@@ -92,6 +94,6 @@ index-inclusion-methodology-summary       # regenerate this card
 ## 8. 工具链
 
 - 48 个 console scripts（见 `docs/cli_reference.md`）
-- Doctor：30 个 health checks（主动监控 verdicts + figures + PAP + paper skeleton + methodology summary）
+- Doctor：30 个 health checks（主动监控 verdicts + figures + 裁决基线快照 + paper skeleton + methodology summary）
 - Public summary：`data/public/index_research_summary.json` (schema v1)
 - Paper bundle：72 artifacts auto-collected from `results/`，含本卡片 (`paper/methodology_summary.md`)

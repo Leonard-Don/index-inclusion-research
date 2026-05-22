@@ -52,24 +52,33 @@
 ## 5. 事件研究方法
 
 - **AR 计算**：默认仍为简单市场调整（`ar = ret − benchmark_ret`，向后兼容；
-  主表、PAP 与 CMA verdict 都钉在这一引擎上）。通过
+  主表与 CMA verdict 都钉在这一引擎上）。通过
   `index-inclusion-run-event-study --ar-model market` 可切换到带 β 估计的市场模型 AR
   （`ar_market_model = ret − (α + β·benchmark_ret)`，估计窗口默认 (-120, -10)，
   与短窗口事件研究文献一致；用 `--estimation-window LOW,HIGH` 改写）。切换引擎
   在 CN 样本上经验上会让 CAR 偏移约 5-15 bps（β 与 1 之差带来的修正），主表
-  保持不变；若要纳入论文需重新跑 PAP §7 决策。
+  保持不变；若要把另一引擎纳入论文，应在 `docs/analysis_parameters.md` 的变更日志中记录这次口径变更。
 - **σ 估计**：默认从 panel 内 `[-window_pre, -2]` 区间估计 (window_pre 默认 20)；
   这是 18 日的 in-panel proxy estimation window，比文献标准（120-250 日）短。
 - **标准化**：`compute_patell_bmp_summary` 在简单 t 之外提供 Patell t 与 BMP t；
   在样本量充足时建议优先看 BMP（不假设零相关）。
 - **长窗口** `[0,+120]`：样本会大幅缩水，仅作探索性结果，不进入主表。
 
-## 6. 多重检验
+## 6. 多重检验与 post-hoc 披露
 
 - **当前阈值**：决定层 p<0.10（默认）；输出层附 Bonferroni 与 Benjamini-Hochberg q-value。
-- **Pre-registration**：7 假说 PAP 草稿见 [`docs/pre_registration.md`](pre_registration.md)（冻结日 2026-05-03）。
-  在 PAP §7 决策日志签字之前，仍按 **post-hoc** 表述；签字后可升级为 **confirmatory**。
-  详细 verdict 迭代流程见 [`docs/verdict_iteration.md`](verdict_iteration.md)。
+- **H1–H7 是 post-hoc、探索性假说**：本项目 **没有预分析计划 (pre-analysis plan)**。
+  7 条 CMA 假说是在观察到 announce-vs-effective、CN-vs-US 的不对称结果**之后**形成的，
+  属于探索性解释，**不是 confirmatory 验证**。裁决阈值（p<0.10、内阈值 0.05）是在
+  已知结果的情况下选定的分析参数，没有事前承诺。多重检验校正
+  （Bonferroni、Benjamini-Hochberg）虽已在 `cma_hypothesis_verdicts.csv` 中报告，
+  但同样是在假说选定**之后**应用的。因此论文与汇报中引用 H1–H7 时，应明确表述为
+  post-hoc 探索性证据，并优先只把 `evidence_tier=core` 的假说放进主表。
+- **分析参数记录**：7 假说的判据、阈值与样本边界集中记录在
+  [`docs/analysis_parameters.md`](analysis_parameters.md)——这是一份透明性文档，
+  **不是 pre-analysis plan**。verdict 跨时间稳定性可用 `index-inclusion-verdict-summary
+  --vs-pap` 对比裁决基线快照查看；详细 verdict 迭代流程见
+  [`docs/verdict_iteration.md`](verdict_iteration.md)。
 
 ## 7. 每假说的统计功效（post-hoc）
 
@@ -99,9 +108,17 @@
 
 ### 7.1 各假说功效裁决（paper-ready 摘要）
 
+- **H3 的"支持 / 高置信度"裁决建立在 n=4 上，而项目自己的功效分析给出 power≈0**。
+  H3 的裁决变量是 4 个 CN/US × announce/effective 象限的 dual-channel 命中率（3/4=0.75）。
+  在 n=4、α=0.05 下：正态近似功效仅 ≈ 0.13，**精确二项检验下根本不存在 rejection
+  region（exact-binomial power = 0.000）**——也就是说，即便真实命中率确实是 75%，
+  本设计在 n=4 下几乎无法把它从零区分开。因此 H3 的"支持"必须读作**方向性、
+  描述性**的证据，其"高置信度"标签反映的是命中率点估计本身（3/4），**不是**一个有
+  统计功效支撑的结论。论文里 H3 只应作为 supplementary，并明确写出 n=4 / power≈0
+  的限制；不要让 §3.3 的"支持/高"被读成强证据。
 - **H4 is severely underpowered (n=436, observed power ≈ 0.09)**。 paper §5 应保留为 supplementary 并把口径写成"在当前样本下证据不足以拒零，**不构成对 H4 的反证**"。
 - **H5 is moderately powered (n=936, observed power ≈ 0.75)**，恰好落在 0.80 阈值之下。 frequentist 显著（p=0.008）+ 方向正确，可继续作为 main finding，**但在 §5 局限性段落明示"观测效应处于可检测边界"**。
-- **H3 is severely underpowered (n=4, power ≈ 0.13)** + **H6 is direction-mismatched (power ≈ 1.0, d=−0.73)**：保留既有处理（H3 supplementary，H6 reframed as 'evidence against' rather than 'evidence for'）。
+- **H6 is direction-mismatched (power ≈ 1.0, d=−0.73)**：保留既有处理（H6 reframed as 'evidence against' rather than 'evidence for'）。
 
 ## 8. CMA 假说证据强度分层
 

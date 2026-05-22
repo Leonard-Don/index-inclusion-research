@@ -1,14 +1,19 @@
 # Verdict 迭代追踪
 
-## Pre-registration status
+## 裁决性质
 
-7 条 CMA 假说截至 2026-05 仍是 **post-hoc**（详见 `docs/limitations.md` §6 与 `docs/paper_outline_verdicts.md`）。本文档定义的 verdict-diff 工作流就是为了支持**未来的预注册迭代**：
+7 条 CMA 假说是 **post-hoc、探索性**的——它们在观察到 announce-vs-effective、
+CN-vs-US 不对称结果之后形成，本项目**没有预分析计划**（详见 `docs/limitations.md` §6
+与 `docs/paper_outline_verdicts.md`）。本文档定义的 verdict-diff 工作流是一个
+**裁决稳定性追踪工具**：它让你在数据扩展或代码改动后看清 7 条 verdict 有没有翻转，
+**不是**预注册机制，也不会把 post-hoc 裁决转化为 confirmatory 结论。
 
-1. 在打 tag 的 commit 里冻结：假说文本、p 阈值、样本筛选规则。
+1. 在打 tag 的 commit 里记录当下的：假说文本、p 阈值、样本筛选规则。
 2. 跑 `index-inclusion-cma`，把当前 `cma_hypothesis_verdicts.csv` 快照到 `cma_hypothesis_verdicts.previous.csv`（`--snapshot <path>` 可指定别处）。
 3. 修数据 / 改代码后再跑，用 `--compare-with <previous>` 对比方向变化；verdict 文本和阈值保持不变。
 
-任何偏离预注册设计（增删假说、改阈值、换样本口径）必须在本文档下方"决策日志"里记录日期与原因。
+增删假说、改阈值、换样本口径等改动会改变分析参数，请在
+`docs/analysis_parameters.md` §7 的变更日志里记录日期与原因，便于读者追溯。
 
 ## diff 工作流
 
