@@ -247,7 +247,7 @@
   \item \textbf{样本规模}：893 个真实事件（274 CN + 619 US，2010-2025）。
 \end{itemize}
 
-\section{3. 被动 AUM（H2 假说）}
+\section{3. 被动 AUM 数据}
 
 \begin{itemize}
   \item \textbf{US 来源}：Federal Reserve Z.1 系列（\texttt{BOGZ1FL564090005A}，US ETF Total Financial Assets）。
@@ -262,45 +262,27 @@
   生成命令：\texttt{uv run index-inclusion-download-cn-passive-aum-proxy}。
 \begin{itemize}
   \item \textbf{CN 数据局限（必须在论文中披露）}：
-  \item 这是 \textbf{TNA 聚合 proxy}，不是基金业协会披露的官方“被动 AUM”口径；
-  \item ETF 宇宙逐年扩张（2024 年下半年是机构 ETF 配置爆发期），早年快照天然
-\end{itemize}
-    低估真实被动跟踪 AUM；
-\begin{itemize}
-  \item n=5 个年终快照（2020-2024），仍少于 US 的 12 个，但 H2 verdict 已升级为
-\end{itemize}
-    "core" 因为合并 n（CN rolling CAR 5 + US rolling CAR 12 = 17）越过 \texttt{EVIDENCE\_TIER\_PROMOTION\_FLOOR["H2"]=15} 阈值；
-\begin{itemize}
+  \item 这是 \textbf{TNA 聚合 proxy}，不是基金业协会披露的官方”被动 AUM”口径；
+  \item ETF 宇宙逐年扩张（2024 年下半年是机构 ETF 配置爆发期），早年快照天然低估真实被动跟踪 AUM；
+  \item n=5 个年终快照（2020-2024），仍少于 US 的 12 个；
   \item 数据新鲜度依赖 akshare（东方财富 / 上交所 / 深交所）公开接口，刷新周期由
-\end{itemize}
     \texttt{download\_cn\_passive\_aum\_proxy} 控制；
-\begin{itemize}
-  \item 单位是 CNY trillion，而 US 行是 USD trillion，\textbf{不能跨币种直接比较绝对值}。
+  \item 单位是 CNY trillion，而 US 行是 USD trillion，\textbf{不能跨币种直接比较绝对值}；跨市场比较只用市场内首尾趋势方向，因此币种差异不影响方向性解读。
 \end{itemize}
-    H2 verdict 只用市场内首尾趋势方向，所以币种不一致不污染裁决结果。
+  上述两套数据在 §6 讨论（1）中用于说明中美被动规模的量级差异，支持”需求渠道若为主导则应产生可识别的跨市场量级分化”这一逻辑。
 \begin{itemize}
   \item \textbf{保留的另一份 CN 数据}：\texttt{data/raw/passive\_aum.csv} 仍保留 top-down \texttt{download\_passive\_aum\_cn}
+    写入的 CN 行（公募基金总规模 × 指数型占比）。如果未来要回退到旧口径，删除 \texttt{data/raw/cn\_passive\_aum\_proxy.csv} 即可。
 \end{itemize}
-  写入的 CN 行（公募基金总规模 × 指数型占比），但 CMA 编排时被 proxy 覆盖。
-  如果未来要回退到旧口径，删除 \texttt{data/raw/cn\_passive\_aum\_proxy.csv} 即可。
 
 \section{4. HS300 RDD 数据层级}
 
-\begin{itemize}
-  \item \textbf{L3（官方）}：2020-11 到 2025-11 共 11 个批次，356 行（含 191 调入 + 165 备选对照）。详见 \texttt{docs/hs300\_rdd\_data\_contract.md}。
-  \item \textbf{L2（公开重建）}：1887 行；从公开调整新闻反推，\textbf{不等价于中证官方历史排名}。
-  \item \textbf{L1（演示）}：合成数据，仅供 pipeline 测试。
-  \item \textbf{当前主表使用}：默认 L3；缺失时返回 \texttt{missing} 状态而非自动降级。
-  \item \textbf{若要支持论文级因果声明}：需扩展 L3 到 ≥10 年并补 McCrary 操纵性检验，
-\end{itemize}
-  详见 \texttt{docs/hs300\_rdd\_l3\_collection\_audit.md}。
+本项目曾探索沪深 300 调整名单的断点回归（RDD），但其 running variable 是由调整名单序号构造的有序变量（并非交易所历史自由流通市值的真实打分），与处理变量完全共线，不构成有效的断点识别。因此 HS300 RDD 不进入本文的实证主线，仅作为方法学教训在此保留说明，避免读者误以为本项目存在准实验式的因果识别。如需将 RDD 路径用于未来研究，须扩展 L3 官方候选边界样本至 $\geq10$ 年并补充 McCrary 操纵性检验（详见 \texttt{docs/hs300\_rdd\_l3\_collection\_audit.md}），方可支持论文级因果声明。
 
 \section{5. 事件研究方法}
 
 \begin{itemize}
-  \item \textbf{AR 计算}：默认仍为简单市场调整（\texttt{ar = ret − benchmark\_ret}，向后兼容；
-\end{itemize}
-  主表与 CMA verdict 都钉在这一引擎上）。通过
+  \item \textbf{AR 计算}：默认仍为简单市场调整（\texttt{ar = ret − benchmark\_ret}，向后兼容；主表钉在这一引擎上）。通过
   \texttt{index-inclusion-run-event-study --ar-model market} 可切换到带 β 估计的市场模型 AR
   （\texttt{ar\_market\_model = ret − (α + β·benchmark\_ret)}，估计窗口默认 (-120, -10)，
   与短窗口事件研究文献一致；用 \texttt{--estimation-window LOW,HIGH} 改写）。切换引擎
@@ -322,28 +304,11 @@
 
 \begin{itemize}
   \item \textbf{当前阈值}：决定层 p<0.10（默认）；输出层附 Bonferroni 与 Benjamini-Hochberg q-value。
-  \item \textbf{H1–H7 是 post-hoc、探索性假说}：本项目没有预分析计划 (pre-analysis plan)。7 条 CMA 假说是在观察到 announce-vs-effective、CN-vs-US 的不对称结果之后形成的，属于探索性解释，不是 confirmatory 验证。裁决阈值（p<0.10、内阈值 0.05）是在已知结果的情况下选定的分析参数，没有事前承诺；多重检验校正同样是在假说选定之后应用的。引用 H1–H7 时应明确表述为 post-hoc 探索性证据，并优先只把 \texttt{evidence\_tier=core} 的假说放进主表。
+  \item \textbf{H1–H7 是 post-hoc、探索性假说，不进入本文主线}：本项目没有预分析计划 (pre-analysis plan)。7 条跨市场机制假说（H1–H7，涵盖信息泄露、被动 AUM 差异、涨跌停限制、卖空约束等渠道）是在观察到公告/生效窗不对称与中美量级相似这两个主要结果之后形成的，属于早期探索性分析，不是 confirmatory 验证。裁决阈值（p<0.10、内阈值 0.05）是在已知结果的情况下选定的分析参数，没有事前承诺；多重检验校正同样是在假说选定之后应用的。本文的核心实证主线是§4 报告的公告窗/生效窗 CAR 对比及跨制度相似性；H1–H7 探索性裁决不作为本文核心论点的支撑证据，相关分析参数与记录见 \texttt{docs/analysis\_parameters.md}，供对机制细节感兴趣的读者参考（与 §6 讨论（3）所述一致）。
   \item \textbf{分析参数记录}：7 假说的判据、阈值与样本边界集中记录在 [\texttt{docs/analysis\_parameters.md}](analysis\_parameters.md)——这是一份透明性文档，不是 pre-analysis plan。
 \end{itemize}
   verdict 跨时间稳定性可用 \texttt{index-inclusion-verdict-summary --vs-pap} 对比裁决基线快照查看；
   详细 verdict 迭代流程见 [\texttt{docs/verdict\_iteration.md}](verdict\_iteration.md)。
-
-\section{7. CMA 假说证据强度分层}
-
-\begin{itemize}
-  \item \textbf{核心假说（core, n 充足）}：H1（n=436）、H5（n=936）、H7（sector spread n=187；交互回归 n=1882）；
-\end{itemize}
-  H2 在补入 CN ETF TNA proxy 后由 supplementary 升级为 core（合并 n=17：US rolling 12 + CN rolling 5,超过 \texttt{EVIDENCE\_TIER\_PROMOTION\_FLOOR["H2"]=15} 阈值）。
-\begin{itemize}
-  \item \textbf{附录假说（supplementary, n 受限）}：
-  \item H3（n=4 象限，dual-channel 判据）
-  \item H4（n=436 但回归 p=0.537，不显著）
-  \item H6（n=67）
-  \item 该分层在 \texttt{analysis/cross\_market\_asymmetry/verdicts/\_core.py} 中由 \texttt{EVIDENCE\_TIER} 与
-\end{itemize}
-  \texttt{EVIDENCE\_TIER\_PROMOTION\_FLOOR} 联合决定，并由 \texttt{\_make\_verdict} 写入
-  \texttt{cma\_hypothesis\_verdicts.csv} 的 \texttt{evidence\_tier} 列；H2 是当前唯一启用
-  combined-n 数据驱动升级的假说，目的就是在 CN AUM 数据补齐后避免人工硬改。
 
 \section{8. 何时不要用本项目结论}
 
@@ -412,7 +377,7 @@ akshare 上交所/深交所 ETF 份额与东方财富 ETF NAV（CN 被动 AUM pr
 
 \textbf{基准表 \texttt{benchmarks.csv}}：字段为 \texttt{market} / \texttt{date} / \texttt{benchmark\_ret}，中国为 CSI300 指数收益、美国为标普 500 指数收益。
 
-\textbf{被动 AUM 与行业标签}：美国被动 AUM 为 Federal Reserve Z.1 年度序列（USD trillion），中国为 ETF TNA 聚合 proxy（CNY trillion），两者单位不同、不可跨币种直接比较绝对值，裁决只用市场内首尾趋势方向。行业标签当前中美使用各自分类体系（中国 35 类、美国 11 类）。所有近似口径的边界见 §5 与 \texttt{docs/limitations.md}。
+\textbf{被动 AUM 与行业标签}：美国被动 AUM 为 Federal Reserve Z.1 年度序列（USD trillion），中国为 ETF TNA 聚合 proxy（CNY trillion），两者单位不同、不可跨币种直接比较绝对值；§6 讨论（1）仅用市场内首尾趋势方向说明中美量级差距，以支持跨制度渠道识别的逻辑。行业标签当前中美使用各自分类体系（中国 35 类、美国 11 类）。所有近似口径的边界见 §5 与 \texttt{docs/limitations.md}。
 
 \subsection{B. CLI 入口 (48 个)}
 
@@ -420,10 +385,10 @@ akshare 上交所/深交所 ETF 份额与东方财富 ETF NAV（CN 被动 AUM pr
 
 \subsection{C. 复现指南}
 
-本文所有图表、表与裁决可通过下列命令一键复现：
+本文所有图表、表与分析结果可通过下列命令一键复现：
 
 ```bash
-make rebuild           \# 10 步流水线：从原始数据到 CMA verdict
+make rebuild           \# 10 步流水线：从原始数据到事件研究结果
 make figures-tables    \# 重绘 5 张论文级 figure
 make paper             \# 论文交付包：自动复制到 paper/
 index-inclusion-export-public-summary  \# 刷新公共摘要 data/public/index\_research\_summary.json
@@ -439,6 +404,8 @@ index-inclusion-paper-skeleton --force \# 重新生成本骨架
 \textbf{生成时间}: 2026-05-17 | \textbf{裁决基线快照}: 2026-05-16
 
 \section{1. 样本规模}
+
+下表为早期探索性假说（H1–H7）的样本规模与分类，仅供数据透明性参考；这些假说均为 post-hoc 探索性分析，不进入本文的实证主线（主线为公告窗/生效窗 CAR 跨市场对比，详见正文 §4 与 §6 讨论（3））。
 
 \begin{table}[ht]
   \centering
@@ -458,7 +425,7 @@ index-inclusion-paper-skeleton --force \# 重新生成本骨架
   \end{tabular}
 \end{table}
 
-\textbf{事件研究面板}:
+\textbf{事件研究面板}（本文核心数据基础）：
 
 \begin{itemize}
   \item 真实事件：893 行 (\texttt{data/processed/real\_events\_clean.csv})
@@ -479,12 +446,14 @@ index-inclusion-paper-skeleton --force \# 重新生成本骨架
     标准化 & t 检验 (默认) + Patell Z (1976) + BMP t (1991) \\
     多重检验 & Bonferroni \& Benjamini-Hochberg \\
     Bootstrap & Block bootstrap (按 \texttt{announce\_date} 分块，5000 iterations) \\
-    RDD (HS300) & Local linear regression (bandwidth 0.06)；donut / polynomial / placebo 稳健性 \\
+    RDD (HS300) & Local linear regression (bandwidth 0.06)；donut / polynomial / placebo 稳健性；\textbf{注：RDD 不进入本文实证主线}（running variable 与处理变量共线，见 §限制 4） \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 \section{3. 稳健性覆盖}
+
+以下稳健性覆盖针对早期探索性假说（H1–H7）的裁决稳定性，不代表本文核心事件研究结论的稳健性维度（核心稳健性见正文 §5）。
 
 \begin{table}[ht]
   \centering
