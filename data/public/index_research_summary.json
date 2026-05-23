@@ -8,7 +8,7 @@
     "results/figures/verdict_timeline.png",
     "results/literature/literature_timeline.png"
   ],
-  "generated_at": "2026-05-20T14:07:50+00:00",
+  "generated_at": "2026-05-23T02:14:55+00:00",
   "hs300_rdd": {
     "main_bandwidth": 0.0600000000000022,
     "main_n_obs": 118,
@@ -78,7 +78,7 @@
     ]
   },
   "pap_baseline": {
-    "frozen_for_days": 4,
+    "frozen_for_days": 7,
     "path_ref": "snapshots/pre-registration-2026-05-16.csv",
     "snapshot_date": "2026-05-16"
   },

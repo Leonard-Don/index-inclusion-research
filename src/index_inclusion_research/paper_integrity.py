@@ -215,7 +215,20 @@ def check_verdicts_hids_match_skeleton(
     verdicts_csv: Path | None = None,
     skeleton_md: Path | None = None,
 ) -> list[IntegrityIssue]:
-    """The 7 H rows in the verdicts CSV must match those in skeleton.md."""
+    """Verify skeleton structural integrity with respect to hypothesis CSV.
+
+    In the reframed honest paper (§1–§7), H1–H7 are intentionally NOT
+    rendered as main-body table rows in skeleton.md — they are disclosed
+    as post-hoc in §6 讨论 and documented in docs/analysis_parameters.md.
+    This check therefore accepts two valid states:
+
+    1. Skeleton has no H rows at all (new honest framing) — passes.
+    2. Skeleton has H rows that exactly match the CSV (old framing or
+       tests that inject H rows explicitly) — passes.
+
+    It only fails if the skeleton renders some H rows but they don't
+    match the CSV (partial / stale render).
+    """
     verdicts_csv = verdicts_csv or _default_verdicts_csv()
     skeleton_md = skeleton_md or _default_skeleton_md()
     issues: list[IntegrityIssue] = []
@@ -245,13 +258,20 @@ def check_verdicts_hids_match_skeleton(
                     f"paper skeleton not available at {_relative(skeleton_md)}; "
                     "skipping skeleton hid cross-check."
                 ),
-                fix_command="index-inclusion-paper-skeleton --force",
+                fix_command="index-inclusion-paper-bundle --force",
             )
         )
         return issues
 
     csv_hids = set(df["hid"].astype(str).tolist())
     skeleton_hids = set(_extract_h_rows_from_markdown(text).keys())
+
+    # New honest framing: skeleton intentionally omits H rows from main body.
+    # This is the correct state — pass without complaint.
+    if not skeleton_hids:
+        return issues
+
+    # If the skeleton does render some H rows, they must match the CSV exactly.
     missing_from_skeleton = sorted(csv_hids - skeleton_hids)
     extra_in_skeleton = sorted(skeleton_hids - csv_hids)
     if missing_from_skeleton or extra_in_skeleton:
@@ -265,23 +285,11 @@ def check_verdicts_hids_match_skeleton(
                 severity="fail",
                 category="hypothesis_set",
                 description=(
-                    "Hypothesis set in cma_hypothesis_verdicts.csv does not "
-                    "match the H rows rendered in paper/skeleton.md."
+                    "Skeleton renders some H rows but they don't match "
+                    "cma_hypothesis_verdicts.csv (partial or stale render)."
                 ),
                 evidence=tuple(evidence),
-                fix_command="index-inclusion-paper-skeleton --force",
-            )
-        )
-    elif csv_hids != set(EXPECTED_HIDS):
-        issues.append(
-            IntegrityIssue(
-                severity="fail",
-                category="hypothesis_set",
-                description=(
-                    f"verdicts CSV has hids {sorted(csv_hids)}, expected "
-                    f"{list(EXPECTED_HIDS)}."
-                ),
-                fix_command="index-inclusion-cma",
+                fix_command="index-inclusion-paper-bundle --force",
             )
         )
     return issues

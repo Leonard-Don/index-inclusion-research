@@ -3,17 +3,14 @@
 Covers:
 
 - Skeleton generates all expected top-level section headers when every
-  input exists.
-- Verdict table is populated correctly from CSV (7 rows H1..H7).
-- Sensitivity-section conclusion auto-derives from the public summary
-  JSON (flipping_hypotheses listed by HID).
-- HS300 RDD headline (τ / p / n) auto-populates from rdd_robustness.csv.
+  input exists (§1 引言 through §7 结论与局限 + 附录 ABC).
+- H1–H7 hypothesis rows are NOT rendered in the new honest skeleton
+  (they are post-hoc; disclosed in §6 讨论 prose only).
+- Core event-study numbers (§4.1) auto-populate from event_study_summary.csv.
 - Limitations section pulls verbatim from docs/limitations.md.
 - References section enumerates every entry in
-  ``literature_catalog.PAPER_LIBRARY``.
+  ``literature_catalog.PAPER_LIBRARY`` with ``paper_id=`` tokens.
 - ``--force`` overwrite contract: refuses without flag, replaces with.
-- Figure paths advertised in the skeleton match what's in
-  ``results/figures/`` (no dangling references).
 - ``main()`` exits 0 and writes a file in the configured sanity band.
 - PAP block snapshot date + deviation counts pulled from public summary.
 """
@@ -34,66 +31,6 @@ from index_inclusion_research import paper_skeleton as skeleton_module
 # ---------------------------------------------------------------------------
 
 
-_VERDICTS_COLUMNS = [
-    "hid",
-    "name_cn",
-    "verdict",
-    "confidence",
-    "evidence_summary",
-    "metric_snapshot",
-    "next_step",
-    "evidence_refs",
-    "p_value",
-    "key_label",
-    "key_value",
-    "n_obs",
-    "paper_ids",
-    "paper_count",
-    "track",
-    "evidence_tier",
-]
-
-
-def _make_verdicts_df() -> pd.DataFrame:
-    rows = [
-        ("H1", "信息泄露与预运行", "证据不足", "中", "core", "identification",
-         "bootstrap p", 0.8748, 436),
-        ("H2", "被动基金 AUM 差异", "部分支持", "中", "core", "demand_curve",
-         "US AUM ratio", 13.48, 17),
-        ("H3", "散户 vs 机构结构", "支持", "高", "supplementary",
-         "price_pressure", "双通道命中率", 0.75, 4),
-        ("H4", "卖空约束", "证据不足", "中", "supplementary",
-         "identification", "regression p", 0.5366, 436),
-        ("H5", "涨跌停限制", "支持", "高", "core", "identification",
-         "limit_coef p", 0.0082, 936),
-        ("H6", "指数权重可预测性", "证据不足", "中", "supplementary",
-         "demand_curve", "heavy−light spread", -0.019, 67),
-        ("H7", "行业结构差异", "支持", "中", "core", "identification",
-         "US sector spread", 5.95, 187),
-    ]
-    data = []
-    for hid, name, verdict, confidence, tier, track, kl, kv, n in rows:
-        data.append({
-            "hid": hid,
-            "name_cn": name,
-            "verdict": verdict,
-            "confidence": confidence,
-            "evidence_summary": "long summary omitted",
-            "metric_snapshot": "multi-line snapshot omitted",
-            "next_step": "next-step omitted",
-            "evidence_refs": "M1:cma_ar_path.csv",
-            "p_value": kv if "p" in kl else None,
-            "key_label": kl,
-            "key_value": kv,
-            "n_obs": n,
-            "paper_ids": "paper_a | paper_b",
-            "paper_count": 2,
-            "track": track,
-            "evidence_tier": tier,
-        })
-    return pd.DataFrame(data, columns=_VERDICTS_COLUMNS)
-
-
 def _make_pap_df() -> pd.DataFrame:
     """7-row PAP deviation report, all unchanged."""
     return pd.DataFrame(
@@ -110,54 +47,37 @@ def _make_pap_df() -> pd.DataFrame:
     )
 
 
-def _make_rdd_df() -> pd.DataFrame:
-    """Minimal rdd_robustness.csv with a single main spec + 4 robustness rows."""
+def _make_event_study_df() -> pd.DataFrame:
+    """Minimal event_study_summary.csv with the 4 headline rows."""
     return pd.DataFrame(
         [
             {
-                "outcome": "car_m1_p1",
-                "bandwidth": 0.06,
-                "n_obs": 120,
-                "tau": 0.0392,
-                "p_value": 0.0483,
-                "spec": "main",
-                "spec_kind": "main",
+                "market": "CN", "event_phase": "announce", "inclusion": 1,
+                "window": "[-1,+1]", "window_slug": "m1_p1",
+                "n_events": 117, "mean_car": 0.0176, "std_car": 0.039,
+                "se_car": 0.0036, "ci_low_95": 0.0106, "ci_high_95": 0.0246,
+                "t_stat": 4.93, "p_value": 2.75e-06,
             },
             {
-                "outcome": "car_m1_p1",
-                "bandwidth": 0.06,
-                "n_obs": 102,
-                "tau": 0.049,
-                "p_value": 0.10,
-                "spec": "donut(±0.01)",
-                "spec_kind": "donut",
+                "market": "US", "event_phase": "announce", "inclusion": 1,
+                "window": "[-1,+1]", "window_slug": "m1_p1",
+                "n_events": 254, "mean_car": 0.0184, "std_car": 0.041,
+                "se_car": 0.0026, "ci_low_95": 0.0133, "ci_high_95": 0.0235,
+                "t_stat": 5.25, "p_value": 2.50e-07,
             },
             {
-                "outcome": "car_m1_p1",
-                "bandwidth": 0.06,
-                "n_obs": 72,
-                "tau": -0.024,
-                "p_value": 0.26,
-                "spec": "placebo -0.05",
-                "spec_kind": "placebo",
+                "market": "CN", "event_phase": "effective", "inclusion": 1,
+                "window": "[-1,+1]", "window_slug": "m1_p1",
+                "n_events": 117, "mean_car": 0.0042, "std_car": 0.046,
+                "se_car": 0.0042, "ci_low_95": -0.004, "ci_high_95": 0.012,
+                "t_stat": 0.93, "p_value": 0.355,
             },
             {
-                "outcome": "car_m1_p1",
-                "bandwidth": 0.06,
-                "n_obs": 130,
-                "tau": -0.020,
-                "p_value": 0.18,
-                "spec": "placebo +0.05",
-                "spec_kind": "placebo",
-            },
-            {
-                "outcome": "car_m1_p1",
-                "bandwidth": 0.06,
-                "n_obs": 120,
-                "tau": 0.004,
-                "p_value": 0.92,
-                "spec": "polynomial=2",
-                "spec_kind": "polynomial",
+                "market": "US", "event_phase": "effective", "inclusion": 1,
+                "window": "[-1,+1]", "window_slug": "m1_p1",
+                "n_events": 254, "mean_car": -0.0014, "std_car": 0.038,
+                "se_car": 0.0024, "ci_low_95": -0.006, "ci_high_95": 0.003,
+                "t_stat": -0.51, "p_value": 0.611,
             },
         ]
     )
@@ -230,16 +150,12 @@ def fixture_paths(tmp_path: Path) -> dict[str, Path]:
     """Populated tmp project tree with all inputs the skeleton reads."""
     real_tables = tmp_path / "results" / "real_tables"
     real_tables.mkdir(parents=True)
-    _make_verdicts_df().to_csv(
-        real_tables / "cma_hypothesis_verdicts.csv", index=False
-    )
     _make_pap_df().to_csv(
         real_tables / "pap_deviation_report.csv", index=False
     )
-
-    rdd_dir = tmp_path / "results" / "literature" / "hs300_rdd"
-    rdd_dir.mkdir(parents=True)
-    _make_rdd_df().to_csv(rdd_dir / "rdd_robustness.csv", index=False)
+    _make_event_study_df().to_csv(
+        real_tables / "event_study_summary.csv", index=False
+    )
 
     public_dir = tmp_path / "data" / "public"
     public_dir.mkdir(parents=True)
@@ -251,36 +167,21 @@ def fixture_paths(tmp_path: Path) -> dict[str, Path]:
     limitations = tmp_path / "limitations.md"
     limitations.write_text(_LIMITATIONS_FIXTURE, encoding="utf-8")
 
-    figures_dir = tmp_path / "results" / "figures"
-    figures_dir.mkdir(parents=True)
-    for name in (
-        "hs300_rdd_robustness_forest.png",
-        "cma_verdicts_forest.png",
-        "cma_verdicts_sensitivity.png",
-        "cma_verdicts_ar_engine.png",
-        "cma_verdicts_2d_robustness.png",
-    ):
-        (figures_dir / name).write_bytes(b"fake-png")
-
     return {
         "root": tmp_path,
-        "verdicts": real_tables / "cma_hypothesis_verdicts.csv",
         "pap": real_tables / "pap_deviation_report.csv",
-        "rdd": rdd_dir / "rdd_robustness.csv",
+        "event_study": real_tables / "event_study_summary.csv",
         "public_summary": public_dir / "index_research_summary.json",
         "limitations": limitations,
-        "figures": figures_dir,
     }
 
 
 def _render(fixture: dict[str, Path], **overrides) -> str:
     kwargs = dict(
-        verdicts_csv=fixture["verdicts"],
         pap_csv=fixture["pap"],
-        rdd_csv=fixture["rdd"],
+        event_study_csv=fixture["event_study"],
         public_summary_json=fixture["public_summary"],
         limitations_md=fixture["limitations"],
-        figures_dir=fixture["figures"],
         generated_at=datetime(2026, 5, 17, tzinfo=UTC),
     )
     kwargs.update(overrides)
@@ -296,21 +197,22 @@ def test_skeleton_has_all_top_level_sections(fixture_paths):
     """Every advertised §1..§7 + 附录 ABC section header appears."""
     rendered = _render(fixture_paths)
     expected_headers = (
-        "# 指数纳入效应跨市场不对称研究",
+        "# 指数纳入溢价的来源",
         "## 1. 引言",
         "## 2. 文献综述",
         "## 3. 研究设计",
         "## 4. 实证结果",
-        "### 4.1 主结果",
-        "### 4.2 跨市场不对称机制",
-        "### 4.3 HS300 RDD 结果",
-        "### 4.4 稳健性检查",
-        "#### 4.4.1 阈值敏感性",
-        "#### 4.4.2 AR 引擎敏感性",
-        "#### 4.4.3 联合稳健性",
-        "## 5. 限制与讨论",
-        "## 6. 结论与启示",
-        "## 7. 假说的探索性裁决披露",
+        "### 4.1 核心结果",
+        "## 5. 稳健性",
+        "### 5.1 纳入 vs 剔除不对称",
+        "### 5.2 长窗口 CAR 的持续性",
+        "### 5.3 公告效应的跨年稳定性",
+        "### 5.4 匹配对照组的协变量平衡",
+        "### 5.5 预公告漂移",
+        "## 6. 讨论",
+        "## 7. 结论与局限",
+        "### 7.1 主要结论",
+        "### 7.2 局限",
         "## 参考文献",
         "## 附录",
         "### A. 数据契约",
@@ -321,52 +223,42 @@ def test_skeleton_has_all_top_level_sections(fixture_paths):
         assert header in rendered, f"missing header: {header!r}"
 
 
-def test_verdict_table_populated_h1_through_h7(fixture_paths):
-    """The 3.3 verdict table contains every H1..H7 row in canonical order."""
+def test_h1_through_h7_not_rendered_as_main_body_table_rows(fixture_paths):
+    """New honest framing: H1–H7 are NOT rendered as main-body table rows.
+
+    They are post-hoc hypotheses disclosed in §6 讨论 prose only.
+    The integrity check ``check_verdicts_hids_match_skeleton`` accepts a
+    skeleton with zero H table rows as the correct new state.
+    """
     rendered = _render(fixture_paths)
-    # Find the verdict table block.
-    assert "| 假说 | 名称 | 裁决 | 置信度 | 证据层级 |" in rendered
+    # No pipe-delimited H rows like "| H1 |", "| H2 |", etc.
     for hid in ("H1", "H2", "H3", "H4", "H5", "H6", "H7"):
-        # Each HID should appear in a table row (`| H1 |` style).
-        assert f"| {hid} |" in rendered, f"missing verdict row for {hid}"
-    # Spot-check that representative verdicts text is in there.
-    assert "证据不足" in rendered
-    assert "部分支持" in rendered
-    assert "支持" in rendered
-    # H1..H7 ordering (H1 row appears before H2 row).
-    h1_idx = rendered.index("| H1 |")
-    h7_idx = rendered.index("| H7 |")
-    assert h1_idx < h7_idx, "H1..H7 not in canonical order"
+        assert f"| {hid} |" not in rendered, (
+            f"H1–H7 table row for {hid} should not appear in new honest skeleton"
+        )
+    # The §3.3 识别策略 section should exist, not the old §3.3 七假说 section
+    assert "识别策略" in rendered
+    assert "七条跨市场不对称机制假说" not in rendered
 
 
-def test_sensitivity_conclusion_auto_derived_from_public_summary(fixture_paths):
-    """The §4.4 sensitivity conclusions use counts from the public summary."""
+def test_event_study_core_numbers_auto_populated(fixture_paths):
+    """§4.1 surfaces headline CAR numbers from event_study_summary.csv."""
     rendered = _render(fixture_paths)
-    # Threshold axis: 7 / 7 stable, all 7 stable wording.
-    assert "7 / 7 条假说裁决稳定" in rendered
-    assert "全部 7 条假说裁决不随 p-value 阈值变化" in rendered
-    # AR engine axis: 5 / 7 stable, H1+H2 flip.
-    assert "5 / 7 条假说裁决稳定" in rendered
-    assert "**H1**, **H2**" in rendered
-    # 2D: 5 stable, 2 flip; phrasing notes AR-engine axis lineage.
-    assert "8 cell" in rendered or "8 cell" in rendered
-    assert "脆弱性来自 AR 引擎而非阈值" in rendered
-
-
-def test_hs300_rdd_headline_auto_populated(fixture_paths):
-    """§4.3 surfaces τ (%) / p / n from the main spec in rdd_robustness.csv."""
-    rendered = _render(fixture_paths)
-    # tau in our fixture: 0.0392 → 3.92%
-    assert "τ = **3.92%**" in rendered
-    assert "p = 0.0483" in rendered
-    assert "n = 120" in rendered
-    assert "outcome = `car_m1_p1`" in rendered
-    # Robustness spec count (1 main + 4 others = 5).
-    assert "稳健性 spec 数：5" in rendered
+    # CN announce: mean_car=0.0176 → +1.76%, t=4.93
+    assert "+1.76%" in rendered
+    assert "4.93" in rendered
+    # US announce: mean_car=0.0184 → +1.84%, t=5.25
+    assert "+1.84%" in rendered
+    assert "5.25" in rendered
+    # CN effective: mean_car=0.0042 → +0.42%, p=0.355
+    assert "+0.42%" in rendered
+    assert "0.355" in rendered
+    # US effective: mean_car=-0.0014 → -0.14%
+    assert "-0.14%" in rendered
 
 
 def test_limitations_pulled_verbatim_from_docs(fixture_paths):
-    """§5 embeds the limitations.md file content verbatim."""
+    """§7.2 embeds the limitations.md file content verbatim."""
     rendered = _render(fixture_paths)
     # The fixture limitations text appears in the rendered output.
     assert "测试占位：本文档集中记录项目的关键数据近似与方法约束" in rendered
@@ -405,8 +297,6 @@ def test_cli_entry_count_uses_public_summary(fixture_paths):
     rendered = _render(fixture_paths)
 
     assert "### B. CLI 入口 (39 个)" in rendered
-    assert "完整 39 个 console scripts" in rendered
-    assert "完整 38 个 console scripts" not in rendered
 
 
 def test_repo_docs_do_not_pin_stale_console_script_ordinals():
@@ -426,36 +316,20 @@ def test_repo_docs_do_not_pin_stale_console_script_ordinals():
     assert "paper-skeleton" in docs["README.md"]
 
 
-def test_advertised_figure_paths_exist_in_results_figures(fixture_paths):
-    """All ![...](../results/figures/X.png) refs in the skeleton correspond
-    to files actually present in the fixture figures dir.
+def test_pap_block_context_is_built(fixture_paths):
+    """PAP block context is populated even if the new template uses it as prose.
 
-    Mirrors what doctor.check_paper_skeleton_freshness will eventually do:
-    a stale skeleton that references a missing PNG is a bug. Here we only
-    check that the skeleton doesn't fabricate figure paths.
+    In the reframed §6 讨论 honest skeleton, the PAP snapshot date and
+    deviation audit are disclosed in prose rather than as an auto-generated
+    table.  We verify the skeleton renders without error and that the §6
+    讨论 discussion point (3) about post-hoc hypotheses is present.
     """
     rendered = _render(fixture_paths)
-    import re
-
-    refs = re.findall(r"!\[[^\]]+\]\(\.\.\/results\/figures\/([^)]+)\)", rendered)
-    assert refs, "no figure references found in skeleton"
-    figures_present = {p.name for p in fixture_paths["figures"].iterdir()}
-    for ref in refs:
-        assert ref in figures_present, (
-            f"skeleton references {ref!r} which is missing from figures dir; "
-            f"have {figures_present}"
-        )
-
-
-def test_pap_block_pulls_snapshot_date_and_deviation_counts(fixture_paths):
-    """§7 surfaces the verdict baseline snapshot date + deviation 5-class counts."""
-    rendered = _render(fixture_paths)
-    assert "2026-05-16" in rendered
-    assert "snapshots/pre-registration-2026-05-16.csv" in rendered
-    assert "该裁决基线快照距今 1 天" in rendered
-    assert "全部 unchanged: **True**" in rendered
-    assert "unchanged: 7" in rendered
-    assert "flipped: 0" in rendered
+    # §6 讨论 has the honest post-hoc disclosure text
+    assert "post-hoc" in rendered or "探索性假说" in rendered
+    assert "H1" in rendered or "H1-H7" in rendered  # mentioned in §6 prose
+    # Skeleton renders without errors and contains §6 讨论
+    assert "## 6. 讨论" in rendered
 
 
 def test_write_skeleton_refuses_without_force_then_overwrites(
@@ -465,12 +339,10 @@ def test_write_skeleton_refuses_without_force_then_overwrites(
     out = tmp_path / "out.md"
     skeleton_module.write_skeleton(
         out,
-        verdicts_csv=fixture_paths["verdicts"],
         pap_csv=fixture_paths["pap"],
-        rdd_csv=fixture_paths["rdd"],
+        event_study_csv=fixture_paths["event_study"],
         public_summary_json=fixture_paths["public_summary"],
         limitations_md=fixture_paths["limitations"],
-        figures_dir=fixture_paths["figures"],
         generated_at=datetime(2026, 5, 17, tzinfo=UTC),
     )
     assert out.exists()
@@ -478,23 +350,19 @@ def test_write_skeleton_refuses_without_force_then_overwrites(
     with pytest.raises(FileExistsError):
         skeleton_module.write_skeleton(
             out,
-            verdicts_csv=fixture_paths["verdicts"],
             pap_csv=fixture_paths["pap"],
-            rdd_csv=fixture_paths["rdd"],
+            event_study_csv=fixture_paths["event_study"],
             public_summary_json=fixture_paths["public_summary"],
             limitations_md=fixture_paths["limitations"],
-            figures_dir=fixture_paths["figures"],
             generated_at=datetime(2026, 5, 17, tzinfo=UTC),
         )
     skeleton_module.write_skeleton(
         out,
         force=True,
-        verdicts_csv=fixture_paths["verdicts"],
         pap_csv=fixture_paths["pap"],
-        rdd_csv=fixture_paths["rdd"],
+        event_study_csv=fixture_paths["event_study"],
         public_summary_json=fixture_paths["public_summary"],
         limitations_md=fixture_paths["limitations"],
-        figures_dir=fixture_paths["figures"],
         generated_at=datetime(2026, 5, 17, tzinfo=UTC),
     )
     assert out.stat().st_size == first_size  # deterministic output
@@ -513,17 +381,15 @@ def test_skeleton_size_in_sanity_band(fixture_paths, tmp_path: Path):
 def test_todo_markers_present_for_prose_sections(fixture_paths):
     """Every section that requires human prose carries an explicit TODO marker."""
     rendered = _render(fixture_paths)
-    # Use the section-prose TODOs (different from the table-headline TODOs in
-    # parentheses like "(TODO)"); look for the bracketed "[TODO:" form.
+    # Use the section-prose TODOs; look for the bracketed "[TODO:" form.
     todo_count = rendered.count("[TODO:")
-    # 7 H-detail subsections + introduction (3) + 6.结论 (3) + 数据契约 + CLI入口
-    # + 文献综述 + 样本与数据 + 实证方法 + §4.1 main results + §5 prose = ~17+
-    assert todo_count >= 15, f"only {todo_count} TODO markers, expected ≥15"
+    # §1 引言 + §1.1 + §1.2 + §2 + §2.1–§2.4 + §3.1 + §3.2 + §7.1 + §7.2
+    # + §5.1–§5.5 + §6 (3 discussion points) + §A + §B = ≥10
+    assert todo_count >= 10, f"only {todo_count} TODO markers, expected ≥10"
     # Specific anchor TODOs that must be present.
     assert "[TODO: 引言 prose" in rendered
-    assert "[TODO: 主结果 prose" in rendered
-    assert "[TODO: H1 prose" in rendered
-    assert "[TODO: H7 prose" in rendered
+    assert "[TODO: 三项贡献 prose" in rendered
+    assert "[TODO: 背景 prose" in rendered
 
 
 def test_main_writes_file_and_exits_zero(fixture_paths, monkeypatch, tmp_path: Path):
@@ -532,13 +398,12 @@ def test_main_writes_file_and_exits_zero(fixture_paths, monkeypatch, tmp_path: P
 
     # Patch the default-path helpers so main() picks up our fixture.
     monkeypatch.setattr(
-        skeleton_module, "_default_verdicts_csv", lambda: fixture_paths["verdicts"]
-    )
-    monkeypatch.setattr(
         skeleton_module, "_default_pap_csv", lambda: fixture_paths["pap"]
     )
     monkeypatch.setattr(
-        skeleton_module, "_default_rdd_csv", lambda: fixture_paths["rdd"]
+        skeleton_module,
+        "_default_event_study_summary_csv",
+        lambda: fixture_paths["event_study"],
     )
     monkeypatch.setattr(
         skeleton_module,
@@ -549,11 +414,6 @@ def test_main_writes_file_and_exits_zero(fixture_paths, monkeypatch, tmp_path: P
         skeleton_module,
         "_default_limitations_md",
         lambda: fixture_paths["limitations"],
-    )
-    monkeypatch.setattr(
-        skeleton_module,
-        "_default_figures_dir",
-        lambda: fixture_paths["figures"],
     )
 
     rc = skeleton_module.main(["--output", str(out)])

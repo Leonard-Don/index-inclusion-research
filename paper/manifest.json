@@ -405,8 +405,8 @@
       "section": "figures",
       "source": "results/literature/citation_network.png",
       "target": "figures/citation_network.png",
-      "sha256": "a8027ca09e687f8ed404a4eba7faadbb0de58c90e2fcad9bf88e83ba8570b541",
-      "size_bytes": 81377
+      "sha256": "c4ecb1a22e2e97a16710f56a8a502f6e5396f6a8d07d45ca33c37e96b48f7342",
+      "size_bytes": 81027
     },
     {
       "section": "figures",
@@ -461,7 +461,7 @@
       "section": "figures",
       "source": "results/literature/literature_timeline.pdf",
       "target": "figures/literature_timeline.pdf",
-      "sha256": "1df746f7a8b26492e72836d718cb09595ac182334b7cb84529e29725af738e10",
+      "sha256": "dbe5ab75b8c90112b69d62c8bbb2547bdc2c87cab47b4862f319596616d7339d",
       "size_bytes": 83988
     },
     {
@@ -580,8 +580,8 @@
       "section": "narrative",
       "source": "docs/paper_outline_verdicts.md",
       "target": "narrative/paper_outline_verdicts.md",
-      "sha256": "c018a16df624327db26f59e33b14c938d66f268779c1bb01af1790c1539c4665",
-      "size_bytes": 9300
+      "sha256": "af609499099e2f3db8cc1d8d71f48de904154552c41921b71ed305f843d6c252",
+      "size_bytes": 9224
     },
     {
       "section": "narrative",
