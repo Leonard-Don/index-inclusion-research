@@ -38,8 +38,13 @@
 - `figures/cma_heterogeneity_matrix_size.png`
 - `figures/cma_mechanism_heatmap.png`
 - `figures/cma_time_series_rolling.png`
+- `figures/cma_verdicts_2d_robustness.png`
+- `figures/cma_verdicts_ar_engine.png`
+- `figures/cma_verdicts_forest.png`
+- `figures/cma_verdicts_sensitivity.png`
 - `figures/cn_announce_car_path.png`
 - `figures/cn_effective_car_path.png`
+- `figures/hs300_rdd_robustness_forest.png`
 - `figures/main_regression_coefficients.png`
 - `figures/match_diagnostics_overview.png`
 - `figures/mechanism_regression_coefficients.png`
@@ -48,6 +53,7 @@
 - `figures/sample_event_timeline.png`
 - `figures/us_announce_car_path.png`
 - `figures/us_effective_car_path.png`
+- `figures/verdict_timeline.png`
 - `figures/cma_verdicts_2d_robustness.png`
 - `figures/cma_verdicts_ar_engine.png`
 - `figures/cma_verdicts_forest.png`
@@ -58,12 +64,15 @@
 - `figures/us_announce_car_path.png`
 - `figures/us_effective_car_path.png`
 - `figures/verdict_timeline.png`
+- `figures/citation_network.png`
+- `figures/literature_timeline.png`
 - `figures/hs300_rdd_robustness_forest.pdf`
 - `figures/cma_verdicts_forest.pdf`
 - `figures/cma_verdicts_sensitivity.pdf`
 - `figures/cma_verdicts_ar_engine.pdf`
 - `figures/cma_verdicts_2d_robustness.pdf`
 - `figures/verdict_timeline.pdf`
+- `figures/literature_timeline.pdf`
 
 ## rdd/ — HS300 RDD 数据 + 图（含稳健性面板）
 

@@ -1,6 +1,6 @@
 # 指数纳入效应跨市场不对称研究 · 方法论摘要
 
-**生成时间**: 2026-05-20 | **裁决基线快照**: 2026-05-16
+**生成时间**: 2026-05-23 | **裁决基线快照**: 2026-05-16
 
 ## 1. 样本规模
 
@@ -55,11 +55,11 @@
 
 ## 4. 裁决基线快照
 
-> H1–H7 是 post-hoc、探索性裁决，非预注册（详见 `docs/limitations.md` §6）。下表的"裁决基线快照"是跨时间观察 verdict 稳定性的工具，不是 pre-analysis plan。
+H1-H7 为事后探索性假说（在观察到公告日 vs 生效日、中美市场的不对称之后形成），本研究无预注册分析计划；下表的裁决基线快照仅用于裁决稳定性追踪。
 
 | 项 | 状态 |
 |---|---|
-| 裁决基线快照 | 2026-05-16 冻结 (`snapshots/pre-registration-2026-05-16.csv`，文件名为历史命名) |
+| 裁决基线快照 | 冻结于 2026-05-16 (`snapshots/pre-registration-2026-05-16.csv`) |
 | 当前偏离 | 全部未偏离（all_unchanged=True） |
 | 偏离审计 CLI | `index-inclusion-pap-diff` (默认非阻断 / `--strict` 阻断) |
 | Doctor 主动监控 | `check_pap_deviation_no_flips` · `check_pap_snapshot_freshness` |
@@ -94,6 +94,6 @@ index-inclusion-methodology-summary       # regenerate this card
 ## 8. 工具链
 
 - 48 个 console scripts（见 `docs/cli_reference.md`）
-- Doctor：30 个 health checks（主动监控 verdicts + figures + 裁决基线快照 + paper skeleton + methodology summary）
+- Doctor：30 个 health checks（主动监控 verdicts + figures + PAP + paper skeleton + methodology summary）
 - Public summary：`data/public/index_research_summary.json` (schema v1)
 - Paper bundle：72 artifacts auto-collected from `results/`，含本卡片 (`paper/methodology_summary.md`)
