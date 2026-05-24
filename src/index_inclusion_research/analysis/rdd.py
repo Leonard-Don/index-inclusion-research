@@ -11,8 +11,9 @@ from scipy import stats
 matplotlib.use("Agg")
 from matplotlib import pyplot as plt
 
-plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
-plt.rcParams["axes.unicode_minus"] = False
+from index_inclusion_research.plot_style import configure_matplotlib_cjk
+
+configure_matplotlib_cjk(plt)
 
 LEFT_COLOR = "#a63b28"
 RIGHT_COLOR = "#0f5c6e"

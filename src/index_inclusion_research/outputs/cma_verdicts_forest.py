@@ -32,8 +32,9 @@ import pandas as pd
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
-plt.rcParams["axes.unicode_minus"] = False
+from index_inclusion_research.plot_style import configure_matplotlib_cjk
+
+configure_matplotlib_cjk(plt)
 
 # Canonical hypothesis ordering — matches the PAP / verdict CSV (H1-H7).
 # Anchors the eye at H1 (top) and walks down to H7 so the figure reads

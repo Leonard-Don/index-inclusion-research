@@ -13,6 +13,7 @@ from index_inclusion_research.dashboard.types import (
     RddStatusLoader,
     RelativePathBuilder,
 )
+from index_inclusion_research.plot_style import configure_matplotlib_cjk
 
 
 def dashboard_figure_dir(root: Path) -> Path:
@@ -67,8 +68,7 @@ def create_price_pressure_figures(
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
-    plt.rcParams["axes.unicode_minus"] = False
+    configure_matplotlib_cjk(plt)
 
     target_dir = dashboard_figure_dir(root)
     summary_path = root / "results" / "real_tables" / "time_series_event_study_summary.csv"
@@ -132,8 +132,7 @@ def create_identification_figures(
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
-    plt.rcParams["axes.unicode_minus"] = False
+    configure_matplotlib_cjk(plt)
 
     rdd_status = load_rdd_status()
     if rdd_status["mode"] not in {"real", "reconstructed"}:
@@ -315,8 +314,7 @@ def _rdd_robustness_figure_entry(
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
-    plt.rcParams["axes.unicode_minus"] = False
+    configure_matplotlib_cjk(plt)
 
     robust_path = root / "results" / "literature" / "hs300_rdd" / "rdd_robustness.csv"
     if not robust_path.exists():
@@ -433,8 +431,7 @@ def _l3_coverage_figure_entry(
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
-    plt.rcParams["axes.unicode_minus"] = False
+    configure_matplotlib_cjk(plt)
 
     candidates_path = root / "data" / "raw" / "hs300_rdd_candidates.csv"
     if not candidates_path.exists():
@@ -596,8 +593,7 @@ def create_sample_design_figures(
     import matplotlib.pyplot as plt
     from matplotlib.colors import LinearSegmentedColormap, TwoSlopeNorm
 
-    plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
-    plt.rcParams["axes.unicode_minus"] = False
+    configure_matplotlib_cjk(plt)
 
     target_dir = dashboard_figure_dir(root)
     timeline_path = target_dir / "sample_event_timeline.png"

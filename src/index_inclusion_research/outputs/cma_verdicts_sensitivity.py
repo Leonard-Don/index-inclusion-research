@@ -63,11 +63,11 @@ from index_inclusion_research.outputs.cma_verdicts_forest import (
     _VERDICT_ASCII,
     classify_strength,
 )
+from index_inclusion_research.plot_style import configure_matplotlib_cjk
 
 logger = logging.getLogger(__name__)
 
-plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
-plt.rcParams["axes.unicode_minus"] = False
+configure_matplotlib_cjk(plt)
 
 
 # Default thresholds for the sweep. 0.05 (strict, traditional academic),

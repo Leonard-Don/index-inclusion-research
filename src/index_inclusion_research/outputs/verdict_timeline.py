@@ -57,13 +57,9 @@ import matplotlib.dates as mdates  # noqa: E402 -- after backend pin
 import matplotlib.patches as mpatches  # noqa: E402 -- after backend pin
 import matplotlib.pyplot as plt  # noqa: E402 -- after backend pin
 
-plt.rcParams["font.sans-serif"] = [
-    "Songti SC",
-    "STHeiti",
-    "Arial Unicode MS",
-    "DejaVu Sans",
-]
-plt.rcParams["axes.unicode_minus"] = False
+from index_inclusion_research.plot_style import configure_matplotlib_cjk
+
+configure_matplotlib_cjk(plt)
 
 logger = logging.getLogger(__name__)
 

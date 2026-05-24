@@ -22,10 +22,10 @@ from index_inclusion_research.outputs.schema_registry import (
     empty_output_table,
     output_table_columns,
 )
+from index_inclusion_research.plot_style import configure_matplotlib_cjk
 from index_inclusion_research.rdd_evidence import rdd_evidence_tier, rdd_source_label
 
-plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
-plt.rcParams["axes.unicode_minus"] = False
+configure_matplotlib_cjk(plt)
 
 MARKET_LABELS = {
     "CN": "中国 A 股",

@@ -83,11 +83,11 @@ from index_inclusion_research.outputs.cma_verdicts_sensitivity import (
     _normalise_threshold_label,
     _normalise_thresholds,
 )
+from index_inclusion_research.plot_style import configure_matplotlib_cjk
 
 logger = logging.getLogger(__name__)
 
-plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
-plt.rcParams["axes.unicode_minus"] = False
+configure_matplotlib_cjk(plt)
 
 
 # Default thresholds reused from the 1D sensitivity sweep so the

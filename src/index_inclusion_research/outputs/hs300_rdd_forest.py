@@ -26,8 +26,9 @@ import pandas as pd
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-plt.rcParams["font.sans-serif"] = ["Songti SC", "STHeiti", "Arial Unicode MS", "DejaVu Sans"]
-plt.rcParams["axes.unicode_minus"] = False
+from index_inclusion_research.plot_style import configure_matplotlib_cjk
+
+configure_matplotlib_cjk(plt)
 
 # Sort order matches the audit narrative: main first, then donut /
 # placebo / polynomial. Specs with unknown kinds drop to the bottom.
