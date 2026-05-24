@@ -1574,15 +1574,17 @@ def test_pap_status_chip_renders_with_baseline_diff() -> None:
             drift_state = chip.first.get_attribute("data-drift-state")
             assert drift_state in {"frozen", "drift", "missing"}
 
-            headline = page.locator("[data-pap-headline]").inner_text().strip()
-            assert headline.startswith("PAP 冻结")
+            headline = chip.locator("[data-pap-headline]").inner_text().strip()
+            assert headline.startswith("裁决基线快照")
             assert "当前 vs 基线" in headline
 
-            snapshot_path = page.locator("[data-pap-snapshot-path]").inner_text().strip()
-            assert snapshot_path == "PAP 基线 2026-05-16"
+            snapshot_path = chip.locator("[data-pap-snapshot-path]").inner_text().strip()
+            assert snapshot_path == "裁决基线 2026-05-16"
 
-            summary_label = page.locator("[data-pap-summary-label]").inner_text().strip()
+            summary_label = chip.locator("[data-pap-summary-label]").inner_text().strip()
             assert summary_label  # non-empty
+            if drift_state == "frozen":
+                assert "一致" in summary_label
         finally:
             browser.close()
 
