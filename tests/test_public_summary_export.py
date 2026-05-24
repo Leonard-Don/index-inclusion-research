@@ -370,6 +370,32 @@ def test_figures_published_filters_to_existing_files(fixture_paths, monkeypatch)
     assert len(surviving) == len(export_module.PUBLISHED_FIGURE_RELPATHS) - 1
 
 
+def test_figures_published_uses_explicit_figures_dir_without_env(fixture_paths, monkeypatch):
+    """A synthetic ``figures_dir`` should not depend on ambient checkout root."""
+    monkeypatch.delenv("INDEX_INCLUSION_ROOT", raising=False)
+
+    payload = _build(fixture_paths)
+
+    assert set(payload["figures_published"]) == set(export_module.PUBLISHED_FIGURE_RELPATHS)
+
+
+def test_figures_published_skips_unsafe_manifest_entries(
+    fixture_paths, monkeypatch
+):
+    """Future manifest additions cannot publish absolute or traversal paths."""
+    monkeypatch.setenv("INDEX_INCLUSION_ROOT", str(fixture_paths["root"]))
+    unsafe_entries = (
+        export_module.PUBLISHED_FIGURE_RELPATHS[0],
+        "../outside.png",
+        "/tmp/leaked.png",
+    )
+    monkeypatch.setattr(export_module, "PUBLISHED_FIGURE_RELPATHS", unsafe_entries)
+
+    payload = _build(fixture_paths)
+
+    assert payload["figures_published"] == [unsafe_entries[0]]
+
+
 def test_no_absolute_paths_or_debug_fields_in_output(fixture_paths, monkeypatch):
     """The public JSON must never contain ``/Users/``-style absolute paths
     or non-public keys leaking in from the source CSVs."""

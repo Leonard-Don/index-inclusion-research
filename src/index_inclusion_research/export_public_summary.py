@@ -650,16 +650,47 @@ def _build_literature_network_section() -> dict[str, Any] | None:
     return summarize_for_public_summary(graph)
 
 
+def _public_figure_manifest_root(figures_dir: Path) -> Path:
+    """Infer the repo root that owns ``PUBLISHED_FIGURE_RELPATHS``.
+
+    ``figures_dir`` is normally ``<root>/results/figures``. Tests and
+    alternate workspaces pass an explicit synthetic directory, so deriving
+    ``root`` from that argument keeps the manifest check local to the caller
+    instead of silently falling back to the ambient checkout.
+    """
+    normalized = figures_dir.resolve()
+    if normalized.name == "figures" and normalized.parent.name == "results":
+        return normalized.parent.parent
+    return paths.project_root()
+
+
+def _safe_public_figure_relpath(relpath: str) -> str | None:
+    """Return a safe repo-relative figure relpath, or ``None``.
+
+    The manifest constants are maintained in-repo, but treating them like
+    untrusted input prevents future additions from leaking absolute paths or
+    advertising traversal targets to downstream public consumers.
+    """
+    candidate = Path(relpath)
+    if candidate.is_absolute() or ".." in candidate.parts:
+        logger.warning("unsafe figure relpath skipped for public summary: %s", relpath)
+        return None
+    return candidate.as_posix()
+
+
 def _build_figures_published(figures_dir: Path) -> list[str]:
-    """Filter ``PUBLISHED_FIGURE_RELPATHS`` to the entries that actually exist.
+    """Filter ``PUBLISHED_FIGURE_RELPATHS`` to existing safe relpaths.
 
     Missing files just drop out of the list (with a warning).
     Downstream consumers can therefore assume every advertised relpath is
     a real artifact in the repo at the time the summary was generated.
     """
-    root = paths.project_root()
+    root = _public_figure_manifest_root(figures_dir)
     surviving: list[str] = []
-    for relpath in PUBLISHED_FIGURE_RELPATHS:
+    for raw_relpath in PUBLISHED_FIGURE_RELPATHS:
+        relpath = _safe_public_figure_relpath(raw_relpath)
+        if relpath is None:
+            continue
         candidate = root / relpath
         if candidate.exists():
             surviving.append(relpath)
