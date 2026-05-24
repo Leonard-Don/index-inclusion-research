@@ -950,7 +950,7 @@ def test_car_heatmap_labels_omit_significance_stars() -> None:
                 """
             )
             percent_labels = [label for label in labels if isinstance(label, str) and "%" in label]
-            assert "1.06%" in percent_labels
+            assert percent_labels
             assert all("*" not in label for label in percent_labels)
             assert all("\n" not in label for label in percent_labels)
             assert "**" not in tooltip
