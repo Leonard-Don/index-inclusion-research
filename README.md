@@ -65,22 +65,39 @@ H2 在 2026 年补入 `data/raw/cn_passive_aum_proxy.csv`（CSI300 + CSI500 ETF 
 
 <table>
   <tr>
-    <td><strong>首页总览</strong></td>
-    <td><strong>单篇文献速读</strong></td>
-    <td><strong>移动端阅读</strong></td>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/readme-dashboard-overview.png" alt="Dashboard research overview" width="100%">
+      <br><strong>研究首页总览</strong><br>
+      <sub>16 篇文献、真实样本、识别设计与核心结果入口</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/readme-paper-brief.png" alt="Paper brief page preview" width="100%">
+      <br><strong>单篇文献速读</strong><br>
+      <sub>把文献定位、核心贡献和识别挑战放进同一阅读页</sub>
+    </td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/dashboard-home.png" alt="Dashboard homepage" width="100%"></td>
-    <td><img src="docs/screenshots/paper-brief.png" alt="Paper brief page" width="100%"></td>
-    <td><img src="docs/screenshots/dashboard-mobile.png" alt="Dashboard mobile view" width="100%"></td>
-  </tr>
-  <tr>
-    <td colspan="3"><strong>CMA 证据层级与 H7 行业交互</strong></td>
-  </tr>
-  <tr>
-    <td colspan="3"><img src="docs/screenshots/cma-evidence-tiers.png" alt="CMA evidence tiers and H7 interaction detail" width="100%"></td>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/cma-evidence-tiers.png" alt="CMA evidence tiers and H7 interaction detail" width="100%">
+      <br><strong>CMA 证据层级与 H7 行业交互</strong><br>
+      <sub>七个假说的支持强度、稳健性与行业交互一屏核对</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/readme-mobile-overview.png" alt="Dashboard mobile preview" width="58%">
+      <br><strong>移动端阅读</strong><br>
+      <sub>核心研究摘要在窄屏下保持可读</sub>
+    </td>
   </tr>
 </table>
+
+<details>
+<summary>查看完整长截图 / Full-page screenshots</summary>
+
+- [首页完整长截图](docs/screenshots/dashboard-home.png)
+- [单篇文献完整长截图](docs/screenshots/paper-brief.png)
+- [移动端完整长截图](docs/screenshots/dashboard-mobile.png)
+
+</details>
 
 仓库没有公开在线 demo，推荐直接在本地运行并打开 `http://localhost:5001`。
 
