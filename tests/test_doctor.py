@@ -1163,7 +1163,7 @@ def test_makefile_quality_and_ci_targets_keep_doctor_strict() -> None:
     assert re.search(r"^quality:.*\bdoctor-strict\b", makefile, flags=re.MULTILINE)
     assert re.search(r"^ci:.*\bdoctor-strict\b", makefile, flags=re.MULTILINE)
     assert "doctor-strict: ## Run project health checks with --fail-on-warn" in makefile
-    assert "index-inclusion-doctor --fail-on-warn" in makefile
+    assert "python3 -m index_inclusion_research.doctor --fail-on-warn" in makefile
 
 
 def test_makefile_paper_targets_run_claim_audit_in_strict_mode() -> None:

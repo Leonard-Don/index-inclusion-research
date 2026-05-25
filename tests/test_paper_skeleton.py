@@ -156,6 +156,18 @@ def fixture_paths(tmp_path: Path) -> dict[str, Path]:
     _make_event_study_df().to_csv(
         real_tables / "event_study_summary.csv", index=False
     )
+    pd.DataFrame(
+        [
+            {
+                "hid": "H1",
+                "n_obs": 371,
+                "test_family": "one-sample t",
+                "power_at_observed": 0.84,
+                "mde_at_80_power": 0.0123,
+                "interpretation": "公告窗效应具备主文讨论所需的统计功效。",
+            }
+        ]
+    ).to_csv(real_tables / "power_analysis_report.csv", index=False)
 
     public_dir = tmp_path / "data" / "public"
     public_dir.mkdir(parents=True)
@@ -171,6 +183,7 @@ def fixture_paths(tmp_path: Path) -> dict[str, Path]:
         "root": tmp_path,
         "pap": real_tables / "pap_deviation_report.csv",
         "event_study": real_tables / "event_study_summary.csv",
+        "power_analysis": real_tables / "power_analysis_report.csv",
         "public_summary": public_dir / "index_research_summary.json",
         "limitations": limitations,
     }
@@ -180,6 +193,7 @@ def _render(fixture: dict[str, Path], **overrides) -> str:
     kwargs = dict(
         pap_csv=fixture["pap"],
         event_study_csv=fixture["event_study"],
+        power_analysis_csv=fixture["power_analysis"],
         public_summary_json=fixture["public_summary"],
         limitations_md=fixture["limitations"],
         generated_at=datetime(2026, 5, 17, tzinfo=UTC),
@@ -255,6 +269,18 @@ def test_event_study_core_numbers_auto_populated(fixture_paths):
     assert "0.355" in rendered
     # US effective: mean_car=-0.0014 → -0.14%
     assert "-0.14%" in rendered
+
+
+def test_power_analysis_rows_rendered_from_report(fixture_paths):
+    """§5 limitations should surface the power-analysis report when present."""
+    rendered = _render(fixture_paths)
+
+    assert "统计功效" in rendered
+    assert "H1" in rendered
+    assert "one-sample t" in rendered
+    assert "84.0%" in rendered
+    assert "1.23%" in rendered
+    assert "公告窗效应具备主文讨论所需的统计功效" in rendered
 
 
 def test_limitations_pulled_verbatim_from_docs(fixture_paths):

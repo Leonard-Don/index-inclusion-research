@@ -46,10 +46,10 @@ verdicts: ## Print the current 7-hypothesis verdict picture
 	index-inclusion-verdict-summary
 
 doctor: ## Run project health checks (paper IDs / CSVs / chart registry / scripts)
-	index-inclusion-doctor
+	python3 -m index_inclusion_research.doctor
 
 doctor-strict: ## Run project health checks with --fail-on-warn (CI-strict)
-	index-inclusion-doctor --fail-on-warn
+	python3 -m index_inclusion_research.doctor --fail-on-warn
 
 paper: ## Aggregate paper-grade artefacts into ./paper/ (tables / figures / narrative / RDD)
 	python3 -m index_inclusion_research.paper_bundle --force
