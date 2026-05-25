@@ -329,7 +329,30 @@ def test_renderers_emit_all_three_formats(consistent_project: Path) -> None:
     assert payload["blocker_count"] == assessment.blocker_count
     assert len(payload["checks"]) == len(assessment.checks)
     # markdown produces a table header
-    assert "| Status | Check |" in md_out
+    assert "| Status | Check | Evidence |" in md_out
+
+
+def test_markdown_renderer_includes_check_evidence(consistent_project: Path) -> None:
+    """Markdown output must carry evidence details, not only status/description."""
+    skeleton = (
+        _make_skeleton_text()
+        .replace(
+            "prose for ## 3. 研究设计.",
+            "prose [TODO: fill identification setup]",
+        )
+        .replace(
+            "prose for ## 4. 实证结果.",
+            "prose [TODO: fill H1] [TODO: fill H2] [TODO: fill H3]",
+        )
+    )
+    (consistent_project / "paper" / "skeleton.md").write_text(skeleton, encoding="utf-8")
+    assessment = submission_ready.assess_submission_ready(checks=_FS_CHECKS)
+
+    md_out = submission_ready.render_markdown(assessment)
+
+    assert "4. 实证结果: 3" in md_out
+    assert "3. 研究设计: 1" in md_out
+    assert "<br>" in md_out
 
 
 def test_real_project_assessment_runs_without_crashing() -> None:

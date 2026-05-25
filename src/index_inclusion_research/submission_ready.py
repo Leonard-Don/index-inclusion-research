@@ -1203,6 +1203,9 @@ def render_json(assessment: SubmissionAssessment) -> str:
 
 
 def render_markdown(assessment: SubmissionAssessment) -> str:
+    def _cell(text: str) -> str:
+        return text.replace("|", "\\|").replace("\n", "<br>")
+
     lines: list[str] = [
         "# Submission readiness report",
         "",
@@ -1213,15 +1216,16 @@ def render_markdown(assessment: SubmissionAssessment) -> str:
         f"- fail: **{assessment.blocker_count}**",
         f"- estimated remaining work: **{assessment.estimated_remaining_work_hours:.1f}h**",
         "",
-        "| Status | Check | Description | Fix |",
-        "|---|---|---|---|",
+        "| Status | Check | Evidence | Description | Fix |",
+        "|---|---|---|---|---|",
     ]
     for c in assessment.checks:
-        desc = c.description.replace("|", "\\|")
-        fix = c.fix_command.replace("|", "\\|") if c.fix_command else ""
+        desc = _cell(c.description)
+        evidence = _cell("<br>".join(c.evidence)) if c.evidence else ""
+        fix = _cell(c.fix_command) if c.fix_command else ""
         fix_cell = f"`{fix}`" if fix else ""
         lines.append(
-            f"| {c.status} | {c.name} | {desc} | {fix_cell} |"
+            f"| {c.status} | {c.name} | {evidence} | {desc} | {fix_cell} |"
         )
     lines.append("")
     return "\n".join(lines)
