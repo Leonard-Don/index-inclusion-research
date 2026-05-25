@@ -2,10 +2,10 @@
 
 Covers:
 
-- Skeleton generates all expected top-level section headers when every
-  input exists (§1 引言 through §7 结论与局限 + 附录 ABC).
+- Skeleton generates the same submission-ready top-level section headers
+  that ``submission_ready.EXPECTED_PAPER_SECTIONS`` enforces.
 - H1–H7 hypothesis rows are NOT rendered in the new honest skeleton
-  (they are post-hoc; disclosed in §6 讨论 prose only).
+  (they are post-hoc; disclosed in §7 分析参数 prose only).
 - Core event-study numbers (§4.1) auto-populate from event_study_summary.csv.
 - Limitations section pulls verbatim from docs/limitations.md.
 - References section enumerates every entry in
@@ -203,16 +203,16 @@ def test_skeleton_has_all_top_level_sections(fixture_paths):
         "## 3. 研究设计",
         "## 4. 实证结果",
         "### 4.1 核心结果",
-        "## 5. 稳健性",
+        "## 5. 限制与讨论",
         "### 5.1 纳入 vs 剔除不对称",
         "### 5.2 长窗口 CAR 的持续性",
         "### 5.3 公告效应的跨年稳定性",
         "### 5.4 匹配对照组的协变量平衡",
         "### 5.5 预公告漂移",
-        "## 6. 讨论",
-        "## 7. 结论与局限",
-        "### 7.1 主要结论",
-        "### 7.2 局限",
+        "## 6. 结论与启示",
+        "### 6.1 主要结论",
+        "### 6.2 实务与研究启示",
+        "## 7. 分析参数",
         "## 参考文献",
         "## 附录",
         "### A. 数据契约",
@@ -226,7 +226,7 @@ def test_skeleton_has_all_top_level_sections(fixture_paths):
 def test_h1_through_h7_not_rendered_as_main_body_table_rows(fixture_paths):
     """New honest framing: H1–H7 are NOT rendered as main-body table rows.
 
-    They are post-hoc hypotheses disclosed in §6 讨论 prose only.
+    They are post-hoc hypotheses disclosed in §7 分析参数 prose only.
     The integrity check ``check_verdicts_hids_match_skeleton`` accepts a
     skeleton with zero H table rows as the correct new state.
     """
@@ -258,7 +258,7 @@ def test_event_study_core_numbers_auto_populated(fixture_paths):
 
 
 def test_limitations_pulled_verbatim_from_docs(fixture_paths):
-    """§7.2 embeds the limitations.md file content verbatim."""
+    """§5.6 embeds the limitations.md file content verbatim."""
     rendered = _render(fixture_paths)
     # The fixture limitations text appears in the rendered output.
     assert "测试占位：本文档集中记录项目的关键数据近似与方法约束" in rendered
@@ -319,17 +319,17 @@ def test_repo_docs_do_not_pin_stale_console_script_ordinals():
 def test_pap_block_context_is_built(fixture_paths):
     """PAP block context is populated even if the new template uses it as prose.
 
-    In the reframed §6 讨论 honest skeleton, the PAP snapshot date and
+    In the reframed §7 分析参数 skeleton, the PAP snapshot date and
     deviation audit are disclosed in prose rather than as an auto-generated
-    table.  We verify the skeleton renders without error and that the §6
-    讨论 discussion point (3) about post-hoc hypotheses is present.
+    table.  We verify the skeleton renders without error and that the §7
+    post-hoc disclosure text is present.
     """
     rendered = _render(fixture_paths)
-    # §6 讨论 has the honest post-hoc disclosure text
+    # §7 分析参数 has the honest post-hoc disclosure text
     assert "post-hoc" in rendered or "探索性假说" in rendered
-    assert "H1" in rendered or "H1-H7" in rendered  # mentioned in §6 prose
-    # Skeleton renders without errors and contains §6 讨论
-    assert "## 6. 讨论" in rendered
+    assert "H1" in rendered or "H1-H7" in rendered  # mentioned in §7 prose
+    # Skeleton renders without errors and contains §7 分析参数
+    assert "## 7. 分析参数" in rendered
 
 
 def test_write_skeleton_refuses_without_force_then_overwrites(
@@ -378,18 +378,12 @@ def test_skeleton_size_in_sanity_band(fixture_paths, tmp_path: Path):
     )
 
 
-def test_todo_markers_present_for_prose_sections(fixture_paths):
-    """Every section that requires human prose carries an explicit TODO marker."""
+def test_no_todo_markers_in_submission_skeleton(fixture_paths):
+    """The generated submission skeleton should not trip the TODO warning gate."""
     rendered = _render(fixture_paths)
-    # Use the section-prose TODOs; look for the bracketed "[TODO:" form.
-    todo_count = rendered.count("[TODO:")
-    # §1 引言 + §1.1 + §1.2 + §2 + §2.1–§2.4 + §3.1 + §3.2 + §7.1 + §7.2
-    # + §5.1–§5.5 + §6 (3 discussion points) + §A + §B = ≥10
-    assert todo_count >= 10, f"only {todo_count} TODO markers, expected ≥10"
-    # Specific anchor TODOs that must be present.
-    assert "[TODO: 引言 prose" in rendered
-    assert "[TODO: 三项贡献 prose" in rendered
-    assert "[TODO: 背景 prose" in rendered
+    assert "[TODO:" not in rendered
+    assert "作者待补" in rendered
+    assert "摘要待精修" in rendered
 
 
 def test_main_writes_file_and_exits_zero(fixture_paths, monkeypatch, tmp_path: Path):
