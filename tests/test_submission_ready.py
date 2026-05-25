@@ -214,6 +214,25 @@ def test_todos_present_yields_warn(consistent_project: Path) -> None:
     assert submission_ready.submission_exit_code(assessment) == 1
 
 
+def test_multiple_todos_on_one_line_are_counted_individually(
+    consistent_project: Path,
+) -> None:
+    """A prose line can carry several TODO markers; readiness counts each one."""
+    skeleton = _make_skeleton_text().replace(
+        "prose for ## 4. 实证结果.",
+        "prose [TODO: fill H1] [TODO: fill H2] [TODO: fill H3]",
+    )
+    (consistent_project / "paper" / "skeleton.md").write_text(skeleton, encoding="utf-8")
+
+    assessment = submission_ready.assess_submission_ready(checks=_FS_CHECKS)
+
+    warns = {c.name: c for c in assessment.checks if c.status == "warn"}
+    assert "prose_todo_markers" in warns
+    assert "3 [TODO" in warns["prose_todo_markers"].description
+    assert "4. 实证结果: 3" in warns["prose_todo_markers"].evidence
+    assert assessment.estimated_remaining_work_hours == 3.5
+
+
 def test_stale_methodology_warns(consistent_project: Path) -> None:
     """Methodology summary older than the skeleton triggers a warn."""
     # Backdate methodology by 7 days, then ``touch`` the skeleton fresh.

@@ -278,9 +278,11 @@ def _count_todo_markers(text: str) -> tuple[int, dict[str, int]]:
         if m:
             current_section = m.group(1).strip()[:60]
             continue
-        if todo_re.search(line):
-            total += 1
-            bucket[current_section] = bucket.get(current_section, 0) + 1
+        matches = todo_re.findall(line)
+        if matches:
+            count = len(matches)
+            total += count
+            bucket[current_section] = bucket.get(current_section, 0) + count
     return total, bucket
 
 
