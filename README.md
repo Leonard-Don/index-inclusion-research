@@ -185,7 +185,7 @@ tests/                 1100+ 个单元测试 + 浏览器 smoke
 - [docs/literature_review_author_year_cn.md](docs/literature_review_author_year_cn.md)：作者（年份）版中文文献综述
 - [docs/literature_deep_analysis_cn.md](docs/literature_deep_analysis_cn.md)：每篇论文的深度分析
 - [docs/literature_five_camps_framework_cn.md](docs/literature_five_camps_framework_cn.md)：五大阵营与会议表达框架
-- [src/index_inclusion_research/literature_catalog.py](src/index_inclusion_research/literature_catalog.py)：项目内的结构化文献目录与项目映射
+- [src/index_inclusion_research/literature_catalog/](src/index_inclusion_research/literature_catalog/)：项目内的结构化文献目录与项目映射
 
 ## 数据输入契约
 
@@ -278,7 +278,7 @@ GitHub Actions 通过 `astral-sh/setup-uv` + `uv sync --extra dev`（按 `uv.loc
 - [docs/dashboard_architecture.md](docs/dashboard_architecture.md)
 - [docs/cli_reference.md](docs/cli_reference.md)
 - [src/index_inclusion_research/literature_dashboard.py](src/index_inclusion_research/literature_dashboard.py)
-- [src/index_inclusion_research/literature_catalog.py](src/index_inclusion_research/literature_catalog.py)
+- [src/index_inclusion_research/literature_catalog/](src/index_inclusion_research/literature_catalog/)
 - [results/real_tables/research_summary.md](results/real_tables/research_summary.md)
 
 ## 哪些文件主要是生成产物
