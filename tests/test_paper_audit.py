@@ -311,6 +311,24 @@ def test_paper_bundle_audit_fails_when_manifest_target_escapes_paper_root(
     assert any("../outside.csv" in detail and "under paper/" in detail for detail in result.details)
 
 
+def test_paper_bundle_audit_fails_when_manifest_repeats_target(tmp_path: Path) -> None:
+    _seed_audit_project(tmp_path)
+    manifest_path = tmp_path / "paper" / "manifest.json"
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload["artifacts"].append(dict(payload["artifacts"][0]))
+    payload["artifact_count"] = len(payload["artifacts"])
+    _write_manifest_payload(tmp_path, payload)
+
+    result = paper_audit.audit_paper_bundle(tmp_path)
+
+    assert result.status == "fail"
+    duplicated_target = str(payload["artifacts"][0]["target"])
+    assert any(
+        "duplicate manifest target" in detail and duplicated_target in detail
+        for detail in result.details
+    )
+
+
 def test_paper_bundle_audit_fails_when_manifest_size_drifts(tmp_path: Path) -> None:
     _seed_audit_project(tmp_path)
     manifest_path = tmp_path / "paper" / "manifest.json"

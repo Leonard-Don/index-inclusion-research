@@ -814,8 +814,12 @@ def _validate_paper_bundle_manifest(root: Path, *, required_paths: Sequence[Path
         if target_rel.is_absolute() or ".." in target_rel.parts:
             problems.append(f"{target_value}: target must stay under paper/")
             continue
+        target_key = target_rel.as_posix()
+        if target_key in targets_seen:
+            problems.append(f"{target_value}: duplicate manifest target")
+            continue
+        targets_seen.add(target_key)
         target_path = paper_root / target_rel
-        targets_seen.add(target_rel.as_posix())
         if not target_path.is_file():
             problems.append(f"{target_value}: target file is missing")
             continue
