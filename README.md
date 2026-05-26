@@ -6,6 +6,7 @@
 ![Literature](https://img.shields.io/badge/literature-16%20papers-6f42c1)
 ![Pipeline](https://img.shields.io/badge/pipeline-10%20steps-0969da)
 ![CLI](https://img.shields.io/badge/CLI-48%20commands-2da44e)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
 `index-inclusion-research` 是一个把指数纳入效应文献、真实样本结果与识别设计放到同一工作流里的实证研究项目。它把 16 篇文献库、3 条研究主线、真实样本表和 HS300 RDD 扩展统一到同一 dashboard 与 CLI 体系，适合：
 
