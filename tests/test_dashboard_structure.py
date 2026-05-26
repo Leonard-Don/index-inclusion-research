@@ -44,6 +44,18 @@ def _reset_refresh_state() -> None:
         )
 
 
+def test_evidence_api_does_not_leak_absolute_project_root() -> None:
+    client = dashboard.app.test_client()
+    response = client.get("/api/evidence/H6_weight_change")
+
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert "matched_weight_events" in body
+    assert '"root"' not in body
+    assert str(ROOT) not in body
+    assert "/Users/" not in body
+
+
 def test_dashboard_uses_three_track_entrypoints() -> None:
     assert set(dashboard.ANALYSES) == {
         "price_pressure_track",

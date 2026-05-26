@@ -1203,7 +1203,11 @@ def test_evidence_detail_and_rdd_l3_workbench_pages_render() -> None:
             )
             assert response is not None
             assert response.status == 200
-            assert "matched_weight_events" in page.locator("body").inner_text()
+            api_body = page.locator("body").inner_text()
+            assert "matched_weight_events" in api_body
+            assert '"root"' not in api_body
+            assert str(ROOT) not in api_body
+            assert "/Users/" not in api_body
 
             page.goto(
                 f"{base_url}/evidence/H6_weight_change",

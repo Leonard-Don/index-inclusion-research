@@ -259,7 +259,8 @@ def _register_evidence_routes(app: Flask, root: Path) -> None:
         detail = build_evidence_detail(item, root=root)
         if detail is None:
             abort(404)
-        return jsonify(detail)
+        public_detail = {key: value for key, value in detail.items() if key != "root"}
+        return jsonify(public_detail)
 
     show_evidence_detail.__name__ = "show_evidence_detail"
     evidence_api.__name__ = "evidence_api"
