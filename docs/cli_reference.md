@@ -7,7 +7,7 @@
 - **报表与图表**：`make-figures-tables` / `generate-research-report` / `paper-bundle` / `paper-audit` / `build-hs300-rdd-forest` / `build-cma-verdicts-forest` / `build-cma-sensitivity-forest` / `build-cma-ar-engine-forest` / `build-cma-2d-robustness-heatmap` / `citation-graph` / `verdict-timeline` / `literature-timeline`
 - **Dashboard 与三条主线**：`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - **HS300 RDD 工具链**：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`（详见 [docs/hs300_rdd_workflow.md](hs300_rdd_workflow.md)）
-- **跨市场不对称 + 假说证据**：`cma`（7 条假说 verdict）/ `prepare-passive-aum` / `download-passive-aum-cn` / `download-cn-passive-aum-proxy` / `compute-h6-weight-change` / `refresh-real-evidence` / `power-analysis`（H3/H6 post-hoc 功效）
+- **跨市场不对称 + 假说证据**：`cma`（7 条假说 verdict）/ `prepare-passive-aum` / `download-passive-aum-cn` / `download-cn-passive-aum-proxy` / `compute-h6-weight-change` / `refresh-real-evidence` / `power-analysis`（H3-H6 post-hoc 功效 + H1/H2 engine-flip 诊断）
 - **总入口**：`rebuild-all`（10 步流水线一键跑）/ `verdict-summary`（终端速览）/ `pap-diff`（裁决基线偏离审计）/ `doctor`（项目健康检查）/ `export-public-summary`（生成 data/public/index_research_summary.json）/ `paper-skeleton`（自动生成 paper/skeleton.md 论文骨架）/ `methodology-summary`（自动生成 paper/methodology_summary.md 方法论摘要卡）/ `paper-integrity`（论文交付前的跨文档一致性发布门禁）/ `tex-export`（生成 Overleaf/XeLaTeX 论文源文件）/ `submission-ready`（论文提交前最后一道发布就绪 go/no-go 门禁）/ `enrich-bib`（用 CrossRef 自动补全 BibTeX 期刊 / 卷 / 页 / DOI）/ `add-paper`（交互式添加新文献到 PAPER_LIBRARY 并同步下游 6 个工件）
 
 > `citation-graph` 生成的是启发式文献关联网络（主题/方法/年代链接），不是逐条 bibliography 引用核验。
@@ -712,9 +712,9 @@ python3 -m index_inclusion_research.outputs.literature_timeline
 
 ## 25. 低-n 假说后验功效（`power-analysis`）
 
-`index-inclusion-power-analysis` 是 48 个 console scripts 的第 48 号。它解决审稿人对低-n 假说的「**有这么小的 n，你究竟能不能检出真实效应？**」反驳——把"我不知道"变成具体的功效数字（power at observed effect、80% 功效下的 MDE、与小/中/大 Cohen's *d* 的对照）。
+`index-inclusion-power-analysis` 是 48 个 console scripts 的第 48 号。它解决审稿人对低-n 假说的「**有这么小的 n，你究竟能不能检出真实效应？**」反驳——把"我不知道"变成具体的功效数字（power at observed effect、80% 功效下的 MDE、与小/中/大 Cohen's *d* 的对照），并把 H1/H2 的 adjusted-vs-market AR 引擎口径翻转诊断落盘。
 
-输出 `results/real_tables/power_analysis_report.csv` + `power_analysis_report.md`：
+输出三份工件：`results/real_tables/power_analysis_report.csv` + `power_analysis_engine_flip.csv` + `power_analysis_report.md`：
 
 - **H3 (n=4, 双通道命中率)**：
   - 测试族：单比例 z-test（正态近似）+ exact-binomial 对照。
@@ -729,6 +729,11 @@ python3 -m index_inclusion_research.outputs.literature_timeline
   - 80% 功效下的 MDE ≈ \|d\|=0.35。
   - 释义：**功效充足**，但观测方向 (heavy<light) 与 H6 预测 (heavy>light) 相反 → "证据不足" 是方向不符，**不是** n 太小。
 
+- **H1/H2 (adjusted vs market AR engine)**：
+  - `power_analysis_engine_flip.csv` 一行一假说，只在 adjusted 与 market 两个 canonical engine 都存在时写诊断。
+  - 输出 `adjusted_power` / `market_power`、`adjusted_p_or_effect` / `market_p_or_effect`、`engine_choice_impact`、`classification` 与中文/英文混合 narrative。
+  - `classification` ∈ `METHODOLOGY_DRIVEN` / `POWER_LIMITED` / `MIXED` / `MISSING` / `NO_FLIP`；单 engine 输入不会伪造 flip。
+
 模块 API:
 
 - `binomial_proportion_power(n, p0, p1, alpha=0.05, alternative='two-sided') → PowerResult`
@@ -738,16 +743,18 @@ python3 -m index_inclusion_research.outputs.literature_timeline
 - `beta_posterior_probability_above(successes, n, threshold, prior_alpha=1.0, prior_beta=1.0) → float`
 - `compute_h3_power(observed_hit_rate=0.75, n=4) → HypothesisPowerReport`
 - `compute_h6_power(observed_spread=-0.019, observed_sd=None, n=67, ...) → HypothesisPowerReport`
+- `compare_h1_h2_across_engines(h1_inputs_by_engine, h2_inputs_by_engine, ...) → H1H2EngineComparison`
+- `build_engine_flip_diagnoses(reports, alpha=0.05) → list[EngineFlipDiagnosis]`
 
 ```bash
 # 默认产出
 index-inclusion-power-analysis
 
-# 自定义 α / target power
-index-inclusion-power-analysis --alpha 0.10 --target-power 0.90
+# 自定义 α / target power / engine-flip 诊断输出
+index-inclusion-power-analysis --alpha 0.10 --target-power 0.90 --flip-output /tmp/engine_flip.csv
 
-# 只看 markdown 报告，不写盘
-index-inclusion-power-analysis --print
+# 默认会写盘并把 markdown 正文打印到 stdout；静默只写文件
+index-inclusion-power-analysis --quiet
 
 # 跳过 markdown 二份，只写 CSV
 index-inclusion-power-analysis --md-output ''
@@ -762,6 +769,7 @@ python3 -m index_inclusion_research.power_analysis
 - **明示 Bayesian 先验**：H3 的 P(p>0.60) 默认使用 Beta(1, 1)（uniform）；任何更换都需要在 interpretation 文字里明说。
 - **小样本警示**：n=4 在 α=0.05 二侧 exact-binomial 不存在 rejection region；这是 H3 "证据不足" 的统计依据，而非审美选择。
 - **方向 vs 强度的分离**：H6 power≈1 与 verdict "证据不足" 同时存在，是因为方向相反——这是 power analysis 区别于 simple p-value reporting 的本质价值。
+- **engine-flip 工件必须落盘**：CLI 每次都写 `power_analysis_engine_flip.csv`（可用 `--flip-output` 覆盖）；没有双 engine 对照时写空表头，而不是让下游猜测文件缺失含义。
 - **集成到 `docs/limitations.md` §7**：与 `index-inclusion-export-public-summary` 的 `power_analysis` 段同步：reviewer 看到 "power\<0.30" 这一行不是攻击点，是 n=4 自带的物理限制。
 
 ## Verdicts ↔ Literature 双向链接
@@ -774,6 +782,6 @@ python3 -m index_inclusion_research.power_analysis
 
 ## 交互式 ECharts 图层
 
-dashboard `demo` / `full` 模式下渲染交互图（基于 ECharts CDN），`/api/chart/<chart_id>` 拉 JSON。`car_path` / `car_heatmap` / `price_pressure` / `gap_decomposition` / `heterogeneity_size` / `time_series_rolling` / `main_regression` / `mechanism_regression` / `event_counts` / `cma_mechanism_heatmap` / `cma_gap_length_distribution` / `rdd_scatter` 都已注册。
+dashboard `demo` / `full` 模式下渲染交互图（基于 ECharts CDN），`/api/chart/<chart_id>` 拉 JSON。`car_path` / `car_heatmap` / `price_pressure` / `gap_decomposition` / `heterogeneity_size` / `time_series_rolling` / `main_regression` / `rdd_robustness` / `mechanism_regression` / `event_counts` / `cma_mechanism_heatmap` / `cma_gap_length_distribution` / `rdd_scatter` 都已注册。
 
 `IntersectionObserver` 懒加载；未识别 chart_id 返回 404。新增图见 [chart_data.py](../src/index_inclusion_research/chart_data.py) 的 `CHART_BUILDERS` 注册表与 [interactive_charts.js](../src/index_inclusion_research/web/static/dashboard/interactive_charts.js) 的 `CHART_OPTION_BUILDERS`。

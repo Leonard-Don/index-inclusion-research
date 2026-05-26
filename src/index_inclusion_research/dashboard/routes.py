@@ -246,24 +246,6 @@ def handle_refresh(
     )
 
 
-def handle_refresh_status(
-    *,
-    mode: ModeName,
-    anchor: str,
-    open_panels: str | None,
-    refresh_status_payload: RefreshStatusPayloadBuilder,
-) -> RouteResponse:
-    return DashboardRefreshStatusHandler(
-        refresh_status_payload=refresh_status_payload,
-    ).handle(
-        DashboardRouteState(
-            mode=mode,
-            anchor=anchor,
-            open_panels=open_panels,
-        )
-    )
-
-
 def handle_run_analysis(
     analysis_id: str,
     *,

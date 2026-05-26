@@ -89,14 +89,6 @@ def _health_check(label: str, status: str, copy: str, command: str = "") -> Resu
     }
 
 
-def _read_first_csv_row(path: Path) -> dict[str, str]:
-    if not path.exists() or not path.is_file():
-        return {}
-    with path.open(newline="", encoding="utf-8") as fh:
-        reader = csv.DictReader(fh)
-        return next(reader, {}) or {}
-
-
 _ARTIFACT_LABELS = {
     "event_study_summary.csv": "事件研究摘要",
     "long_window_event_study_summary.csv": "长窗口摘要",

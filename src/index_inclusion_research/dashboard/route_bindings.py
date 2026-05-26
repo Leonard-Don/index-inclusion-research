@@ -284,7 +284,3 @@ def build_dashboard_route_views(
         root=root,
         get_literature_paper=get_literature_paper,
     ).build_views()
-
-
-def bind_dashboard_route_views(namespace: dict[str, RouteView], route_views: DashboardRouteViews) -> None:
-    namespace.update(route_views.route_namespace())

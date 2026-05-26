@@ -858,10 +858,11 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         description=(
             "Post-hoc statistical power analysis for the CMA hypotheses "
             "(H3 n=4, H4 n=436, H5 n=936, H6 n=67; plus H1 / H2 per AR "
-            "engine). Writes results/real_tables/power_analysis_report.csv "
-            "+ markdown twin; reads the published regression / verdict "
-            "CSVs for observed effect-size and SE; falls back to documented "
-            "defaults if a regression CSV is missing."
+            "engine). Writes results/real_tables/power_analysis_report.csv, "
+            "power_analysis_engine_flip.csv, and a markdown twin; reads the "
+            "published regression / verdict CSVs for observed effect-size "
+            "and SE; falls back to documented defaults if a regression CSV "
+            "is missing."
         ),
     )
     parser.add_argument(
@@ -881,6 +882,15 @@ def _build_arg_parser() -> argparse.ArgumentParser:
             "Destination markdown twin "
             "(default: results/real_tables/power_analysis_report.md). "
             "Pass an empty string to skip writing the markdown."
+        ),
+    )
+    parser.add_argument(
+        "--flip-output",
+        type=Path,
+        default=None,
+        help=(
+            "Destination engine-flip diagnostic CSV "
+            "(default: results/real_tables/power_analysis_engine_flip.csv)."
         ),
     )
     parser.add_argument(
@@ -909,9 +919,9 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         "--quiet",
         action="store_true",
         help=(
-            "Suppress the markdown body on stdout. The two ``INFO`` log "
-            "lines (CSV + markdown paths) are still emitted so cron "
-            "logs show where the files landed."
+            "Suppress the markdown body on stdout. The ``INFO`` log "
+            "lines for generated artifact paths are still emitted so cron "
+            "logs show where the CSV, markdown, and engine-flip files landed."
         ),
     )
     return parser
@@ -936,6 +946,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(csv_path, index=False)
     logger.info("Wrote power analysis CSV to %s (%d rows)", csv_path, len(df))
+
+    diagnoses = build_engine_flip_diagnoses(reports, alpha=args.alpha)
+    flip_df = diagnoses_to_dataframe(diagnoses)
+    flip_path = args.flip_output or _default_flip_diagnosis_csv()
+    flip_path.parent.mkdir(parents=True, exist_ok=True)
+    flip_df.to_csv(flip_path, index=False)
+    logger.info(
+        "Wrote engine-flip diagnostics CSV to %s (%d rows)",
+        flip_path,
+        len(flip_df),
+    )
 
     if args.md_output is None or str(args.md_output) != "":
         md_path = args.md_output or _default_md_output()

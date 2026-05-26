@@ -21,35 +21,35 @@ index-inclusion-dashboard
    `index-inclusion-dashboard` 会先走统一 CLI wrapper，再委托给包内 dashboard 启动模块。
 2. [src/index_inclusion_research/literature_dashboard.py](../src/index_inclusion_research/literature_dashboard.py)
    负责解析 dashboard CLI 参数，并把启动职责交给已组装好的 Flask `app`。
-3. [src/index_inclusion_research/dashboard_app.py](../src/index_inclusion_research/dashboard_app.py)
+3. [src/index_inclusion_research/dashboard/app.py](../src/index_inclusion_research/dashboard/app.py)
    负责 bootstrap 路径、构建全局 `dashboard_application`，并导出当前仍然有用的薄别名：
    `app`、`runtime`、`services`、`route_views`、`ANALYSES` 等。
-4. [src/index_inclusion_research/dashboard_factory.py](../src/index_inclusion_research/dashboard_factory.py)
+4. [src/index_inclusion_research/dashboard/factory.py](../src/index_inclusion_research/dashboard/factory.py)
    负责定义 `DashboardShell` / `DashboardApplication`，并把 `shell`、`services`、`route_views` 和 Flask `app` 组装起来。
 
 如果只是想回答"为什么打开这个页面会走到这里"，先从
-`literature_dashboard.py -> dashboard_app.py -> dashboard_factory.py -> dashboard_route_bindings.py`
+`literature_dashboard.py -> dashboard/app.py -> dashboard/factory.py -> dashboard/route_bindings.py`
 看起最快。
 
 ## 分层概览
 
 当前主干大致分成七层：
 
-1. `dashboard_bootstrap.py`
+1. `dashboard/bootstrap.py`
    负责计算 repo root / `src` / `web/templates` / `web/static`，并把 `src` 放入 `sys.path`。
-2. `dashboard_app.py`
+2. `dashboard/app.py`
    进程内单例入口。只做 bootstrap、组装和显式导出。
-3. `dashboard_factory.py`
+3. `dashboard/factory.py`
    负责创建 `DashboardShell`：
    `analyses`、`runtime`、`refresh_coordinator`、`app` 都在这里生成。
    `DashboardApplication` 也已经并回这里，不再单独保留 `dashboard_application.py`。
-4. `dashboard_services.py`
+4. `dashboard/services.py`
    request-aware 服务层。把 refresh 状态、mode 解析、URL 构造、runtime 调用收成显式方法。
-5. `dashboard_runtime.py`
+5. `dashboard/runtime.py`
    dashboard 领域 façade。对外暴露明确的 `load_* / run_* / build_*` 表面。
-6. `dashboard_route_bindings.py` + `dashboard_routes.py`
+6. `dashboard/route_bindings.py` + `dashboard/routes.py`
    路由装配和请求适配层。前者负责 wiring，后者负责 request parsing 和 view/handler。
-7. `dashboard_page_runtime.py` + `dashboard_home.py`
+7. `dashboard/page_runtime.py` + `dashboard/home.py`
    页面内容装配层。前者管理 outline / sections runtime，后者负责首页 context 的最终拼装。
 
 可以把它粗略理解成：
@@ -58,35 +58,35 @@ index-inclusion-dashboard
 
 ## Runtime 结构
 
-[src/index_inclusion_research/dashboard_runtime.py](../src/index_inclusion_research/dashboard_runtime.py)
+[src/index_inclusion_research/dashboard/runtime.py](../src/index_inclusion_research/dashboard/runtime.py)
 现在是一个显式 façade，不再依赖 `__getattr__` 去把内部组件偷偷透出。
 
 它内部组合了两部分：
 
-- `track`: [dashboard_track_runtime.py](../src/index_inclusion_research/dashboard_track_runtime.py)
-- `page`: [dashboard_page_runtime.py](../src/index_inclusion_research/dashboard_page_runtime.py)
+- `track`: [dashboard/track_runtime.py](../src/index_inclusion_research/dashboard/track_runtime.py)
+- `page`: [dashboard/page_runtime.py](../src/index_inclusion_research/dashboard/page_runtime.py)
 
 ### Track Runtime
 
 这一层现在已经收口到
-[dashboard_track_runtime.py](../src/index_inclusion_research/dashboard_track_runtime.py)，
-不再保留 `dashboard_track_support_runtime.py` /
-`dashboard_track_content_runtime.py` /
-`dashboard_track_display_runtime.py` 这三个中间文件。
+[dashboard/track_runtime.py](../src/index_inclusion_research/dashboard/track_runtime.py)，
+不再保留 `dashboard/track_support_runtime.py` /
+`dashboard/track_content_runtime.py` /
+`dashboard/track_display_runtime.py` 这三个中间文件。
 
 当前做法是：`DashboardTrackRuntime` 保持对外 façade 不变，但显式调用 helper 模块：
 
-- `dashboard_formatting`
+- `dashboard/formatting`
   负责 label、格式化、表格渲染、figure caption
-- `dashboard_loaders`
+- `dashboard/loaders`
   负责 saved result / CSV / RDD contract / manifest 读取
-- `dashboard_presenters`
+- `dashboard/presenters`
   负责 table tier、展示层切分与 display 装饰
-- `dashboard_figures`
+- `dashboard/figures`
   负责页面附属 figure 生成
-- `dashboard_refresh`
+- `dashboard/refresh`
   负责 snapshot source 与 refresh meta
-- `dashboard_content` / `dashboard_tracks`
+- `dashboard/content` / `dashboard/tracks`
   负责文献页、framework、supplement 和主线结果内容
 
 所以现在更准确的理解是：
@@ -96,9 +96,9 @@ index-inclusion-dashboard
 
 `page` 侧仍然拆成两层：
 
-- [dashboard_page_outline_runtime.py](../src/index_inclusion_research/dashboard_page_outline_runtime.py)
+- [dashboard/page_outline_runtime.py](../src/index_inclusion_research/dashboard/page_outline_runtime.py)
   放导航、mode tabs、overview 文案、abstract、highlights。
-- [dashboard_page_sections_runtime.py](../src/index_inclusion_research/dashboard_page_sections_runtime.py)
+- [dashboard/page_sections_runtime.py](../src/index_inclusion_research/dashboard/page_sections_runtime.py)
   放首页 section 级内容：
   `design / robustness / limits / cross_market_asymmetry / home_context`。
 
@@ -108,7 +108,7 @@ index-inclusion-dashboard
 
 首页最大的内容拼装点现在在：
 
-- [dashboard_home.py](../src/index_inclusion_research/dashboard_home.py)
+- [dashboard/home.py](../src/index_inclusion_research/dashboard/home.py)
 
 其中：
 
@@ -121,19 +121,19 @@ index-inclusion-dashboard
 如果你要改：
 
 - 首页 section 的组合关系：优先看 `DashboardHomeContextBuilder`
-- overview/highlight 文案逻辑：优先看 `dashboard_home.py`
-- section 具体内容来源：优先看 `dashboard_page_sections_runtime.py`
+- overview/highlight 文案逻辑：优先看 `dashboard/home.py`
+- section 具体内容来源：优先看 `dashboard/page_sections_runtime.py`
 - 如果是新增首页独立板块（例如 CMA section）：优先看
-  `dashboard_page_sections_runtime.py` + `dashboard_home.py`
+  `dashboard/page_sections_runtime.py` + `dashboard/home.py`
 
 ## 路由层
 
 路由层现在拆成两步：
 
-1. [dashboard_route_bindings.py](../src/index_inclusion_research/dashboard_route_bindings.py)
+1. [dashboard/route_bindings.py](../src/index_inclusion_research/dashboard/route_bindings.py)
    负责显式 wiring。
    这里现在是 `DashboardRouteDependencies` + `DashboardRouteFactory`，不再依赖字符串 `getattr`。
-2. [dashboard_routes.py](../src/index_inclusion_research/dashboard_routes.py)
+2. [dashboard/routes.py](../src/index_inclusion_research/dashboard/routes.py)
    负责请求适配和 handler。
    这里现在有：
    `DashboardRequestAdapter`、
@@ -155,9 +155,9 @@ index-inclusion-dashboard
 
 refresh 仍然是本地研究面板导向的实现：
 
-- [dashboard_refresh.py](../src/index_inclusion_research/dashboard_refresh.py)
-- [dashboard_refresh_coordinator.py](../src/index_inclusion_research/dashboard_refresh_coordinator.py)
-- [dashboard_services.py](../src/index_inclusion_research/dashboard_services.py)
+- [dashboard/refresh.py](../src/index_inclusion_research/dashboard/refresh.py)
+- [dashboard/refresh_coordinator.py](../src/index_inclusion_research/dashboard/refresh_coordinator.py)
+- [dashboard/services.py](../src/index_inclusion_research/dashboard/services.py)
 
 当前特点：
 
@@ -169,12 +169,12 @@ refresh 仍然是本地研究面板导向的实现：
 
 ## 配置与类型
 
-- [dashboard_config.py](../src/index_inclusion_research/dashboard_config.py)
+- [dashboard/config.py](../src/index_inclusion_research/dashboard/config.py)
   负责 `analyses`、card、details panel keys 等静态配置。
-- [dashboard_types.py](../src/index_inclusion_research/dashboard_types.py)
+- [dashboard/types.py](../src/index_inclusion_research/dashboard/types.py)
   负责 `AnalysesConfig`、`AnalysisRunner`、request/url builder protocols、route registration map 等共享类型。
 
-如果你要继续增强类型边界，先从 `dashboard_types.py` 往里推最稳。
+如果你要继续增强类型边界，先从 `dashboard/types.py` 往里推最稳。
 
 ## 测试护栏
 
@@ -207,5 +207,5 @@ refresh 仍然是本地研究面板导向的实现：
 4. 如果继续扩首页 section，保持 “mode gating + browser smoke 覆盖” 一起落地，避免首页再次变成只靠手点验证的脆弱面。
 
 如果只是改视觉或页面内容，通常不需要动 `factory/services` 这一层。优先在
-`dashboard_home.py`、`dashboard_page_sections_runtime.py`、`dashboard_sections.py`、
-`dashboard_presenters.py` 和静态资源里完成更安全。
+`dashboard/home.py`、`dashboard/page_sections_runtime.py`、`dashboard/sections.py`、
+`dashboard/presenters.py` 和静态资源里完成更安全。

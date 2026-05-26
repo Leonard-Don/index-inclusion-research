@@ -45,11 +45,7 @@ from index_inclusion_research import paths
 
 logger = logging.getLogger(__name__)
 
-# Canonical ordered hypothesis IDs — kept for any helpers that still reference
-# the verdict CSV, but H1–H7 are no longer emitted into the main skeleton.
-EXPECTED_HIDS: tuple[str, ...] = ("H1", "H2", "H3", "H4", "H5", "H6", "H7")
 
-# Sanity bound: a well-formed skeleton should fall in this size band (bytes).
 # Lower bound: §1–§7 headers + §References + Appendix + limitations verbatim
 # (~3 KB) + 16 paper refs. Upper bound: submission-ready prose plus the
 # full limitations file embedded verbatim.
@@ -176,20 +172,6 @@ def _coerce_float(value: Any) -> float | None:
 
 
 @dataclass(frozen=True)
-class VerdictRow:
-    """Bare-minimum verdict row for the skeleton hypothesis table."""
-
-    hid: str
-    name_cn: str
-    verdict: str
-    confidence: str
-    evidence_tier: str
-    n_obs: int
-    headline_metric: str
-    track: str
-
-
-@dataclass(frozen=True)
 class PowerAnalysisRow:
     """One row of the §5 Limitations post-hoc power table."""
 
@@ -239,113 +221,6 @@ def _power_analysis_rows(power_csv: Path) -> list[PowerAnalysisRow]:
             )
         )
     return rows
-
-
-def _verdict_rows(verdicts_df: pd.DataFrame) -> list[VerdictRow]:
-    """Return verdict rows in canonical H1..H7 order."""
-    if verdicts_df.empty:
-        return []
-    by_hid: dict[str, VerdictRow] = {}
-    for _, row in verdicts_df.iterrows():
-        hid = _coerce_str(row.get("hid"))
-        if not hid:
-            continue
-        key_label = _coerce_str(row.get("key_label"))
-        key_value_raw = row.get("key_value")
-        try:
-            key_value = (
-                float(key_value_raw)
-                if key_value_raw is not None
-                and not (isinstance(key_value_raw, float) and pd.isna(key_value_raw))
-                else None
-            )
-        except (TypeError, ValueError):
-            key_value = None
-        if key_label and key_value is not None:
-            headline = f"{key_label} = {key_value:.4g}"
-        elif key_label:
-            headline = key_label
-        else:
-            headline = ""
-        by_hid[hid] = VerdictRow(
-            hid=hid,
-            name_cn=_coerce_str(row.get("name_cn")),
-            verdict=_coerce_str(row.get("verdict")),
-            confidence=_coerce_str(row.get("confidence")),
-            evidence_tier=_coerce_str(row.get("evidence_tier")),
-            n_obs=_coerce_int(row.get("n_obs")),
-            headline_metric=headline,
-            track=_coerce_str(row.get("track")),
-        )
-    out: list[VerdictRow] = []
-    for hid in EXPECTED_HIDS:
-        if hid in by_hid:
-            out.append(by_hid[hid])
-    for hid in sorted(set(by_hid.keys()) - set(EXPECTED_HIDS)):
-        out.append(by_hid[hid])
-    return out
-
-
-def _hs300_main_block(rdd_df: pd.DataFrame) -> dict[str, Any]:
-    """Extract HS300 RDD main-spec headline for §4.3 prose."""
-    if rdd_df.empty:
-        return {}
-    main_rows = rdd_df[rdd_df["spec_kind"].astype(str).str.lower() == "main"]
-    if main_rows.empty:
-        return {}
-    main = main_rows.iloc[0]
-    tau = _coerce_float(main.get("tau"))
-    if tau is None:
-        return {}
-    p_value = _coerce_float(main.get("p_value"))
-    bandwidth = _coerce_float(main.get("bandwidth"))
-    return {
-        "tau_pct": round(tau * 100.0, 2),
-        "p_value": round(p_value, 4) if p_value is not None else None,
-        "n_obs": _coerce_int(main.get("n_obs")),
-        "outcome": _coerce_str(main.get("outcome")) or None,
-        "bandwidth": bandwidth,
-        "robustness_count": int(len(rdd_df)),
-    }
-
-
-def _sensitivity_block(public_summary: dict[str, Any]) -> dict[str, Any]:
-    """Pull sensitivity sweep totals out of the public summary JSON.
-
-    Falls back to ``None`` for any axis the summary doesn't carry, so
-    the template's ``{% if %}`` guards take care of partial inputs.
-    """
-    sens = public_summary.get("sensitivity_robustness") or {}
-    threshold = sens.get("threshold_axis") or {}
-    ar = sens.get("ar_engine_axis") or {}
-    two_d = sens.get("two_dimensional") or {}
-    return {
-        "threshold": {
-            "thresholds_tested": threshold.get("thresholds_tested") or [],
-            "cell_count": threshold.get("cell_count"),
-            "stable_count": threshold.get("stable_count"),
-            "flip_count": threshold.get("flip_count"),
-        }
-        if threshold
-        else None,
-        "ar_engine": {
-            "models_tested": ar.get("ar_models_tested") or [],
-            "cell_count": ar.get("cell_count"),
-            "stable_count": ar.get("stable_count"),
-            "flip_count": ar.get("flip_count"),
-            "flipping_hypotheses": ar.get("flipping_hypotheses") or [],
-        }
-        if ar
-        else None,
-        "two_d": {
-            "cell_count": two_d.get("cell_count"),
-            "stable_count": two_d.get("stable_count"),
-            "flip_count": two_d.get("flip_count"),
-            "flipping_hypotheses": two_d.get("flipping_hypotheses") or [],
-        }
-        if two_d
-        else None,
-    }
 
 
 def _pap_block(
@@ -447,13 +322,6 @@ def _citation_network_block() -> dict[str, Any]:
         }
     graph = build_citation_graph()
     return summarize_for_paper_skeleton(graph)
-
-
-def _figures_available(figures_dir: Path) -> set[str]:
-    """Return basenames present in the published figures directory."""
-    if not figures_dir.exists():
-        return set()
-    return {p.name for p in figures_dir.iterdir() if p.is_file()}
 
 
 def _event_study_core_numbers(event_study_csv: Path) -> dict[str, Any]:

@@ -389,8 +389,8 @@ def _write_verdicts_csv(path: Path) -> None:
     df.to_csv(path, index=False)
 
 
-def test_cli_writes_csv_and_markdown(tmp_path: Path, monkeypatch) -> None:
-    """`main()` writes both a CSV and a markdown twin to disk."""
+def test_cli_writes_csv_markdown_and_engine_flip_csv(tmp_path: Path, monkeypatch) -> None:
+    """`main()` writes the headline report plus the promised engine-flip CSV."""
     # Build a minimal verdicts CSV that the CLI will read.
     fake_root = tmp_path / "root"
     real_tables = fake_root / "results" / "real_tables"
@@ -402,8 +402,10 @@ def test_cli_writes_csv_and_markdown(tmp_path: Path, monkeypatch) -> None:
     assert rc == 0
     csv_path = real_tables / "power_analysis_report.csv"
     md_path = real_tables / "power_analysis_report.md"
+    flip_path = real_tables / "power_analysis_engine_flip.csv"
     assert csv_path.exists()
     assert md_path.exists()
+    assert flip_path.exists()
     df = pd.read_csv(csv_path)
     assert set(df["hid"].tolist()) == {"H3", "H6"}
     h3 = df.loc[df["hid"] == "H3"].iloc[0]
@@ -414,6 +416,38 @@ def test_cli_writes_csv_and_markdown(tmp_path: Path, monkeypatch) -> None:
     markdown = md_path.read_text(encoding="utf-8")
     assert "## 1. 功效一览表" in markdown
     assert "H3" in markdown and "H6" in markdown
+    flip_df = pd.read_csv(flip_path)
+    assert list(flip_df.columns) == list(cli_module.FLIP_DIAGNOSIS_COLUMNS)
+
+
+def test_cli_engine_flip_csv_contains_diagnoses(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Per-engine H1/H2 diagnostics are no longer library-only."""
+    fake_root = tmp_path / "root"
+    real_tables = fake_root / "results" / "real_tables"
+    real_tables.mkdir(parents=True)
+    monkeypatch.setenv("INDEX_INCLUSION_ROOT", str(fake_root))
+
+    reports = [
+        _engine_report(hid="H1", engine="adjusted", power=0.85, bootstrap_p_value=0.01),
+        _engine_report(hid="H1", engine="market", power=0.88, bootstrap_p_value=0.42),
+    ]
+    monkeypatch.setattr(cli_module, "build_power_report_rows", lambda **_: reports)
+
+    rc = cli_module.main(["--quiet"])
+    assert rc == 0
+    flip_df = pd.read_csv(real_tables / "power_analysis_engine_flip.csv")
+    assert flip_df["hid"].tolist() == ["H1"]
+    assert flip_df.loc[0, "classification"] in {
+        "METHODOLOGY_DRIVEN",
+        "MIXED",
+        "POWER_LIMITED",
+        "NO_FLIP",
+    }
+    narrative = str(flip_df.loc[0, "narrative"])
+    assert "adjusted" in narrative
 
 
 def test_cli_prints_markdown_body_to_stdout_by_default(

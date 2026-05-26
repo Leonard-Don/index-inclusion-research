@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import cast
 
 from index_inclusion_research.dashboard.types import FigureEntry, RelativePathBuilder
 
@@ -78,12 +77,3 @@ def build_figure_entry(
         entry["width"] = width
         entry["height"] = height
     return entry
-
-
-def attach_figure_dimensions(entry: FigureEntry, *, path: Path) -> FigureEntry:
-    enriched = dict(entry)
-    width, height = read_image_dimensions(path)
-    if width is not None and height is not None:
-        enriched["width"] = width
-        enriched["height"] = height
-    return cast(FigureEntry, enriched)
