@@ -98,10 +98,17 @@ BASE_REFRESH_STEPS: tuple[PipelineStep, ...] = (
 
 
 def _relative_label(path: Path, *, root: Path = ROOT) -> str:
+    path = Path(path)
+    root = Path(root)
+    if not path.is_absolute():
+        label = path.as_posix()
+        return "." if label in {"", "."} else label
     try:
-        return str(path.relative_to(root))
+        relative = path.resolve().relative_to(root.resolve())
     except ValueError:
-        return str(path)
+        return f"../{path.name}" if path.name else ".."
+    label = relative.as_posix()
+    return "." if label == "." else label
 
 
 def _is_missing_text(value: object) -> bool:
@@ -473,8 +480,8 @@ def build_evidence_manifest(
     ]
     return {
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
-        "root": str(root),
-        "tables_dir": str(tables_dir),
+        "root": _relative_label(root, root=root),
+        "tables_dir": _relative_label(tables_dir, root=root),
         "steps": list(step_records),
         "coverage": coverage,
         "doctor": doctor.results_payload(results),

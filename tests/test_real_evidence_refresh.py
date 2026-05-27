@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import json
+
 import pandas as pd
 
 from index_inclusion_research import real_evidence_refresh
 from index_inclusion_research.doctor import CheckResult
 from index_inclusion_research.real_evidence_refresh import (
+    _relative_label,
     build_evidence_manifest,
     compute_cn_sector_coverage,
     run_refresh_pipeline,
@@ -32,6 +35,33 @@ def test_compute_cn_sector_coverage_deduplicates_events_and_metadata(tmp_path) -
     assert coverage["total"] == 2
     assert coverage["known"] == 2
     assert coverage["rate"] == 1.0
+
+
+def test_build_evidence_manifest_uses_safe_relative_path_labels(tmp_path) -> None:
+    tables = tmp_path / "results" / "real_tables"
+    tables.mkdir(parents=True)
+
+    manifest = build_evidence_manifest(
+        root=tmp_path,
+        tables_dir=tables,
+        doctor_results=[CheckResult("fixture", "pass", "ok")],
+    )
+    serialized = json.dumps(manifest, ensure_ascii=False)
+
+    assert str(tmp_path) not in serialized
+    assert manifest["root"] == "."
+    assert manifest["tables_dir"] == "results/real_tables"
+
+
+def test_relative_label_for_path_outside_root_does_not_leak_absolute_path(
+    tmp_path,
+) -> None:
+    outside = tmp_path.parent / f"{tmp_path.name}-outside" / "artifact.csv"
+
+    label = _relative_label(outside, root=tmp_path)
+
+    assert str(outside) not in label
+    assert not label.startswith("/")
 
 
 def test_build_evidence_manifest_summarises_current_files(tmp_path) -> None:
