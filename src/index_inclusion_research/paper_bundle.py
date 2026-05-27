@@ -196,9 +196,21 @@ def _copy_into_section(
     target_dir = dest / section.target_subdir
     target_dir.mkdir(parents=True, exist_ok=True)
     records: list[CopyRecord] = []
-    for src, _anchor in _resolve_files(section):
+    sources = _resolve_files(section)
+    selected_sources: list[tuple[Path, Path]] = []
+    seen_targets: set[Path] = set()
+    # Sections flatten nested outputs by basename; keep source-order precedence
+    # so each copied file has exactly one manifest target.
+    for src, _anchor in sources:
         if src.is_dir():
             continue
+        target = target_dir / src.name
+        if target in seen_targets:
+            continue
+        seen_targets.add(target)
+        selected_sources.append((src, _anchor))
+
+    for src, _anchor in selected_sources:
         # Flatten nested layout into target_dir; preserve only the basename
         # to make `\input{paper/tables/foo.tex}` style references trivial.
         # Exception: snapshots/ keeps its name so the whole subdir lands

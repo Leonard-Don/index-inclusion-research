@@ -287,6 +287,24 @@ def test_manifest_lists_new_visualization_artifacts(tmp_path: Path) -> None:
     assert "tables/pap_deviation_report.csv" in targets
 
 
+def test_build_paper_bundle_de_duplicates_flattened_targets(tmp_path: Path) -> None:
+    """Two source files with the same basename should produce one bundle
+    artifact and one manifest target, preserving source-order precedence.
+    """
+    _seed_minimal_project(tmp_path)
+    canonical = tmp_path / "results" / "real_figures" / "cma_mechanism_heatmap.png"
+    canonical.write_bytes(b"canonical figure")
+    duplicate = tmp_path / "results" / "figures" / "cma_mechanism_heatmap.png"
+    duplicate.write_bytes(b"different figure with colliding basename")
+
+    result = _build_no_regen(tmp_path, force=True)
+    payload = json.loads(result.manifest.read_text(encoding="utf-8"))
+
+    targets = [entry["target"] for entry in payload["artifacts"]]
+    assert targets.count("figures/cma_mechanism_heatmap.png") == 1
+    assert (result.dest / "figures" / "cma_mechanism_heatmap.png").read_bytes() == b"canonical figure"
+
+
 # ── Regeneration tests ───────────────────────────────────────────────
 
 
