@@ -42,7 +42,7 @@ import sys
 import tempfile
 import tomllib
 from datetime import UTC, date, datetime
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 import pandas as pd
@@ -671,11 +671,25 @@ def _safe_public_figure_relpath(relpath: str) -> str | None:
     untrusted input prevents future additions from leaking absolute paths or
     advertising traversal targets to downstream public consumers.
     """
-    candidate = Path(relpath)
-    if candidate.is_absolute() or ".." in candidate.parts:
+    text = str(relpath).strip()
+    candidate = Path(text)
+    windows_candidate = PureWindowsPath(text)
+    if (
+        not text
+        or "\\" in text
+        or candidate.is_absolute()
+        or windows_candidate.is_absolute()
+        or bool(windows_candidate.drive)
+        or ".." in candidate.parts
+        or ".." in windows_candidate.parts
+    ):
         logger.warning("unsafe figure relpath skipped for public summary: %s", relpath)
         return None
-    return candidate.as_posix()
+    relpath_posix = candidate.as_posix()
+    if relpath_posix in {"", "."}:
+        logger.warning("unsafe figure relpath skipped for public summary: %s", relpath)
+        return None
+    return relpath_posix
 
 
 def _build_figures_published(figures_dir: Path) -> list[str]:

@@ -396,6 +396,41 @@ def test_figures_published_skips_unsafe_manifest_entries(
     assert payload["figures_published"] == [unsafe_entries[0]]
 
 
+def test_figures_published_skips_windows_style_manifest_entries(
+    fixture_paths, monkeypatch
+):
+    """Windows-style absolute/traversal figure refs stay out of public JSON.
+
+    On POSIX, backslashes and ``C:/...`` can look like ordinary relative
+    filenames. Seed matching files so the filter must reject them for path
+    safety, not merely because they are missing.
+    """
+    monkeypatch.setenv("INDEX_INCLUSION_ROOT", str(fixture_paths["root"]))
+    unsafe_entries = (
+        export_module.PUBLISHED_FIGURE_RELPATHS[0],
+        ".",
+        "./",
+        r"..\outside.png",
+        "C:/Users/alice/artifact.png",
+        "C:artifact.png",
+        r"results\figures\cma_verdicts_forest.png",
+    )
+    for relpath in unsafe_entries[1:]:
+        if relpath in {".", "./"}:
+            continue
+        unsafe_path = fixture_paths["root"] / relpath
+        unsafe_path.parent.mkdir(parents=True, exist_ok=True)
+        unsafe_path.write_bytes(b"fake-png")
+    monkeypatch.setattr(export_module, "PUBLISHED_FIGURE_RELPATHS", unsafe_entries)
+
+    payload = _build(fixture_paths)
+
+    assert payload["figures_published"] == [unsafe_entries[0]]
+    serialized = json.dumps(payload, ensure_ascii=False)
+    assert "C:/Users" not in serialized
+    assert "\\" not in serialized
+
+
 def test_no_absolute_paths_or_debug_fields_in_output(fixture_paths, monkeypatch):
     """The public JSON must never contain ``/Users/``-style absolute paths
     or non-public keys leaking in from the source CSVs."""
