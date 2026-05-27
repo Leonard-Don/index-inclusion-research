@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import posixpath
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -148,8 +149,9 @@ def _normalize_manifest_path(value: str) -> str:
     value = value.replace("\\", "/")
     while "//" in value:
         value = value.replace("//", "/")
-    while "/./" in value:
-        value = value.replace("/./", "/")
+    value = posixpath.normpath(value)
+    if value == ".":
+        return ""
     while value.startswith("./"):
         value = value[2:]
     return value
