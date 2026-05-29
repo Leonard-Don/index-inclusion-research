@@ -210,10 +210,8 @@ def _md_coverage_rows(c: pd.DataFrame) -> str:
 
 def to_md(verdicts, events, coverage) -> str:
     flips = list(verdicts.loc[verdicts["change_kind"] == "结论翻转", "hid"])
-    conf = list(verdicts.loc[verdicts["change_kind"] == "置信下调", "hid"])
     n_changed = int((verdicts["changed"] == "是").sum())
     flip_s = "、".join(flips) if flips else "无"
-    conf_s = "、".join(conf) if conf else "无"
     return f"""# A 股数据源迁移对照：Yahoo Finance（免费）vs Tushare Pro（付费）
 
 > 自动生成，请勿手工编辑。重算：`python snapshots/yahoo-baseline-cefc214/make_comparison.py`
