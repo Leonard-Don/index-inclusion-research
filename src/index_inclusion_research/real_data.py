@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
-from index_inclusion_research import paths
+from index_inclusion_research import paths, tushare_source
 from index_inclusion_research.loaders import load_events, save_dataframe
 
 ROOT = paths.project_root()
@@ -278,11 +278,14 @@ def _build_price_rows(
     return pd.DataFrame(price_rows), pd.DataFrame(metadata_rows)
 
 
-def _download_benchmarks(start: str, end: str) -> pd.DataFrame:
+def _download_benchmarks(start: str, end: str, markets: list[str] | None = None) -> pd.DataFrame:
     benchmark_specs = {
         "US": "^GSPC",
         "CN": "000300.SS",
     }
+    if markets is not None:
+        market_set = set(markets)
+        benchmark_specs = {market: symbol for market, symbol in benchmark_specs.items() if market in market_set}
     rows: list[dict[str, object]] = []
     for market, yahoo_symbol in benchmark_specs.items():
         history = yf.download(
@@ -308,13 +311,26 @@ def _download_benchmarks(start: str, end: str) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _select_columns_or_empty(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    if all(column in frame.columns for column in columns):
+        return frame.loc[:, columns].copy()
+    return pd.DataFrame(columns=columns)
+
+
 def build_real_dataset(
     start: str,
     end: str,
     us_start_year: int = 2010,
     us_end_year: int = 2025,
     cn_events_path: str | Path = CN_EVENT_SOURCE,
+    cn_price_source: str = "yahoo",
+    tushare_token: str | None = None,
+    tushare_cn_benchmark_code: str = tushare_source.DEFAULT_CSI300_TS_CODE,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    if cn_price_source not in {"yahoo", "tushare"}:
+        raise ValueError(f"Unsupported CN price source: {cn_price_source!r}")
+    if cn_price_source == "tushare":
+        tushare_token = tushare_source.resolve_tushare_token(tushare_token)
     us_events, us_constituents = build_us_events(start_year=us_start_year, end_year=us_end_year)
     cn_events = build_cn_events(cn_events_path)
     events = pd.concat([cn_events, us_events], ignore_index=True)
@@ -331,7 +347,7 @@ def build_real_dataset(
     us_universe = pd.concat(
         [
             us_events.loc[:, ["ticker", "sector"]].drop_duplicates().assign(market="US"),
-            us_controls.loc[:, ["Symbol", "GICS Sector"]]
+            _select_columns_or_empty(us_controls, ["Symbol", "GICS Sector"])
             .rename(columns={"Symbol": "ticker", "GICS Sector": "sector"})
             .assign(market="US"),
         ],
@@ -344,17 +360,48 @@ def build_real_dataset(
     cn_universe = pd.concat(
         [
             cn_event_sector.assign(market="CN"),
-            cn_controls.loc[:, ["ticker"]].assign(sector=pd.NA, market="CN"),
+            _select_columns_or_empty(cn_controls, ["ticker"]).assign(sector=pd.NA, market="CN"),
         ],
         ignore_index=True,
     ).drop_duplicates(subset=["market", "ticker"])
     cn_universe["yahoo_symbol"] = cn_universe["ticker"].map(_cn_code_to_yahoo_symbol)
 
-    universe = pd.concat([cn_universe, us_universe], ignore_index=True)
-    symbols = universe["yahoo_symbol"].dropna().drop_duplicates().tolist()
-    history_map = _chunked_download_history(symbols, start=start, end=end)
-    prices, metadata = _build_price_rows(universe, history_map)
-    benchmarks = _download_benchmarks(start=start, end=end)
+    if cn_price_source == "tushare":
+        us_symbols = us_universe["yahoo_symbol"].dropna().drop_duplicates().tolist()
+        us_history_map = _chunked_download_history(us_symbols, start=start, end=end)
+        us_prices, us_metadata = _build_price_rows(us_universe, us_history_map)
+        if not us_metadata.empty and "data_source" not in us_metadata.columns:
+            us_metadata = us_metadata.assign(data_source="yahoo")
+        cn_tickers = cn_universe["ticker"].dropna().astype(str).drop_duplicates().tolist()
+        cn_sector_lookup = (
+            cn_universe.loc[cn_universe["sector"].notna(), ["ticker", "sector"]]
+            .drop_duplicates("ticker")
+            .set_index("ticker")["sector"]
+            .to_dict()
+        )
+        cn_prices, cn_metadata = tushare_source.fetch_cn_prices(
+            cn_tickers,
+            start=start,
+            end=end,
+            token=tushare_token,
+            sectors=cn_sector_lookup,
+        )
+        prices = pd.concat([cn_prices, us_prices], ignore_index=True)
+        metadata = pd.concat([cn_metadata, us_metadata], ignore_index=True)
+        us_benchmarks = _download_benchmarks(start=start, end=end, markets=["US"])
+        cn_benchmarks = tushare_source.fetch_cn_benchmark(
+            start=start,
+            end=end,
+            token=tushare_token,
+            ts_code=tushare_cn_benchmark_code,
+        )
+        benchmarks = pd.concat([cn_benchmarks, us_benchmarks], ignore_index=True)
+    else:
+        universe = pd.concat([cn_universe, us_universe], ignore_index=True)
+        symbols = universe["yahoo_symbol"].dropna().drop_duplicates().tolist()
+        history_map = _chunked_download_history(symbols, start=start, end=end)
+        prices, metadata = _build_price_rows(universe, history_map)
+        benchmarks = _download_benchmarks(start=start, end=end)
     return events, prices, benchmarks, metadata
 
 
@@ -365,6 +412,22 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--us-start-year", type=int, default=2010, help="Earliest S&P 500 change year to include.")
     parser.add_argument("--us-end-year", type=int, default=2025, help="Latest S&P 500 change year to include.")
     parser.add_argument("--cn-events", default=str(CN_EVENT_SOURCE), help="CSV path for CSI300 adjustment events.")
+    parser.add_argument(
+        "--cn-price-source",
+        choices=["yahoo", "tushare"],
+        default="yahoo",
+        help="CN daily price source. Default keeps the historical Yahoo path.",
+    )
+    parser.add_argument(
+        "--tushare-token",
+        default=None,
+        help="Tushare token. Defaults to TUSHARE_TOKEN or TS_TOKEN when --cn-price-source=tushare.",
+    )
+    parser.add_argument(
+        "--tushare-cn-benchmark-code",
+        default=tushare_source.DEFAULT_CSI300_TS_CODE,
+        help="Tushare CSI300 benchmark ts_code used for CN benchmark returns.",
+    )
     parser.add_argument("--events-output", default="data/raw/real_events.csv", help="Events CSV output path.")
     parser.add_argument("--prices-output", default="data/raw/real_prices.csv", help="Prices CSV output path.")
     parser.add_argument("--benchmarks-output", default="data/raw/real_benchmarks.csv", help="Benchmarks CSV output path.")
@@ -381,6 +444,9 @@ def main(argv: list[str] | None = None) -> None:
         us_start_year=args.us_start_year,
         us_end_year=args.us_end_year,
         cn_events_path=args.cn_events,
+        cn_price_source=args.cn_price_source,
+        tushare_token=args.tushare_token,
+        tushare_cn_benchmark_code=args.tushare_cn_benchmark_code,
     )
     save_dataframe(events, args.events_output)
     save_dataframe(prices, args.prices_output)

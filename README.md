@@ -295,6 +295,8 @@ GitHub Actions 通过 `astral-sh/setup-uv` + `uv sync --extra dev`（按 `uv.loc
 完整限制清单见 [docs/limitations.md](docs/limitations.md)。关键提醒：
 
 - `mkt_cap` / `turnover` 来自 Yahoo `sharesOutstanding` 近似，不是交易所历史口径。
+  若设置 `TUSHARE_TOKEN` 并用 `index-inclusion-download-real-data --cn-price-source tushare`，
+  A 股侧可改用 Tushare 的日线 + `daily_basic` 市值 / 换手率口径刷新。
 - HS300 RDD 当前 L3 覆盖 2020-11 到 2025-11 共 11 个批次、356 条候选，论文级因果声明需扩展到 ≥10 年（见 [docs/hs300_rdd_l3_collection_audit.md](docs/hs300_rdd_l3_collection_audit.md)）。
 - 7 条 CMA 假说为 post-hoc、探索性形成（在观察到 announce-vs-effective / CN-vs-US 不对称结果之后），本项目无预分析计划。判据、阈值与样本边界记录在 [docs/analysis_parameters.md](docs/analysis_parameters.md)（透明性文档，非 pre-analysis plan）；裁决基线快照（`snapshots/pre-registration-*.csv`）配合 `index-inclusion-verdict-summary --vs-pap` 用于跨时间观察 verdict 稳定性，dashboard hero 的状态 pill 也会标 verdict 相对基线快照是否变化。
 - 假说证据强度分层：`core`（H1/H2/H5/H7）vs `supplementary`（H3/H4/H6），见 `cma_hypothesis_verdicts.csv` 的 `evidence_tier` 列。H2 由 `EVIDENCE_TIER_PROMOTION_FLOOR` 数据驱动升级——补入 CN ETF TNA proxy 后合并 n=17 跨过 15 阈值。

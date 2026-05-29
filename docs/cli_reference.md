@@ -34,6 +34,17 @@ index-inclusion-download-real-data
 
 或：`python3 -m index_inclusion_research.real_data`
 
+默认真实行情仍走 Yahoo Finance。若要用 Tushare 刷新 A 股价格、市值 / 换手率和
+CSI300 基准（US 仍走 Yahoo），先设置 token 后切换 CN 源：
+
+```bash
+export TUSHARE_TOKEN=...
+index-inclusion-download-real-data --cn-price-source tushare
+```
+
+也可以显式传 `--tushare-token ...`；CSI300 指数代码默认 `399300.SZ`，
+需要时用 `--tushare-cn-benchmark-code` 覆盖。
+
 下载完成后回填 A 股行业标签 + 重建 H6 权重 proxy：
 
 ```bash

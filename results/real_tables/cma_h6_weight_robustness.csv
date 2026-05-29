@@ -1,7 +1,7 @@
 test,status,coefficient,p_value,n_obs,detail
-coverage,pass,,,67,matched events=67; unique tickers=67
-quartile_spread,pass,-0.027902507397274488,0.030465364461785247,67,Q4 mean=+0.944%; Q1 mean=+3.735%
-ols_weight,pass,-0.006078270224634214,0.0014022106023061855,67,HC3 OLS on standardized weight_proxy; r2=0.033
-sector_fe_weight,pass,-0.043576227111143645,1.0,67,HC3 OLS on standardized weight_proxy; r2=0.443
-median_quantreg_weight,pass,-0.005665481537092168,0.31204108635547817,67,median QuantReg on standardized weight_proxy
-permutation_quartile_spread,pass,-0.027902507397274488,0.02659468106378724,67,two-sided permutation (B=5000); |observed spread|=2.790%; extreme=132/5000
+coverage,pass,,,87,matched events=87; unique tickers=87
+quartile_spread,pass,-0.018104954545454504,0.08930579000932261,87,Q4 mean=+1.385%; Q1 mean=+3.196%
+ols_weight,pass,-0.005658135864275942,0.0006144492584563031,87,HC3 OLS on standardized weight_proxy; r2=0.029
+sector_fe_weight,pass,-0.030505422689307227,1.0,87,HC3 OLS on standardized weight_proxy; r2=0.380
+median_quantreg_weight,pass,-0.0050900495139287035,0.2663826107666379,87,median QuantReg on standardized weight_proxy
+permutation_quartile_spread,pass,-0.018104954545454504,0.09078184363127374,87,two-sided permutation (B=5000); |observed spread|=1.810%; extreme=453/5000

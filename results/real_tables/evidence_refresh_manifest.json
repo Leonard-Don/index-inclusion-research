@@ -1,86 +1,8 @@
 {
-  "generated_at": "2026-05-06T08:50:55+00:00",
+  "generated_at": "2026-05-29T06:01:51+00:00",
   "root": ".",
   "tables_dir": "results/real_tables",
-  "steps": [
-    {
-      "slug": "enrich-cn-sectors",
-      "status": "skipped",
-      "detail": "CN sector coverage 268/271 (98.9%)"
-    },
-    {
-      "slug": "build-event-sample",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 0.102
-    },
-    {
-      "slug": "build-price-panel",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 13.279
-    },
-    {
-      "slug": "match-controls",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 38.59
-    },
-    {
-      "slug": "match-robustness",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 23.353
-    },
-    {
-      "slug": "build-matched-panel",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 33.894
-    },
-    {
-      "slug": "run-event-study",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 3.421
-    },
-    {
-      "slug": "run-regressions",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 7.354
-    },
-    {
-      "slug": "hs300-rdd",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 4.998
-    },
-    {
-      "slug": "compute-h6-weight-change",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 2.179
-    },
-    {
-      "slug": "cma",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 9.208
-    },
-    {
-      "slug": "make-figures-tables",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 18.573
-    },
-    {
-      "slug": "generate-research-report",
-      "status": "pass",
-      "exit_code": 0,
-      "elapsed_sec": 0.006
-    }
-  ],
+  "steps": [],
   "coverage": [
     {
       "item": "H2_passive_aum",
@@ -95,15 +17,15 @@
       "label": "H6 权重变化",
       "status": "pass",
       "status_label": "通过",
-      "value": "A股权重 736 行；匹配 67 个事件",
-      "detail": "A股权重行=736；匹配事件=67；股票数=67"
+      "value": "A股权重 858 行；匹配 87 个事件",
+      "detail": "A股权重行=858；匹配事件=87；股票数=87"
     },
     {
       "item": "H7_cn_sector",
       "label": "H7 A股行业覆盖",
       "status": "pass",
       "status_label": "通过",
-      "value": "268/271 (98.9%)",
+      "value": "270/273 (98.9%)",
       "detail": "缺少行业 ticker：000413, 002411, 600705"
     },
     {
@@ -119,7 +41,7 @@
       "label": "CMA 假说裁决",
       "status": "pass",
       "status_label": "通过",
-      "value": "支持 3；部分支持 0；证据不足 4；待补数据 0",
+      "value": "支持 2；部分支持 0；证据不足 5；待补充数据 0",
       "detail": "results/real_tables 下共有 7 条 H1-H7 裁决"
     },
     {
@@ -127,7 +49,7 @@
       "label": "匹配稳健性",
       "status": "pass",
       "status_label": "通过",
-      "value": "最佳规格 announce_1to2；超阈值 0；max|SMD| 0.157",
+      "value": "最佳规格 announce_1to1；超阈值 0；max|SMD| 0.128",
       "detail": "规格数=6；默认规格=announce_1to3；超阈值=0"
     },
     {
@@ -135,16 +57,16 @@
       "label": "项目健康检查",
       "status": "pass",
       "status_label": "通过",
-      "value": "15 通过 / 0 警告 / 0 失败",
-      "detail": "共 15 项检查"
+      "value": "30 通过 / 0 警告 / 0 失败",
+      "detail": "共 30 项检查"
     }
   ],
   "doctor": {
     "summary": {
-      "pass": 15,
+      "pass": 30,
       "warn": 0,
       "fail": 0,
-      "total": 15
+      "total": 30
     },
     "checks": [
       {
@@ -178,7 +100,7 @@
       {
         "name": "p_gated_verdict_sensitivity",
         "status": "pass",
-        "message": "3 p-gated hypotheses; 1 significant at strict (0.05), 1 at default (0.1); none sit in the [0.05, 0.1) boundary.",
+        "message": "3 p-gated hypotheses; 0 significant at strict (0.05), 0 at default (0.1); none sit in the [0.05, 0.1) boundary.",
         "fix": "",
         "details": []
       },
@@ -192,21 +114,21 @@
       {
         "name": "h6_weight_change_readiness",
         "status": "pass",
-        "message": "H6 has 736 CN weight_change row(s) available.",
+        "message": "H6 has 858 CN weight_change row(s) available.",
         "fix": "",
         "details": []
       },
       {
         "name": "h7_cn_sector_readiness",
         "status": "pass",
-        "message": "H7 has 35 CN sector bucket(s) available.",
+        "message": "H7 has 41 CN sector bucket(s) available.",
         "fix": "",
         "details": [
+          "Industrials: n=1",
+          "Technology: n=1",
+          "Utilities: n=1",
           "专用设备制造业: n=7",
-          "互联网和相关服务: n=1",
-          "农副食品加工业: n=1",
-          "化学原料和化学制品制造业: n=6",
-          "化学纤维制造业: n=2"
+          "互联网和相关服务: n=1"
         ]
       },
       {
@@ -226,14 +148,84 @@
       {
         "name": "matched_sample_balance",
         "status": "pass",
-        "message": "all covariates pass |SMD|<0.25 (max=0.177).",
+        "message": "all covariates pass |SMD|<0.25 (max=0.197).",
         "fix": "",
         "details": []
       },
       {
         "name": "match_robustness_grid",
         "status": "pass",
-        "message": "6 local robustness spec(s) available; best=announce_1to2 (over=0, max|SMD|=0.157).",
+        "message": "6 local robustness spec(s) available; best=announce_1to1 (over=0, max|SMD|=0.128).",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "pap_deviation_no_flips",
+        "status": "pass",
+        "message": "All 7 hypothesis verdict(s) are unchanged vs the frozen verdict baseline snapshot.",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "pap_snapshot_freshness",
+        "status": "pass",
+        "message": "Latest verdict baseline snapshot snapshots/pre-registration-2026-05-29.csv is 0 day(s) old (≤ 90).",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "hs300_rdd_forest_artifact",
+        "status": "pass",
+        "message": "forest plot artifacts (results/figures/hs300_rdd_robustness_forest.png, results/figures/hs300_rdd_robustness_forest.pdf) are fresher than results/literature/hs300_rdd/rdd_robustness.csv.",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "cma_verdicts_forest_artifact",
+        "status": "pass",
+        "message": "forest plot artifacts (results/figures/cma_verdicts_forest.png, results/figures/cma_verdicts_forest.pdf) are fresher than results/real_tables/cma_hypothesis_verdicts.csv.",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "cma_sensitivity_forest_artifact",
+        "status": "pass",
+        "message": "sensitivity forest plot artifacts (results/figures/cma_verdicts_sensitivity.png, results/figures/cma_verdicts_sensitivity.pdf) are fresher than 4 cached threshold CSV(s).",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "cma_ar_engine_forest_artifact",
+        "status": "pass",
+        "message": "AR-engine forest plot artifacts (results/figures/cma_verdicts_ar_engine.png, results/figures/cma_verdicts_ar_engine.pdf) are fresher than 2 cached AR-engine CSV(s).",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "cma_2d_robustness_heatmap_artifact",
+        "status": "pass",
+        "message": "2D robustness heatmap artifacts (results/figures/cma_verdicts_2d_robustness.png, results/figures/cma_verdicts_2d_robustness.pdf) are fresher than 14 cached cell CSV(s).",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "public_summary_freshness",
+        "status": "pass",
+        "message": "public summary data/public/index_research_summary.json is fresher than results/real_tables/cma_hypothesis_verdicts.csv and siblings.",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "paper_skeleton_freshness",
+        "status": "pass",
+        "message": "paper skeleton paper/skeleton.md is fresher than results/real_tables/cma_hypothesis_verdicts.csv and siblings.",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "methodology_summary_freshness",
+        "status": "pass",
+        "message": "methodology summary paper/methodology_summary.md is fresher than results/real_tables/cma_hypothesis_verdicts.csv and siblings.",
         "fix": "",
         "details": []
       },
@@ -247,14 +239,49 @@
       {
         "name": "console_scripts_importable",
         "status": "pass",
-        "message": "All 29 console_script entry points resolve to callables.",
+        "message": "All 48 console_script entry points resolve to callables.",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "heuristic_citation_centrality_schema",
+        "status": "pass",
+        "message": "results/literature/citation_centrality.csv uses heuristic link columns top_linked_by/top_links_to.",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "citation_graph_artifact",
+        "status": "pass",
+        "message": "forest plot artifacts (results/literature/citation_network.png, results/literature/citation_network.pdf) are fresher than results/literature/citation_centrality.csv.",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "verdict_timeline_artifact",
+        "status": "pass",
+        "message": "forest plot artifacts (results/figures/verdict_timeline.png, results/figures/verdict_timeline.pdf) are fresher than results/real_tables/cma_hypothesis_verdicts.csv.",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "literature_timeline_artifact",
+        "status": "pass",
+        "message": "forest plot artifacts (results/literature/literature_timeline.png, results/literature/literature_timeline.pdf) are fresher than results/literature/citation_centrality.csv.",
         "fix": "",
         "details": []
       },
       {
         "name": "paper_audit_claims",
         "status": "pass",
-        "message": "Paper audit maps all 5 claim group(s) to current artifacts.",
+        "message": "Paper audit maps all 6 claim group(s) to current artifacts.",
+        "fix": "",
+        "details": []
+      },
+      {
+        "name": "paper_integrity",
+        "status": "pass",
+        "message": "paper-integrity cross-document gate passes (0 info-level note(s)).",
         "fix": "",
         "details": []
       }

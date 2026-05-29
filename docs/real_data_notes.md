@@ -12,6 +12,9 @@
   - 当前真实事件文件会把这些 CN 批次与美股指数变更合并成 `data/raw/real_events.csv`
 - 日频价格与基准指数：
   - Yahoo Finance，经 `yfinance` 抓取
+  - 可选：A 股日频价格、换手率、市值与 CSI300 基准可通过 Tushare Pro 抓取：
+    `index-inclusion-download-real-data --cn-price-source tushare`
+    （需要 `TUSHARE_TOKEN` 或 `--tushare-token`）
 - CN 行业标签：
   - `python3 -m index_inclusion_research.enrich_cn_sectors --force` 优先使用
     `akshare` 的 CNInfo 公司资料接口（`所属行业`），并以 Yahoo Finance 元数据兜底，
@@ -26,7 +29,12 @@
 ## 重要说明
 
 - `close`、`volume`、`benchmark_ret` 属于真实市场数据。
-- `mkt_cap` 和 `turnover` 使用 Yahoo 当前可得 `sharesOutstanding` 近似构造，因此更适合课程论文和机制分析，不等同于交易所官方历史自由流通市值。
+- 默认 Yahoo 路径下，`mkt_cap` 和 `turnover` 使用 Yahoo 当前可得 `sharesOutstanding`
+  近似构造，因此更适合课程论文和机制分析，不等同于交易所官方历史自由流通市值。
+- Tushare 路径下，A 股 `mkt_cap` 来自 `daily_basic.total_mv`（万元转元），
+  `turnover` 来自 `daily_basic.turnover_rate`（百分比转小数），A 股 `volume`
+  将日线 `vol` 从手转为股；这比 Yahoo 当前股本近似更适合刷新 CN 侧机制证据，
+  但仍受 Tushare 账号权限、积分与接口可用性约束。
 - CN `sector` 来自 CNInfo 公司资料的 `所属行业`，不等同于中信 / 申万官方行业分类；H7 会把它作为 A 股真实行业桶。
 - `passive_aum.csv` 是 US ETF 总金融资产 proxy，用于解锁 H2 的时间序列方向判断；它不是全球全口径被动基金 AUM。
 - A 股事件名单当前已经覆盖 2020-06 至 2025-11 的多期沪深300调样批次，足以直接跑通真实样本版本；如果你后面要扩展到更长样本期，可以继续往原始变更源追加公告批次。
@@ -42,4 +50,13 @@ index-inclusion-compute-h6-weight-change --force
 index-inclusion-build-event-sample --input data/raw/real_events.csv --output data/processed/real_events_clean.csv
 index-inclusion-build-price-panel --events data/processed/real_events_clean.csv --prices data/raw/real_prices.csv --benchmarks data/raw/real_benchmarks.csv --output data/processed/real_event_panel.csv
 index-inclusion-cma
+```
+
+如果要用 Tushare 刷新 A 股价格与 CSI300 基准，先设置 token：
+
+```bash
+export TUSHARE_TOKEN=...
+index-inclusion-download-real-data --cn-price-source tushare
+index-inclusion-refresh-real-evidence
+index-inclusion-verdict-summary --vs-pap
 ```

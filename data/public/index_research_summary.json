@@ -8,13 +8,13 @@
     "results/figures/verdict_timeline.png",
     "results/literature/literature_timeline.png"
   ],
-  "generated_at": "2026-05-23T02:14:55+00:00",
+  "generated_at": "2026-05-29T06:01:48+00:00",
   "hs300_rdd": {
     "main_bandwidth": 0.0600000000000022,
-    "main_n_obs": 118,
+    "main_n_obs": 148,
     "main_outcome": "car_m1_p1",
-    "main_p_value": 0.0450271671641052,
-    "main_tau_pct": 4.0085,
+    "main_p_value": 0.0950642410140224,
+    "main_tau_pct": 2.9584,
     "robustness_specs_count": 5,
     "spec_kinds": [
       "donut",
@@ -78,9 +78,9 @@
     ]
   },
   "pap_baseline": {
-    "frozen_for_days": 7,
-    "path_ref": "snapshots/pre-registration-2026-05-16.csv",
-    "snapshot_date": "2026-05-16"
+    "frozen_for_days": 0,
+    "path_ref": "snapshots/pre-registration-2026-05-29.csv",
+    "snapshot_date": "2026-05-29"
   },
   "pap_deviation_summary": {
     "all_unchanged": true,
@@ -95,50 +95,50 @@
     "hypotheses": [
       {
         "hid": "H3",
-        "interpretation": "normal-approx power=0.134 · exact-binomial power=0.000 · posterior P(p>0.60|data)=0.663 (Beta(1,1) uniform prior). MDE@80%=+0.499 概率差（p1≈0.999）。严重欠功效 (power=0.13 < 0.30): n=4 无法在 α=0.05 检出真实命中率 75%；结果按 supplementary 处理是合理的。",
+        "interpretation": "normal-approx power=0.050 · exact-binomial power=0.000 · posterior P(p>0.60|data)=0.317 (Beta(1,1) uniform prior). MDE@80%=+0.499 概率差（p1≈0.999）。严重欠功效 (power=0.05 < 0.30): n=4 无法在 α=0.05 检出真实命中率 50%；结果按 supplementary 处理是合理的。",
         "mde_at_80_power": 0.4994901759579069,
         "mde_label": "proportion_gap_p1_minus_p0",
         "n_obs": 4,
         "name_cn": "散户 vs 机构结构",
-        "observed_effect": 0.25,
+        "observed_effect": 0.0,
         "observed_effect_label": "hit_rate − 0.5",
-        "power_at_observed": 0.13414480741204104,
+        "power_at_observed": 0.05000000000000002,
         "test_family": "binomial_proportion_z_two_sided"
       },
       {
         "hid": "H4",
-        "interpretation": "HC3 regression coef=+0.0061 (SE=0.0099, t=+0.618, p=0.5366), df≈433; two-sided t-test power=0.095. MDE@80% = |coef|≈0.0278 (≈ 4.5× the observed coefficient). 严重欠功效 (power=0.09 < 0.30): n=436 下观测系数 +0.0061 太小 (相对 SE=0.0099)，无法在 α=0.05 下稳健检出。证据不足的判定是 n 不够大，不是 H4 一定错，因此保留为 supplementary 是合理的。",
-        "mde_at_80_power": 0.02776998894496617,
+        "interpretation": "HC3 regression coef=+0.0050 (SE=0.0097, t=+0.519, p=0.6037), df≈452; two-sided t-test power=0.081. MDE@80% = |coef|≈0.0272 (≈ 5.4× the observed coefficient). 严重欠功效 (power=0.08 < 0.30): n=455 下观测系数 +0.0050 太小 (相对 SE=0.0097)，无法在 α=0.05 下稳健检出。证据不足的判定是 n 不够大，不是 H4 一定错，因此保留为 supplementary 是合理的。",
+        "mde_at_80_power": 0.02718354849279095,
         "mde_label": "coef_at_target_power",
-        "n_obs": 436,
+        "n_obs": 455,
         "name_cn": "卖空约束",
-        "observed_effect": 0.0061111135890994,
+        "observed_effect": 0.0050255595793112,
         "observed_effect_label": "cn_coef_gap_drift",
-        "power_at_observed": 0.09455514653575463,
+        "power_at_observed": 0.08125615809442202,
         "test_family": "regression_coef_t_two_sided"
       },
       {
         "hid": "H5",
-        "interpretation": "HC3 regression coef=+0.1549 (SE=0.0586, t=+2.642, p=0.0082), df≈934; two-sided t-test power=0.752. MDE@80% = |coef|≈0.1644 (≈ 1.06× the observed coefficient). 功效中等 (power=0.75): 趋势可读但仍存在错过真实小效应的风险。",
-        "mde_at_80_power": 0.16441103590648404,
+        "interpretation": "HC3 regression coef=+0.0744 (SE=0.0937, t=+0.794, p=0.4270), df≈1094; two-sided t-test power=0.125. MDE@80% = |coef|≈0.2628 (≈ 3.53× the observed coefficient). 严重欠功效 (power=0.12 < 0.30): n=1096 下仍无法稳健检出该效应。",
+        "mde_at_80_power": 0.2627968647110164,
         "mde_label": "coef_at_target_power",
-        "n_obs": 936,
+        "n_obs": 1096,
         "name_cn": "涨跌停限制",
-        "observed_effect": 0.1548913745610099,
+        "observed_effect": 0.0744418580663689,
         "observed_effect_label": "limit_coef_announce_car",
-        "power_at_observed": 0.751560496189127,
+        "power_at_observed": 0.12468077802462689,
         "test_family": "regression_coef_t_two_sided"
       },
       {
         "hid": "H6",
-        "interpretation": "Cohen's d (observed) ≈ -0.728 (bucket-SD=0.0319); two-sided t-test power=1.000. 对比小/中/大效应 (d=0.2/0.5/0.8) 的功效 = 0.36 / 0.98 / 1.00. MDE@80% = |d|=0.347. 功效充足 (power=1.00 >= 0.80) — n 足以检出该效应，但观测方向 (heavy<light) 与 H6 预测 (heavy>light) 相反，所以 verdict='证据不足' 并不是 n 不够，而是方向不符。",
-        "mde_at_80_power": 0.34734949720719577,
+        "interpretation": "Cohen's d (observed) ≈ -0.473 (bucket-SD=0.0325); two-sided t-test power=0.992. 对比小/中/大效应 (d=0.2/0.5/0.8) 的功效 = 0.45 / 1.00 / 1.00. MDE@80% = |d|=0.304. 功效充足 (power=0.99 >= 0.80) — n 足以检出该效应，但观测方向 (heavy<light) 与 H6 预测 (heavy>light) 相反，所以 verdict='证据不足' 并不是 n 不够，而是方向不符。",
+        "mde_at_80_power": 0.30376750711144396,
         "mde_label": "cohens_d_at_target_power",
-        "n_obs": 67,
+        "n_obs": 87,
         "name_cn": "指数权重可预测性",
-        "observed_effect": -0.727791289222424,
+        "observed_effect": -0.47284939244321844,
         "observed_effect_label": "cohens_d",
-        "power_at_observed": 0.9999536209269687,
+        "power_at_observed": 0.9918188351329235,
         "test_family": "one_sample_t_two_sided"
       },
       {
@@ -248,25 +248,25 @@
     "H1": {
       "confidence": "中",
       "evidence_tier": "core",
-      "headline_metric": "bootstrap p = 0.8748",
-      "n_obs": 436,
+      "headline_metric": "bootstrap p = 1",
+      "n_obs": 455,
       "name": "信息泄露与预运行",
       "track": "identification",
       "verdict": "证据不足"
     },
     "H2": {
-      "confidence": "中",
+      "confidence": "低",
       "evidence_tier": "core",
       "headline_metric": "US AUM ratio = 13.48",
-      "n_obs": 17,
+      "n_obs": 18,
       "name": "被动基金 AUM 差异",
       "track": "demand_curve",
-      "verdict": "部分支持"
+      "verdict": "证据不足"
     },
     "H3": {
       "confidence": "高",
       "evidence_tier": "supplementary",
-      "headline_metric": "双通道命中率 = 0.75",
+      "headline_metric": "双通道命中率 = 0.5",
       "n_obs": 4,
       "name": "散户 vs 机构结构",
       "track": "price_pressure",
@@ -275,26 +275,26 @@
     "H4": {
       "confidence": "中",
       "evidence_tier": "supplementary",
-      "headline_metric": "regression p = 0.5366",
-      "n_obs": 436,
+      "headline_metric": "regression p = 0.6037",
+      "n_obs": 455,
       "name": "卖空约束",
       "track": "identification",
       "verdict": "证据不足"
     },
     "H5": {
-      "confidence": "高",
+      "confidence": "中",
       "evidence_tier": "core",
-      "headline_metric": "limit_coef p = 0.00824",
-      "n_obs": 936,
+      "headline_metric": "limit_coef p = 0.427",
+      "n_obs": 1096,
       "name": "涨跌停限制",
       "track": "identification",
-      "verdict": "支持"
+      "verdict": "证据不足"
     },
     "H6": {
       "confidence": "中",
       "evidence_tier": "supplementary",
-      "headline_metric": "heavy−light spread = -0.01903",
-      "n_obs": 67,
+      "headline_metric": "heavy−light spread = -0.01631",
+      "n_obs": 87,
       "name": "指数权重可预测性",
       "track": "demand_curve",
       "verdict": "证据不足"
@@ -302,7 +302,7 @@
     "H7": {
       "confidence": "中",
       "evidence_tier": "core",
-      "headline_metric": "US sector spread = 5.954",
+      "headline_metric": "US sector spread = 5.973",
       "n_obs": 187,
       "name": "行业结构差异",
       "track": "identification",

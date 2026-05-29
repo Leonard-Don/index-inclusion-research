@@ -9,14 +9,14 @@ and local price history; it does not download or scrape web data.
 
 ## Best Current Specification
 
-- `announce_1to2`: 0 covariate(s) over threshold; max |SMD| = 0.157
-- default `announce_1to3`: 0 covariate(s) over threshold; max |SMD| = 0.177
+- `announce_1to1`: 0 covariate(s) over threshold; max |SMD| = 0.128
+- default `announce_1to3`: 0 covariate(s) over threshold; max |SMD| = 0.197
 
 ## Specification Grid
 
-- `announce_1to1`: controls=1:1, reference=announce_date, over=0, max_abs_smd=0.198, worst=CN/pre_event_volatility (+0.198)
-- `announce_1to2`: controls=1:2, reference=announce_date, over=0, max_abs_smd=0.157, worst=CN/mkt_cap_log (-0.157)
-- `announce_1to3` (default): controls=1:3, reference=announce_date, over=0, max_abs_smd=0.177, worst=CN/mkt_cap_log (-0.177)
-- `effective_1to1`: controls=1:1, reference=effective_date, over=1, max_abs_smd=0.422, worst=CN/pre_event_volatility (+0.422)
-- `effective_1to2`: controls=1:2, reference=effective_date, over=1, max_abs_smd=0.276, worst=CN/pre_event_volatility (+0.276)
-- `effective_1to3`: controls=1:3, reference=effective_date, over=1, max_abs_smd=0.266, worst=CN/pre_event_volatility (+0.266)
+- `announce_1to1`: controls=1:1, reference=announce_date, over=0, max_abs_smd=0.128, worst=CN/pre_event_return (+0.128)
+- `announce_1to2`: controls=1:2, reference=announce_date, over=0, max_abs_smd=0.160, worst=CN/mkt_cap_log (-0.160)
+- `announce_1to3` (default): controls=1:3, reference=announce_date, over=0, max_abs_smd=0.197, worst=CN/mkt_cap_log (-0.197)
+- `effective_1to1`: controls=1:1, reference=effective_date, over=1, max_abs_smd=0.369, worst=CN/pre_event_volatility (+0.369)
+- `effective_1to2`: controls=1:2, reference=effective_date, over=1, max_abs_smd=0.332, worst=CN/pre_event_volatility (+0.332)
+- `effective_1to3`: controls=1:3, reference=effective_date, over=1, max_abs_smd=0.328, worst=CN/pre_event_volatility (+0.328)

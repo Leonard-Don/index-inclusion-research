@@ -74,6 +74,20 @@ the L1 / L2 / L3 tiering.
 Cleaned event panels and benchmarks used downstream by the event-study
 pipeline.
 
+`index-inclusion-download-real-data` defaults to the historical Yahoo
+Finance path. For A-share prices and the CSI300 benchmark, the command
+can instead use Tushare Pro:
+
+```bash
+export TUSHARE_TOKEN=...
+index-inclusion-download-real-data --cn-price-source tushare
+```
+
+The Tushare path maps stock `daily` / `pro_bar` output plus
+`daily_basic` into the same project schema: `vol` is converted from lots
+to shares, `turnover_rate` from percent to a fraction, and `total_mv`
+from 10k CNY units to CNY. US data still comes from Yahoo in this mode.
+
 ## Refresh cadence summary
 
 | File | Refresh CLI | Recommended cadence |

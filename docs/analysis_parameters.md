@@ -11,10 +11,10 @@
 `snapshots/pre-registration-*.csv` 是**裁决基线快照**（用于跨时间观察 verdict 稳定性的
 工具，详见 §6），不是 pre-analysis plan。
 
-- **参数记录日期**：2026-05-16（最近一次更新；见 §7 变更日志）
-- **基线快照**：[`snapshots/pre-registration-2026-05-16.csv`](../snapshots/pre-registration-2026-05-16.csv)
+- **参数记录日期**：2026-05-29（最近一次更新；见 §7 变更日志）
+- **基线快照**：[`snapshots/pre-registration-2026-05-29.csv`](../snapshots/pre-registration-2026-05-29.csv)
   （CSV 文件名为历史命名，保留以兼容现有 `--vs-pap` / `--compare-with` 工具；语义见 §6）
-- **比对命令**：`index-inclusion-verdict-summary --compare-with snapshots/pre-registration-2026-05-16.csv`
+- **比对命令**：`index-inclusion-verdict-summary --compare-with snapshots/pre-registration-2026-05-29.csv`
 
 ## 1. 决策阈值（分析参数）
 
@@ -158,6 +158,7 @@ CLI 标志名（`--vs-pap`）保留历史命名仅为兼容，不改变其语义
 | 2026-05-03 | 样本边界扩展 | HS300 RDD L3 从 6 批次扩到 11 批次（新增 csi300-2020-11、2021-05、2021-11、2022-05、2022-11，共 197 行）。来源：中证官方 Excel 公告附件原本有 `备选名单` sheet（含 `排序` 列），原 parser 漏读；修正后无需手工 archive 检索。仍 < 20 批次 / 10 年门槛，主表用法不变。verdicts diff vs 基线快照：0 changed。 | §3 仅 RDD 行；§4 不变 | leo | 006440a |
 | 2026-05-06 | 证据补强 | 新增 H7 sector×phase/treatment 交互回归表；H2 manifest 明确 US-only / CN AUM 缺失边界；不改变 verdict/confidence/key metric。 | H2/H7 证据说明、dashboard 明细 | leo | 本提交 |
 | 2026-05-16 | H2 数据扩展 + 数据驱动 tier 升级 | 引入 `data/raw/cn_passive_aum_proxy.csv`(CSI300+CSI500 跟踪 ETF 年终 TNA 聚合,通过 akshare `fund_etf_scale_sse` + `fund_scale_daily_szse` + `fund_etf_fund_info_em`(close 兜底) 抓取);H2 verdict 函数升级为双市场比较;`_core.EVIDENCE_TIER_PROMOTION_FLOOR["H2"]=15` 在合并 n(US rolling 12 + CN rolling 5 = 17)越线后将 H2 evidence_tier 由 supplementary 升级为 core;副作用:H2 verdict 由"证据不足/低"变为"部分支持/中"——CN 端 AUM 上升伴随 effective CAR 下降(0.59%→0.42%),US 端 effective CAR 没有持续衰减(0.04%→0.05%);verdict 文本变更是数据驱动而非人工硬改。proxy 局限见 docs/limitations.md §3。snapshots/pre-registration-2026-05-03.csv 基线不变,§4 主表纳入规则改写为 baseline {H1/H5/H7} 或 proxy-promoted {H1/H2/H5/H7}。 | §1 主表纳入规则; §2 H2 metric/judgment 文本; §4 主表/附录划分 | leo | 本提交 |
+| 2026-05-29 | Tushare CN 行情口径刷新 + 新裁决快照 | 使用 qmt 项目中的 Tushare token 将 A 股日线、CSI300 基准、`daily_basic.total_mv` 与 `turnover_rate` 接入 `index-inclusion-download-real-data --cn-price-source tushare` 并重跑真实证据流水线；相对 2026-05-16 快照，H2 由"部分支持/中"翻为"证据不足/低"，H5 由"支持/高"翻为"证据不足/中"，H1/H3/H4 弱化但 verdict 未变，H6/H7 verdict 未变。创建 `snapshots/pre-registration-2026-05-29.csv` 作为新的裁决稳定性快照；旧快照保留，可用 `index-inclusion-verdict-summary --compare-with snapshots/pre-registration-2026-05-16.csv` 复核本次翻转。 | 数据源说明; CMA verdicts; 裁决基线快照 | leo | 本提交 |
 
 此后任何分析参数变更新增一行，不要删除已有行。
 

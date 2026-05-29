@@ -265,6 +265,36 @@ def test_build_data_source_table_summarises_core_inputs() -> None:
     assert event_row["事件数"] == 2
 
 
+def test_build_data_source_table_labels_tushare_cn_source() -> None:
+    prices = pd.DataFrame(
+        [
+            {"market": "CN", "ticker": "000001", "date": "2024-01-02"},
+            {"market": "US", "ticker": "A", "date": "2024-02-02"},
+        ]
+    )
+    benchmarks = pd.DataFrame(
+        [
+            {"market": "CN", "date": "2024-01-02"},
+            {"market": "US", "date": "2024-02-02"},
+        ]
+    )
+    metadata = pd.DataFrame(
+        [
+            {"market": "CN", "ticker": "000001", "data_source": "tushare"},
+            {"market": "US", "ticker": "A", "data_source": "yahoo"},
+        ]
+    )
+
+    summary = build_data_source_table(pd.DataFrame(), prices=prices, benchmarks=benchmarks, metadata=metadata)
+
+    price_source = summary.loc[summary["数据集"] == "日频价格", "来源"].iloc[0]
+    benchmark_source = summary.loc[summary["数据集"] == "基准收益", "来源"].iloc[0]
+    metadata_note = summary.loc[summary["数据集"] == "证券元数据", "备注"].iloc[0]
+    assert "Tushare Pro" in price_source
+    assert "Tushare Pro" in benchmark_source
+    assert "CN 使用 Tushare" in metadata_note
+
+
 def test_build_sample_scope_table_includes_long_window_layer() -> None:
     events = pd.DataFrame(
         [

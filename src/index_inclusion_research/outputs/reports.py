@@ -145,6 +145,50 @@ def _empty_data_source_table_frame() -> pd.DataFrame:
     return empty_output_table("data_sources")
 
 
+def _uses_tushare_cn(metadata: pd.DataFrame) -> bool:
+    if metadata.empty or not {"market", "data_source"}.issubset(metadata.columns):
+        return False
+    market = metadata["market"].astype(str).str.upper()
+    source = metadata["data_source"].astype(str).str.lower()
+    return bool(((market == "CN") & (source == "tushare")).any())
+
+
+def _price_source_label(metadata: pd.DataFrame) -> str:
+    if _uses_tushare_cn(metadata):
+        return "Tushare Pro（A股日线 / daily_basic）+ Yahoo Finance（US，经 yfinance 抓取）"
+    return "Yahoo Finance（经 yfinance 抓取）"
+
+
+def _price_source_note(metadata: pd.DataFrame) -> str:
+    if _uses_tushare_cn(metadata):
+        return "包含事件股票与匹配对照组候选股票的日度价格、成交量、换手率与市值；CN 为 Tushare total_mv/turnover_rate 口径，US 为 Yahoo 近似口径。"
+    return "包含事件股票与匹配对照组候选股票的日度价格、成交量、换手率与市值近似值。"
+
+
+def _benchmark_source_label(metadata: pd.DataFrame) -> str:
+    if _uses_tushare_cn(metadata):
+        return "Tushare Pro（CSI300 指数日线）+ Yahoo Finance（S&P 500，经 yfinance 抓取）"
+    return "Yahoo Finance（经 yfinance 抓取）"
+
+
+def _benchmark_source_note(metadata: pd.DataFrame) -> str:
+    if _uses_tushare_cn(metadata):
+        return "美国使用 S&P 500 指数收益（Yahoo），中国使用沪深300指数收益（Tushare）。"
+    return "美国使用 S&P 500 指数收益，中国使用沪深300指数收益。"
+
+
+def _metadata_source_label(metadata: pd.DataFrame) -> str:
+    if _uses_tushare_cn(metadata):
+        return "Tushare Pro（CN daily_basic）+ Yahoo Finance（US sharesOutstanding / sector 近似口径）"
+    return "Yahoo Finance（sharesOutstanding / sector 近似口径）"
+
+
+def _metadata_source_note(metadata: pd.DataFrame) -> str:
+    if _uses_tushare_cn(metadata):
+        return "CN 使用 Tushare 总市值 / 换手率口径，US 用 Yahoo 当前股本近似构造市值与换手率。"
+    return "用于构造市值与换手率近似值，更适合课程论文与机制分析。"
+
+
 def build_data_source_table(
     events: pd.DataFrame,
     prices: pd.DataFrame | None = None,
@@ -181,14 +225,14 @@ def build_data_source_table(
         rows.append(
             {
                 "数据集": "日频价格",
-                "来源": "Yahoo Finance（经 yfinance 抓取）",
+                "来源": _price_source_label(metadata),
                 "市场范围": _market_scope_from_values(prices["market"]),
                 "起始日期": price_start,
                 "结束日期": price_end,
                 "行数": _safe_int(len(prices)),
                 "股票数": _safe_int(prices["ticker"].nunique()) if "ticker" in prices.columns else pd.NA,
                 "事件数": pd.NA,
-                "备注": "包含事件股票与匹配对照组候选股票的日度价格、成交量、换手率与市值近似值。",
+                "备注": _price_source_note(metadata),
             }
         )
 
@@ -197,14 +241,14 @@ def build_data_source_table(
         rows.append(
             {
                 "数据集": "基准收益",
-                "来源": "Yahoo Finance（经 yfinance 抓取）",
+                "来源": _benchmark_source_label(metadata),
                 "市场范围": _market_scope_from_values(benchmarks["market"]),
                 "起始日期": benchmark_start,
                 "结束日期": benchmark_end,
                 "行数": _safe_int(len(benchmarks)),
                 "股票数": pd.NA,
                 "事件数": pd.NA,
-                "备注": "美国使用 S&P 500 指数收益，中国使用沪深300指数收益。",
+                "备注": _benchmark_source_note(metadata),
             }
         )
 
@@ -212,14 +256,14 @@ def build_data_source_table(
         rows.append(
             {
                 "数据集": "证券元数据",
-                "来源": "Yahoo Finance（sharesOutstanding / sector 近似口径）",
+                "来源": _metadata_source_label(metadata),
                 "市场范围": _market_scope_from_values(metadata["market"]) if "market" in metadata.columns else "NA",
                 "起始日期": pd.NA,
                 "结束日期": pd.NA,
                 "行数": _safe_int(len(metadata)),
                 "股票数": _safe_int(metadata["ticker"].nunique()) if "ticker" in metadata.columns else pd.NA,
                 "事件数": pd.NA,
-                "备注": "用于构造市值与换手率近似值，更适合课程论文与机制分析。",
+                "备注": _metadata_source_note(metadata),
             }
         )
 
