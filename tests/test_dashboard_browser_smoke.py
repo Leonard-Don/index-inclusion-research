@@ -1583,7 +1583,7 @@ def test_pap_status_chip_renders_with_baseline_diff() -> None:
             assert "当前 vs 基线" in headline
 
             snapshot_path = chip.locator("[data-pap-snapshot-path]").inner_text().strip()
-            assert snapshot_path == "裁决基线 2026-05-16"
+            assert snapshot_path == "裁决基线 2026-05-29"
 
             summary_label = chip.locator("[data-pap-summary-label]").inner_text().strip()
             assert summary_label  # non-empty
