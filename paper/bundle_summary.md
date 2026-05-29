@@ -2,13 +2,13 @@
 
 ## 裁决基线快照
 
-- 快照文件：`snapshots/pre-registration-2026-05-16.csv`
-- 基线日期：`2026-05-16`
+- 快照文件：`snapshots/pre-registration-2026-05-29.csv`
+- 基线日期：`2026-05-29`
 - 假说数：7 行
 
 ## CMA 假说裁决
 
-- 当前裁决分布：3 项支持 / 1 项部分支持 / 3 项证据不足
+- 当前裁决分布：2 项支持 / 5 项证据不足
 - 主表入选 (`evidence_tier=core`)：4 条假说
 - 详细裁决见 `tables/cma_hypothesis_verdicts.tex` 与 `narrative/paper_outline_verdicts.md`。
 
@@ -21,7 +21,7 @@
 
 ## HS300 RDD 主结果
 
-- main 局部线性 τ = 4.01% (p = 0.045, n = 118)
+- main 局部线性 τ = 2.96% (p = 0.095, n = 148)
 - 完整稳健性面板见 `rdd/rdd_robustness.csv` 与 `rdd/rdd_robustness_forest.png`。
 
 ---

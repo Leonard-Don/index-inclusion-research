@@ -16,8 +16,8 @@
 
 **事件研究面板**:
 
-- 真实事件：893 行 (`data/processed/real_events_clean.csv`)
-- 匹配对照面板：225,668 行 (`data/processed/real_matched_event_panel.csv`，Stuart 2010 SMD；covariate balance pass)
+- 真实事件：0 行 (`data/processed/real_events_clean.csv`)
+- 匹配对照面板：0 行 (`data/processed/real_matched_event_panel.csv`，Stuart 2010 SMD；covariate balance pass)
 - 时间窗：CAR[-1,+1] / [-3,+3] / [-5,+5]
 
 ## 2. 估计方法
@@ -34,9 +34,7 @@
 
 | 轴 | 范围 | 假说稳定数 |
 |---|---|---|
-| 阈值 | 0.05 / 0.1 / 0.15 / 0.2 | 7/7 |
-| AR 引擎 | adjusted / market | 5/7 |
-| 联合 | 8 cells = 4 阈值 × 2 AR 引擎 | 5/7 |
+| (公共摘要未生成) | — | — |
 
 ### 3.1 各假说后验功效（H3 / H4 / H5 / H6 + H1 / H2 分引擎）
 

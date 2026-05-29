@@ -12,15 +12,15 @@
 
 | 市场 | 阶段 | n | mean CAR[-1,+1] | t | p |
 |---|---|---|---|---|---|
-| CN | announce | 117 | +1.76% | 4.93 | 0.0000 |
-| CN | effective | 117 | +0.42% | 0.93 | 0.3551 |
-| US | announce | 254 | +1.84% | 5.25 | 0.0000 |
-| US | effective | 257 | -0.14% | -0.51 | 0.6107 |
+| CN | announce | 137 | +2.07% | 6.48 | 0.0000 |
+| CN | effective | 137 | +0.49% | 1.25 | 0.2117 |
+| US | announce | 255 | +1.87% | 5.34 | 0.0000 |
+| US | effective | 258 | -0.15% | -0.54 | 0.5879 |
 
 **论文核心发现**
 
-- **公告日均显著正向**:CN +1.76% (t=4.93, p=0.0000)、US +1.84% (t=5.25, p=0.0000)。与 Shleifer (1986)、Harris-Gurel (1986)、Lynch-Mendenhall (1997) 等指数效应文献方向一致。
-- **生效日效应基本消散**:CN +0.42% (p=0.3551)、US -0.14% (p=0.6107)。公告日已完成主要 price discovery,与 Greenwood-Sammon (2022) "S&P500 inclusion effect 已弱化" 的发现方向一致。
+- **公告日均显著正向**:CN +2.07% (t=6.48, p=0.0000)、US +1.87% (t=5.34, p=0.0000)。与 Shleifer (1986)、Harris-Gurel (1986)、Lynch-Mendenhall (1997) 等指数效应文献方向一致。
+- **生效日效应基本消散**:CN +0.49% (p=0.2117)、US -0.15% (p=0.5879)。公告日已完成主要 price discovery,与 Greenwood-Sammon (2022) "S&P500 inclusion effect 已弱化" 的发现方向一致。
 - **机制定位**:超额收益主要发生在公告日,意味着"为何上涨"的解释焦点应推向公告期机制(信息泄露 / 行业结构 / 关注度提升),而非生效日的被动配置需求冲击。
 
 ---
@@ -29,7 +29,7 @@
 
 下面 7 条假说回答的是 "为什么 CN/US 在公告日 / 生效日的反应不一致",而**不是**直接回答 "指数纳入是否产生超额收益"(那个问题在上节已回答)。
 
-基于跨市场不对称(CMA)pipeline 自动产出,7 条 CN/US 不对称机制假说的当前裁决分布: **3 项支持 / 1 项部分支持 / 3 项证据不足**。 详见 `results/real_tables/cma_hypothesis_verdicts.csv`。
+基于跨市场不对称(CMA)pipeline 自动产出,7 条 CN/US 不对称机制假说的当前裁决分布: **2 项支持 / 5 项证据不足**。 详见 `results/real_tables/cma_hypothesis_verdicts.csv`。
 
 ### 样本概述
 
@@ -46,39 +46,39 @@
 - **HS300 RDD**: cutoff=300 的运行变量断点，公告日 `[-1,+1]` 主结果。
 
 ### H1 · 信息泄露与预运行 —— 证据不足(可信度:中)
-**bootstrap p = 0.875**, n = 436
-CN-US pre-runup 差异 0.50% 在 bootstrap 下不显著 (p=0.875, CI95=[-3.25%, 4.70%])，方向偏 CN 但跨市场差异口径无法归因为信息泄露。
-_细节_: CN pre-runup=3.09%; US pre-runup=2.59%; diff=0.50%, bootstrap p=0.875, CI95=[-3.25%, 4.70%]
+**bootstrap p = 1.000**, n = 455
+CN-US pre-runup 差异 0.14% 在 bootstrap 下不显著 (p=1.000, CI95=[-3.22%, 3.96%])，方向偏 CN 但跨市场差异口径无法归因为信息泄露。
+_细节_: CN pre-runup=2.75%; US pre-runup=2.61%; diff=0.14%, bootstrap p=1.000, CI95=[-3.22%, 3.96%]
 
-### H2 · 被动基金 AUM 差异 —— 部分支持(可信度:中)
-**US AUM ratio = 13.481**, n = 17
-CN 方向符合 H2(AUM 上升 + effective CAR 走弱),另一市场数据不全或方向中性。(双市场覆盖)
-_细节_: US AUM 0.99→13.37 (2010→2025), effective CAR 0.04%→0.05% (2014→2025); CN AUM 0.19→1.12 (2020→2024), effective CAR 0.59%→0.42% (2021→2025)
+### H2 · 被动基金 AUM 差异 —— 证据不足(可信度:低)
+**US AUM ratio = 13.481**, n = 18
+两市场 AUM 与 effective rolling CAR 的方向关系不一致或不支持 H2。(双市场覆盖)
+_细节_: US AUM 0.99→13.37 (2010→2025), effective CAR 0.04%→0.05% (2014→2025); CN AUM 0.19→1.12 (2020→2024), effective CAR -0.36%→0.65% (2020→2025)
 
 ### H3 · 散户 vs 机构结构 —— 支持(可信度:高)
-**双通道命中率 = 0.750**, n = 4
-US announce 与 CN effective 两条预期量能集中四象限均双通道显著 (turnover + volume p<0.10),共 3/4 个象限通过双通道判据。
-_细节_: channel concentration 3/4 both-sig: CN announce=✓, CN effective=✓, US announce=✓, US effective=T
+**双通道命中率 = 0.500**, n = 4
+US announce 与 CN effective 两条预期量能集中四象限均双通道显著 (turnover + volume p<0.10),共 2/4 个象限通过双通道判据。
+_细节_: channel concentration 2/4 both-sig: CN announce=·, CN effective=✓, US announce=✓, US effective=T
 
 ### H4 · 卖空约束 —— 证据不足(可信度:中)
-**regression p = 0.537**, n = 436
-控制 gap_length_days 后 CN-US gap_drift 差异 0.61% 不显著 (p=0.537)，跨市场差异口径无法支持 H4 套利约束解释。
-_细节_: CN gap_drift=0.76%; US gap_drift=-0.33%; regression cn_coef=0.61%, p=0.537, n=436
+**regression p = 0.604**, n = 455
+控制 gap_length_days 后 CN-US gap_drift 差异 0.50% 不显著 (p=0.604)，跨市场差异口径无法支持 H4 套利约束解释。
+_细节_: CN gap_drift=0.63%; US gap_drift=-0.34%; regression cn_coef=0.50%, p=0.604, n=455
 
-### H5 · 涨跌停限制 —— 支持(可信度:高)
-**limit_coef p = 0.008**, n = 936
-CN 事件级涨跌停命中率正向预测 announce-day CAR (limit_coef=0.1549, p=0.008, R²=0.011, n=936)，支持 H5 涨跌停截断机制。
-_细节_: CN limit_coef=0.1549, p=0.008, R²=0.011, n=936
+### H5 · 涨跌停限制 —— 证据不足(可信度:中)
+**limit_coef p = 0.427**, n = 1096
+CN 事件级涨跌停命中率对 announce-day CAR 不具显著预测力 (limit_coef=0.0744, p=0.427, n=1096)，H5 缺乏支持。
+_细节_: CN limit_coef=0.0744, p=0.427, R²=0.003, n=1096
 
 ### H6 · 指数权重可预测性 —— 证据不足(可信度:中)
-**heavy−light spread = -0.019**, n = 67
-CN 重权重 announce_jump 并不明显高于轻权重 (+1.29% vs +3.20%,spread=-1.90%),H6 不被支持。
-_细节_: matched=67, median weight=0.0039, heavy announce_jump=+1.29%, light=+3.20%, spread=-1.90%; robustness: ols_weight coef=-0.0061, p=0.001; sector_fe_weight coef=-0.0436, p=1.000; median_quantreg_weight coef=-0.0057, p=0.312; permutation_quartile_spread coef=-0.0279, p=0.027
+**heavy−light spread = -0.016**, n = 87
+CN 重权重 announce_jump 并不明显高于轻权重 (+1.65% vs +3.28%,spread=-1.63%),H6 不被支持。
+_细节_: matched=87, median weight=0.0035, heavy announce_jump=+1.65%, light=+3.28%, spread=-1.63%; robustness: ols_weight coef=-0.0057, p=0.001; sector_fe_weight coef=-0.0305, p=1.000; median_quantreg_weight coef=-0.0051, p=0.266; permutation_quartile_spread coef=-0.0181, p=0.091
 
 ### H7 · 行业结构差异 —— 支持(可信度:中)
-**US sector spread = 5.954**, n = 187
-US 行业间 asymmetry_index spread = 5.95(Materials +3.90 vs Real Estate -2.05),行业结构在 inclusion 效应中显著起作用。CN 状态:已分行业。 进一步的 sector×phase/treatment 交互回归在 US 显著(joint p=0.064, n=1924)，增强 H7 的机制支持。
-_细节_: US eligible sectors=8, max=+3.90(Materials), min=-2.05(Real Estate), spread=5.95, n=187; CN sectors=35; interaction US joint p=0.064, top=effective_x_sector_Industrials, n=1924
+**US sector spread = 5.973**, n = 187
+US 行业间 asymmetry_index spread = 5.97(Materials +3.92 vs Real Estate -2.05),行业结构在 inclusion 效应中显著起作用。CN 状态:已分行业。 进一步的 sector×phase/treatment 交互回归在 US 显著(joint p=0.095, n=1930)，增强 H7 的机制支持。
+_细节_: US eligible sectors=8, max=+3.92(Materials), min=-2.05(Real Estate), spread=5.97, n=187; CN sectors=41; interaction US joint p=0.095, top=effective_x_sector_Industrials, n=1930
 
 ### 限制与稳健性补强方向
 
@@ -99,13 +99,13 @@ _细节_: US eligible sectors=8, max=+3.90(Materials), min=-2.05(Real Estate), s
 
 | 设定 | τ (CAR[-1,+1]) | p | n_obs | 解读 |
 |---|---|---|---|---|
-| main · 局部线性 | **+4.01%** | **0.045** | 118 | 边界显著 |
-| donut(±0.01) | +5.12% | 0.094 | 100 | 扔近邻后变化 |
-| placebo cutoff +0.05 | -2.13% | 0.165 | 128 | placebo 不显著（识别合理） |
-| placebo cutoff -0.05 | -2.44% | 0.259 | 72 | placebo 不显著（识别合理） |
-| polynomial order=2 | +0.25% | 0.946 | 118 | spec sensitivity（高阶项吸收跳跃） |
+| main · 局部线性 | **+2.96%** | **0.095** | 148 | 边界 marginal |
+| donut(±0.01) | +3.84% | 0.165 | 124 | 扔近邻后变化 |
+| placebo cutoff +0.05 | -2.00% | 0.116 | 174 | placebo 不显著（识别合理） |
+| placebo cutoff -0.05 | -0.63% | 0.770 | 84 | placebo 不显著（识别合理） |
+| polynomial order=2 | -0.25% | 0.939 | 148 | spec sensitivity（高阶项吸收跳跃） |
 
-**论文级表述建议**：HS300 RDD main 在公告日 CAR[-1,+1] 上的边界显著（τ=4.01%, p=0.045, n=118）；placebo cutoff 的 τ 都接近 0 支持识别合理，但 donut / polynomial 提示效应对设定敏感。**结论应当限定为初步识别证据**，论文需如实报告全套稳健性面板。
+**论文级表述建议**：HS300 RDD main 在公告日 CAR[-1,+1] 上的边界显著（τ=2.96%, p=0.095, n=148）；placebo cutoff 的 τ 都接近 0 支持识别合理，但 donut / polynomial 提示效应对设定敏感。**结论应当限定为初步识别证据**，论文需如实报告全套稳健性面板。
 
 ---
 

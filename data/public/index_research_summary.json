@@ -8,7 +8,7 @@
     "results/figures/verdict_timeline.png",
     "results/literature/literature_timeline.png"
   ],
-  "generated_at": "2026-05-29T06:01:48+00:00",
+  "generated_at": "2026-05-29T13:37:26+00:00",
   "hs300_rdd": {
     "main_bandwidth": 0.0600000000000022,
     "main_n_obs": 148,
@@ -140,106 +140,23 @@
         "observed_effect_label": "cohens_d",
         "power_at_observed": 0.9918188351329235,
         "test_family": "one_sample_t_two_sided"
-      },
-      {
-        "hid": "H1",
-        "interpretation": "engine=adjusted: diff=+0.0050, bootstrap SE≈0.0203, bootstrap p=0.8748; 在该 SE 与 n=436 下，两侧 z-test 功效=0.057; MDE@80%≈|diff|=0.0569. 功效偏低 (power=0.06 < 0.50): adjusted 引擎下 bootstrap SE=0.0203 太宽，差异需达到 |diff|≈0.0569 才能在 80% 功效下被检出。",
-        "mde_at_80_power": 0.05685450553817207,
-        "mde_label": "diff_at_target_power",
-        "n_obs": 436,
-        "name_cn": "信息泄露与预运行",
-        "observed_effect": 0.004971120740001,
-        "observed_effect_label": "cn_minus_us_pre_runup",
-        "power_at_observed": 0.05690190177736831,
-        "test_family": "bootstrap_diff_two_sided"
-      },
-      {
-        "hid": "H1",
-        "interpretation": "engine=market: diff=+0.0206, bootstrap SE≈0.0070, bootstrap p=0.0004; 在该 SE 与 n=436 下，两侧 z-test 功效=0.839; MDE@80%≈|diff|=0.0196. 功效充足 (power=0.84 >= 0.80): market 引擎下 n=436 足以检出 |diff|≈0.0206 的真实效应。",
-        "mde_at_80_power": 0.019602554349363765,
-        "mde_label": "diff_at_target_power",
-        "n_obs": 436,
-        "name_cn": "信息泄露与预运行",
-        "observed_effect": 0.0206383848457056,
-        "observed_effect_label": "cn_minus_us_pre_runup",
-        "power_at_observed": 0.8388306573103322,
-        "test_family": "bootstrap_diff_two_sided"
-      },
-      {
-        "hid": "H2",
-        "interpretation": "engine=adjusted: Cohen's d≈-0.037 (empirical deltas (n_used=15, SD=0.0029)); n_combined=15, two-sided t-test power=0.052, MDE@80%=|d|=0.778. 功效偏低 (power=0.05 < 0.50): adjusted 引擎下 样本 n=15 太小，|d| 必须 ≥0.778 才能在 80% 功效下检出。",
-        "mde_at_80_power": 0.7780225697856631,
-        "mde_label": "cohens_d_at_target_power",
-        "n_obs": 15,
-        "name_cn": "被动基金 AUM 差异",
-        "observed_effect": -0.037292944594264923,
-        "observed_effect_label": "cohens_d_car_delta",
-        "power_at_observed": 0.05208456833884063,
-        "test_family": "one_sample_t_two_sided"
-      },
-      {
-        "hid": "H2",
-        "interpretation": "engine=market: Cohen's d≈-0.365 (empirical deltas (n_used=15, SD=0.0037)); n_combined=15, two-sided t-test power=0.261, MDE@80%=|d|=0.778. 功效偏低 (power=0.26 < 0.50): market 引擎下 样本 n=15 太小，|d| 必须 ≥0.778 才能在 80% 功效下检出。",
-        "mde_at_80_power": 0.7780225697856631,
-        "mde_label": "cohens_d_at_target_power",
-        "n_obs": 15,
-        "name_cn": "被动基金 AUM 差异",
-        "observed_effect": -0.3650541403353745,
-        "observed_effect_label": "cohens_d_car_delta",
-        "power_at_observed": 0.26091885789902086,
-        "test_family": "one_sample_t_two_sided"
       }
     ],
     "target_power": 0.8
   },
   "schema_version": 1,
-  "sensitivity_robustness": {
-    "ar_engine_axis": {
-      "ar_models_tested": [
-        "adjusted",
-        "market"
-      ],
-      "cell_count": 2,
-      "flip_count": 2,
-      "flipping_hypotheses": [
-        "H1",
-        "H2"
-      ],
-      "stable_count": 5
-    },
-    "threshold_axis": {
-      "cell_count": 4,
-      "flip_count": 0,
-      "stable_count": 7,
-      "thresholds_tested": [
-        0.05,
-        0.1,
-        0.15,
-        0.2
-      ]
-    },
-    "two_dimensional": {
-      "cell_count": 8,
-      "flip_count": 2,
-      "flipping_hypotheses": [
-        "H1",
-        "H2"
-      ],
-      "stable_count": 5
-    }
-  },
   "source_codebase_version": "0.1.0",
   "verdict_timeline": {
     "first_commit_date": "2026-05-05",
-    "last_commit_date": "2026-05-16",
-    "total_commits_tracked": 4,
-    "total_verdict_changes": 1,
+    "last_commit_date": "2026-05-29",
+    "total_commits_tracked": 5,
+    "total_verdict_changes": 3,
     "verdict_changes_per_hypothesis": {
       "H1": 0,
-      "H2": 1,
+      "H2": 2,
       "H3": 0,
       "H4": 0,
-      "H5": 0,
+      "H5": 1,
       "H6": 0,
       "H7": 0
     }

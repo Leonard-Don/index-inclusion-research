@@ -1,0 +1,14 @@
+\begin{tabular}{llrrllrrrrrl}
+\toprule
+market & event_phase & inclusion & n_events & short_window_slug & long_window_slug & short_mean_car & long_mean_car & car_reversal & retention_ratio & retention_ratio_valid & retention_note \\
+\midrule
+CN & announce & 0 & 121 & p0_p20 & p0_p120 & -0.0047 & 0.0853 & -0.0900 & NaN & False & 短窗口基数过小，不适合解释保留率。 \\
+CN & announce & 1 & 118 & p0_p20 & p0_p120 & 0.0184 & 0.0156 & 0.0028 & 0.8504 & True & 短窗口基数充足，可用于解释长期保留率。 \\
+CN & effective & 0 & 121 & p0_p20 & p0_p120 & 0.0090 & 0.0937 & -0.0847 & 10.3722 & True & 短窗口基数充足，可用于解释长期保留率。 \\
+CN & effective & 1 & 118 & p0_p20 & p0_p120 & -0.0137 & -0.0018 & -0.0119 & 0.1327 & True & 短窗口基数充足，可用于解释长期保留率。 \\
+US & announce & 0 & 293 & p0_p20 & p0_p120 & 0.0084 & 0.0543 & -0.0459 & 6.4537 & True & 短窗口基数充足，可用于解释长期保留率。 \\
+US & announce & 1 & 318 & p0_p20 & p0_p120 & 0.0026 & 0.0196 & -0.0170 & NaN & False & 短窗口基数过小，不适合解释保留率。 \\
+US & effective & 0 & 293 & p0_p20 & p0_p120 & 0.0156 & 0.0565 & -0.0409 & 3.6263 & True & 短窗口基数充足，可用于解释长期保留率。 \\
+US & effective & 1 & 318 & p0_p20 & p0_p120 & -0.0091 & 0.0041 & -0.0132 & -0.4465 & True & 短窗口基数充足，可用于解释长期保留率。 \\
+\bottomrule
+\end{tabular}

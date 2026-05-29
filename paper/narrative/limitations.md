@@ -8,6 +8,10 @@
 - **市值（mkt_cap）**：用 Yahoo `sharesOutstanding`（当前值）× 历史价格近似得到。
   **不等价于交易所历史自由流通市值**，仅适合机制分析与课程汇报。
 - **换手率（turnover）**：volume / shares_outstanding 近似，没有过滤大宗 / 协议交易。
+- **Tushare 可选 CN 口径**：`index-inclusion-download-real-data --cn-price-source tushare`
+  会用 Tushare 日线 / `daily_basic` 刷新 A 股价格、总市值与换手率，并用 Tushare
+  指数日线刷新 CSI300 基准；US 侧仍走 Yahoo。该路径需要 `TUSHARE_TOKEN`，
+  且受 Tushare 权限、积分和接口可用性约束。
 - **基准（benchmark_ret）**：CN 用 CSI300 指数收益，US 用 S&P 500 指数收益（`benchmarks.csv`）。
 
 ## 2. 事件清单
@@ -135,7 +139,8 @@
 
 ## 9. 何时不要用本项目结论
 
-- 若需要交易所自由流通市值精确口径 → 不要用 Yahoo `mkt_cap`。
+- 若需要交易所自由流通市值精确口径 → 不要用默认 Yahoo `mkt_cap`；可先尝试
+  Tushare CN 口径改善总市值 / 换手率，但它仍不是完整自由流通市值审计。
 - 若需要中证官方历史排名因果识别 → L3 数据不足以前不要用。
 - 若需要长窗口 [0,+120] 退化效应 → 样本严重缩水，仅作探索性。
 - 若需要时间序列 AUM 推断 → US n=12 且 CN 可比 AUM 缺失，结论以方向参考为主。
@@ -144,7 +149,7 @@
 
 文中或表注中引用本项目结果时，建议同时标注：
 
-> 数据来源：Yahoo Finance（价格、近似市值）、Federal Reserve Z.1（US 被动 AUM）、
+> 数据来源：Yahoo Finance（默认价格、近似市值；Tushare 可选刷新 A 股日线、市值、换手率与 CSI300 基准）、Federal Reserve Z.1（US 被动 AUM）、
 > akshare 上交所/深交所 ETF 份额与东方财富 ETF NAV（CN 被动 AUM proxy，详见 §3）、
 > 中证指数公司公告与维基百科（事件清单）；HS300 RDD 当前使用 L3 官方候选边界样本，但覆盖期仍不足以支撑论文级强因果声明。
 > 详细数据与方法限制见 `docs/limitations.md`。

@@ -1,0 +1,12 @@
+% auto-generated HS300 RDD robustness panel
+\begin{tabular}{lrrrrl}
+\toprule
+Specification & $n$ & $\tau$ & 95\% CI & $p$ & 解读 \\
+\midrule
+main · 局部线性 & 118 & +4.01\% & [+0.09\%, +7.93\%] & 0.045 & 边界显著 \\
+donut(±0.01) & 100 & +5.12\% & [-0.87\%, +11.12\%] & 0.094 & 扔近邻后变化 \\
+placebo cutoff +0.05 & 128 & -2.13\% & [-5.15\%, +0.88\%] & 0.165 & placebo 不显著（识别合理） \\
+placebo cutoff -0.05 & 72 & -2.44\% & [-6.69\%, +1.80\%] & 0.259 & placebo 不显著（识别合理） \\
+polynomial order=2 & 118 & +0.25\% & [-6.96\%, +7.45\%] & 0.946 & 高阶项吸收跳跃 \\
+\bottomrule
+\end{tabular}
