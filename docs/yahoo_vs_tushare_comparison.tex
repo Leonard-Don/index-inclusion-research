@@ -1,0 +1,36 @@
+% Yahoo (free) vs Tushare Pro (paid) — A-share data source migration
+\begin{table}[htbp]\centering
+\caption{假设判定对 A 股数据源的敏感性（Yahoo 免费 vs Tushare Pro 付费）}
+\label{tab:yahoo-vs-tushare-verdicts}
+\begin{tabular}{llcccc}
+\toprule
+假设 & 名称 & Yahoo 判定 & Tushare 判定 & 变动 & Tushare $p$ \\
+\midrule
+H1 & 信息泄露与预运行 & 证据不足/中 & 证据不足/中 & 否 & 1.000 \\
+H2 & 被动基金 AUM 差异 & 部分支持/中 & 证据不足/低 & \textbf{是} & -- \\
+H3 & 散户 vs 机构结构 & 支持/高 & 支持/高 & 否 & -- \\
+H4 & 卖空约束 & 证据不足/中 & 证据不足/中 & 否 & 0.604 \\
+H5 & 涨跌停限制 & 支持/高 & 证据不足/中 & \textbf{是} & 0.427 \\
+H6 & 指数权重可预测性 & 证据不足/中 & 证据不足/中 & 否 & -- \\
+H7 & 行业结构差异 & 支持/中 & 支持/中 & 否 & -- \\
+\bottomrule
+\end{tabular}
+\par\smallskip\footnotesize Yahoo 基线取自 git commit cefc214；Tushare 为同管线仅替换 A 股价格源后的重算结果。美股样本两版均使用 Yahoo，故 US 行差异仅来自抽样窗口微调。
+\end{table}
+
+\begin{table}[htbp]\centering
+\caption{公告日/生效日 $CAR[-1,+1]$（inclusion=1）：Yahoo vs Tushare}
+\label{tab:yahoo-vs-tushare-car}
+\begin{tabular}{llcccccc}
+\toprule
+& & \multicolumn{3}{c}{Yahoo} & \multicolumn{3}{c}{Tushare} \\
+\cmidrule(lr){3-5}\cmidrule(lr){6-8}
+市场 & 阶段 & $N$ & CAR(\%) & $t$ & $N$ & CAR(\%) & $t$ \\
+\midrule
+CN & announce & 117 & 1.76 & 4.93 & 137 & 2.07 & 6.48 \\
+CN & effective & 117 & 0.42 & 0.93 & 137 & 0.49 & 1.25 \\
+US & announce & 254 & 1.84 & 5.25 & 255 & 1.87 & 5.34 \\
+US & effective & 257 & -0.14 & -0.51 & 258 & -0.15 & -0.54 \\
+\bottomrule
+\end{tabular}
+\end{table}

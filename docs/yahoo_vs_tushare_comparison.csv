@@ -1,0 +1,25 @@
+# SECTION A — 假设判定对照 (H1-H7)
+hid,name_cn,yahoo_verdict,yahoo_confidence,tushare_verdict,tushare_confidence,changed,change_kind,yahoo_p,tushare_p,yahoo_n,tushare_n,yahoo_metric,tushare_metric
+H1,信息泄露与预运行,证据不足,中,证据不足,中,否,无,0.8748,1.0,436,455,"CN pre-runup=3.09%; US pre-runup=2.59%; diff=0.50%, bootstrap p=0.875, CI95=[-3.25%, 4.70%]","CN pre-runup=2.75%; US pre-runup=2.61%; diff=0.14%, bootstrap p=1.000, CI95=[-3.22%, 3.96%]"
+H2,被动基金 AUM 差异,部分支持,中,证据不足,低,是,结论翻转,,,17,18,"US AUM 0.99→13.37 (2010→2025), effective CAR 0.04%→0.05% (2014→2025); CN AUM 0.19→1.12 (2020→2024), effective CAR 0.59%→0.42% (2021→2025)","US AUM 0.99→13.37 (2010→2025), effective CAR 0.04%→0.05% (2014→2025); CN AUM 0.19→1.12 (2020→2024), effective CAR -0.36%→0.65% (2020→2025)"
+H3,散户 vs 机构结构,支持,高,支持,高,否,无,,,4,4,"channel concentration 3/4 both-sig: CN announce=✓, CN effective=✓, US announce=✓, US effective=T","channel concentration 2/4 both-sig: CN announce=·, CN effective=✓, US announce=✓, US effective=T"
+H4,卖空约束,证据不足,中,证据不足,中,否,无,0.5366460641588349,0.6037284910140779,436,455,"CN gap_drift=0.76%; US gap_drift=-0.33%; regression cn_coef=0.61%, p=0.537, n=436","CN gap_drift=0.63%; US gap_drift=-0.34%; regression cn_coef=0.50%, p=0.604, n=455"
+H5,涨跌停限制,支持,高,证据不足,中,是,结论翻转,0.0082397750132134,0.4270236711337155,936,1096,"CN limit_coef=0.1549, p=0.008, R²=0.011, n=936","CN limit_coef=0.0744, p=0.427, R²=0.003, n=1096"
+H6,指数权重可预测性,证据不足,中,证据不足,中,否,无,,,67,87,"matched=67, median weight=0.0039, heavy announce_jump=+1.29%, light=+3.20%, spread=-1.90%; robustness: ols_weight coef=-0.0061, p=0.001; sector_fe_weight coef=-0.0436, p=1.000; median_quantreg_weight coef=-0.0057, p=0.312; permutation_quartile_spread coef=-0.0279, p=0.027","matched=87, median weight=0.0035, heavy announce_jump=+1.65%, light=+3.28%, spread=-1.63%; robustness: ols_weight coef=-0.0057, p=0.001; sector_fe_weight coef=-0.0305, p=1.000; median_quantreg_weight coef=-0.0051, p=0.266; permutation_quartile_spread coef=-0.0181, p=0.091"
+H7,行业结构差异,支持,中,支持,中,否,无,,,187,187,"US eligible sectors=8, max=+3.90(Materials), min=-2.05(Real Estate), spread=5.95, n=187; CN sectors=35; interaction US joint p=0.064, top=effective_x_sector_Industrials, n=1924","US eligible sectors=8, max=+3.92(Materials), min=-2.05(Real Estate), spread=5.97, n=187; CN sectors=41; interaction US joint p=0.095, top=effective_x_sector_Industrials, n=1930"
+
+# SECTION B — 事件研究 CAR[-1,+1] (inclusion=1)
+market,phase,yahoo_n,yahoo_car_pct,yahoo_t,yahoo_p,tushare_n,tushare_car_pct,tushare_t,tushare_p
+CN,announce,117,1.762,4.93,0.0,137,2.07,6.48,0.0
+CN,effective,117,0.42,0.93,0.3551,137,0.495,1.25,0.2117
+US,announce,254,1.842,5.25,0.0,255,1.873,5.34,0.0
+US,effective,257,-0.143,-0.51,0.6107,258,-0.151,-0.54,0.5879
+
+# SECTION C — 样本覆盖
+指标,yahoo,tushare
+覆盖股票数,785.0,822.0
+事件窗口面板·事件数,850.0,885.0
+事件窗口面板·行数,69674.0,72540.0
+匹配面板·股票数,780.0,819.0
+匹配面板·事件数,850.0,885.0
+匹配面板·行数,212756.0,225668.0

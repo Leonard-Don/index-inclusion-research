@@ -1,0 +1,17 @@
+market,event_phase,specification,dependent_variable,n_obs,r_squared,adj_r_squared
+CN,announce,main_car,car_m1_p1,936,0.0795945102406839,0.0766318316255788
+CN,announce,turnover_mechanism,turnover_change,936,0.0312950171823251,0.0281768680960021
+CN,announce,volume_mechanism,volume_change,936,0.0412104381739142,0.0381242056787658
+CN,announce,volatility_mechanism,volatility_change,936,0.002641715904169,-0.0005686648386287
+CN,effective,main_car,car_m1_p1,936,0.086871958462077,0.0839327051094871
+CN,effective,turnover_mechanism,turnover_change,936,0.0211494567773848,0.0179986503077841
+CN,effective,volume_mechanism,volume_change,936,0.0297051086813898,0.0265818418638407
+CN,effective,volatility_mechanism,volatility_change,936,0.0084902022983498,0.0052986471555334
+US,announce,main_car,car_m1_p1,1390,0.0403490683505554,0.0382719018318336
+US,announce,turnover_mechanism,turnover_change,1390,0.3529313203849524,0.3515307388273441
+US,announce,volume_mechanism,volume_change,1390,0.3649263928424595,0.3635517746451487
+US,announce,volatility_mechanism,volatility_change,1384,0.0204542882437408,0.0183248410442705
+US,effective,main_car,car_m1_p1,1392,0.0029997681416528,0.0008448685050712
+US,effective,turnover_mechanism,turnover_change,1392,0.2766010727443486,0.2750375303943724
+US,effective,volume_mechanism,volume_change,1392,0.0788327300868394,0.0768417345466812
+US,effective,volatility_mechanism,volatility_change,1392,0.0244920761412774,0.0223836296199688
