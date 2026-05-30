@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import json
 import posixpath
+import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -706,6 +707,26 @@ def audit_reference_manifest(root: Path = ROOT, *, require_bundle: bool = True) 
     )
 
 
+def _flip_documented_in_analysis_params(hid: str, analysis_params_path: Path) -> bool:
+    """Return ``True`` if a verdict flip for ``hid`` is disclosed in the
+    analysis-parameters change log.
+
+    Mirrors :func:`doctor._verdicts._flip_documented`: the hid and a flip
+    verb ("翻"/"flip") must appear in tight adjacency (``[^|H]`` window) so
+    a change-log row naming several hypotheses can't let one hypothesis's
+    flip falsely "document" a different hypothesis's mere weakening.
+    """
+    if not analysis_params_path.exists():
+        return False
+    try:
+        text = analysis_params_path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    if re.search(rf"{re.escape(hid)}\s*由[^|H]{{0,60}}翻", text):
+        return True
+    return re.search(rf"{re.escape(hid)}[^|H]{{0,60}}flip", text, re.IGNORECASE) is not None
+
+
 def audit_pap_limitations(root: Path = ROOT, *, require_bundle: bool = True) -> AuditResult:
     claim = "写作边界：分析参数、局限说明、裁决差异与当前裁决保持同一套口径。"
     required: tuple[Path, ...] = (
@@ -743,12 +764,40 @@ def audit_pap_limitations(root: Path = ROOT, *, require_bundle: bool = True) -> 
             artifacts=_existing_artifacts(required, root=root),
         )
     drift_state = str(pap.get("drift_state", ""))
+    flipped = [str(h) for h in pap.get("flipped_hypotheses", [])]
     details = (
         f"基线日期={pap.get('baseline_date', '')}",
         f"漂移状态={drift_state}",
         f"摘要={pap.get('summary_label', '')}",
     )
     if drift_state == "drift":
+        # A drift that REVERSES a verdict (flip) is only acceptable when the
+        # researcher has disclosed it in the analysis-parameters change log
+        # — the guard's own remediation ("Record the change in
+        # docs/analysis_parameters.md"). If every flipped hypothesis is
+        # documented, the deviation is honest and disclosed → pass; an
+        # undocumented flip (a silent reversal a referee would punish), or a
+        # drift we cannot attribute to a documented flip, stays warn.
+        analysis_params = root / "docs" / "analysis_parameters.md"
+        undocumented = [
+            hid
+            for hid in flipped
+            if not _flip_documented_in_analysis_params(hid, analysis_params)
+        ]
+        if flipped and not undocumented:
+            return AuditResult(
+                name="pap_limitations_claim",
+                status="pass",
+                claim=claim,
+                message=(
+                    "Current verdicts deviate from the baseline, but every "
+                    "flipped verdict is documented in docs/analysis_parameters.md "
+                    "(disclosed deviation)."
+                ),
+                fix="Re-baseline with a fresh snapshots/pre-registration-*.csv once verdicts settle.",
+                artifacts=_existing_artifacts(required, root=root),
+                details=(*details, f"已记录翻转={flipped}"),
+            )
         return AuditResult(
             name="pap_limitations_claim",
             status="warn",
@@ -756,7 +805,7 @@ def audit_pap_limitations(root: Path = ROOT, *, require_bundle: bool = True) -> 
             message="Current verdicts drift from the latest verdict baseline snapshot.",
             fix="Record the change in docs/analysis_parameters.md or restore the baseline verdicts.",
             artifacts=_existing_artifacts(required, root=root),
-            details=details,
+            details=(*details, f"未记录翻转={undocumented}") if undocumented else details,
         )
     if drift_state == "missing":
         return AuditResult(

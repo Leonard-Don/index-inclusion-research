@@ -679,15 +679,66 @@ def test_check_pap_deviation_no_flips_fails_on_flip(tmp_path: Path) -> None:
         "notes": "verdict 支持 → 证据不足",
     }
     _write_pap_report(report, rows)
+    # Isolate from the real docs/analysis_parameters.md: an UNDOCUMENTED
+    # flip (empty change log) must hard-fail.
+    empty_params = tmp_path / "analysis_parameters.md"
+    empty_params.write_text("# no change log here\n", encoding="utf-8")
     result = check_pap_deviation_no_flips(
         report_path=report,
         verdicts_csv_path=tmp_path / "missing_verdicts.csv",
         snapshots_dir=tmp_path / "missing_snapshots",
+        analysis_params_path=empty_params,
     )
     assert result.status == "fail"
-    assert "flipped" in result.message
-    assert "make verdicts && make paper" in result.fix
+    assert "WITHOUT" in result.message or "without" in result.message.lower()
+    assert "analysis_parameters" in result.fix
     assert any("H3" in detail and "支持" in detail for detail in result.details)
+
+
+def test_check_pap_deviation_no_flips_warns_when_flip_is_documented(
+    tmp_path: Path,
+) -> None:
+    """A flip recorded in docs/analysis_parameters.md downgrades fail→warn.
+
+    The guardrail's remediation is "document any flip before presenting the
+    new state"; once the researcher has disclosed the reversal in the
+    change log, it's an honest deviation, not a silent one.
+    """
+    report = tmp_path / "pap_deviation_report.csv"
+    rows = [
+        {
+            "hid": f"H{i}",
+            "name_cn": f"假说{i}",
+            "classification": "unchanged",
+            "baseline_verdict": "支持",
+            "current_verdict": "支持",
+            "notes": "",
+        }
+        for i in range(1, 8)
+    ]
+    rows[4] = {
+        "hid": "H5",
+        "name_cn": "涨跌停限制",
+        "classification": "flipped",
+        "baseline_verdict": "支持",
+        "current_verdict": "证据不足",
+        "notes": "verdict 支持 → 证据不足",
+    }
+    _write_pap_report(report, rows)
+    documented_params = tmp_path / "analysis_parameters.md"
+    documented_params.write_text(
+        "| 2026-05-29 | Tushare 刷新 | H5 由“支持”翻为“证据不足” | … |\n",
+        encoding="utf-8",
+    )
+    result = check_pap_deviation_no_flips(
+        report_path=report,
+        verdicts_csv_path=tmp_path / "missing_verdicts.csv",
+        snapshots_dir=tmp_path / "missing_snapshots",
+        analysis_params_path=documented_params,
+    )
+    assert result.status == "warn"
+    assert "documented" in result.message
+    assert any("H5" in detail for detail in result.details)
 
 
 def test_check_pap_deviation_no_flips_warns_on_drift(tmp_path: Path) -> None:
