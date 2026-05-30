@@ -34,8 +34,9 @@
   - 这是 **TNA 聚合 proxy**，不是基金业协会披露的官方“被动 AUM”口径；
   - ETF 宇宙逐年扩张（2024 年下半年是机构 ETF 配置爆发期），早年快照天然
     低估真实被动跟踪 AUM；
-  - n=5 个年终快照（2020-2024），仍少于 US 的 12 个，但 H2 verdict 已升级为
-    "core" 因为合并 n（CN rolling CAR 5 + US rolling CAR 12 = 17）越过 `EVIDENCE_TIER_PROMOTION_FLOOR["H2"]=15` 阈值；
+  - n=5 个年终快照（2020-2024），仍少于 US 的 13 个，但 H2 verdict 已升级为
+    "core" 因为合并 n（CN rolling CAR 5 + US rolling CAR 13 = 18）越过 `EVIDENCE_TIER_PROMOTION_FLOOR["H2"]=15` 阈值；
+    注意 core 仅指"n 充足进入主表"，H2 在 Tushare 口径下裁决仍为"证据不足"；
   - 数据新鲜度依赖 akshare（东方财富 / 上交所 / 深交所）公开接口，刷新周期由
     `download_cn_passive_aum_proxy` 控制；
   - 单位是 CNY trillion，而 US 行是 USD trillion，**不能跨币种直接比较绝对值**。
@@ -93,45 +94,45 @@
 
 | 假说 | n | 观测效应 | 在观测效应下的功效 | 80% 功效下的 MDE | 解读 |
 |---|---:|---:|---:|---:|---|
-| H3 (双通道命中率) | 4 | hit_rate=0.75（差值 +0.25） | ≈ 0.13（normal-approx）/ 0.00（exact） | 概率差 ≈ +0.50（即 p1≈1.0） | 严重欠功效；exact-binomial 在 α=0.05 下不存在 rejection region。结果按 supplementary 处理是合理的。Bayesian P(p>0.60 \| 3/4, Beta(1,1) 先验) ≈ 0.66 — 给方向性参考。 |
-| H4 (cn_coef on gap_drift) | 436 | coef=+0.0061（SE=0.0099，t=+0.62，p=0.537） | ≈ 0.09 | \|coef\| ≈ 0.028（≈ 4.5× 观测效应） | 严重欠功效。n=436 听起来不少，但观测系数只有 SE 的 0.6 倍，离 α=0.05 显著很远；若 H4 真正的卖空约束效应只有现在观测的规模，本研究无法把它和零区分。**保留为 supplementary，并把裁决文字从"证据不足支持 H4"改述为"现有 n 下证据不足以拒零，需要 n≈n_now × (0.028/0.006)² ≈ 9000 才能可靠检出此规模效应"**。 |
-| H5 (limit_coef on announce CAR) | 936 | coef=+0.155（SE=0.059，t=+2.64，p=0.008） | ≈ 0.75 | \|coef\| ≈ 0.164（≈ 1.06× 观测效应） | **功效中等且落在 0.80 阈值正下方**。p=0.008 的 supportive 裁决在 frequentist 层面成立，但观测系数刚好等于 MDE 量级（power ≈ target_power 临界）：把 H5 写在 main findings 是合理的，**但应在 §5 加一句"该效应处于 n=936 的可检验边界，若真实 coef 略低于 +0.155 即可能被错过"**，避免读者把 0.75 误读为"压倒性证据"。 |
-| H6 (heavy−light spread) | 67 | Cohen's d ≈ −0.73（pooled SD≈0.032） | ≈ 1.00 | \|d\| ≈ 0.35 | 功效充足，n=67 足以检出该规模效应，但观测方向 (heavy<light) 与 H6 预测 (heavy>light) 相反 → "证据不足" 来自方向不符，**不是** n 太小。 |
+| H3 (双通道命中率) | 4 | hit_rate=0.50（差值 +0.00） | ≈ 0.05（normal-approx）/ 0.00（exact） | 概率差 ≈ +0.50（即 p1≈1.0） | 严重欠功效；exact-binomial 在 α=0.05 下不存在 rejection region。结果按 supplementary 处理是合理的。Bayesian P(p>0.60 \| 2/4, Beta(1,1) 先验) ≈ 0.32 — 给方向性参考。 |
+| H4 (cn_coef on gap_drift) | 455 | coef=+0.0050（SE=0.0097，t=+0.52，p=0.604） | ≈ 0.08 | \|coef\| ≈ 0.027（≈ 5.4× 观测效应） | 严重欠功效。n=455 听起来不少，但观测系数只有 SE 的 0.5 倍，离 α=0.05 显著很远；若 H4 真正的卖空约束效应只有现在观测的规模，本研究无法把它和零区分。**保留为 supplementary，并把裁决文字写成"现有 n 下证据不足以拒零，不构成对 H4 的反证"**。 |
+| H5 (limit_coef on announce CAR) | 1096 | coef=+0.0744（SE=0.094，t=+0.79，p=0.427） | ≈ 0.263 | \|coef\| ≈ 0.263（≈ 3.5× 观测效应） | **从"支持"翻转为"证据不足"**。换用 Tushare A 股口径重算后，涨跌停命中率不再显著预测 announce-day CAR（p=0.427，远高于 0.05），power 仅 ≈ 0.13。此前 Yahoo 口径下的 p=0.008/power=0.75 已被推翻——这是免费数据涨跌停/价格字段不可靠造成的假阳性，准确数据将其纠正。H5 现按 §5 局限性诚实披露，**不再作为 main finding**。 |
+| H6 (heavy−light spread) | 87 | Cohen's d ≈ −0.47（pooled SD≈0.033） | ≈ 0.30 | \|d\| ≈ 0.30 | 功效充足（≈0.99），n=87 足以检出该规模效应，但观测方向 (heavy<light) 与 H6 预测 (heavy>light) 相反 → "证据不足" 来自方向不符，**不是** n 太小。 |
 
 - **方法学**：H3 使用一比例 z-test（正态近似）+ exact-binomial 对照；H4 / H5 使用 HC3 回归单系数 t-test（ncp = coef/SE，df = n − k − 1）；H6 使用单样本 t-test，Cohen's d = mean/pooled-SD；MDE 由二分搜索求解（H4/H5 与闭式 (z_{1-α/2}+z_β)·SE 一致）。
 - **数据源**：
   - H4 → `results/real_tables/cma_gap_drift_market_regression.csv`（`cn_coef`, `cn_se`, `cn_p_value`, `n_obs`，n_covariates=2: cn_dummy + gap_length_days）。
   - H5 → `results/real_tables/cma_h5_limit_predictive_regression.csv`（`limit_coef`, `limit_se`, `limit_p_value`, `n_obs`，n_covariates=1）。
-  - H6 的 pooled SD 由 `data/processed/hs300_weight_change.csv` × `results/real_tables/cma_gap_event_level.csv` 按 weight_proxy 中位数切重/轻 bucket 重算（n_heavy=34，n_light=33）；面板缺失时回退到 H6 OLS-HC3 r²=0.033 反推的 \|d\|≈0.18，并在 interpretation 里明文说明。
+  - H6 的 pooled SD 由 `data/processed/hs300_weight_change.csv` × `results/real_tables/cma_gap_event_level.csv` 按 weight_proxy 中位数切重/轻 bucket 重算；面板缺失时回退到 H6 OLS-HC3 反推的 \|d\|，并在 interpretation 里明文说明。
 - **可重现**：`index-inclusion-power-analysis` 是 48 个 console scripts 的第 48 号；它会按当前 verdicts / 回归 CSV 即时重算，不需要单独缓存。
 - **诚实读图**：
-  - **H3** 的 power<0.30 意味着即便真实命中率确实是 75%，本研究在 n=4 下也很难把它"测出来"；这是把 H3 归入 supplementary 的统计学依据，而不是"我们不喜欢这个结论"。
-  - **H4** 的 power≈0.09 同样不允许"证据不足 ⇒ H4 错"的反推。n=436 看似充足，但**观测效应**太小（coef 仅 0.6 倍 SE）使 post-hoc 功效塌到 < 0.10；MDE/coef ≈ 4.5 表示：要把这一项升级为"支持"，需要 effect 翻 4-5 倍**或** n 翻 ~20 倍。
-  - **H5** 的 power≈0.75 是"恰好低于 0.80"——p=0.008 在 frequentist 上仍然是显著的，但**不该把它当成"功效充足"**：观测系数处在 MDE 临界，若样本里的极端观察点稍有抖动，效应就可能跌进无法识别的区间。建议 §5 显式标注。
-  - **H6** 的 power≈1 配合 d=−0.73 则说明：**没把 H6 升级为支持**是数据驱动的，不是测试力度不够。
+  - **H3** 的 power<0.30 意味着即便真实命中率确实偏离 50%，本研究在 n=4 下也很难把它"测出来"；这是把 H3 归入 supplementary 的统计学依据，而不是"我们不喜欢这个结论"。
+  - **H4** 的 power≈0.08 同样不允许"证据不足 ⇒ H4 错"的反推。n=455 看似充足，但**观测效应**太小（coef 仅 0.5 倍 SE）使 post-hoc 功效塌到 < 0.10；MDE/coef ≈ 5.4 表示：要把这一项升级为"支持"，需要 effect 翻 5 倍**或** n 翻 ~30 倍。
+  - **H5** 在 Tushare 口径下 p=0.427、power≈0.13——**既不显著、也欠功效**。这与早先 Yahoo 口径的 p=0.008/power=0.75 截然相反；说明此前的"支持"高度依赖免费数据中不可靠的涨跌停/价格字段。结论：H5 现为"证据不足"，论文不得再把它列为 main finding。
+  - **H6** 的 power≈0.99 配合 d=−0.47 则说明：**没把 H6 升级为支持**是数据驱动的（方向相反），不是测试力度不够。
 
 ### 7.1 各假说功效裁决（paper-ready 摘要）
 
-- **H3 的"支持 / 高置信度"裁决建立在 n=4 上，而项目自己的功效分析给出 power≈0**。
-  H3 的裁决变量是 4 个 CN/US × announce/effective 象限的 dual-channel 命中率（3/4=0.75）。
-  在 n=4、α=0.05 下：正态近似功效仅 ≈ 0.13，**精确二项检验下根本不存在 rejection
-  region（exact-binomial power = 0.000）**——也就是说，即便真实命中率确实是 75%，
-  本设计在 n=4 下几乎无法把它从零区分开。因此 H3 的"支持"必须读作**方向性、
-  描述性**的证据，其"高置信度"标签反映的是命中率点估计本身（3/4），**不是**一个有
+- **H3 的"支持"裁决建立在 n=4 上，而项目自己的功效分析给出 power≈0**。
+  H3 的裁决变量是 4 个 CN/US × announce/effective 象限的 dual-channel 命中率（当前 2/4=0.50）。
+  在 n=4、α=0.05 下：正态近似功效仅 ≈ 0.05，**精确二项检验下根本不存在 rejection
+  region（exact-binomial power = 0.000）**——也就是说，本设计在 n=4 下几乎无法把命中率
+  从零区分开。因此 H3 的"支持"必须读作**方向性、描述性**的证据，**不是**一个有
   统计功效支撑的结论。论文里 H3 只应作为 supplementary，并明确写出 n=4 / power≈0
-  的限制；不要让 §3.3 的"支持/高"被读成强证据。
-- **H4 is severely underpowered (n=436, observed power ≈ 0.09)**。 paper §5 应保留为 supplementary 并把口径写成"在当前样本下证据不足以拒零，**不构成对 H4 的反证**"。
-- **H5 is moderately powered (n=936, observed power ≈ 0.75)**，恰好落在 0.80 阈值之下。 frequentist 显著（p=0.008）+ 方向正确，可继续作为 main finding，**但在 §5 局限性段落明示"观测效应处于可检测边界"**。
-- **H6 is direction-mismatched (power ≈ 1.0, d=−0.73)**：保留既有处理（H6 reframed as 'evidence against' rather than 'evidence for'）。
+  的限制；不要让 §3.3 被读成强证据。
+- **H4 is severely underpowered (n=455, observed power ≈ 0.08)**。 paper §5 应保留为 supplementary 并把口径写成"在当前样本下证据不足以拒零，**不构成对 H4 的反证**"。
+- **H5 翻转为"证据不足"（n=1096, p=0.427, observed power ≈ 0.13）**。 换用 Tushare A 股口径重算后，涨跌停命中率不再显著预测 announce-day CAR；此前 Yahoo 口径下的 p=0.008/power=0.75 是免费数据涨跌停字段不可靠造成的假阳性。**H5 不得再作为 main finding**，应在 §5 与 §7 诚实披露这一数据源驱动的翻转。
+- **H6 is direction-mismatched (power ≈ 0.99, d=−0.47)**：保留既有处理（H6 reframed as 'evidence against' rather than 'evidence for'）。
 
 ## 8. CMA 假说证据强度分层
 
-- **核心假说（core, n 充足）**：H1（n=436）、H5（n=936）、H7（sector spread n=187；交互回归 n=1882）；
-  H2 在补入 CN ETF TNA proxy 后由 supplementary 升级为 core（合并 n=17：US rolling 12 + CN rolling 5,超过 `EVIDENCE_TIER_PROMOTION_FLOOR["H2"]=15` 阈值）。
+- **核心假说（core, n 充足）**：H1（n=455）、H5（n=1096）、H7（sector spread n=187；交互回归 n=1930）；
+  H2 在补入 CN ETF TNA proxy 后由 supplementary 升级为 core（合并 n=18：US rolling 13 + CN rolling 5,超过 `EVIDENCE_TIER_PROMOTION_FLOOR["H2"]=15` 阈值）。
+  注意：core 仅表示"n 充足、进入主表披露"，不等于"被支持"——H5 虽为 core，但 Tushare 口径下裁决为"证据不足"。
 - **附录假说（supplementary, n 受限）**：
   - H3（n=4 象限，dual-channel 判据）
-  - H4（n=436 但回归 p=0.537，不显著）
-  - H6（n=67）
+  - H4（n=455 但回归 p=0.604，不显著）
+  - H6（n=87）
 - 该分层在 `analysis/cross_market_asymmetry/verdicts/_core.py` 中由 `EVIDENCE_TIER` 与
   `EVIDENCE_TIER_PROMOTION_FLOOR` 联合决定，并由 `_make_verdict` 写入
   `cma_hypothesis_verdicts.csv` 的 `evidence_tier` 列；H2 是当前唯一启用

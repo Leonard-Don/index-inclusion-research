@@ -48,38 +48,81 @@ def _make_pap_df() -> pd.DataFrame:
 
 
 def _make_event_study_df() -> pd.DataFrame:
-    """Minimal event_study_summary.csv with the 4 headline rows."""
+    """Minimal event_study_summary.csv with the 4 headline rows.
+
+    Uses the Tushare-era A-share numbers so the whole test fixture tells
+    one coherent data-vintage story (CN announce +2.07%, n=137, etc.).
+    """
     return pd.DataFrame(
         [
             {
                 "market": "CN", "event_phase": "announce", "inclusion": 1,
                 "window": "[-1,+1]", "window_slug": "m1_p1",
-                "n_events": 117, "mean_car": 0.0176, "std_car": 0.039,
-                "se_car": 0.0036, "ci_low_95": 0.0106, "ci_high_95": 0.0246,
-                "t_stat": 4.93, "p_value": 2.75e-06,
+                "n_events": 137, "mean_car": 0.0207, "std_car": 0.037,
+                "se_car": 0.0032, "ci_low_95": 0.0144, "ci_high_95": 0.0270,
+                "t_stat": 6.48, "p_value": 1.56e-09,
             },
             {
                 "market": "US", "event_phase": "announce", "inclusion": 1,
                 "window": "[-1,+1]", "window_slug": "m1_p1",
-                "n_events": 254, "mean_car": 0.0184, "std_car": 0.041,
-                "se_car": 0.0026, "ci_low_95": 0.0133, "ci_high_95": 0.0235,
-                "t_stat": 5.25, "p_value": 2.50e-07,
+                "n_events": 255, "mean_car": 0.0187, "std_car": 0.056,
+                "se_car": 0.0035, "ci_low_95": 0.0118, "ci_high_95": 0.0256,
+                "t_stat": 5.34, "p_value": 2.11e-07,
             },
             {
                 "market": "CN", "event_phase": "effective", "inclusion": 1,
                 "window": "[-1,+1]", "window_slug": "m1_p1",
-                "n_events": 117, "mean_car": 0.0042, "std_car": 0.046,
-                "se_car": 0.0042, "ci_low_95": -0.004, "ci_high_95": 0.012,
-                "t_stat": 0.93, "p_value": 0.355,
+                "n_events": 137, "mean_car": 0.0049, "std_car": 0.046,
+                "se_car": 0.0039, "ci_low_95": -0.003, "ci_high_95": 0.013,
+                "t_stat": 1.25, "p_value": 0.212,
             },
             {
                 "market": "US", "event_phase": "effective", "inclusion": 1,
                 "window": "[-1,+1]", "window_slug": "m1_p1",
-                "n_events": 254, "mean_car": -0.0014, "std_car": 0.038,
-                "se_car": 0.0024, "ci_low_95": -0.006, "ci_high_95": 0.003,
-                "t_stat": -0.51, "p_value": 0.611,
+                "n_events": 255, "mean_car": -0.0015, "std_car": 0.045,
+                "se_car": 0.0028, "ci_low_95": -0.007, "ci_high_95": 0.004,
+                "t_stat": -0.54, "p_value": 0.588,
             },
         ]
+    )
+
+
+def _make_asymmetry_df() -> pd.DataFrame:
+    """Minimal asymmetry_summary.csv for §5.1 derivation."""
+    return pd.DataFrame(
+        [
+            {
+                "market": "CN", "event_phase": "announce",
+                "addition_car_m1_p1": 0.0207, "deletion_car_m1_p1": -0.0109,
+            },
+            {
+                "market": "US", "event_phase": "announce",
+                "addition_car_m1_p1": 0.0187, "deletion_car_m1_p1": 0.0009,
+            },
+        ]
+    )
+
+
+def _make_long_window_df() -> pd.DataFrame:
+    """Minimal long_window_event_study_summary.csv for §5.2 derivation."""
+    return pd.DataFrame(
+        [
+            {
+                "market": "CN", "event_phase": "announce", "inclusion": 1,
+                "window_slug": "p0_p120", "mean_car": 0.0014, "t_stat": 0.07,
+            },
+            {
+                "market": "US", "event_phase": "announce", "inclusion": 1,
+                "window_slug": "p0_p120", "mean_car": 0.0192, "t_stat": 1.54,
+            },
+        ]
+    )
+
+
+def _make_pre_runup_df() -> pd.DataFrame:
+    """Minimal cma_pre_runup_bootstrap.csv for §5.5 derivation."""
+    return pd.DataFrame(
+        [{"cn_mean": 0.0275, "us_mean": 0.0261, "boot_p_value": 1.0}]
     )
 
 
@@ -168,6 +211,15 @@ def fixture_paths(tmp_path: Path) -> dict[str, Path]:
             }
         ]
     ).to_csv(real_tables / "power_analysis_report.csv", index=False)
+    _make_asymmetry_df().to_csv(
+        real_tables / "asymmetry_summary.csv", index=False
+    )
+    _make_long_window_df().to_csv(
+        real_tables / "long_window_event_study_summary.csv", index=False
+    )
+    _make_pre_runup_df().to_csv(
+        real_tables / "cma_pre_runup_bootstrap.csv", index=False
+    )
 
     public_dir = tmp_path / "data" / "public"
     public_dir.mkdir(parents=True)
@@ -184,6 +236,9 @@ def fixture_paths(tmp_path: Path) -> dict[str, Path]:
         "pap": real_tables / "pap_deviation_report.csv",
         "event_study": real_tables / "event_study_summary.csv",
         "power_analysis": real_tables / "power_analysis_report.csv",
+        "asymmetry": real_tables / "asymmetry_summary.csv",
+        "long_window": real_tables / "long_window_event_study_summary.csv",
+        "pre_runup": real_tables / "cma_pre_runup_bootstrap.csv",
         "public_summary": public_dir / "index_research_summary.json",
         "limitations": limitations,
     }
@@ -194,6 +249,9 @@ def _render(fixture: dict[str, Path], **overrides) -> str:
         pap_csv=fixture["pap"],
         event_study_csv=fixture["event_study"],
         power_analysis_csv=fixture["power_analysis"],
+        asymmetry_csv=fixture["asymmetry"],
+        long_window_csv=fixture["long_window"],
+        pre_runup_csv=fixture["pre_runup"],
         public_summary_json=fixture["public_summary"],
         limitations_md=fixture["limitations"],
         generated_at=datetime(2026, 5, 17, tzinfo=UTC),
@@ -258,17 +316,39 @@ def test_h1_through_h7_not_rendered_as_main_body_table_rows(fixture_paths):
 def test_event_study_core_numbers_auto_populated(fixture_paths):
     """§4.1 surfaces headline CAR numbers from event_study_summary.csv."""
     rendered = _render(fixture_paths)
-    # CN announce: mean_car=0.0176 → +1.76%, t=4.93
-    assert "+1.76%" in rendered
-    assert "4.93" in rendered
-    # US announce: mean_car=0.0184 → +1.84%, t=5.25
-    assert "+1.84%" in rendered
-    assert "5.25" in rendered
-    # CN effective: mean_car=0.0042 → +0.42%, p=0.355
-    assert "+0.42%" in rendered
-    assert "0.355" in rendered
-    # US effective: mean_car=-0.0014 → -0.14%
-    assert "-0.14%" in rendered
+    # CN announce: mean_car=0.0207 → +2.07%, t=6.48
+    assert "+2.07%" in rendered
+    assert "6.48" in rendered
+    # US announce: mean_car=0.0187 → +1.87%, t=5.34
+    assert "+1.87%" in rendered
+    assert "5.34" in rendered
+    # CN effective: mean_car=0.0049 → +0.49%, p=0.212
+    assert "+0.49%" in rendered
+    assert "0.212" in rendered
+    # US effective: mean_car=-0.0015 → -0.15%
+    assert "-0.15%" in rendered
+
+
+def test_discussion_numbers_auto_derived_not_hardcoded(fixture_paths):
+    """§5.1/5.2/5.5 derive from result CSVs, not template literals.
+
+    Regression guard for the Yahoo→Tushare drift: these three passages
+    used to be hardcoded (+1.76%, +1.56%, +3.09%) in the template and
+    survived data-source changes. They must now reflect the fixture CSVs.
+    """
+    rendered = _render(fixture_paths)
+    # §5.1 asymmetry (from _make_asymmetry_df)
+    assert "中国纳入公告窗约 +2.07%，剔除约 -1.09%" in rendered
+    assert "美国纳入约 +1.87%，剔除约 +0.09%" in rendered
+    # §5.2 long-window (from _make_long_window_df)
+    assert "中国 [0,+120] 均值 CAR 约 +0.14%（t=0.07" in rendered
+    assert "美国约 +1.92%（t=1.54" in rendered
+    # §5.5 pre-runup (from _make_pre_runup_df)
+    assert "公告前均值漂移在中国约 +2.75%，美国约 +2.61%，两市场差异 bootstrap p=1.000" in rendered
+    # The old hardcoded Yahoo-vintage literals must be gone.
+    assert "+1.76%" not in rendered
+    assert "+1.56%" not in rendered
+    assert "+3.09%" not in rendered
 
 
 def test_power_analysis_rows_rendered_from_report(fixture_paths):

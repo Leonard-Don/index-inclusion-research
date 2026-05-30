@@ -6,10 +6,10 @@
 
 | 假说 | 名称 | n | 测试族 | 观测效应 | 在观测效应下的功效 | 80% 功效下的 MDE |
 |---|---|---:|---|---:|---:|---:|
-| H3 | 散户 vs 机构结构 | 4 | binomial_proportion_z_two_sided | +0.250 (hit_rate − 0.5) | 0.134 | 0.499 (proportion_gap_p1_minus_p0) |
-| H4 | 卖空约束 | 436 | regression_coef_t_two_sided | +0.006 (cn_coef_gap_drift) | 0.095 | 0.028 (coef_at_target_power) |
-| H5 | 涨跌停限制 | 936 | regression_coef_t_two_sided | +0.155 (limit_coef_announce_car) | 0.752 | 0.164 (coef_at_target_power) |
-| H6 | 指数权重可预测性 | 67 | one_sample_t_two_sided | -0.728 (cohens_d) | 1.000 | 0.347 (cohens_d_at_target_power) |
+| H3 | 散户 vs 机构结构 | 4 | binomial_proportion_z_two_sided | +0.000 (hit_rate − 0.5) | 0.050 | 0.499 (proportion_gap_p1_minus_p0) |
+| H4 | 卖空约束 | 455 | regression_coef_t_two_sided | +0.005 (cn_coef_gap_drift) | 0.081 | 0.027 (coef_at_target_power) |
+| H5 | 涨跌停限制 | 1096 | regression_coef_t_two_sided | +0.074 (limit_coef_announce_car) | 0.125 | 0.263 (coef_at_target_power) |
+| H6 | 指数权重可预测性 | 87 | one_sample_t_two_sided | -0.473 (cohens_d) | 0.992 | 0.304 (cohens_d_at_target_power) |
 | H1 | 信息泄露与预运行 | 436 | bootstrap_diff_two_sided | +0.005 (cn_minus_us_pre_runup) | 0.057 | 0.057 (diff_at_target_power) |
 | H1 | 信息泄露与预运行 | 436 | bootstrap_diff_two_sided | +0.021 (cn_minus_us_pre_runup) | 0.839 | 0.020 (diff_at_target_power) |
 | H2 | 被动基金 AUM 差异 | 15 | one_sample_t_two_sided | -0.037 (cohens_d_car_delta) | 0.052 | 0.778 (cohens_d_at_target_power) |
@@ -19,47 +19,47 @@
 
 ### H3 · 散户 vs 机构结构 (n=4)
 
-normal-approx power=0.134 · exact-binomial power=0.000 · posterior P(p>0.60|data)=0.663 (Beta(1,1) uniform prior). MDE@80%=+0.499 概率差（p1≈0.999）。严重欠功效 (power=0.13 < 0.30): n=4 无法在 α=0.05 检出真实命中率 75%；结果按 supplementary 处理是合理的。
+normal-approx power=0.050 · exact-binomial power=0.000 · posterior P(p>0.60|data)=0.317 (Beta(1,1) uniform prior). MDE@80%=+0.499 概率差（p1≈0.999）。严重欠功效 (power=0.05 < 0.30): n=4 无法在 α=0.05 检出真实命中率 50%；结果按 supplementary 处理是合理的。
 
 **额外指标**:
 
 - `exact_power` (精确二项功效) = 0.0000
-- `bayes_p_gt_0.60` (后验 P(p>0.60)) = 0.6630
-- `successes` (成功次数) = 3.0000
+- `bayes_p_gt_0.60` (后验 P(p>0.60)) = 0.3174
+- `successes` (成功次数) = 2.0000
 
-### H4 · 卖空约束 (n=436)
+### H4 · 卖空约束 (n=455)
 
-HC3 regression coef=+0.0061 (SE=0.0099, t=+0.618, p=0.5366), df≈433; two-sided t-test power=0.095. MDE@80% = |coef|≈0.0278 (≈ 4.5× the observed coefficient). 严重欠功效 (power=0.09 < 0.30): n=436 下观测系数 +0.0061 太小 (相对 SE=0.0099)，无法在 α=0.05 下稳健检出。证据不足的判定是 n 不够大，不是 H4 一定错，因此保留为 supplementary 是合理的。
+HC3 regression coef=+0.0050 (SE=0.0097, t=+0.519, p=0.6037), df≈452; two-sided t-test power=0.081. MDE@80% = |coef|≈0.0272 (≈ 5.4× the observed coefficient). 严重欠功效 (power=0.08 < 0.30): n=455 下观测系数 +0.0050 太小 (相对 SE=0.0097)，无法在 α=0.05 下稳健检出。证据不足的判定是 n 不够大，不是 H4 一定错，因此保留为 supplementary 是合理的。
 
 **额外指标**:
 
-- `coef_observed` (观测系数) = 0.0061
-- `se_observed` (系数标准误) = 0.0099
-- `t_observed` (t 统计量) = 0.6179
-- `p_value_observed` (p 值) = 0.5366
+- `coef_observed` (观测系数) = 0.0050
+- `se_observed` (系数标准误) = 0.0097
+- `t_observed` (t 统计量) = 0.5190
+- `p_value_observed` (p 值) = 0.6037
 - `n_covariates` (协变量数) = 2.0000
 
-### H5 · 涨跌停限制 (n=936)
+### H5 · 涨跌停限制 (n=1096)
 
-HC3 regression coef=+0.1549 (SE=0.0586, t=+2.642, p=0.0082), df≈934; two-sided t-test power=0.752. MDE@80% = |coef|≈0.1644 (≈ 1.06× the observed coefficient). 功效中等 (power=0.75): 趋势可读但仍存在错过真实小效应的风险。
+HC3 regression coef=+0.0744 (SE=0.0937, t=+0.794, p=0.4270), df≈1094; two-sided t-test power=0.125. MDE@80% = |coef|≈0.2628 (≈ 3.53× the observed coefficient). 严重欠功效 (power=0.12 < 0.30): n=1096 下仍无法稳健检出该效应。
 
 **额外指标**:
 
-- `coef_observed` (观测系数) = 0.1549
-- `se_observed` (系数标准误) = 0.0586
-- `t_observed` (t 统计量) = 2.6421
-- `p_value_observed` (p 值) = 0.0082
+- `coef_observed` (观测系数) = 0.0744
+- `se_observed` (系数标准误) = 0.0937
+- `t_observed` (t 统计量) = 0.7943
+- `p_value_observed` (p 值) = 0.4270
 - `n_covariates` (协变量数) = 1.0000
 
-### H6 · 指数权重可预测性 (n=67)
+### H6 · 指数权重可预测性 (n=87)
 
-Cohen's d (observed) ≈ -0.728 (bucket-SD=0.0319); two-sided t-test power=1.000. 对比小/中/大效应 (d=0.2/0.5/0.8) 的功效 = 0.36 / 0.98 / 1.00. MDE@80% = |d|=0.347. 功效充足 (power=1.00 >= 0.80) — n 足以检出该效应，但观测方向 (heavy<light) 与 H6 预测 (heavy>light) 相反，所以 verdict='证据不足' 并不是 n 不够，而是方向不符。
+Cohen's d (observed) ≈ -0.473 (bucket-SD=0.0325); two-sided t-test power=0.992. 对比小/中/大效应 (d=0.2/0.5/0.8) 的功效 = 0.45 / 1.00 / 1.00. MDE@80% = |d|=0.304. 功效充足 (power=0.99 >= 0.80) — n 足以检出该效应，但观测方向 (heavy<light) 与 H6 预测 (heavy>light) 相反，所以 verdict='证据不足' 并不是 n 不够，而是方向不符。
 
 **额外指标**:
 
-- `cohens_d_observed` (Cohen d) = -0.7278
-- `power_at_d_0.20` (d=0.20 功效) = 0.3646
-- `power_at_d_0.50` (d=0.50 功效) = 0.9809
+- `cohens_d_observed` (Cohen d) = -0.4728
+- `power_at_d_0.20` (d=0.20 功效) = 0.4542
+- `power_at_d_0.50` (d=0.50 功效) = 0.9960
 - `power_at_d_0.80` (d=0.80 功效) = 1.0000
 
 ### H1 · 信息泄露与预运行 (n=436)

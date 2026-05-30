@@ -1,6 +1,6 @@
 # 指数纳入效应跨市场不对称研究 · 方法论摘要
 
-**生成时间**: 2026-05-29 | **裁决基线快照**: 2026-05-29
+**生成时间**: 2026-05-30 | **裁决基线快照**: 2026-05-29
 
 ## 1. 样本规模
 
@@ -16,8 +16,8 @@
 
 **事件研究面板**:
 
-- 真实事件：0 行 (`data/processed/real_events_clean.csv`)
-- 匹配对照面板：0 行 (`data/processed/real_matched_event_panel.csv`，Stuart 2010 SMD；covariate balance pass)
+- 真实事件：893 行 (`data/processed/real_events_clean.csv`)
+- 匹配对照面板：225,668 行 (`data/processed/real_matched_event_panel.csv`，Stuart 2010 SMD；covariate balance pass)
 - 时间窗：CAR[-1,+1] / [-3,+3] / [-5,+5]
 
 ## 2. 估计方法
@@ -40,10 +40,10 @@
 
 | 假说 | n | 测试族 | 在观测效应下的功效 | 80% 功效下的 MDE |
 |---|---:|---|---:|---:|
-| H3 | 4 | binomial_proportion_z_two_sided | 0.134 | 0.499 (proportion_gap_p1_minus_p0) |
-| H4 | 436 | regression_coef_t_two_sided | 0.095 | 0.028 (coef_at_target_power) |
-| H5 | 936 | regression_coef_t_two_sided | 0.752 | 0.164 (coef_at_target_power) |
-| H6 | 67 | one_sample_t_two_sided | 1.000 | 0.347 (cohens_d_at_target_power) |
+| H3 | 4 | binomial_proportion_z_two_sided | 0.050 | 0.499 (proportion_gap_p1_minus_p0) |
+| H4 | 455 | regression_coef_t_two_sided | 0.081 | 0.027 (coef_at_target_power) |
+| H5 | 1096 | regression_coef_t_two_sided | 0.125 | 0.263 (coef_at_target_power) |
+| H6 | 87 | one_sample_t_two_sided | 0.992 | 0.304 (cohens_d_at_target_power) |
 | H1 | 436 | bootstrap_diff_two_sided | 0.057 | 0.057 (diff_at_target_power) |
 | H1 | 436 | bootstrap_diff_two_sided | 0.839 | 0.020 (diff_at_target_power) |
 | H2 | 15 | one_sample_t_two_sided | 0.052 | 0.778 (cohens_d_at_target_power) |

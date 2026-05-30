@@ -90,6 +90,18 @@ def _default_event_study_summary_csv() -> Path:
     return paths.real_tables_dir() / "event_study_summary.csv"
 
 
+def _default_asymmetry_summary_csv() -> Path:
+    return paths.real_tables_dir() / "asymmetry_summary.csv"
+
+
+def _default_long_window_summary_csv() -> Path:
+    return paths.real_tables_dir() / "long_window_event_study_summary.csv"
+
+
+def _default_pre_runup_csv() -> Path:
+    return paths.real_tables_dir() / "cma_pre_runup_bootstrap.csv"
+
+
 def _default_figures_dir() -> Path:
     return paths.results_dir() / "figures"
 
@@ -425,6 +437,105 @@ def _event_study_core_numbers(event_study_csv: Path) -> dict[str, Any]:
     return out
 
 
+def _asymmetry_numbers(asymmetry_csv: Path) -> dict[str, Any]:
+    """Extract §5.1 inclusion-vs-deletion announce-window CARs.
+
+    Reads ``asymmetry_summary.csv`` (rows keyed by market/event_phase)
+    and returns ``addition``/``deletion`` CAR[-1,+1] percentages for the
+    announce phase of each market. Keys (all ``None`` when unavailable so
+    the template can ``{{ val or "待补" }}``):
+        asym_cn_add, asym_cn_del, asym_us_add, asym_us_del.
+    """
+    df = _read_csv_or_empty(asymmetry_csv)
+    out: dict[str, Any] = {}
+    needed = {
+        "market",
+        "event_phase",
+        "addition_car_m1_p1",
+        "deletion_car_m1_p1",
+    }
+    if df.empty or not needed.issubset(df.columns):
+        return out
+
+    def _pct(val: Any) -> str | None:
+        v = _coerce_float(val)
+        return None if v is None else f"{v * 100:+.2f}"
+
+    for market, key in (("CN", "asym_cn"), ("US", "asym_us")):
+        mask = (
+            (df["market"].astype(str).str.upper() == market)
+            & (df["event_phase"].astype(str).str.lower() == "announce")
+        )
+        sub = df.loc[mask]
+        if sub.empty:
+            continue
+        row = sub.iloc[0]
+        out[f"{key}_add"] = _pct(row.get("addition_car_m1_p1"))
+        out[f"{key}_del"] = _pct(row.get("deletion_car_m1_p1"))
+    return out
+
+
+def _long_window_numbers(long_window_csv: Path) -> dict[str, Any]:
+    """Extract §5.2 long-window [0,+120] announce CAR for inclusion events.
+
+    Reads ``long_window_event_study_summary.csv`` and returns the mean
+    CAR (percent) and t-stat for the announce-phase, inclusion=1,
+    ``p0_p120`` window of each market. Keys (``None`` when missing):
+        lw_cn_car, lw_cn_t, lw_us_car, lw_us_t.
+    """
+    df = _read_csv_or_empty(long_window_csv)
+    out: dict[str, Any] = {}
+    needed = {
+        "market",
+        "event_phase",
+        "inclusion",
+        "window_slug",
+        "mean_car",
+        "t_stat",
+    }
+    if df.empty or not needed.issubset(df.columns):
+        return out
+
+    for market, key in (("CN", "lw_cn"), ("US", "lw_us")):
+        mask = (
+            (df["market"].astype(str).str.upper() == market)
+            & (df["event_phase"].astype(str).str.lower() == "announce")
+            & (df["inclusion"].astype(str) == "1")
+            & (df["window_slug"].astype(str) == "p0_p120")
+        )
+        sub = df.loc[mask]
+        if sub.empty:
+            continue
+        row = sub.iloc[0]
+        car = _coerce_float(row.get("mean_car"))
+        t = _coerce_float(row.get("t_stat"))
+        out[f"{key}_car"] = None if car is None else f"{car * 100:+.2f}"
+        out[f"{key}_t"] = None if t is None else f"{t:.2f}"
+    return out
+
+
+def _pre_runup_numbers(pre_runup_csv: Path) -> dict[str, Any]:
+    """Extract §5.5 pre-announcement drift means + bootstrap p-value.
+
+    Reads ``cma_pre_runup_bootstrap.csv`` (one row) and returns the CN/US
+    pre-runup means (percent) and the two-market bootstrap difference
+    p-value. Keys (``None`` when missing):
+        prerun_cn, prerun_us, prerun_p.
+    """
+    df = _read_csv_or_empty(pre_runup_csv)
+    out: dict[str, Any] = {}
+    if df.empty:
+        return out
+    row = df.iloc[0]
+    cn = _coerce_float(row.get("cn_mean"))
+    us = _coerce_float(row.get("us_mean"))
+    p = _coerce_float(row.get("boot_p_value"))
+    out["prerun_cn"] = None if cn is None else f"{cn * 100:+.2f}"
+    out["prerun_us"] = None if us is None else f"{us * 100:+.2f}"
+    out["prerun_p"] = None if p is None else f"{p:.3f}"
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Template (Jinja2 inline)
 # ---------------------------------------------------------------------------
@@ -511,11 +622,11 @@ Shleifer (1986) 和 Harris & Gurel (1986) 证明指数成分调整会伴随可�
 
 ### 5.1 纳入 vs 剔除不对称
 
-若信息/认证渠道为主导，纳入与剔除应呈方向不对称。当前结果显示，中国纳入公告窗约 +1.76%，剔除约 -0.59%；美国纳入约 +1.84%，剔除约 +0.05%。这一方向差异更接近“纳入带来正向认证或注意力冲击”的解释，而不是简单对称的机械买卖压力。
+若信息/认证渠道为主导，纳入与剔除应呈方向不对称。当前结果显示，中国纳入公告窗约 {{ asym_cn_add or "待补" }}%，剔除约 {{ asym_cn_del or "待补" }}%；美国纳入约 {{ asym_us_add or "待补" }}%，剔除约 {{ asym_us_del or "待补" }}%。这一方向差异更接近“纳入带来正向认证或注意力冲击”的解释，而不是简单对称的机械买卖压力。
 
 ### 5.2 长窗口 CAR 的持续性
 
-长窗口用于检验短期公告效应是否随后大幅反转。中国 [0,+120] 均值 CAR 约 +1.56%（t=0.66，不显著），美国约 +1.96%（t=1.57，不显著）。点估计为正但统计不显著，说明本文不能声称长期持续超额收益，但也没有看到与纯短暂价格压力一致的大幅反转。
+长窗口用于检验短期公告效应是否随后大幅反转。中国 [0,+120] 均值 CAR 约 {{ lw_cn_car or "待补" }}%（t={{ lw_cn_t or "待补" }}，不显著），美国约 {{ lw_us_car or "待补" }}%（t={{ lw_us_t or "待补" }}，不显著）。点估计为正但统计不显著，说明本文不能声称长期持续超额收益，但也没有看到与纯短暂价格压力一致的大幅反转。
 
 ### 5.3 公告效应的跨年稳定性
 
@@ -527,7 +638,7 @@ Shleifer (1986) 和 Harris & Gurel (1986) 证明指数成分调整会伴随可�
 
 ### 5.5 预公告漂移：一项无法排除的不确定性
 
-公告前均值漂移在中国约 +3.09%，美国约 +2.59%，两市场差异 bootstrap p=0.875。该事实要求论文诚实披露：市场可能在正式公告前已部分消化信息，公告窗显著并不等同于“公告当天才第一次被定价”。这也是本文避免强因果表述的关键原因。
+公告前均值漂移在中国约 {{ prerun_cn or "待补" }}%，美国约 {{ prerun_us or "待补" }}%，两市场差异 bootstrap p={{ prerun_p or "待补" }}。该事实要求论文诚实披露：市场可能在正式公告前已部分消化信息，公告窗显著并不等同于“公告当天才第一次被定价”。这也是本文避免强因果表述的关键原因。
 
 ### 5.6 数据与方法限制摘要
 
@@ -620,6 +731,9 @@ def build_paper_skeleton(
     figures_dir: Path | None = None,
     power_analysis_csv: Path | None = None,
     event_study_csv: Path | None = None,
+    asymmetry_csv: Path | None = None,
+    long_window_csv: Path | None = None,
+    pre_runup_csv: Path | None = None,
     generated_at: datetime | None = None,
 ) -> str:
     """Render the paper skeleton markdown from current research artifacts.
@@ -649,6 +763,9 @@ def build_paper_skeleton(
         power_analysis_csv or _default_power_analysis_csv()
     )
     event_study_csv = event_study_csv or _default_event_study_summary_csv()
+    asymmetry_csv = asymmetry_csv or _default_asymmetry_summary_csv()
+    long_window_csv = long_window_csv or _default_long_window_summary_csv()
+    pre_runup_csv = pre_runup_csv or _default_pre_runup_csv()
 
     pap_df = _read_csv_or_empty(pap_csv)
     public_summary = _read_json_or_empty(public_summary_json)
@@ -661,6 +778,12 @@ def build_paper_skeleton(
     sample_size_summary = event_study_numbers.get(
         "sample_size_summary", "待补"
     )
+    # §5.1/§5.2/§5.5 discussion numbers — derived, never hardcoded, so the
+    # manuscript stays in sync with the live result tables after any data
+    # source change (e.g. the Yahoo→Tushare A-share migration).
+    asymmetry_numbers = _asymmetry_numbers(asymmetry_csv)
+    long_window_numbers = _long_window_numbers(long_window_csv)
+    pre_runup_numbers = _pre_runup_numbers(pre_runup_csv)
 
     context: dict[str, Any] = {
         "generated_date": (generated_at or datetime.now(tz=UTC))
@@ -684,6 +807,20 @@ def build_paper_skeleton(
         "us_effective_p": event_study_numbers.get("us_effective_p"),
         "cn_events": event_study_numbers.get("cn_events"),
         "us_events": event_study_numbers.get("us_events"),
+        # §5.1 inclusion-vs-deletion asymmetry (announce window)
+        "asym_cn_add": asymmetry_numbers.get("asym_cn_add"),
+        "asym_cn_del": asymmetry_numbers.get("asym_cn_del"),
+        "asym_us_add": asymmetry_numbers.get("asym_us_add"),
+        "asym_us_del": asymmetry_numbers.get("asym_us_del"),
+        # §5.2 long-window [0,+120] persistence
+        "lw_cn_car": long_window_numbers.get("lw_cn_car"),
+        "lw_cn_t": long_window_numbers.get("lw_cn_t"),
+        "lw_us_car": long_window_numbers.get("lw_us_car"),
+        "lw_us_t": long_window_numbers.get("lw_us_t"),
+        # §5.5 pre-announcement drift
+        "prerun_cn": pre_runup_numbers.get("prerun_cn"),
+        "prerun_us": pre_runup_numbers.get("prerun_us"),
+        "prerun_p": pre_runup_numbers.get("prerun_p"),
         "pap": _pap_block(public_summary, pap_df),
         "power_analysis_rows": _power_analysis_rows(power_analysis_csv),
         "references": _references_block(),
