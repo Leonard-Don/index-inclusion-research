@@ -764,7 +764,21 @@ def audit_pap_limitations(root: Path = ROOT, *, require_bundle: bool = True) -> 
             artifacts=_existing_artifacts(required, root=root),
         )
     drift_state = str(pap.get("drift_state", ""))
-    flipped = [str(h) for h in pap.get("flipped_hypotheses", [])]
+    # load_pap_summary does not expose per-hid flip classifications, so read
+    # the flipped hids straight from the deviation report.
+    flipped: list[str] = []
+    _report_csv = root / "results" / "real_tables" / "pap_deviation_report.csv"
+    if _report_csv.exists():
+        try:
+            _rep = pd.read_csv(_report_csv, keep_default_na=False)
+            if "classification" in _rep.columns and "hid" in _rep.columns:
+                flipped = [
+                    str(r["hid"]).strip()
+                    for _, r in _rep.iterrows()
+                    if str(r["classification"]).strip() == "flipped"
+                ]
+        except (OSError, ValueError):
+            flipped = []
     details = (
         f"基线日期={pap.get('baseline_date', '')}",
         f"漂移状态={drift_state}",
