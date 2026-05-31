@@ -46,28 +46,28 @@
 - **HS300 RDD**: cutoff=300 的运行变量断点，公告日 `[-1,+1]` 主结果。
 
 ### H1 · 信息泄露与预运行 —— 证据不足(可信度:中)
-**bootstrap p = 1.000**, n = 455
-CN-US pre-runup 差异 0.14% 在 bootstrap 下不显著 (p=1.000, CI95=[-3.22%, 3.96%])，方向偏 CN 但跨市场差异口径无法归因为信息泄露。
-_细节_: CN pre-runup=2.75%; US pre-runup=2.61%; diff=0.14%, bootstrap p=1.000, CI95=[-3.22%, 3.96%]
+**bootstrap p = 0.965**, n = 455
+CN-US pre-runup 差异 0.14% 在 bootstrap 下不显著 (p=0.965, CI95=[-3.22%, 3.96%])，方向偏 CN 但跨市场差异口径无法归因为信息泄露。
+_细节_: CN pre-runup=2.75%; US pre-runup=2.61%; diff=0.14%, bootstrap p=0.965, CI95=[-3.22%, 3.96%]
 
 ### H2 · 被动基金 AUM 差异 —— 证据不足(可信度:低)
 **US AUM ratio = 13.481**, n = 18
 两市场 AUM 与 effective rolling CAR 的方向关系不一致或不支持 H2。(双市场覆盖)
 _细节_: US AUM 0.99→13.37 (2010→2025), effective CAR 0.04%→0.05% (2014→2025); CN AUM 0.19→1.12 (2020→2024), effective CAR -0.36%→0.65% (2020→2025)
 
-### H3 · 散户 vs 机构结构 —— 支持(可信度:高)
+### H3 · 散户 vs 机构结构 —— 支持(可信度:低)
 **双通道命中率 = 0.500**, n = 4
-US announce 与 CN effective 两条预期量能集中四象限均双通道显著 (turnover + volume p<0.10),共 2/4 个象限通过双通道判据。
+US announce 与 CN effective 两条预期量能集中四象限均双通道显著 (turnover + volume p<0.10),共 2/4 个象限通过双通道判据。（功效不足: power=0.05，低于 0.50 阈值；为方向性/描述性证据，不作高置信结论）
 _细节_: channel concentration 2/4 both-sig: CN announce=·, CN effective=✓, US announce=✓, US effective=T
 
-### H4 · 卖空约束 —— 证据不足(可信度:中)
+### H4 · 卖空约束 —— 证据不足(可信度:低)
 **regression p = 0.604**, n = 455
-控制 gap_length_days 后 CN-US gap_drift 差异 0.50% 不显著 (p=0.604)，跨市场差异口径无法支持 H4 套利约束解释。
+控制 gap_length_days 后 CN-US gap_drift 差异 0.50% 不显著 (p=0.604)，跨市场差异口径无法支持 H4 套利约束解释。（功效不足: power=0.08，低于 0.50 阈值；为方向性/描述性证据，不作高置信结论）
 _细节_: CN gap_drift=0.63%; US gap_drift=-0.34%; regression cn_coef=0.50%, p=0.604, n=455
 
-### H5 · 涨跌停限制 —— 证据不足(可信度:中)
+### H5 · 涨跌停限制 —— 证据不足(可信度:低)
 **limit_coef p = 0.427**, n = 1096
-CN 事件级涨跌停命中率对 announce-day CAR 不具显著预测力 (limit_coef=0.0744, p=0.427, n=1096)，H5 缺乏支持。
+CN 事件级涨跌停命中率对 announce-day CAR 不具显著预测力 (limit_coef=0.0744, p=0.427, n=1096)，H5 缺乏支持。（功效不足: power=0.12，低于 0.50 阈值；为方向性/描述性证据，不作高置信结论）
 _细节_: CN limit_coef=0.0744, p=0.427, R²=0.003, n=1096
 
 ### H6 · 指数权重可预测性 —— 证据不足(可信度:中)

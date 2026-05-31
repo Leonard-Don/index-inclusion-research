@@ -8,7 +8,7 @@
     "results/figures/verdict_timeline.png",
     "results/literature/literature_timeline.png"
   ],
-  "generated_at": "2026-05-31T07:20:57+00:00",
+  "generated_at": "2026-05-31T12:42:01+00:00",
   "hs300_rdd": {
     "main_bandwidth": 0.0600000000000022,
     "main_n_obs": 148,
@@ -78,17 +78,17 @@
     ]
   },
   "pap_baseline": {
-    "frozen_for_days": 15,
-    "path_ref": "snapshots/pre-registration-2026-05-16.csv",
-    "snapshot_date": "2026-05-16"
+    "frozen_for_days": 0,
+    "path_ref": "snapshots/pre-registration-2026-05-31.csv",
+    "snapshot_date": "2026-05-31"
   },
   "pap_deviation_summary": {
-    "all_unchanged": false,
-    "flipped_count": 2,
+    "all_unchanged": true,
+    "flipped_count": 0,
     "tightened_count": 0,
-    "unchanged_count": 2,
+    "unchanged_count": 7,
     "unverifiable_count": 0,
-    "weakened_count": 3
+    "weakened_count": 0
   },
   "power_analysis": {
     "alpha": 0.05,
@@ -248,7 +248,7 @@
     "H1": {
       "confidence": "中",
       "evidence_tier": "core",
-      "headline_metric": "bootstrap p = 1",
+      "headline_metric": "bootstrap p = 0.9646",
       "n_obs": 455,
       "name": "信息泄露与预运行",
       "track": "identification",
@@ -264,7 +264,7 @@
       "verdict": "证据不足"
     },
     "H3": {
-      "confidence": "高",
+      "confidence": "低",
       "evidence_tier": "supplementary",
       "headline_metric": "双通道命中率 = 0.5",
       "n_obs": 4,
@@ -273,7 +273,7 @@
       "verdict": "支持"
     },
     "H4": {
-      "confidence": "中",
+      "confidence": "低",
       "evidence_tier": "supplementary",
       "headline_metric": "regression p = 0.6037",
       "n_obs": 455,
@@ -282,7 +282,7 @@
       "verdict": "证据不足"
     },
     "H5": {
-      "confidence": "中",
+      "confidence": "低",
       "evidence_tier": "core",
       "headline_metric": "limit_coef p = 0.427",
       "n_obs": 1096,

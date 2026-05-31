@@ -97,6 +97,7 @@
 - `data/hs300_rdd_candidates.csv`
 - `data/pre-registration-2026-05-03.csv`
 - `data/pre-registration-2026-05-16.csv`
+- `data/pre-registration-2026-05-31.csv`
 - `data/.gitignore`
 - `data/cma_verdicts_forest.pdf`
 - `data/cma_verdicts_forest.png`

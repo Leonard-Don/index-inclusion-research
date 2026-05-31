@@ -2,8 +2,8 @@
 
 ## 裁决基线快照
 
-- 快照文件：`snapshots/pre-registration-2026-05-16.csv`
-- 基线日期：`2026-05-16`
+- 快照文件：`snapshots/pre-registration-2026-05-31.csv`
+- 基线日期：`2026-05-31`
 - 假说数：7 行
 
 ## CMA 假说裁决

@@ -5,4 +5,4 @@ H7_cn_sector,H7 A股行业覆盖,pass,通过,270/273 (98.9%),"缺少行业 ticke
 RDD_L3_boundary,HS300 RDD L3,pass,通过,正式样本 356 行,data/raw/hs300_rdd_candidates.csv
 CMA_verdicts,CMA 假说裁决,pass,通过,支持 2；部分支持 0；证据不足 5；待补充数据 0,results/real_tables 下共有 7 条 H1-H7 裁决
 Match_robustness,匹配稳健性,pass,通过,最佳规格 announce_1to1；超阈值 0；max|SMD| 0.128,规格数=6；默认规格=announce_1to3；超阈值=0
-doctor,项目健康检查,pass,通过,30 通过 / 0 警告 / 0 失败,共 30 项检查
+doctor,项目健康检查,warn,需关注,23 通过 / 7 警告 / 0 失败,共 30 项检查

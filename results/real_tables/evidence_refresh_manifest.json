@@ -1,8 +1,86 @@
 {
-  "generated_at": "2026-05-29T06:01:51+00:00",
+  "generated_at": "2026-05-31T12:33:38+00:00",
   "root": ".",
   "tables_dir": "results/real_tables",
-  "steps": [],
+  "steps": [
+    {
+      "slug": "enrich-cn-sectors",
+      "status": "skipped",
+      "detail": "CN sector coverage 270/273 (98.9%)"
+    },
+    {
+      "slug": "build-event-sample",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 0.044
+    },
+    {
+      "slug": "build-price-panel",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 11.988
+    },
+    {
+      "slug": "match-controls",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 34.492
+    },
+    {
+      "slug": "match-robustness",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 21.707
+    },
+    {
+      "slug": "build-matched-panel",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 32.103
+    },
+    {
+      "slug": "run-event-study",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 2.542
+    },
+    {
+      "slug": "run-regressions",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 5.24
+    },
+    {
+      "slug": "hs300-rdd",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 5.61
+    },
+    {
+      "slug": "compute-h6-weight-change",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 2.027
+    },
+    {
+      "slug": "cma",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 8.036
+    },
+    {
+      "slug": "make-figures-tables",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 18.13
+    },
+    {
+      "slug": "generate-research-report",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_sec": 0.004
+    }
+  ],
   "coverage": [
     {
       "item": "H2_passive_aum",
@@ -55,16 +133,16 @@
     {
       "item": "doctor",
       "label": "项目健康检查",
-      "status": "pass",
-      "status_label": "通过",
-      "value": "30 通过 / 0 警告 / 0 失败",
+      "status": "warn",
+      "status_label": "需关注",
+      "value": "23 通过 / 7 警告 / 0 失败",
       "detail": "共 30 项检查"
     }
   ],
   "doctor": {
     "summary": {
-      "pass": 30,
-      "warn": 0,
+      "pass": 23,
+      "warn": 7,
       "fail": 0,
       "total": 30
     },
@@ -161,31 +239,40 @@
       },
       {
         "name": "pap_deviation_no_flips",
-        "status": "pass",
-        "message": "All 7 hypothesis verdict(s) are unchanged vs the frozen verdict baseline snapshot.",
-        "fix": "",
-        "details": []
+        "status": "warn",
+        "message": "2 of 7 hypothesis verdict(s) flipped vs the frozen verdict baseline snapshot, each documented in docs/analysis_parameters.md (disclosed deviation).",
+        "fix": "Disclosed flips are acceptable; re-baseline with a fresh snapshots/pre-registration-*.csv once the new verdicts settle.",
+        "details": [
+          "H2 · flipped: 部分支持 → 证据不足 (documented)",
+          "H5 · flipped: 支持 → 证据不足 (documented)"
+        ]
       },
       {
         "name": "pap_snapshot_freshness",
         "status": "pass",
-        "message": "Latest verdict baseline snapshot snapshots/pre-registration-2026-05-29.csv is 0 day(s) old (≤ 90).",
+        "message": "Latest verdict baseline snapshot snapshots/pre-registration-2026-05-16.csv is 15 day(s) old (≤ 90).",
         "fix": "",
         "details": []
       },
       {
         "name": "hs300_rdd_forest_artifact",
-        "status": "pass",
-        "message": "forest plot artifacts (results/figures/hs300_rdd_robustness_forest.png, results/figures/hs300_rdd_robustness_forest.pdf) are fresher than results/literature/hs300_rdd/rdd_robustness.csv.",
-        "fix": "",
-        "details": []
+        "status": "warn",
+        "message": "2 forest plot artifact(s) older than input results/literature/hs300_rdd/rdd_robustness.csv; re-run of `make figures-tables` overdue.",
+        "fix": "Run `make figures-tables` (or `index-inclusion-build-hs300-rdd-forest`) to refresh the figure.",
+        "details": [
+          "results/figures/hs300_rdd_robustness_forest.png mtime older than results/literature/hs300_rdd/rdd_robustness.csv",
+          "results/figures/hs300_rdd_robustness_forest.pdf mtime older than results/literature/hs300_rdd/rdd_robustness.csv"
+        ]
       },
       {
         "name": "cma_verdicts_forest_artifact",
-        "status": "pass",
-        "message": "forest plot artifacts (results/figures/cma_verdicts_forest.png, results/figures/cma_verdicts_forest.pdf) are fresher than results/real_tables/cma_hypothesis_verdicts.csv.",
-        "fix": "",
-        "details": []
+        "status": "warn",
+        "message": "2 forest plot artifact(s) older than input results/real_tables/cma_hypothesis_verdicts.csv; re-run of `make figures-tables` overdue.",
+        "fix": "Run `make figures-tables` (or `index-inclusion-build-cma-verdicts-forest`) to refresh the figure.",
+        "details": [
+          "results/figures/cma_verdicts_forest.png mtime older than results/real_tables/cma_hypothesis_verdicts.csv",
+          "results/figures/cma_verdicts_forest.pdf mtime older than results/real_tables/cma_hypothesis_verdicts.csv"
+        ]
       },
       {
         "name": "cma_sensitivity_forest_artifact",
@@ -210,24 +297,32 @@
       },
       {
         "name": "public_summary_freshness",
-        "status": "pass",
-        "message": "public summary data/public/index_research_summary.json is fresher than results/real_tables/cma_hypothesis_verdicts.csv and siblings.",
-        "fix": "",
-        "details": []
+        "status": "warn",
+        "message": "2 input CSV(s) newer than data/public/index_research_summary.json; re-run of `index-inclusion-export-public-summary` overdue.",
+        "fix": "Run `index-inclusion-export-public-summary` to regenerate data/public/index_research_summary.json.",
+        "details": [
+          "results/real_tables/cma_hypothesis_verdicts.csv mtime newer than data/public/index_research_summary.json",
+          "results/literature/hs300_rdd/rdd_robustness.csv mtime newer than data/public/index_research_summary.json"
+        ]
       },
       {
         "name": "paper_skeleton_freshness",
-        "status": "pass",
-        "message": "paper skeleton paper/skeleton.md is fresher than results/real_tables/cma_hypothesis_verdicts.csv and siblings.",
-        "fix": "",
-        "details": []
+        "status": "warn",
+        "message": "2 input(s) newer than paper/skeleton.md; re-run of `index-inclusion-paper-skeleton --force` overdue.",
+        "fix": "Run `index-inclusion-paper-skeleton --force` to regenerate paper/skeleton.md.",
+        "details": [
+          "results/real_tables/cma_hypothesis_verdicts.csv mtime newer than paper/skeleton.md",
+          "results/literature/hs300_rdd/rdd_robustness.csv mtime newer than paper/skeleton.md"
+        ]
       },
       {
         "name": "methodology_summary_freshness",
-        "status": "pass",
-        "message": "methodology summary paper/methodology_summary.md is fresher than results/real_tables/cma_hypothesis_verdicts.csv and siblings.",
-        "fix": "",
-        "details": []
+        "status": "warn",
+        "message": "1 input(s) newer than paper/methodology_summary.md; re-run of `index-inclusion-methodology-summary` overdue.",
+        "fix": "Run `index-inclusion-methodology-summary` to regenerate paper/methodology_summary.md.",
+        "details": [
+          "results/real_tables/cma_hypothesis_verdicts.csv mtime newer than paper/methodology_summary.md"
+        ]
       },
       {
         "name": "chart_builders_register",
@@ -259,10 +354,13 @@
       },
       {
         "name": "verdict_timeline_artifact",
-        "status": "pass",
-        "message": "forest plot artifacts (results/figures/verdict_timeline.png, results/figures/verdict_timeline.pdf) are fresher than results/real_tables/cma_hypothesis_verdicts.csv.",
-        "fix": "",
-        "details": []
+        "status": "warn",
+        "message": "2 forest plot artifact(s) older than input results/real_tables/cma_hypothesis_verdicts.csv; re-run of `make figures-tables` overdue.",
+        "fix": "Run `index-inclusion-verdict-timeline` to refresh the verdict timeline figure (PNG + PDF) reconstructed from the git log of cma_hypothesis_verdicts.csv.",
+        "details": [
+          "results/figures/verdict_timeline.png mtime older than results/real_tables/cma_hypothesis_verdicts.csv",
+          "results/figures/verdict_timeline.pdf mtime older than results/real_tables/cma_hypothesis_verdicts.csv"
+        ]
       },
       {
         "name": "literature_timeline_artifact",
