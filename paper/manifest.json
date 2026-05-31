@@ -2,19 +2,7 @@
   "bundle_label": "index-inclusion-paper-bundle",
   "manifest_schema_version": 1,
   "artifact_count": 184,
-  "regenerated": {
-    "hs300_rdd_forest": "ok",
-    "cma_verdicts_forest": "ok",
-    "cma_verdicts_sensitivity_forest": "ok",
-    "cma_verdicts_ar_engine_forest": "ok",
-    "cma_verdicts_2d_robustness_heatmap": "ok",
-    "verdict_timeline": "ok",
-    "pap_deviation_report": "ok",
-    "literature_timeline": "ok",
-    "citation_network": "ok",
-    "paper_skeleton": "ok",
-    "methodology_summary": "ok"
-  },
+  "regenerated": {},
   "artifacts": [
     {
       "section": "tables",
@@ -335,8 +323,8 @@
       "section": "figures",
       "source": "results/literature/citation_network.png",
       "target": "figures/citation_network.png",
-      "sha256": "72692feb0c034a15afc84bb1b0a4deeac99b3659b17a07dafc4b8ddff23d1edc",
-      "size_bytes": 81184
+      "sha256": "f75c4f1d4131f099458e952c9ba6b3abc86a0f56dbf55b4ec5d0fe64d57a78f1",
+      "size_bytes": 80992
     },
     {
       "section": "figures",
@@ -391,7 +379,7 @@
       "section": "figures",
       "source": "results/literature/literature_timeline.pdf",
       "target": "figures/literature_timeline.pdf",
-      "sha256": "4eca8438f94d42b5101f2a4f538f6c01e4acb1a6f67973d7e2d0f202d61b4303",
+      "sha256": "a5a93dbec1022bf063d5c2c4b8819b4a45794520461341fdaa9511f9052bad39",
       "size_bytes": 83988
     },
     {
@@ -503,8 +491,8 @@
       "section": "narrative",
       "source": "docs/paper_outline.md",
       "target": "narrative/paper_outline.md",
-      "sha256": "1fa85b10271b65b2ca3d2c5b9e8fd263f223d3ed00a532140246e08ef821943b",
-      "size_bytes": 11449
+      "sha256": "d743d2422e5f8435241bbec52f3b7500409d48b191e3630b4b954759912f7fe7",
+      "size_bytes": 11507
     },
     {
       "section": "narrative",
@@ -517,15 +505,15 @@
       "section": "narrative",
       "source": "docs/research_delivery_package.md",
       "target": "narrative/research_delivery_package.md",
-      "sha256": "1c323e0101faa18d8a2766be5af8fe9524aae0bb1abf61a4018d958f4042637c",
+      "sha256": "a88183ef052b0cd0cdc47c95f101b86442f6a86ce1d4a6362c1a5920df7c0d35",
       "size_bytes": 20379
     },
     {
       "section": "narrative",
       "source": "docs/analysis_parameters.md",
       "target": "narrative/analysis_parameters.md",
-      "sha256": "aceb46dc96d23eeaffcee742fb5781919974be57fe9b1ad99af6af6ecda3550e",
-      "size_bytes": 12131
+      "sha256": "5864ca60cbfc57e70ef239fe33dd3eeec172c6b74682bb8754559ef3b285a1cc",
+      "size_bytes": 12318
     },
     {
       "section": "narrative",

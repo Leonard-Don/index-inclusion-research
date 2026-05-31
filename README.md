@@ -39,16 +39,16 @@
 
 | 假说 | 名称 | 裁决 | 头条指标 | 写作层级 | 主线 |
 |---|---|---|---|---|---|
-| H1 | 信息泄露与预运行 | 证据不足 | bootstrap p = 0.875 (n=436) | 正文 core | 制度识别 |
-| H2 | 被动基金 AUM 差异 | 部分支持 | US AUM ratio = 13.48；CN proxy 已补 (combined n=17) | 正文 core | 需求曲线 |
-| H3 | 散户 vs 机构结构 | 支持 | 双通道命中率 = 0.75 (n=4) | 附录 supplementary | 短期价格压力 |
-| H4 | 卖空约束 | 证据不足 | regression p = 0.537 (n=436) | 附录 supplementary | 制度识别 |
-| H5 | 涨跌停限制 | 支持 | limit_coef p = 0.008 (n=936) | 正文 core | 制度识别 |
-| H6 | 指数权重可预测性 | 证据不足 | heavy−light spread = -0.019 (n=67) | 附录 supplementary | 需求曲线 |
-| H7 | 行业结构差异 | 支持 | US sector spread = 5.95；交互 p = 0.094 | 正文 core | 制度识别 |
+| H1 | 信息泄露与预运行 | 证据不足 | bootstrap p = 1.000 (n=455) | 正文 core | 制度识别 |
+| H2 | 被动基金 AUM 差异 | 证据不足 | US AUM ratio = 13.48；CN proxy 已补 (combined n=18) | 正文 core | 需求曲线 |
+| H3 | 散户 vs 机构结构 | 支持 | 双通道命中率 = 0.50 (n=4) | 附录 supplementary | 短期价格压力 |
+| H4 | 卖空约束 | 证据不足 | regression p = 0.604 (n=455) | 附录 supplementary | 制度识别 |
+| H5 | 涨跌停限制 | 证据不足 | limit_coef p = 0.427 (n=1096) | 正文 core | 制度识别 |
+| H6 | 指数权重可预测性 | 证据不足 | heavy−light spread = -0.016 (n=87) | 附录 supplementary | 需求曲线 |
+| H7 | 行业结构差异 | 支持 | US sector spread = 5.97；交互 p = 0.095 | 正文 core | 制度识别 |
 
 `make rebuild` 跑 10 步流水线刷新所有产出。详见 [results/real_tables/cma_hypothesis_verdicts.csv](results/real_tables/cma_hypothesis_verdicts.csv) 和 [docs/paper_outline_verdicts.md](docs/paper_outline_verdicts.md)。
-H2 在 2026 年补入 `data/raw/cn_passive_aum_proxy.csv`（CSI300 + CSI500 ETF TNA 年终聚合 proxy）后，从 supplementary 升级为 core；evidence manifest 中状态从 `warn` 转为 `pass`，但 verdict 是 "部分支持"——CN 一侧方向符合 H2，US 一侧 effective CAR 没有持续衰减。所以 H2 仍不能写成"被动买盘单一机制"。
+H2 在 2026 年补入 `data/raw/cn_passive_aum_proxy.csv`（CSI300 + CSI500 ETF TNA 年终聚合 proxy）后，evidence_tier 从 supplementary 升级为 core；evidence manifest 中状态从 `warn` 转为 `pass`，但 verdict 是 "证据不足"——CN 一侧方向符合 H2，US 一侧 effective CAR 没有持续衰减。所以 H2 仍不能写成"被动买盘单一机制"。需特别说明：H5 与 H2 在从免费 Yahoo 切换到持牌 Tushare A 股数据后，由"支持"/"部分支持"翻转为"证据不足"（与摘要口径一致），首页不再宣传已撤回的发现。
 
 阈值灵敏度（"如果阈值是 0.05 而不是 0.10？"）做成六层入口（决定 / 数据 / CLI / dashboard / doctor / forest 图），终端一行：`index-inclusion-verdict-summary --sensitivity`。完整说明见 [docs/sensitivity_workflow.md](docs/sensitivity_workflow.md)。
 
@@ -299,10 +299,10 @@ GitHub Actions 通过 `astral-sh/setup-uv` + `uv sync --extra dev`（按 `uv.loc
   A 股侧可改用 Tushare 的日线 + `daily_basic` 市值 / 换手率口径刷新。
 - HS300 RDD 当前 L3 覆盖 2020-11 到 2025-11 共 11 个批次、356 条候选，论文级因果声明需扩展到 ≥10 年（见 [docs/hs300_rdd_l3_collection_audit.md](docs/hs300_rdd_l3_collection_audit.md)）。
 - 7 条 CMA 假说为 post-hoc、探索性形成（在观察到 announce-vs-effective / CN-vs-US 不对称结果之后），本项目无预分析计划。判据、阈值与样本边界记录在 [docs/analysis_parameters.md](docs/analysis_parameters.md)（透明性文档，非 pre-analysis plan）；裁决基线快照（`snapshots/pre-registration-*.csv`）配合 `index-inclusion-verdict-summary --vs-pap` 用于跨时间观察 verdict 稳定性，dashboard hero 的状态 pill 也会标 verdict 相对基线快照是否变化。
-- 假说证据强度分层：`core`（H1/H2/H5/H7）vs `supplementary`（H3/H4/H6），见 `cma_hypothesis_verdicts.csv` 的 `evidence_tier` 列。H2 由 `EVIDENCE_TIER_PROMOTION_FLOOR` 数据驱动升级——补入 CN ETF TNA proxy 后合并 n=17 跨过 15 阈值。
+- 假说证据强度分层：`core`（H1/H2/H5/H7）vs `supplementary`（H3/H4/H6），见 `cma_hypothesis_verdicts.csv` 的 `evidence_tier` 列。H2 由 `EVIDENCE_TIER_PROMOTION_FLOOR` 数据驱动升级——补入 CN ETF TNA proxy 后合并 n=18 跨过 15 阈值。
 - H7 现在同时有描述性 sector spread 与 `cma_h7_sector_interaction.csv` 的 sector×phase/treatment 回归；H2 在 2026 年补入 CN ETF TNA proxy（`data/raw/cn_passive_aum_proxy.csv`）后，evidence manifest 中由 `warn` 升级为 `pass`，dashboard 卡片同步更新（详见 [data/raw/README.md](data/raw/README.md) 的 proxy 说明）。
 - 事件研究除简单 t 外提供 Patell Z 与 BMP t（`results/real_event_study/patell_bmp_summary.csv`）。
-- HS300 RDD 主结果 (`car_m1_p1` τ=4.01%, p=0.045, n=118) 同时跑了完整稳健性面板（main / donut / placebo±0.05 / polynomial），见 `results/literature/hs300_rdd/rdd_robustness.csv` 与首页 forest plot；论文应当报告全套面板而非只引用显著的 main spec。
+- HS300 RDD 主结果 (`car_m1_p1` τ=2.96%, p=0.095, n=148) 同时跑了完整稳健性面板（main / donut / placebo±0.05 / polynomial），见 `results/literature/hs300_rdd/rdd_robustness.csv` 与首页 forest plot；论文应当报告全套面板而非只引用显著的 main spec。
 
 ## 论文写作建议
 
