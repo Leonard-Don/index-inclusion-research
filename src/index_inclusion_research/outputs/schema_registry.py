@@ -117,6 +117,12 @@ OUTPUT_TABLE_SCHEMAS: Mapping[str, tuple[str, ...]] = {
         "ci_high_95",
         "t_stat",
         "p_value",
+        # Additive event-date-clustered robustness columns (NaN when the
+        # optional ``pyfixest`` dependency is missing or a cell has too few
+        # event-date clusters). The iid ``se_car``/``t_stat``/``p_value``
+        # above stay PRIMARY and unchanged.
+        "se_car_clustered",
+        "p_value_clustered",
     ),
     "robustness_regression_summary": (
         "market",

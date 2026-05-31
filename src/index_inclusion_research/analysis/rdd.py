@@ -75,6 +75,25 @@ def fit_local_linear_rdd(
 
     local["interaction"] = local[treatment_col] * local[running_col]
     design = sm.add_constant(local[[treatment_col, running_col, "interaction"]], has_constant="add")
+    if len(local) <= design.shape[1]:
+        # Residual degrees of freedom would be <= 0; statsmodels would emit
+        # divide-by-zero / invalid-value RuntimeWarnings and return garbage.
+        # Return the empty-result shape with real sample counts instead.
+        return {
+            "outcome": outcome_col,
+            "bandwidth": inferred_bandwidth,
+            "n_obs": len(local),
+            "n_left": int((local[running_col] < 0).sum()),
+            "n_right": int((local[running_col] >= 0).sum()),
+            "tau": np.nan,
+            "std_error": np.nan,
+            "t_stat": np.nan,
+            "p_value": np.nan,
+            "r_squared": np.nan,
+            "intercept": np.nan,
+            "running_slope": np.nan,
+            "interaction_slope": np.nan,
+        }
     model = sm.OLS(local[outcome_col], design).fit(cov_type="HC1")
     return {
         "outcome": outcome_col,

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import pandas as pd
 
@@ -27,6 +29,38 @@ def test_fit_local_linear_rdd_detects_positive_jump() -> None:
     result = fit_local_linear_rdd(frame, "car_m1_p1", bandwidth=1.0)
     assert result["n_obs"] == 6
     assert result["tau"] > 0.02
+
+
+def test_fit_single_rdd_degenerate_window_returns_nan_without_warning() -> None:
+    # Local window has only 3 rows, but the design matrix has 4 params
+    # (const + treatment + running + interaction), so residual df would be
+    # negative. The fit must short-circuit to NaN WITHOUT emitting any
+    # divide-by-zero / invalid-value RuntimeWarning from statsmodels.
+    distance = np.array([-0.2, 0.1, 0.4])
+    inclusion = (distance >= 0).astype(int)
+    frame = pd.DataFrame(
+        {
+            "distance_to_cutoff": distance,
+            "inclusion": inclusion,
+            "car_m1_p1": np.array([0.01, 0.03, 0.04]),
+        }
+    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # turn any RuntimeWarning into an error
+        result = fit_local_linear_rdd(frame, "car_m1_p1", bandwidth=1.0)
+
+    assert result["n_obs"] == 3
+    assert result["n_left"] == 1
+    assert result["n_right"] == 2
+    assert result["bandwidth"] == 1.0
+    assert np.isnan(result["tau"])
+    assert np.isnan(result["p_value"])
+    assert np.isnan(result["std_error"])
+    assert np.isnan(result["t_stat"])
+    assert np.isnan(result["r_squared"])
+    assert np.isnan(result["intercept"])
+    assert np.isnan(result["running_slope"])
+    assert np.isnan(result["interaction_slope"])
 
 
 def test_run_rdd_suite_returns_one_row_per_outcome() -> None:

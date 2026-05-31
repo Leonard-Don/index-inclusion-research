@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
+import statsmodels.api as sm
 from scipy import stats
 
 
@@ -201,7 +202,55 @@ _EVENT_STUDY_SUMMARY_STAT_COLUMNS: tuple[str, ...] = (
     "ci_high_95",
     "t_stat",
     "p_value",
+    # Additive event-date-clustered robustness columns. The iid ``se_car`` /
+    # ``t_stat`` / ``p_value`` above stay PRIMARY and unchanged; these mirror
+    # them under cluster-robust (CRV1) standard errors clustered on the event
+    # date and are NaN when a cell has too few distinct date clusters.
+    "se_car_clustered",
+    "p_value_clustered",
 )
+
+# Cluster-robust SE of the mean requires at least two distinct date clusters.
+_MIN_EVENT_DATE_CLUSTERS = 2
+
+
+def _clustered_car_statistics(
+    values: pd.Series,
+    event_dates: pd.Series,
+) -> dict[str, float]:
+    """Event-date-clustered SE/p-value for a cell's per-event CARs.
+
+    Regresses the per-event CAR on a constant with cluster-robust (CRV1)
+    standard errors clustered on the event date (``statsmodels``
+    ``cov_type="cluster"``). The constant's coefficient is the mean CAR;
+    its clustered SE widens under positive within-date correlation —
+    events sharing an announcement/effective date are not independent, so
+    the iid ``se_car`` understates uncertainty. These columns are an
+    additive robustness check; the iid ``se_car`` / ``t_stat`` /
+    ``p_value`` stay PRIMARY and unchanged. Returns ``{nan, nan}`` when a
+    cell has fewer than two distinct date clusters or the fit is
+    degenerate.
+    """
+    nan_result = {"se_car_clustered": np.nan, "p_value_clustered": np.nan}
+
+    paired = pd.DataFrame({"car": values, "event_date": event_dates}).dropna()
+    if len(paired) < 2 or paired["event_date"].nunique() < _MIN_EVENT_DATE_CLUSTERS:
+        return nan_result
+
+    outcome = paired["car"].to_numpy(dtype=float)
+    design = np.ones((len(outcome), 1), dtype=float)
+    groups = pd.factorize(paired["event_date"])[0]
+    try:
+        model = sm.OLS(outcome, design).fit(
+            cov_type="cluster", cov_kwds={"groups": groups}
+        )
+        se = float(model.bse[0])
+        p_value = float(model.pvalues[0])
+    except (ValueError, np.linalg.LinAlgError):
+        return nan_result
+    if not np.isfinite(se):
+        return nan_result
+    return {"se_car_clustered": se, "p_value_clustered": p_value}
 
 
 def _empty_event_study_summary_frame(*, sample_filter: str | None = None) -> pd.DataFrame:
@@ -261,6 +310,11 @@ def summarize_event_level_metrics(
             if sample_filter is not None:
                 row["sample_filter"] = sample_filter
             row.update(_summarise_values(group[column]))
+            if "event_date" in group.columns:
+                row.update(_clustered_car_statistics(group[column], group["event_date"]))
+            else:
+                row["se_car_clustered"] = np.nan
+                row["p_value_clustered"] = np.nan
             summary_rows.append(row)
 
     if not summary_rows:

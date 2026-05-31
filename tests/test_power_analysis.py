@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
@@ -538,3 +539,77 @@ def test_render_markdown_extras_carry_chinese_gloss(
     # H6 is also always present and emits ``cohens_d_observed`` —
     # another stable example covering a different key family.
     assert "`cohens_d_observed` (Cohen d) = " in markdown
+
+
+# ---------------------------------------------------------------------------
+# Power-aware confidence cap (Tier B #6)
+# ---------------------------------------------------------------------------
+
+
+def _verdicts_fixture() -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {"hid": "H3", "verdict": "支持", "confidence": "高", "evidence_summary": "双通道命中率 0.5。"},
+            {"hid": "H5", "verdict": "证据不足", "confidence": "低", "evidence_summary": "limit_coef 不显著。"},
+            {"hid": "H7", "verdict": "支持", "confidence": "中", "evidence_summary": "行业 spread 显著。"},
+        ]
+    )
+
+
+def test_apply_power_aware_confidence_caps_underpowered() -> None:
+    """H3 at power≈0.05 → confidence capped to 低, annotated, verdict kept."""
+    capped = cli_module.apply_power_aware_confidence(
+        _verdicts_fixture(), {"H3": 0.05}
+    )
+    h3 = capped.loc[capped["hid"] == "H3"].iloc[0]
+    assert h3["confidence"] == "低"
+    assert h3["verdict"] == "支持"  # verdict word unchanged
+    assert "功效不足" in h3["evidence_summary"]
+    assert "power=0.05" in h3["evidence_summary"]
+
+
+def test_apply_power_aware_confidence_leaves_powered_untouched() -> None:
+    """A hypothesis with adequate power is not downgraded."""
+    before = _verdicts_fixture()
+    capped = cli_module.apply_power_aware_confidence(before, {"H7": 0.92})
+    h7 = capped.loc[capped["hid"] == "H7"].iloc[0]
+    assert h7["confidence"] == "中"
+    assert "功效不足" not in h7["evidence_summary"]
+
+
+def test_apply_power_aware_confidence_only_lowers_never_raises() -> None:
+    """An already-低 row stays 低 (the cap is a ceiling, not a setter)."""
+    capped = cli_module.apply_power_aware_confidence(
+        _verdicts_fixture(), {"H5": 0.10}
+    )
+    h5 = capped.loc[capped["hid"] == "H5"].iloc[0]
+    assert h5["confidence"] == "低"
+    assert "功效不足" in h5["evidence_summary"]  # annotation still added
+
+
+def test_apply_power_aware_confidence_is_idempotent() -> None:
+    once = cli_module.apply_power_aware_confidence(_verdicts_fixture(), {"H3": 0.05})
+    twice = cli_module.apply_power_aware_confidence(once, {"H3": 0.05})
+    h3_once = once.loc[once["hid"] == "H3"].iloc[0]["evidence_summary"]
+    h3_twice = twice.loc[twice["hid"] == "H3"].iloc[0]["evidence_summary"]
+    assert h3_once == h3_twice  # no double annotation
+    assert h3_twice.count("功效不足") == 1
+
+
+def test_apply_power_aware_confidence_ignores_missing_or_nan_power() -> None:
+    capped = cli_module.apply_power_aware_confidence(
+        _verdicts_fixture(), {"H3": float("nan")}
+    )
+    h3 = capped.loc[capped["hid"] == "H3"].iloc[0]
+    assert h3["confidence"] == "高"  # NaN power → no cap
+
+
+def test_single_hid_power_lookup_excludes_per_engine_and_nan() -> None:
+    reports = [
+        SimpleNamespace(hid="H3", power_at_observed=0.05),
+        SimpleNamespace(hid="H4", power_at_observed=float("nan")),
+        SimpleNamespace(hid="H1", power_at_observed=0.06),  # per-engine row 1
+        SimpleNamespace(hid="H1", power_at_observed=0.84),  # per-engine row 2
+    ]
+    lookup = cli_module.single_hid_power_lookup(reports)
+    assert lookup == {"H3": 0.05}  # H4 dropped (NaN), H1 dropped (multi-row)

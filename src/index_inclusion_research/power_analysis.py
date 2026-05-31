@@ -26,8 +26,9 @@ from __future__ import annotations
 
 import argparse
 import logging
+import math
 import sys
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, cast
@@ -638,6 +639,70 @@ def build_power_report_rows(
                 reports.append(h2_per_engine[engine])
 
     return reports
+
+
+# Post-hoc power below this floor caps a hypothesis's reported confidence to
+# "低" and annotates its verdict as underpowered. The verdict word is never
+# changed — an underpowered "支持" stays "支持" but can no longer be presented
+# at high confidence. See docs/superpowers/specs/2026-05-31-tier-b-statistical-
+# fixes-design.md. Threshold chosen by the author (0.5).
+POWER_CONFIDENCE_FLOOR = 0.5
+_UNDERPOWERED_MARK = "功效不足"
+
+
+def single_hid_power_lookup(
+    reports: Sequence[pa.HypothesisPowerReport],
+) -> dict[str, float]:
+    """Map ``hid → power_at_observed`` for unambiguously single-row hypotheses.
+
+    Per-engine hypotheses (H1/H2) appear once per engine with engine-specific
+    power, so "the" power for them is ambiguous; they are excluded. The cap
+    therefore only acts on single-row hypotheses (H3/H4/H5/H6) whose post-hoc
+    power is unambiguous. Non-finite powers are dropped.
+    """
+    counts: dict[str, int] = {}
+    powers: dict[str, float] = {}
+    for report in reports:
+        counts[report.hid] = counts.get(report.hid, 0) + 1
+        powers[report.hid] = float(report.power_at_observed)
+    return {
+        hid: powers[hid]
+        for hid, count in counts.items()
+        if count == 1 and math.isfinite(powers[hid])
+    }
+
+
+def apply_power_aware_confidence(
+    verdicts_df: pd.DataFrame,
+    power_lookup: Mapping[str, float],
+    *,
+    floor: float = POWER_CONFIDENCE_FLOOR,
+) -> pd.DataFrame:
+    """Cap reported confidence to "低" for underpowered hypotheses.
+
+    For each verdict row whose hypothesis has a known post-hoc power below
+    ``floor``, lower the confidence to "低" (never raise it) and append a
+    "（功效不足: power=…）" note to the evidence summary. The ``verdict`` word
+    is left unchanged. Idempotent: a row already carrying the annotation is
+    not re-annotated, and a confidence already "低" is left alone.
+    """
+    if verdicts_df.empty or "hid" not in verdicts_df.columns:
+        return verdicts_df
+    out = verdicts_df.copy()
+    for idx, row in out.iterrows():
+        hid = str(row["hid"]).strip()
+        power = power_lookup.get(hid)
+        if power is None or not math.isfinite(power) or power >= floor:
+            continue
+        if str(row.get("confidence", "")).strip() in {"高", "中"}:
+            out.at[idx, "confidence"] = "低"
+        summary = str(row.get("evidence_summary", ""))
+        if _UNDERPOWERED_MARK not in summary:
+            out.at[idx, "evidence_summary"] = (
+                f"{summary}（{_UNDERPOWERED_MARK}: power={power:.2f}，"
+                f"低于 {floor:.2f} 阈值；为方向性/描述性证据，不作高置信结论）"
+            )
+    return out
 
 
 def build_engine_flip_diagnoses(

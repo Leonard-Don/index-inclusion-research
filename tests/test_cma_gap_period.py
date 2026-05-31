@@ -283,6 +283,93 @@ def test_compute_pre_runup_bootstrap_block_falls_back_when_too_few_clusters():
     assert result["n_boot"] == 0
 
 
+def test_compute_pre_runup_bootstrap_permutation_small_p_for_large_separation():
+    """PERMUTATION semantics, case (a): well-separated groups -> tiny p_value.
+
+    cn ~ N(5, 1), us ~ N(0, 1), n=40 each. The two arms are not exchangeable, so a
+    permutation test must reject H0 with a small p.
+    """
+    from index_inclusion_research.analysis.cross_market_asymmetry.gap_period import (
+        compute_pre_runup_bootstrap_test,
+    )
+    np_mod = __import__("numpy")
+    rng = np_mod.random.default_rng(2024)
+    cn_runups = list(rng.normal(5.0, 1.0, size=40))
+    us_runups = list(rng.normal(0.0, 1.0, size=40))
+    result = compute_pre_runup_bootstrap_test(
+        _gap_event_level(cn_runups, us_runups), n_boot=2000, seed=0
+    )
+    assert 0.0 <= result["boot_p_value"] <= 1.0
+    assert result["boot_p_value"] < 0.05
+
+
+def test_compute_pre_runup_bootstrap_permutation_large_p_under_null():
+    """PERMUTATION semantics, case (b): exchangeable arms -> LARGE p (>= ~0.5).
+
+    Both arms are 60 zeros; CN additionally carries a single +50 observation and US
+    a mirror-image -50. Under H0 the two arms are exchangeable (a relabel that moves
+    the +50 into US and the -50 into CN is just as likely as the observed labelling),
+    so a correct permutation test reports p ~ 0.5.
+
+    The OLD own-resample procedure instead reports a misleadingly SMALL p (~0.26):
+    it resamples each arm around its OWN values, so most resamples keep the outlier
+    on its observed side and the resampled diff rarely crosses zero. That is a
+    property of the estimator's bootstrap distribution, NOT a test of exchangeability.
+    Asserting p > 0.45 therefore FAILS under the old code and passes under the
+    permutation test.
+    """
+    from index_inclusion_research.analysis.cross_market_asymmetry.gap_period import (
+        compute_pre_runup_bootstrap_test,
+    )
+    cn_runups = [0.0] * 60 + [50.0]
+    us_runups = [0.0] * 60 + [-50.0]
+    result = compute_pre_runup_bootstrap_test(
+        _gap_event_level(cn_runups, us_runups), n_boot=2000, seed=0
+    )
+    assert 0.0 <= result["boot_p_value"] <= 1.0
+    assert result["boot_p_value"] > 0.45
+
+
+def test_compute_pre_runup_bootstrap_permutation_p_value_in_unit_interval():
+    """PERMUTATION semantics, case (c): boot_p_value is always a valid probability."""
+    from index_inclusion_research.analysis.cross_market_asymmetry.gap_period import (
+        compute_pre_runup_bootstrap_test,
+    )
+    np_mod = __import__("numpy")
+    rng = np_mod.random.default_rng(99)
+    cn_runups = list(rng.normal(0.2, 1.0, size=30))
+    us_runups = list(rng.normal(0.0, 1.0, size=25))
+    result = compute_pre_runup_bootstrap_test(
+        _gap_event_level(cn_runups, us_runups), n_boot=1500, seed=0
+    )
+    assert 0.0 <= result["boot_p_value"] <= 1.0
+
+
+def test_compute_pre_runup_bootstrap_permutation_clustered_large_p_under_null():
+    """PERMUTATION at the CLUSTER level, case (b) clustered: exchangeable -> LARGE p.
+
+    20 zero-clusters per arm, plus one +40 cluster in CN and a mirror -40 cluster in
+    US. With cluster-level exchangeability the +40/-40 clusters are just as likely to
+    land in either arm, so a cluster-level permutation test reports p ~ 0.5. The OLD
+    own-resample (resampling clusters WITHIN each arm) keeps each outlier cluster on
+    its observed side and reports a misleadingly small p (~0.23). Asserting p > 0.45
+    FAILS under the old code and passes under cluster-level permutation.
+    """
+    from index_inclusion_research.analysis.cross_market_asymmetry.gap_period import (
+        compute_pre_runup_bootstrap_test,
+    )
+    cn_clusters = [[0.0, 0.0]] * 20 + [[40.0, 40.0]]
+    us_clusters = [[0.0, 0.0]] * 20 + [[-40.0, -40.0]]
+    panel = _gap_event_level_with_clusters(cn_clusters, us_clusters)
+    result = compute_pre_runup_bootstrap_test(
+        panel, n_boot=2000, seed=0, block_by="announce_date"
+    )
+    assert 0.0 <= result["boot_p_value"] <= 1.0
+    assert result["n_cn_clusters"] == 21
+    assert result["n_us_clusters"] == 21
+    assert result["boot_p_value"] > 0.45
+
+
 def test_compute_pre_runup_bootstrap_seed_reproducible():
     from index_inclusion_research.analysis.cross_market_asymmetry.gap_period import (
         compute_pre_runup_bootstrap_test,

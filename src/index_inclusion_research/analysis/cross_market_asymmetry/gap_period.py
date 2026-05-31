@@ -173,12 +173,29 @@ def compute_pre_runup_bootstrap_test(
     seed: int = 0,
     block_by: str | None = None,
 ) -> GapBootstrapResult:
-    """Bootstrap test for H0: mean(CN pre_announce_runup) == mean(US pre_announce_runup).
+    """Permutation test for H0: CN and US pre_announce_runup are exchangeable.
 
-    With ``block_by=None`` (default) each event is resampled independently — iid
-    bootstrap. With ``block_by="announce_date"`` (or any column name) clusters of
-    events sharing that key are resampled as units, preserving within-cluster
-    dependence (date-clustered block bootstrap).
+    The ``boot_p_value`` is a two-sided PERMUTATION p-value of
+    H0: mean(CN) == mean(US). The observed statistic is
+    ``obs_diff = cn_values.mean() - us_values.mean()``; under H0 the CN/US labels
+    are arbitrary, so we pool the two arms, repeatedly relabel which observations
+    are "CN" vs "US" preserving the per-arm sizes, recompute the permuted mean
+    difference, and report ``mean(|perm_diff| >= |obs_diff|)``. This tests H0 of no
+    difference, unlike a bootstrap-of-the-estimator tail probability (which only
+    describes the sampling distribution of the difference and is a CI-coverage,
+    not a hypothesis-test, quantity).
+
+    The ``boot_ci_low`` / ``boot_ci_high`` percentile interval is still a genuine
+    bootstrap: each arm is resampled around its own observed values (an interval
+    estimate of the difference), independently of the permutation p-value.
+
+    With ``block_by=None`` (default) both the permutation relabelling and the
+    bootstrap resample operate at the event (observation) level — iid. With
+    ``block_by="announce_date"`` (or any column name) they operate at the CLUSTER
+    level: whole clusters are relabelled / resampled as units, preserving
+    within-cluster dependence (date-clustered block procedure). For the
+    permutation this means pooling the clusters and randomly assigning whole
+    clusters to the CN/US arms preserving the per-arm cluster counts.
 
     Returns NaN-filled fields when either market has < 2 events (or, when
     blocking, < 2 clusters).
@@ -216,6 +233,9 @@ def compute_pre_runup_bootstrap_test(
     if n_cn < 2 or n_us < 2:
         return base
 
+    diff_mean = float(cn_values.mean() - us_values.mean())
+    obs_diff = abs(diff_mean)
+
     rng = np.random.default_rng(seed)
     if cn_keys is not None and us_keys is not None:
         cn_clusters = _cluster_arrays(cn_values, cn_keys)
@@ -226,6 +246,7 @@ def compute_pre_runup_bootstrap_test(
         base["n_us_clusters"] = n_us_groups
         if n_cn_groups < 2 or n_us_groups < 2:
             return base
+        # Bootstrap percentile CI: resample whole clusters WITHIN each arm.
         diffs = np.empty(n_boot, dtype=float)
         for i in range(n_boot):
             cn_pick = rng.integers(0, n_cn_groups, size=n_cn_groups)
@@ -233,24 +254,41 @@ def compute_pre_runup_bootstrap_test(
             cn_draw = np.concatenate([cn_clusters[j] for j in cn_pick])
             us_draw = np.concatenate([us_clusters[j] for j in us_pick])
             diffs[i] = cn_draw.mean() - us_draw.mean()
+        # Permutation test of H0 (cluster-level exchangeability): pool the clusters
+        # and randomly assign whole clusters to the CN/US arms preserving the
+        # per-arm cluster counts.
+        all_clusters = cn_clusters + us_clusters
+        n_clusters = n_cn_groups + n_us_groups
+        perm_diffs = np.empty(n_boot, dtype=float)
+        for i in range(n_boot):
+            order = rng.permutation(n_clusters)
+            cn_perm = np.concatenate([all_clusters[j] for j in order[:n_cn_groups]])
+            us_perm = np.concatenate([all_clusters[j] for j in order[n_cn_groups:]])
+            perm_diffs[i] = cn_perm.mean() - us_perm.mean()
     else:
+        # Bootstrap percentile CI: resample observations WITHIN each arm.
         cn_idx = rng.integers(0, n_cn, size=(n_boot, n_cn))
         us_idx = rng.integers(0, n_us, size=(n_boot, n_us))
         diffs = cn_values[cn_idx].mean(axis=1) - us_values[us_idx].mean(axis=1)
+        # Permutation test of H0 (observation-level exchangeability): pool the two
+        # arms and randomly relabel which observations are CN vs US, preserving the
+        # per-arm sizes.
+        pooled = np.concatenate([cn_values, us_values])
+        n_total = n_cn + n_us
+        perm_diffs = np.empty(n_boot, dtype=float)
+        for i in range(n_boot):
+            order = rng.permutation(n_total)
+            cn_perm = pooled[order[:n_cn]]
+            us_perm = pooled[order[n_cn:]]
+            perm_diffs[i] = cn_perm.mean() - us_perm.mean()
 
-    diff_mean = float(cn_values.mean() - us_values.mean())
-    if diff_mean > 0:
-        p_one = float((diffs <= 0).mean())
-    elif diff_mean < 0:
-        p_one = float((diffs >= 0).mean())
-    else:
-        p_one = 0.5
+    boot_p_value = float((np.abs(perm_diffs) >= obs_diff).mean())
     base.update(
         {
             "cn_mean": float(cn_values.mean()),
             "us_mean": float(us_values.mean()),
             "diff_mean": diff_mean,
-            "boot_p_value": float(min(2 * p_one, 1.0)),
+            "boot_p_value": boot_p_value,
             "boot_ci_low": float(np.percentile(diffs, 2.5)),
             "boot_ci_high": float(np.percentile(diffs, 97.5)),
             "n_boot": n_boot,

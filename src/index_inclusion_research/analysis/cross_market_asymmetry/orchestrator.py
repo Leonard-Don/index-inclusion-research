@@ -351,6 +351,31 @@ def run_cma_pipeline(
         previous_path = tables_dir / "cma_hypothesis_verdicts.previous.csv"
         previous_path.write_bytes(verdicts_csv_path.read_bytes())
     hypothesis_verdicts.to_csv(verdicts_csv_path, index=False)
+    # Power-aware confidence cap (Tier B): with the verdicts CSV on disk we can
+    # compute post-hoc power and downgrade the reported confidence of any
+    # underpowered hypothesis (e.g. H3 at n=4, power≈0) to "低" before exporting
+    # the tex / paper-verdict-section twins — so every artifact carries the
+    # capped confidence consistently. The verdict word itself is unchanged.
+    # Local import keeps the power-analysis dependency off the module import
+    # graph. See docs/superpowers/specs/2026-05-31-tier-b-statistical-fixes-design.md.
+    from index_inclusion_research.power_analysis import (
+        apply_power_aware_confidence,
+        build_power_report_rows,
+        single_hid_power_lookup,
+    )
+
+    try:
+        power_lookup = single_hid_power_lookup(
+            build_power_report_rows(verdicts_csv=verdicts_csv_path)
+        )
+    except ValueError:
+        # Post-hoc power is undefined for degenerate samples (e.g. toy-data
+        # fixtures with n<2); skip the cap rather than fail the pipeline.
+        power_lookup = {}
+    hypothesis_verdicts = apply_power_aware_confidence(
+        hypothesis_verdicts, power_lookup
+    )
+    hypothesis_verdicts.to_csv(verdicts_csv_path, index=False)
     verdicts.export_hypothesis_verdicts_tex(hypothesis_verdicts, output_dir=tables_dir)
     if paper_verdict_path is None:
         paper_verdict_path = (

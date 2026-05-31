@@ -137,6 +137,8 @@ EXPECTED_OUTPUT_TABLE_SCHEMAS = {
         "ci_high_95",
         "t_stat",
         "p_value",
+        "se_car_clustered",
+        "p_value_clustered",
     ),
     "robustness_regression_summary": (
         "market",
