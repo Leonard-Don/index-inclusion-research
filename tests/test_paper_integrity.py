@@ -514,3 +514,92 @@ def test_real_repo_run_exits_zero() -> None:
         "real repo paper-integrity should pass; issues: "
         + repr([(i.severity, i.category, i.description) for i in issues])
     )
+
+
+# ---------------------------------------------------------------------------
+# README front-page verdict table ↔ cma_hypothesis_verdicts.csv
+#
+# These are fully hermetic: they build a tiny fake repo tree under tmp_path
+# (a minimal README.md + a minimal cma_hypothesis_verdicts.csv) and never
+# touch the real repo files.
+# ---------------------------------------------------------------------------
+
+
+def _make_readme_verdicts_text(verdicts: dict[str, str]) -> str:
+    """Render a front-page 7-hypothesis verdict table for the README.
+
+    ``verdicts`` maps ``hid`` -> README verdict cell. The table mimics the
+    real front-page layout (with a header + separator and trailing detail
+    columns) so the parser must defensively skip non-H rows.
+    """
+    rows = "\n".join(
+        f"| {hid} | 名称{hid} | {verdict} | 细节 {hid} (n=10) | 正文 core | 制度识别 |"
+        for hid, verdict in verdicts.items()
+    )
+    return (
+        "# Project\n\n"
+        "## 七大假说裁定\n\n"
+        "| 假说 | 名称 | 裁定 | 关键证据 | 位置 | 主线 |\n"
+        "|---|---|---|---|---|---|\n"
+        f"{rows}\n\n"
+        "其它正文。\n"
+    )
+
+
+def _write_readme_verdicts_repo(
+    tmp_path: Path,
+    *,
+    readme_verdicts: dict[str, str],
+    csv_verdicts: dict[str, str],
+) -> Path:
+    """Seed a tiny repo tree with just the README + verdicts CSV under tmp_path."""
+    real_tables = tmp_path / "results" / "real_tables"
+    real_tables.mkdir(parents=True)
+    pd.DataFrame(
+        [{"hid": hid, "verdict": verdict} for hid, verdict in csv_verdicts.items()]
+    ).to_csv(real_tables / "cma_hypothesis_verdicts.csv", index=False)
+
+    (tmp_path / "README.md").write_text(
+        _make_readme_verdicts_text(readme_verdicts), encoding="utf-8"
+    )
+    return tmp_path
+
+
+def test_check_readme_verdicts_match_csv_flags_mismatch(tmp_path: Path) -> None:
+    """README says H5=支持 but CSV says 证据不足 -> issues list flags H5."""
+    repo = _write_readme_verdicts_repo(
+        tmp_path,
+        readme_verdicts={
+            "H1": "证据不足",
+            "H5": "支持",  # drifted away from the CSV
+        },
+        csv_verdicts={
+            "H1": "证据不足",
+            "H5": "证据不足",
+        },
+    )
+
+    issues = paper_integrity.check_readme_verdicts_match_csv(repo)
+    assert isinstance(issues, list)
+    assert any("H5" in issue for issue in issues), issues
+    # The non-drifted hid must NOT be reported.
+    assert not any("H1" in issue for issue in issues), issues
+
+
+def test_check_readme_verdicts_match_csv_passes_when_aligned(tmp_path: Path) -> None:
+    """When every README verdict equals the CSV verdict, issues == []."""
+    repo = _write_readme_verdicts_repo(
+        tmp_path,
+        readme_verdicts={
+            "H1": "证据不足",
+            "H2": "部分支持",
+            "H5": "证据不足",
+        },
+        csv_verdicts={
+            "H1": "证据不足",
+            "H2": "部分支持",
+            "H5": "证据不足",
+        },
+    )
+
+    assert paper_integrity.check_readme_verdicts_match_csv(repo) == []

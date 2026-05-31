@@ -647,6 +647,85 @@ def check_paper_library_referenced_in_skeleton(
     return issues
 
 
+def check_readme_verdicts_match_csv(repo_root: Path | None = None) -> list[str]:
+    """README front-page verdict table must match cma_hypothesis_verdicts.csv.
+
+    The README renders the 7-hypothesis verdicts as a front-page markdown
+    table whose rows look like::
+
+        | H5 | 涨跌停限制 | 证据不足 | limit_coef p = 0.427 (n=1096) | 正文 core | 制度识别 |
+
+    We extract the hypothesis id from the FIRST cell and the verdict from
+    the THIRD cell, then compare every README hid against the verdict map
+    in ``results/real_tables/cma_hypothesis_verdicts.csv``. Returns a list
+    of human-readable mismatch strings (empty list = OK). This guards
+    against the README headline table drifting out of sync with the
+    committed verdicts CSV.
+    """
+    root = repo_root if repo_root is not None else paths.project_root()
+    readme_md = Path(root) / "README.md"
+    verdicts_csv = Path(root) / "results" / "real_tables" / "cma_hypothesis_verdicts.csv"
+
+    text = _read_text_safe(readme_md)
+    df = _read_csv_safe(verdicts_csv)
+    if text is None or df is None:
+        return []  # missing artifacts are surfaced by other checks
+    if "hid" not in df.columns or "verdict" not in df.columns:
+        return []
+
+    csv_verdicts: dict[str, str] = {}
+    for _, row in df.iterrows():
+        csv_verdicts[str(row["hid"]).strip()] = str(row["verdict"]).strip()
+
+    issues: list[str] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        cells = [c.strip() for c in stripped.strip("|").split("|")]
+        if len(cells) < 3:
+            continue
+        hid = cells[0]
+        # Defensive: only H<digit> data rows; skip header/separator rows.
+        if not re.fullmatch(r"H\d+", hid):
+            continue
+        readme_verdict = cells[2]
+        csv_verdict = csv_verdicts.get(hid)
+        if csv_verdict is None:
+            continue
+        if readme_verdict != csv_verdict:
+            issues.append(
+                f"README verdict for {hid} ({readme_verdict}) "
+                f"!= cma_hypothesis_verdicts.csv ({csv_verdict})"
+            )
+    return issues
+
+
+def check_readme_verdicts_match_csv_issues() -> list[IntegrityIssue]:
+    """Adapt :func:`check_readme_verdicts_match_csv` to the orchestrator API.
+
+    The aggregate gate invokes each registered check with no arguments and
+    expects ``list[IntegrityIssue]``. This thin wrapper runs the string-based
+    check against the resolved project root and wraps any mismatches in a
+    single ``fail``-level issue.
+    """
+    mismatches = check_readme_verdicts_match_csv()
+    if not mismatches:
+        return []
+    return [
+        IntegrityIssue(
+            severity="fail",
+            category="readme_verdicts",
+            description=(
+                "README front-page verdict table disagrees with "
+                "cma_hypothesis_verdicts.csv."
+            ),
+            evidence=tuple(mismatches),
+            fix_command="index-inclusion-readme --force",
+        )
+    ]
+
+
 def check_sample_sizes_match_methodology(
     *,
     verdicts_csv: Path | None = None,
@@ -987,6 +1066,7 @@ DEFAULT_INTEGRITY_CHECKS: tuple[
     check_pap_classifications_match_public_summary,
     check_console_scripts_count_matches_readme,
     check_paper_library_referenced_in_skeleton,
+    check_readme_verdicts_match_csv_issues,
     check_sample_sizes_match_methodology,
     check_sensitivity_coverage_match,
     check_doctor_checks_listed_in_cli_reference,
