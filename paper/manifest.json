@@ -335,8 +335,8 @@
       "section": "figures",
       "source": "results/literature/citation_network.png",
       "target": "figures/citation_network.png",
-      "sha256": "258c48ec8d6be0164672ae0bc7cc41b084a4316ea2718a96c39c81d2d7fe671e",
-      "size_bytes": 81152
+      "sha256": "72692feb0c034a15afc84bb1b0a4deeac99b3659b17a07dafc4b8ddff23d1edc",
+      "size_bytes": 81184
     },
     {
       "section": "figures",
@@ -391,7 +391,7 @@
       "section": "figures",
       "source": "results/literature/literature_timeline.pdf",
       "target": "figures/literature_timeline.pdf",
-      "sha256": "4b5853a0646415a673eb70e94f2738caf910bdcebd360a9f10701baca98f74b4",
+      "sha256": "4eca8438f94d42b5101f2a4f538f6c01e4acb1a6f67973d7e2d0f202d61b4303",
       "size_bytes": 83988
     },
     {
@@ -496,15 +496,15 @@
       "section": "rdd",
       "source": "results/literature/hs300_rdd/figures/rdd_robustness_forest.png",
       "target": "rdd/rdd_robustness_forest.png",
-      "sha256": "813f08325476873eb3b8cb3c6fef2c1ca46b45d5beeaeb0e18fa0d0d1eb3468d",
-      "size_bytes": 184702
+      "sha256": "31b80a39b325dc375f5c76fb1719061f28d6e72babb5e8ae9be5729b25c0ba27",
+      "size_bytes": 184510
     },
     {
       "section": "narrative",
       "source": "docs/paper_outline.md",
       "target": "narrative/paper_outline.md",
-      "sha256": "6898f756c936fefc61106031f06ed19d89c88c50ada9061a1733fab62698abb9",
-      "size_bytes": 11253
+      "sha256": "1fa85b10271b65b2ca3d2c5b9e8fd263f223d3ed00a532140246e08ef821943b",
+      "size_bytes": 11449
     },
     {
       "section": "narrative",

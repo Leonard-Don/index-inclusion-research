@@ -269,7 +269,7 @@ def test_skeleton_has_all_top_level_sections(fixture_paths):
     """Every advertised §1..§7 + 附录 ABC section header appears."""
     rendered = _render(fixture_paths)
     expected_headers = (
-        "# 指数纳入溢价的来源",
+        "# 指数纳入溢价集中在公告窗还是生效窗",
         "## 1. 引言",
         "## 2. 文献综述",
         "## 3. 研究设计",
@@ -489,7 +489,11 @@ def test_no_todo_markers_in_submission_skeleton(fixture_paths):
     rendered = _render(fixture_paths)
     assert "[TODO:" not in rendered
     assert "作者待补" in rendered
-    assert "摘要待精修" in rendered
+    # Abstract is now a real (honest, descriptive) paragraph rather than the
+    # old "摘要待精修" placeholder; assert the substantive honest framing
+    # is present instead of the removed placeholder.
+    assert "描述性" in rendered
+    assert "不主张因果识别" in rendered or "不构成准实验因果识别" in rendered
 
 
 def test_main_writes_file_and_exits_zero(fixture_paths, monkeypatch, tmp_path: Path):
