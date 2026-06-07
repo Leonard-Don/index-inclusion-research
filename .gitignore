@@ -1,5 +1,8 @@
 __pycache__/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.benchmarks/
 .playwright-cli/
 .venv/
 .claude/
@@ -11,6 +14,7 @@ coverage.xml
 htmlcov/
 output/
 tmp/
+exports/
 .worktrees/
 
 data/processed/*
