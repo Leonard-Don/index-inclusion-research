@@ -46,6 +46,13 @@ FULL_FIGURES = BRIEF_FIGURES + (
     "cma_gap_length_distribution.png",
 )
 
+ROBUSTNESS_FIGURES = (
+    "cma_verdicts_forest.png",
+    "cma_verdicts_sensitivity.png",
+    "cma_verdicts_ar_engine.png",
+    "cma_verdicts_2d_robustness.png",
+)
+
 
 FIGURE_ECHART_IDS: dict[str, str] = {
     "cma_ar_path_comparison.png": "car_path",
@@ -63,6 +70,57 @@ FIGURE_LABELS: dict[str, str] = {
     "cma_heterogeneity_matrix_size.png": "市值分组异质性矩阵",
     "cma_time_series_rolling.png": "五年滚动 CAR 时序",
     "cma_gap_length_distribution.png": "公告日至生效日间隔分布",
+}
+
+ROBUSTNESS_FIGURE_LABELS: dict[str, str] = {
+    "cma_verdicts_forest.png": "CMA 裁决稳健性：森林图",
+    "cma_verdicts_sensitivity.png": "CMA 裁决稳健性：阈值敏感性",
+    "cma_verdicts_ar_engine.png": "CMA 裁决稳健性：AR 引擎对照",
+    "cma_verdicts_2d_robustness.png": "CMA 裁决稳健性：2D 参数网格",
+}
+
+ROBUSTNESS_FIGURE_CAPTIONS: dict[str, str] = {
+    "cma_verdicts_forest.png": (
+        "把 H1-H7 的核心效应、置信区间和裁决方向放在同一张图里，便于区分方向反转、"
+        "低功效和稳定支持。"
+    ),
+    "cma_verdicts_sensitivity.png": (
+        "展示显著性阈值和关键参数变化后，各假说裁决是否会翻转。"
+    ),
+    "cma_verdicts_ar_engine.png": (
+        "对照不同异常收益引擎下的 H1/H2 读法，标出依赖引擎选择的结论。"
+    ),
+    "cma_verdicts_2d_robustness.png": (
+        "用二维参数网格检查裁决边界，识别哪些结论只在窄参数带内成立。"
+    ),
+}
+
+POWER_ANALYSIS_COLUMNS = (
+    "hid",
+    "name_cn",
+    "engine",
+    "n_obs",
+    "test_family",
+    "observed_effect",
+    "observed_effect_label",
+    "power_at_observed",
+    "mde_at_80_power",
+    "mde_label",
+    "interpretation",
+)
+
+POWER_ANALYSIS_COLUMN_LABELS = {
+    "hid": "假说",
+    "name_cn": "名称",
+    "engine": "引擎",
+    "n_obs": "样本量",
+    "test_family": "测试族",
+    "observed_effect": "观测效应",
+    "observed_effect_label": "观测效应口径",
+    "power_at_observed": "在观测效应下的功效",
+    "mde_at_80_power": "80% 功效下的 MDE",
+    "mde_label": "MDE 口径",
+    "interpretation": "统计解读",
 }
 
 
@@ -97,6 +155,136 @@ def _frame_to_payload(frame: pd.DataFrame) -> dict[str, object]:
             for row in rows
         ]
     return payload
+
+
+def _empty_power_analysis_payload() -> dict[str, object]:
+    return {
+        "available": False,
+        "columns": [],
+        "rows": [],
+        "summary_cards": [],
+        "method_note": "",
+    }
+
+
+def _read_power_method_note(path: Path) -> str:
+    if not path.exists():
+        return ""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return ""
+
+    note_parts: list[str] = []
+    in_methods = False
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith("#"):
+            in_methods = line == "## 3. 方法学说明"
+            continue
+        if line.startswith("|") or line.startswith("---"):
+            continue
+        if line.startswith("- ") and in_methods:
+            note_parts.append(line[2:])
+        elif not note_parts:
+            note_parts.append(line)
+        if len(note_parts) >= 3:
+            break
+    return " ".join(note_parts)
+
+
+def _build_power_summary_cards(frame: pd.DataFrame) -> list[dict[str, object]]:
+    raw_power = (
+        frame["power_at_observed"]
+        if "power_at_observed" in frame.columns
+        else pd.Series(dtype="float64")
+    )
+    power = pd.to_numeric(raw_power, errors="coerce")
+    high = int((power >= 0.80).sum())
+    low = int((power < 0.30).sum())
+    moderate = int(((power >= 0.30) & (power < 0.80)).sum())
+    engine_count = 0
+    if "engine" in frame.columns:
+        engine_text = frame["engine"].astype(str).str.strip()
+        engine_count = int((engine_text.ne("") & engine_text.ne("默认")).sum())
+    return [
+        {
+            "kicker": "后验功效",
+            "title": f"{high} 项功效充足",
+            "meta": "power ≥ 0.80",
+            "copy": "这些裁决的样本量足以检出观测效应；若仍为证据不足，重点看方向或机制是否不符。",
+            "foot": f"{moderate} 项处于中间带",
+        },
+        {
+            "kicker": "低功效提示",
+            "title": f"{low} 项严重欠功效",
+            "meta": "power < 0.30",
+            "copy": "低功效说明当前样本难以检出真实效应，适合保留为附录或探索性结论。",
+            "foot": "避免把样本不足误读成假说被证伪",
+        },
+        {
+            "kicker": "引擎敏感性",
+            "title": f"{engine_count} 行分引擎读法",
+            "meta": "H1 / H2 等多口径比较",
+            "copy": "同一假说在 adjusted 与 market 引擎下的功效可能不同，需和稳健性图一起读。",
+            "foot": "",
+        },
+    ]
+
+
+def _build_power_analysis_payload(tables_dir: Path, mode: str) -> dict[str, object]:
+    if mode == "brief":
+        return _empty_power_analysis_payload()
+
+    frame = _safe_read(tables_dir / "power_analysis_report.csv")
+    if frame.empty:
+        return _empty_power_analysis_payload()
+
+    columns = [column for column in POWER_ANALYSIS_COLUMNS if column in frame.columns]
+    if not columns:
+        return _empty_power_analysis_payload()
+
+    display_frame = frame.loc[:, columns].copy()
+    if "engine" in display_frame.columns:
+        engine_text = display_frame["engine"].fillna("").astype(str).str.strip()
+        display_frame["engine"] = engine_text.mask(engine_text.eq(""), "默认")
+
+    payload = _frame_to_payload(display_frame)
+    payload["available"] = bool(payload["rows"])
+    payload["column_labels"] = {
+        column: POWER_ANALYSIS_COLUMN_LABELS.get(column, column)
+        for column in columns
+    }
+    payload["summary_cards"] = _build_power_summary_cards(display_frame)
+    payload["method_note"] = _read_power_method_note(
+        tables_dir / "power_analysis_report.md"
+    )
+    return payload
+
+
+def _build_robustness_figures(figures_dir: Path, mode: str) -> list[dict[str, object]]:
+    if mode == "brief":
+        return []
+    entries: list[dict[str, object]] = []
+    for name in ROBUSTNESS_FIGURES:
+        path = figures_dir / name
+        if not path.exists():
+            continue
+        label = ROBUSTNESS_FIGURE_LABELS.get(name, name)
+        caption = ROBUSTNESS_FIGURE_CAPTIONS.get(name, label)
+        entries.append(
+            {
+                "label": label,
+                "path": str(path),
+                "caption": caption,
+                "caption_lead": caption,
+                "caption_focus": "优先看裁决是否跨阈值、跨引擎仍保持同一方向。",
+                "layout_class": "wide",
+            }
+        )
+    return entries
 
 
 def _nested_verdict(row: Mapping[str, object], key: str) -> str:
@@ -217,6 +405,8 @@ def build_cross_market_section(
         },
         "figures": figures,
         "figure_echart_ids": figure_echart_ids,
+        "power_analysis": _build_power_analysis_payload(tables_dir, mode),
+        "robustness_figures": _build_robustness_figures(figures_dir, mode),
         "hypothesis_map": {
             "columns": list(hypothesis_map.columns),
             "rows": hypothesis_map.to_dict(orient="records") if mode == "full" else [],

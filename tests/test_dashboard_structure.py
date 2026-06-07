@@ -266,6 +266,22 @@ def test_home_dashboard_full_mode_marks_cma_evidence_tiers() -> None:
         assert "附录/探索性" in html[card_start:card_end]
 
 
+def test_home_dashboard_full_mode_renders_cma_power_and_robustness_additions() -> None:
+    client = dashboard.app.test_client()
+    response = client.get("/?mode=full#cross_market_asymmetry")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+
+    assert "假说后验统计功效" in html
+    assert "post-hoc 功效计算" in html
+    assert "在观测效应下的功效" in html
+    assert "CMA 裁决稳健性" in html
+    assert "cma_verdicts_forest.png" in html
+    assert "cma_verdicts_sensitivity.png" in html
+    assert "cma_verdicts_ar_engine.png" in html
+    assert "cma_verdicts_2d_robustness.png" in html
+
+
 def test_home_dashboard_supports_full_mode() -> None:
     client = dashboard.app.test_client()
     response = client.get("/?mode=full")
@@ -532,6 +548,8 @@ def test_dashboard_template_uses_shared_section_and_figure_macros() -> None:
     assert "macro render_design_section" in content_macros
     assert "macro render_track_section" in content_macros
     assert "macro render_table_suite_section" in content_macros
+    assert "macro render_cma_power_analysis" in content_macros
+    assert "macro render_cma_robustness_figures" in content_macros
     assert "macro render_topbar" in macros
     assert "macro render_section_head" in macros
     assert "macro render_abstract_panel" in macros

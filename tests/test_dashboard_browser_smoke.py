@@ -1582,8 +1582,12 @@ def test_pap_status_chip_renders_with_baseline_diff() -> None:
             assert headline.startswith("裁决基线快照")
             assert "当前 vs 基线" in headline
 
+            latest_snapshot = sorted(
+                (ROOT / "snapshots").glob("pre-registration-*.csv")
+            )[-1]
+            latest_baseline = latest_snapshot.stem.replace("pre-registration-", "")
             snapshot_path = chip.locator("[data-pap-snapshot-path]").inner_text().strip()
-            assert snapshot_path == "裁决基线 2026-05-29"
+            assert snapshot_path == f"裁决基线 {latest_baseline}"
 
             summary_label = chip.locator("[data-pap-summary-label]").inner_text().strip()
             assert summary_label  # non-empty

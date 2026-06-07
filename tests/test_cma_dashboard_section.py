@@ -7,6 +7,7 @@ import pandas as pd
 from index_inclusion_research.analysis.cross_market_asymmetry.dashboard_section import (
     BRIEF_FIGURES,
     FULL_FIGURES,
+    ROBUSTNESS_FIGURES,
     SECTION_ID,
     build_cross_market_section,
 )
@@ -81,6 +82,54 @@ def _seed_figures(figures_dir, names):
         (figures_dir / name).write_bytes(b"\x89PNG\r\n\x1a\n")
 
 
+def _seed_power_analysis(tables_dir):
+    pd.DataFrame(
+        [
+            {
+                "hid": "H3",
+                "name_cn": "散户 vs 机构结构",
+                "engine": "",
+                "n_obs": 4,
+                "test_family": "binomial_proportion_z_two_sided",
+                "observed_effect": 0.0,
+                "observed_effect_label": "hit_rate − 0.5",
+                "power_at_observed": 0.05,
+                "mde_at_80_power": 0.499,
+                "mde_label": "proportion_gap_p1_minus_p0",
+                "interpretation": "严重欠功效，结果按 supplementary 处理是合理的。",
+            },
+            {
+                "hid": "H6",
+                "name_cn": "指数权重可预测性",
+                "engine": "",
+                "n_obs": 87,
+                "test_family": "one_sample_t_two_sided",
+                "observed_effect": -0.473,
+                "observed_effect_label": "cohens_d",
+                "power_at_observed": 0.992,
+                "mde_at_80_power": 0.304,
+                "mde_label": "cohens_d_at_target_power",
+                "interpretation": "功效充足，但方向与 H6 预测相反。",
+            },
+        ]
+    ).to_csv(tables_dir / "power_analysis_report.csv", index=False)
+    (tables_dir / "power_analysis_report.md").write_text(
+        "\n".join(
+            [
+                "# 假说后验统计功效分析",
+                "",
+                "对各假说做 post-hoc 功效计算，α=0.05, target power = 80%。",
+                "",
+                "## 3. 方法学说明",
+                "",
+                "- H3 使用比例 z-test，并提供 exact-binomial 对照。",
+                "- 80% 功效下的 MDE 由二分搜索求解。",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
 def test_section_has_expected_top_level_keys(tmp_path):
     tables = tmp_path / "tables"
     figures = tmp_path / "figures"
@@ -102,6 +151,8 @@ def test_section_has_expected_top_level_keys(tmp_path):
         "hypothesis_map",
         "hypothesis_verdicts",
         "evidence_coverage",
+        "power_analysis",
+        "robustness_figures",
     ):
         assert key in section, f"missing key: {key}"
 
@@ -248,6 +299,7 @@ def test_section_missing_tables_yield_empty_rows(tmp_path):
     assert section["hypothesis_map"]["rows"] == []
     assert section["hypothesis_verdicts"]["rows"] == []
     assert section["figures"] == {}
+    assert section["robustness_figures"] == []
     assert section["detail_tables"] == {
         "window_summary_all": {"columns": [], "rows": []},
             "hypothesis_verdicts": {"columns": [], "rows": []},
@@ -264,6 +316,8 @@ def test_section_missing_tables_yield_empty_rows(tmp_path):
         "ar_path": {"columns": [], "rows": []},
         "car_path": {"columns": [], "rows": []},
     }
+    assert section["power_analysis"]["available"] is False
+    assert section["power_analysis"]["rows"] == []
 
 
 def test_section_empty_optional_csv_yields_empty_detail_table(tmp_path):
@@ -506,6 +560,61 @@ def test_section_demo_mode_has_empty_detail_tables(tmp_path):
         tables_dir=tables, figures_dir=figures, mode="demo"
     )
     assert section["detail_tables"] == {}
+
+
+def test_section_full_mode_exposes_power_analysis_and_robustness_figures(tmp_path):
+    tables = tmp_path / "tables"
+    figures = tmp_path / "figures"
+    _seed_tables(tables)
+    _seed_power_analysis(tables)
+    _seed_figures(figures, FULL_FIGURES + ROBUSTNESS_FIGURES)
+
+    section = build_cross_market_section(
+        tables_dir=tables, figures_dir=figures, mode="full"
+    )
+
+    power = section["power_analysis"]
+    assert power["available"] is True
+    assert len(power["rows"]) == 2
+    assert power["columns"] == [
+        "hid",
+        "name_cn",
+        "engine",
+        "n_obs",
+        "test_family",
+        "observed_effect",
+        "observed_effect_label",
+        "power_at_observed",
+        "mde_at_80_power",
+        "mde_label",
+        "interpretation",
+    ]
+    assert power["column_labels"]["power_at_observed"] == "在观测效应下的功效"
+    assert power["summary_cards"][0]["title"] == "1 项功效充足"
+    assert "post-hoc 功效计算" in power["method_note"]
+
+    robustness = section["robustness_figures"]
+    assert len(robustness) == 4
+    assert {figure["path"].rsplit("/", 1)[-1] for figure in robustness} == set(
+        ROBUSTNESS_FIGURES
+    )
+    assert any("2D" in figure["label"] for figure in robustness)
+
+
+def test_section_brief_mode_hides_power_analysis_and_robustness_figures(tmp_path):
+    tables = tmp_path / "tables"
+    figures = tmp_path / "figures"
+    _seed_tables(tables)
+    _seed_power_analysis(tables)
+    _seed_figures(figures, ROBUSTNESS_FIGURES)
+
+    section = build_cross_market_section(
+        tables_dir=tables, figures_dir=figures, mode="brief"
+    )
+
+    assert section["power_analysis"]["available"] is False
+    assert section["power_analysis"]["rows"] == []
+    assert section["robustness_figures"] == []
 
 
 def test_section_gap_summary_empty_in_brief_mode(tmp_path):

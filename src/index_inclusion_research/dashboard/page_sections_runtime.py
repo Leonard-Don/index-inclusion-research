@@ -106,6 +106,20 @@ class DashboardPageSectionsRuntime:
             for name, abs_path in figures.items()
         }
         section["figures"] = relative_figures
+        robustness_figures = section.get("robustness_figures", [])
+        if isinstance(robustness_figures, list):
+            relative_robustness_figures: list[dict[str, Any]] = []
+            for entry in robustness_figures:
+                if not isinstance(entry, Mapping):
+                    continue
+                item = dict(entry)
+                path = item.get("path")
+                if path:
+                    item["path"] = self.track.safe_relative(Path(str(path)))
+                relative_robustness_figures.append(item)
+            section["robustness_figures"] = relative_robustness_figures
+        else:
+            section["robustness_figures"] = []
         return section
 
     def build_home_context(

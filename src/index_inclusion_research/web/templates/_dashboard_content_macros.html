@@ -226,6 +226,65 @@
 {% endif %}
 {%- endmacro %}
 
+{% macro render_cma_power_analysis(payload, mode) -%}
+{% if payload and payload.available and payload.rows %}
+<div class="result-group cma-power-analysis" aria-label="假说后验统计功效">
+  <div class="result-group-head">
+    <h4>假说后验统计功效</h4>
+    <p>把每个假说的样本量、观测功效和 80% 功效下的最小可检出效应放到裁决旁边，说明哪些结论来自低功效、哪些来自方向或引擎差异。</p>
+  </div>
+  {{ shared.render_summary_cards(payload.summary_cards) }}
+  {% if payload.method_note %}
+  <div class="result-card cma-method-note">
+    <div class="table-label">方法说明</div>
+    <p>{{ cma_display_text(payload.method_note) }}</p>
+  </div>
+  {% endif %}
+  {% if mode == 'demo' %}
+  {% call shared.render_details_panel(
+    "demo-cma-power-analysis",
+    "功效明细",
+    "假说功效与 MDE 摘要",
+    "逐假说查看 n、观测功效、MDE 和统计解读。",
+    "展开表格",
+    "details-panel-compact"
+  ) %}
+    {{ render_cma_generic_table(payload, '假说功效与 MDE 摘要') }}
+  {% endcall %}
+  {% else %}
+    {{ render_cma_generic_table(payload, '假说功效与 MDE 摘要') }}
+  {% endif %}
+</div>
+{% endif %}
+{%- endmacro %}
+
+
+{% macro render_cma_robustness_figures(figures, mode) -%}
+{% if figures %}
+{% if mode == 'demo' %}
+{{ render_collapsible_figure_group(
+  "demo-cma-robustness-figures",
+  "CMA 裁决稳健性图组（4 张）",
+  "森林图、阈值敏感性、AR 引擎对照和 2D 参数网格集中检查 H1-H7 裁决是否随关键口径翻转。",
+  figures,
+  "CMA 裁决稳健性",
+  "展开图组",
+  "detail",
+  "cma-figures library-panels"
+) }}
+{% else %}
+<div class="result-group cma-robustness-figures" aria-label="CMA 裁决稳健性">
+  <div class="result-group-head">
+    <h4>CMA 裁决稳健性</h4>
+    <p>四张图把 H1-H7 裁决放到阈值、引擎和参数网格下复核，重点看哪些结论稳定、哪些需要保留为敏感性结果。</p>
+  </div>
+  {{ render_figure_cards(figures, "detail", "cma-figures library-panels") }}
+</div>
+{% endif %}
+{% endif %}
+{%- endmacro %}
+
+
 {% macro render_cma_verdict_cards(payload, mode) -%}
 {% if payload and payload.rows %}
 {% set verdict_tiers_present = payload.rows | map(attribute='verdict') | list | unique | list %}
@@ -464,6 +523,11 @@
   </div>
   {% endif %}
   {{ render_cma_verdict_cards(cma_section.hypothesis_verdicts, mode) }}
+  {% endif %}
+
+  {% if mode != 'brief' %}
+  {{ render_cma_power_analysis(cma_section.power_analysis, mode) }}
+  {{ render_cma_robustness_figures(cma_section.robustness_figures, mode) }}
   {% endif %}
 
   {% if cma_section.figures %}
