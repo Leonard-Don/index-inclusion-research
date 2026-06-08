@@ -68,6 +68,7 @@ PLACEBO_CAR_COLUMNS: tuple[str, ...] = (
     "placebo_q975",
     "empirical_p_value",
     "n_events",
+    "n_events_effective",
     "n_placebo_draws",
     "seed",
 )
@@ -281,7 +282,12 @@ def compute_placebo_car_distribution(
 
     Returns one row per ``(market, event_phase, window)``; an empty
     schema-anchored frame when the panel is empty / lacks columns / has too few
-    events.
+    events. ``n_events`` is the raw event-id group count for the cell, while
+    ``n_events_effective`` is the number of those events that contribute a
+    finite window CAR to ``real_mean_car`` — the two differ whenever an event
+    lacks a usable abnormal return in the window (e.g. delisted / acquired
+    tickers with no price), and ``n_events_effective`` is the N to compare
+    against the permutation / clustered-SE tables.
     """
     windows = _normalise_windows(car_windows)
     required = {"market", phase_col, event_id_col, relative_day_col, ar_column}
@@ -329,6 +335,13 @@ def compute_placebo_car_distribution(
             ]
             real_series = pd.Series(real_cars, dtype=float).dropna()
             real_mean = float(real_series.mean()) if not real_series.empty else np.nan
+            # ``n_events`` is the raw (market, phase) cell group count; the real
+            # mean CAR is averaged only over events with a finite window sum
+            # (delisted / acquired tickers carry all-NaN window AR), so report
+            # the *effective* N beside it — matching the N the permutation and
+            # clustered-SE tables report and avoiding a CSV that looks
+            # internally inconsistent to a reviewer cross-checking the columns.
+            n_events_effective = int(real_series.size)
 
             # Candidate placebo centers: any window of length ``span`` that
             # fits inside the panel and whose own span never overlaps the real
@@ -358,6 +371,7 @@ def compute_placebo_car_distribution(
                         "placebo_q975": np.nan,
                         "empirical_p_value": np.nan,
                         "n_events": int(n_events),
+                        "n_events_effective": n_events_effective,
                         "n_placebo_draws": 0,
                         "seed": int(seed),
                     }
@@ -399,6 +413,7 @@ def compute_placebo_car_distribution(
                         "placebo_q975": np.nan,
                         "empirical_p_value": np.nan,
                         "n_events": int(n_events),
+                        "n_events_effective": n_events_effective,
                         "n_placebo_draws": 0,
                         "seed": int(seed),
                     }
@@ -422,6 +437,7 @@ def compute_placebo_car_distribution(
                     "placebo_q975": float(np.quantile(placebo_arr, 0.975)),
                     "empirical_p_value": float(p_value),
                     "n_events": int(n_events),
+                    "n_events_effective": n_events_effective,
                     "n_placebo_draws": int(placebo_arr.size),
                     "seed": int(seed),
                 }

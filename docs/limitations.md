@@ -63,6 +63,21 @@
   与短窗口事件研究文献一致；用 `--estimation-window LOW,HIGH` 改写）。切换引擎
   在 CN 样本上经验上会让 CAR 偏移约 5-15 bps（β 与 1 之差带来的修正），主表
   保持不变；若要把另一引擎纳入论文，应在 `docs/analysis_parameters.md` 的变更日志中记录这次口径变更。
+- **事件窗有效 AR 缺失率与幸存者偏差（必须在论文中披露）**：在
+  `real_matched_event_panel.csv` 中 **US 处理事件约 39.3%（611 中 240）在 `[-1,+1]`
+  窗内无有效 `ar`**（announce / effective 为同一批 240 个证券；宽窗 `[-3,+3]`/`[-5,+5]`
+  有效 N 略升至 372/373）；CN 处理与 US/CN 对照均为 0%。
+  - **根因（真实价格缺口，非 build/match bug）**：240 个里 236 个整段面板 `close`/`ret`
+    全空——它们是退市 / 被并购 / 改代码的旧标的（如 Allergan、ACE→CB），yfinance
+    不再返回其 OHLCV。匹配面板按事件×相对日建满网格再左连价格；缺价标的
+    `close`/`ret`→NaN（`benchmark_ret` 以日历日为键仍在），故 `ar` NaN，缺失经网格
+    padding 暴露，且偏向早年（2010–2017）。
+  - **对主结果的影响**：主表（`event_study_summary.csv`）与全部稳健性检验都先
+    `dropna(CAR)` 再算，用的都是有效样本——US announce 主表 N 已是加入 255 + 剔除
+    116 = **371**（非 611）。故缺失**不改主表数字**，真正限制是**样本选择 / 幸存者偏差**：
+    有效样本偏向存续公司，被剔的 240 个非随机集中于并购 / 退市标的，论文须标 N=371。
+    `robustness_placebo_car.csv` 现并列 `n_events`（611）与 `n_events_effective`（371），
+    以后者为准。
 - **σ 估计**：默认从 panel 内 `[-window_pre, -2]` 区间估计 (window_pre 默认 20)；
   这是 18 日的 in-panel proxy estimation window，比文献标准（120-250 日）短。
 - **标准化**：`compute_patell_bmp_summary` 在简单 t 之外提供 Patell t 与 BMP t；

@@ -164,6 +164,34 @@ def test_placebo_real_car_lands_in_tail_for_strong_effect() -> None:
     assert int(row["n_placebo_draws"]) > 0
 
 
+def test_placebo_effective_n_excludes_events_missing_window_ar() -> None:
+    """``n_events_effective`` must count only events with a finite window CAR.
+
+    Mirrors the real US-announce panel, where ~39% of treated events are
+    delisted/acquired tickers with no price (hence all-NaN window ``ar``).
+    ``n_events`` is the raw (market, phase) cell group count; the real mean CAR
+    is computed only over events with a finite window sum, so the two diverge
+    and downstream readers must compare against the *effective* N — the same
+    sample the permutation / clustered-SE tables report.
+    """
+    panel = _matched_panel(n_events=12, treatment_jump=0.05)
+    treated = panel["treatment_group"] == 1
+    treated_ids = sorted(panel.loc[treated, "event_id"].unique())
+    # Knock out the window AR for a third of the treated events (mimicking the
+    # price-data gap) — they keep their grid rows but carry no usable AR.
+    dropped = set(treated_ids[:4])
+    window = panel["relative_day"].between(-1, 1)
+    panel.loc[panel["event_id"].isin(dropped) & window, "ar"] = np.nan
+
+    result = compute_placebo_car_distribution(
+        panel, [(-1, 1)], n_placebo_draws=100, seed=17
+    )
+    row = result.iloc[0]
+    assert int(row["n_events"]) == len(treated_ids)  # raw cell group count
+    assert int(row["n_events_effective"]) == len(treated_ids) - len(dropped)
+    assert int(row["n_events_effective"]) < int(row["n_events"])
+
+
 def test_placebo_is_deterministic_under_fixed_seed() -> None:
     panel = _matched_panel(n_events=16, treatment_jump=0.05)
     first = compute_placebo_car_distribution(panel, [(-1, 1)], n_placebo_draws=200, seed=99)

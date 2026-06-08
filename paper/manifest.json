@@ -363,8 +363,8 @@
       "section": "figures",
       "source": "results/literature/citation_network.png",
       "target": "figures/citation_network.png",
-      "sha256": "0edcdd07ad5269d5f93cf2b4caa8caa1691f8bcefb54b1ced216a1f65cc2d78d",
-      "size_bytes": 81192
+      "sha256": "ce6f881a9df1968c6bbedaebc8d69e738d639a4d23dac3450aa6dff2eac06b8c",
+      "size_bytes": 81542
     },
     {
       "section": "figures",
@@ -377,49 +377,49 @@
       "section": "figures",
       "source": "results/real_figures/hs300_rdd_robustness_forest.pdf",
       "target": "figures/hs300_rdd_robustness_forest.pdf",
-      "sha256": "cacd64206288f285e8839933fc3bf6692f864a59d357e3ed0a046f8e8380e965",
+      "sha256": "48729baf3022d2adc34f097383c8564118aad767355f1e4d07899e3297899760",
       "size_bytes": 74771
     },
     {
       "section": "figures",
       "source": "results/real_figures/cma_verdicts_forest.pdf",
       "target": "figures/cma_verdicts_forest.pdf",
-      "sha256": "f9ea76f2317d79901882d8a8b09c25ed9712e4243e4cd2010e47585fe94ac826",
+      "sha256": "27fe0dc5c6abd1afcae599566376bd65b1f3f064ba6b5b4d30cdfe80c8d99d52",
       "size_bytes": 138847
     },
     {
       "section": "figures",
       "source": "results/real_figures/cma_verdicts_sensitivity.pdf",
       "target": "figures/cma_verdicts_sensitivity.pdf",
-      "sha256": "e06bf0b32a7528ed9c9565c80a861c12dbc4dc45c914a81c575bea59f61db43e",
+      "sha256": "98e0d3f14744dc9dd574e5b9d43b36bd3b368f09f68fd4d89afaa0faab2dc214",
       "size_bytes": 139677
     },
     {
       "section": "figures",
       "source": "results/real_figures/cma_verdicts_ar_engine.pdf",
       "target": "figures/cma_verdicts_ar_engine.pdf",
-      "sha256": "6ab5842e5b379a59966a30444d717441fbb9ada28297d79615d1e473524115a6",
+      "sha256": "feeb62efc66f709d8fe58ec9afdab109dfe55664825618e27d8d151a68b852a4",
       "size_bytes": 154022
     },
     {
       "section": "figures",
       "source": "results/real_figures/cma_verdicts_2d_robustness.pdf",
       "target": "figures/cma_verdicts_2d_robustness.pdf",
-      "sha256": "7c1183062df69573e7978131154c92700e291367bab477edd047b7af535e41e4",
+      "sha256": "77c5c8977089ecb432dd18c3675c8edcf8404228609e3df7049dda36383e02c3",
       "size_bytes": 152631
     },
     {
       "section": "figures",
       "source": "results/real_figures/verdict_timeline.pdf",
       "target": "figures/verdict_timeline.pdf",
-      "sha256": "7fee5fc85204a14746a214cae21009a1aca798a984d2117dab22b06300772bae",
+      "sha256": "4be1f08e9159f4cfb6f238da6e499b37bb51487c5e6102df8a3a88306cafd1b5",
       "size_bytes": 56003
     },
     {
       "section": "figures",
       "source": "results/literature/literature_timeline.pdf",
       "target": "figures/literature_timeline.pdf",
-      "sha256": "8e295a1876a25db29cf4f3aea8bcbee64186fd4e7852e92155ad6417d80ee8c9",
+      "sha256": "2ea9a5823807f3c954ebfb00c750f36b1fd17cbb2119f0aca67c22b8e2f29d7e",
       "size_bytes": 83988
     },
     {
@@ -559,8 +559,8 @@
       "section": "narrative",
       "source": "docs/limitations.md",
       "target": "narrative/limitations.md",
-      "sha256": "1f7a3f95964cd4900927d8a777376c2519927be0ce2f7b93b1015cdd7b06e35d",
-      "size_bytes": 14265
+      "sha256": "912b0e51a27c0a5fdb648ba556f0de1806c4e3030f405fa5aec8ca4171adb98c",
+      "size_bytes": 15667
     },
     {
       "section": "narrative",
