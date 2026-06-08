@@ -1,5 +1,7 @@
 # Index-Inclusion Research Toolkit
 
+**English** · [简体中文](README.zh-CN.md)
+
 [![CI](https://github.com/Leonard-Don/index-inclusion-research/actions/workflows/ci.yml/badge.svg)](https://github.com/Leonard-Don/index-inclusion-research/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%2B-3776AB)
 ![Research](https://img.shields.io/badge/focus-index%20inclusion%20research-1f6feb)
