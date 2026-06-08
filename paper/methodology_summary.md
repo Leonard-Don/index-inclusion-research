@@ -1,6 +1,6 @@
 # 指数纳入效应跨市场不对称研究 · 方法论摘要
 
-**生成时间**: 2026-05-31 | **裁决基线快照**: 2026-05-31
+**生成时间**: 2026-06-08 | **裁决基线快照**: 2026-05-31
 
 ## 1. 样本规模
 
@@ -93,7 +93,7 @@ index-inclusion-methodology-summary       # regenerate this card
 
 ## 8. 工具链
 
-- 48 个 console scripts（见 `docs/cli_reference.md`）
+- 43 个 console scripts（见 `docs/cli_reference.md`）
 - Doctor：30 个 health checks（主动监控 verdicts + figures + PAP + paper skeleton + methodology summary）
 - Public summary：`data/public/index_research_summary.json` (schema v1)
 - Paper bundle：72 artifacts auto-collected from `results/`，含本卡片 (`paper/methodology_summary.md`)

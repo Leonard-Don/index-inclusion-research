@@ -104,7 +104,7 @@
   - H4 → `results/real_tables/cma_gap_drift_market_regression.csv`（`cn_coef`, `cn_se`, `cn_p_value`, `n_obs`，n_covariates=2: cn_dummy + gap_length_days）。
   - H5 → `results/real_tables/cma_h5_limit_predictive_regression.csv`（`limit_coef`, `limit_se`, `limit_p_value`, `n_obs`，n_covariates=1）。
   - H6 的 pooled SD 由 `data/processed/hs300_weight_change.csv` × `results/real_tables/cma_gap_event_level.csv` 按 weight_proxy 中位数切重/轻 bucket 重算；面板缺失时回退到 H6 OLS-HC3 反推的 \|d\|，并在 interpretation 里明文说明。
-- **可重现**：`index-inclusion-power-analysis` 是 48 个 console scripts 的第 48 号；它会按当前 verdicts / 回归 CSV 即时重算，不需要单独缓存。
+- **可重现**：`index-inclusion-power-analysis` 是 43 个 console scripts 的第 42 号；它会按当前 verdicts / 回归 CSV 即时重算，不需要单独缓存。
 - **诚实读图**：
   - **H3** 的 power<0.30 意味着即便真实命中率确实偏离 50%，本研究在 n=4 下也很难把它"测出来"；这是把 H3 归入 supplementary 的统计学依据，而不是"我们不喜欢这个结论"。
   - **H4** 的 power≈0.08 同样不允许"证据不足 ⇒ H4 错"的反推。n=455 看似充足，但**观测效应**太小（coef 仅 0.5 倍 SE）使 post-hoc 功效塌到 < 0.10；MDE/coef ≈ 5.4 表示：要把这一项升级为"支持"，需要 effect 翻 5 倍**或** n 翻 ~30 倍。

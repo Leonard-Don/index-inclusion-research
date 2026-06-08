@@ -8,7 +8,7 @@
     "results/figures/verdict_timeline.png",
     "results/literature/literature_timeline.png"
   ],
-  "generated_at": "2026-05-31T12:42:01+00:00",
+  "generated_at": "2026-06-08T01:22:37+00:00",
   "hs300_rdd": {
     "main_bandwidth": 0.0600000000000022,
     "main_n_obs": 148,
@@ -24,7 +24,7 @@
     ]
   },
   "literature": {
-    "console_scripts_count": 48,
+    "console_scripts_count": 43,
     "papers_indexed": 16,
     "research_thread_names": [
       "price_pressure",
@@ -78,7 +78,7 @@
     ]
   },
   "pap_baseline": {
-    "frozen_for_days": 0,
+    "frozen_for_days": 8,
     "path_ref": "snapshots/pre-registration-2026-05-31.csv",
     "snapshot_date": "2026-05-31"
   },
@@ -231,8 +231,8 @@
   "source_codebase_version": "0.1.0",
   "verdict_timeline": {
     "first_commit_date": "2026-05-05",
-    "last_commit_date": "2026-05-29",
-    "total_commits_tracked": 5,
+    "last_commit_date": "2026-05-31",
+    "total_commits_tracked": 6,
     "total_verdict_changes": 3,
     "verdict_changes_per_hypothesis": {
       "H1": 0,

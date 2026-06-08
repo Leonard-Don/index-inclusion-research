@@ -1,5 +1,11 @@
 # HS300 RDD 候选样本工作流
 
+> **定位提醒**：本工作流保留用于复现与数据采集，但 HS300 RDD **在数学上不构成有效 RDD**——running variable
+> 是按中证官方名单序号铺出的等距数列、与处理变量 100% 共线、断点两侧零重叠，识别假设无从陈述（详见
+> [docs/hs300_rdd_l3_collection_audit.md](hs300_rdd_l3_collection_audit.md) 文首"首要结论"与
+> [docs/identification_roadmap.md](identification_roadmap.md)）。论文里它仅作附录里"尝试过但识别失败"的设计，
+> 不作识别证据、不进主表。
+
 RDD 默认不再自动回退 demo。
 
 - 当 [data/raw/hs300_rdd_candidates.csv](../data/raw/hs300_rdd_candidates.csv) 存在且通过校验时，进入 `L3` 正式边界样本

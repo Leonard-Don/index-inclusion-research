@@ -5,10 +5,10 @@
 ![Research](https://img.shields.io/badge/focus-index%20inclusion%20research-1f6feb)
 ![Literature](https://img.shields.io/badge/literature-16%20papers-6f42c1)
 ![Pipeline](https://img.shields.io/badge/pipeline-10%20steps-0969da)
-![CLI](https://img.shields.io/badge/CLI-48%20commands-2da44e)
+![CLI](https://img.shields.io/badge/CLI-43%20commands-2da44e)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-`index-inclusion-research` 是一个把指数纳入效应文献、真实样本结果与识别设计放到同一工作流里的实证研究项目。它把 16 篇文献库、3 条研究主线、真实样本表和 HS300 RDD 扩展统一到同一 dashboard 与 CLI 体系，适合：
+`index-inclusion-research` 是一个把指数纳入效应文献、真实样本结果与稳健性追踪放到同一工作流里的**描述性**实证研究项目。它把 16 篇文献库、3 条研究主线、真实样本表和 HS300 RDD 工具链（保留用于复现；该设计本身不构成有效识别，见"数据与方法限制"）统一到同一 dashboard 与 CLI 体系，适合：
 
 - 指数纳入效应论文的文献综述与研究展示
 - 事件研究、匹配回归与中国市场识别的实证复现
@@ -144,7 +144,7 @@ make smoke   # 浏览器 smoke test，需要 Playwright + Chromium
 1. [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)：16 篇文献如何统一映射到当前项目。
 2. [docs/research_delivery_package.md](docs/research_delivery_package.md)：论文 / 答辩交付边界。
 3. [docs/dashboard_architecture.md](docs/dashboard_architecture.md)：dashboard 主干。
-4. [docs/cli_reference.md](docs/cli_reference.md)：48 个 console scripts 的完整说明。
+4. [docs/cli_reference.md](docs/cli_reference.md)：43 个 console scripts 的完整说明。
 5. 启动界面：`index-inclusion-dashboard` → 打开 <http://localhost:5001>。
 
 ## 项目结构
@@ -177,7 +177,7 @@ tests/                 1100+ 个单元测试 + 浏览器 smoke
 
 ### 3. 制度识别与中国市场证据
 
-回答："指数效应的结论会不会因制度背景和识别方法而改变？" 主要依赖中国样本事件研究、匹配对照组、DID 风格汇总、HS300 RDD 扩展（详见 [docs/hs300_rdd_workflow.md](docs/hs300_rdd_workflow.md)）。研究主线入口：`index-inclusion-identification`。
+回答："指数效应的格局会不会因制度背景而不同？" 主要依赖中国样本事件研究、匹配对照组（横截面水平差，**非 DiD**）。注意：HS300 RDD 工具链（详见 [docs/hs300_rdd_workflow.md](docs/hs300_rdd_workflow.md)）保留用于复现，但该设计在数学上**不构成 RDD**、不作识别证据（见下文"数据与方法限制"）。研究主线入口：`index-inclusion-identification`。
 
 ## 文献相关文件
 
@@ -219,15 +219,15 @@ index-inclusion-refresh-real-evidence                # 真实数据 + evidence m
 index-inclusion-doctor --fail-on-warn                # 严格门禁（warn 也阻断）
 ```
 
-按用途分组（共 48 个 console scripts）：
+按用途分组（共 43 个 console scripts）：
 
 - 数据流水线：`build-event-sample` / `build-price-panel` / `match-controls` / `match-robustness` / `run-event-study` / `run-regressions`
 - 样本数据：`generate-sample-data` / `download-real-data`
-- 报表与图表：`make-figures-tables` / `generate-research-report` / `paper-bundle` / `paper-audit` / `build-hs300-rdd-forest` / `build-cma-verdicts-forest` / `build-cma-sensitivity-forest` / `build-cma-ar-engine-forest` / `build-cma-2d-robustness-heatmap` / `citation-graph` / `verdict-timeline` / `literature-timeline`
+- 报表与图表：`make-figures-tables` / `generate-research-report` / `paper-bundle` / `paper-audit` / `build-hs300-rdd-forest` / `build-cma-figures`（`--which {forest,sensitivity,ar,heatmap,all}`，四张 CMA 稳健性图统一入口）/ `verdict-timeline` / `literature-timeline`
 - Dashboard 与三条主线：`dashboard` / `price-pressure` / `demand-curve` / `identification`
 - HS300 RDD 工具链：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`
 - 跨市场不对称 + 假说证据：`cma` / `prepare-passive-aum` / `download-passive-aum-cn` / `download-cn-passive-aum-proxy` / `compute-h6-weight-change` / `refresh-real-evidence` / `power-analysis`（H3/H6 后验功效）
-- 总入口：`rebuild-all` / `verdict-summary` / `doctor` / `export-public-summary` / `paper-skeleton`（自动生成 `paper/skeleton.md`）/ `methodology-summary`（自动生成 `paper/methodology_summary.md` 方法论摘要卡）/ `paper-integrity`（跨文档一致性发布门禁）/ `tex-export`（从 Markdown 论文骨架导出 `paper/manuscript.tex` + `references.bib`）/ `enrich-bib`（CrossRef 自动补全 `references.bib` 的 journal / volume / pages / DOI）/ `add-paper`（交互式新增文献并同步 catalog + BibTeX + 下游工件）/ `citation-graph`（生成启发式文献关联网络 PNG/PDF/CSV，非逐条引用核验）/ `verdict-timeline`（从 git log 重建 H1-H7 裁决演进 swimlane 图）/ `literature-timeline`（按发表年×研究主线渲染 16 篇文献年表，颜色=立场、大小=链入度）
+- 总入口：`rebuild-all` / `verdict-summary` / `doctor` / `export-public-summary` / `paper-skeleton`（自动生成 `paper/skeleton.md`）/ `methodology-summary`（自动生成 `paper/methodology_summary.md` 方法论摘要卡）/ `paper-integrity`（跨文档一致性发布门禁）/ `tex-export`（从 Markdown 论文骨架导出 `paper/manuscript.tex` + `references.bib`）/ `enrich-bib`（CrossRef 自动补全 `references.bib` 的 journal / volume / pages / DOI）/ `add-paper`（交互式新增文献并同步 catalog + BibTeX + 下游工件）/ `verdict-timeline`（从 git log 重建 H1-H7 裁决演进 swimlane 图）/ `literature-timeline`（按发表年×研究主线渲染 16 篇文献年表，颜色=立场、大小=链入度）
 
 `match-controls` 现在会同时输出 covariate balance 表（`match_balance.csv`，Stuart 2010 SMD）；`doctor` 的 `matched_sample_balance` 检查在 |SMD|≥0.25 时变 warn。`compute_pre_runup_bootstrap_test` 默认按 `announce_date` 做 block bootstrap，`cluster_method` 列记录采样方式。
 
@@ -297,12 +297,12 @@ GitHub Actions 通过 `astral-sh/setup-uv` + `uv sync --extra dev`（按 `uv.loc
 - `mkt_cap` / `turnover` 来自 Yahoo `sharesOutstanding` 近似，不是交易所历史口径。
   若设置 `TUSHARE_TOKEN` 并用 `index-inclusion-download-real-data --cn-price-source tushare`，
   A 股侧可改用 Tushare 的日线 + `daily_basic` 市值 / 换手率口径刷新。
-- HS300 RDD 当前 L3 覆盖 2020-11 到 2025-11 共 11 个批次、356 条候选，论文级因果声明需扩展到 ≥10 年（见 [docs/hs300_rdd_l3_collection_audit.md](docs/hs300_rdd_l3_collection_audit.md)）。
+- HS300 RDD 在数学上**不构成 RDD**，是一次"尝试过但识别失败"的设计，**不作识别证据、不进主表**：官方只发布"调入/备选名单"（排名序），数据里的 `running_variable` 是按序号铺出的等距数列（299.85…300.28，间隔 0.01），与处理变量 100% 共线、断点两侧零重叠，识别假设根本无从陈述；McCrary p≈0.44 是等距构造的假象。这不是"样本不够"——扩样本也救不回（见 [docs/hs300_rdd_l3_collection_audit.md](docs/hs300_rdd_l3_collection_audit.md) 与 [docs/identification_roadmap.md](docs/identification_roadmap.md)）。
 - 7 条 CMA 假说为 post-hoc、探索性形成（在观察到 announce-vs-effective / CN-vs-US 不对称结果之后），本项目无预分析计划。判据、阈值与样本边界记录在 [docs/analysis_parameters.md](docs/analysis_parameters.md)（透明性文档，非 pre-analysis plan）；裁决基线快照（`snapshots/pre-registration-*.csv`）配合 `index-inclusion-verdict-summary --vs-pap` 用于跨时间观察 verdict 稳定性，dashboard hero 的状态 pill 也会标 verdict 相对基线快照是否变化。
 - 假说证据强度分层：`core`（H1/H2/H5/H7）vs `supplementary`（H3/H4/H6），见 `cma_hypothesis_verdicts.csv` 的 `evidence_tier` 列。H2 由 `EVIDENCE_TIER_PROMOTION_FLOOR` 数据驱动升级——补入 CN ETF TNA proxy 后合并 n=18 跨过 15 阈值。
 - H7 现在同时有描述性 sector spread 与 `cma_h7_sector_interaction.csv` 的 sector×phase/treatment 回归；H2 在 2026 年补入 CN ETF TNA proxy（`data/raw/cn_passive_aum_proxy.csv`）后，evidence manifest 中由 `warn` 升级为 `pass`，dashboard 卡片同步更新（详见 [data/raw/README.md](data/raw/README.md) 的 proxy 说明）。
 - 事件研究除简单 t 外提供 Patell Z 与 BMP t（`results/real_event_study/patell_bmp_summary.csv`）。
-- HS300 RDD 主结果 (`car_m1_p1` τ=2.96%, p=0.095, n=148) 同时跑了完整稳健性面板（main / donut / placebo±0.05 / polynomial），见 `results/literature/hs300_rdd/rdd_robustness.csv` 与首页 forest plot；论文应当报告全套面板而非只引用显著的 main spec。
+- HS300 RDD 全套稳健性面板（main `car_m1_p1` τ=2.96%, p=0.095, n=148 / donut / placebo±0.05 / polynomial，见 `results/literature/hs300_rdd/rdd_robustness.csv` 与首页 forest plot）仅作**诚实展示效应脆弱 + 断点是构造假象**之用：main 仅边际（连 0.05 都没过）、donut 失去显著、二阶多项式 τ 翻负（p=0.939）、placebo +0.05 反而接近显著（警告信号）。它不作识别结论；论文如实报告全套面板，但把 RDD 定位为附录里的失败识别尝试。
 
 ## 论文写作建议
 
