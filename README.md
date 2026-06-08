@@ -1,4 +1,4 @@
-# Index Inclusion Research Toolkit
+# Index-Inclusion Research Toolkit
 
 [![CI](https://github.com/Leonard-Don/index-inclusion-research/actions/workflows/ci.yml/badge.svg)](https://github.com/Leonard-Don/index-inclusion-research/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%2B-3776AB)
@@ -8,327 +8,148 @@
 ![CLI](https://img.shields.io/badge/CLI-43%20commands-2da44e)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-`index-inclusion-research` 是一个把指数纳入效应文献、真实样本结果与稳健性追踪放到同一工作流里的**描述性**实证研究项目。它把 16 篇文献库、3 条研究主线、真实样本表和 HS300 RDD 工具链（保留用于复现；该设计本身不构成有效识别，见"数据与方法限制"）统一到同一 dashboard 与 CLI 体系，适合：
+> **What this is.** An end-to-end empirical-finance research project — *when a stock is added to a major index, does its price actually move, is the move permanent, and does the effect survive scrutiny (especially in China)?* — built solo in Python: a reproducible event-study pipeline, a matched-control design, an interactive research dashboard, ~1,190 tests, and an answer I report **honestly**, including where it comes back null and where my own identification strategy didn't hold up.
 
-- 指数纳入效应论文的文献综述与研究展示
-- 事件研究、匹配回归与中国市场识别的实证复现
-- 课堂汇报、导师讨论和项目维护的同一套界面输出
+It is deliberately a **descriptive** study, not a causal-claims paper — see [The honest version](#the-honest-version-read-this-first) below.
 
-项目围绕 3 条研究主线展开：
+---
 
-- `短期价格压力与效应减弱`
-- `需求曲线与长期保留`
-- `制度识别与中国市场证据`
+## TL;DR
 
-回答 3 个核心问题：
+- **The question.** Index-inclusion is a classic "demand shock" laboratory: when CSI 300 / S&P 500 reshuffles, passive funds *must* buy the new names. The textbook prediction is a price pop. I test whether it happens, whether it reverses, and which mechanism drives it — across **two markets (CN + US)**.
+- **What I found.** The **announcement-window** effect is real and robust in the US (US announce `CAR[-1,+1] ≈ +1.3%`, permutation `p = 0.0002`, holds under event-clustered SE), marginal in China (`p ≈ 0.03`). But the **effective-day window is null everywhere** (`p > 0.27`), and **5 of 7 mechanism hypotheses are inconclusive**. That pattern — a shrinking, mostly-anticipated effect — is consistent with the *disappearing index effect* (Greenwood & Sammon, 2022), here **replicated cross-market**.
+- **What it demonstrates.** Full-stack empirical research (event study, propensity-style matching with covariate balance, pseudo-event placebos, permutation tests, clustered SE, multiple-testing correction), a reproducible pipeline with automated quality gates, and — the part I care most about — **knowing and stating the limits of the data** rather than manufacturing significance.
 
-- 指数纳入后的上涨是不是只是短期交易冲击？
-- 价格效应会不会只部分回吐，从而支持需求曲线向下倾斜？
-- 不同市场制度和识别方法会不会改变结论，尤其是在中国市场？
+---
 
-## 一屏速览
+## The honest version (read this first)
 
-- **交付形态**：本地 dashboard + CLI + 论文交付包，把文献、样本、图表和结论放在同一 workflow。
-- **证据主线**：短期价格压力、长期需求曲线、制度识别 / 中国市场扩展。
-- **真实样本**：CMA 跨市场 pipeline 已输出 7 条机制假说裁决，并显式标注正文 / 附录边界。
-- **维护门禁**：README、CLI reference、console scripts、pipeline 步数和 paper wording 都有回归 guard。
+A research project is only as good as what it admits. Three things I put up front rather than bury:
 
-## 研究当前结论速览
+1. **My flagship identification design was not valid, and I say so.** I built an HS300 regression-discontinuity (RDD) around the index-membership cutoff. On inspection the "running variable" is a fabricated rank index (evenly spaced `299.85 … 300.28`), **perfectly collinear with treatment, with zero overlap at the cutoff** — mathematically not an RDD at all. I kept the full machinery for reproducibility but **downgraded it to an appendix "design that failed identification"** instead of presenting it as causal evidence. ([why, in detail](docs/identification_roadmap.md))
+2. **The hypotheses are post-hoc / exploratory.** The 7 mechanism hypotheses were formed *after* seeing the announce-vs-effective and CN-vs-US asymmetries; there is no pre-analysis plan. The main table reports only `evidence_tier = core` results; small-n / exploratory ones (e.g. H3 with **n = 4**) stay in the appendix, flagged.
+3. **The data has real limits.** US market-cap/weights are Yahoo approximations; ~39% of US announcement events are dropped for lack of valid window returns — and that drop is **non-random (delisted / acquired tickers)**, i.e. a survivorship/selection bias I document explicitly (effective `N = 371`). ([full limitations](docs/limitations.md))
 
-跨市场不对称（CMA）pipeline 在真实样本上的 7 条机制假说裁决（`index-inclusion-verdict-summary` 也能终端打印）：
+Putting this near the top is intentional: it's exactly the signal I'd want to see from a research hire.
 
-| 假说 | 名称 | 裁决 | 头条指标 | 写作层级 | 主线 |
-|---|---|---|---|---|---|
-| H1 | 信息泄露与预运行 | 证据不足 | 置换 p = 0.965 (n=455) | 正文 core | 制度识别 |
-| H2 | 被动基金 AUM 差异 | 证据不足 | US AUM ratio = 13.48；CN proxy 已补 (combined n=18) | 正文 core | 需求曲线 |
-| H3 | 散户 vs 机构结构 | 支持 | 双通道命中率 = 0.50 (n=4) | 附录 supplementary | 短期价格压力 |
-| H4 | 卖空约束 | 证据不足 | regression p = 0.604 (n=455) | 附录 supplementary | 制度识别 |
-| H5 | 涨跌停限制 | 证据不足 | limit_coef p = 0.427 (n=1096) | 正文 core | 制度识别 |
-| H6 | 指数权重可预测性 | 证据不足 | heavy−light spread = -0.016 (n=87) | 附录 supplementary | 需求曲线 |
-| H7 | 行业结构差异 | 支持 | US sector spread = 5.97；交互 p = 0.095 | 正文 core | 制度识别 |
+---
 
-`make rebuild` 跑 10 步流水线刷新所有产出。详见 [results/real_tables/cma_hypothesis_verdicts.csv](results/real_tables/cma_hypothesis_verdicts.csv) 和 [docs/paper_outline_verdicts.md](docs/paper_outline_verdicts.md)。
-H2 在 2026 年补入 `data/raw/cn_passive_aum_proxy.csv`（CSI300 + CSI500 ETF TNA 年终聚合 proxy）后，evidence_tier 从 supplementary 升级为 core；evidence manifest 中状态从 `warn` 转为 `pass`，但 verdict 是 "证据不足"——CN 一侧方向符合 H2，US 一侧 effective CAR 没有持续衰减。所以 H2 仍不能写成"被动买盘单一机制"。需特别说明：H5 与 H2 在从免费 Yahoo 切换到持牌 Tushare A 股数据后，由"支持"/"部分支持"翻转为"证据不足"（与摘要口径一致），首页不再宣传已撤回的发现。
+## Headline results — 7 mechanism hypotheses
 
-阈值灵敏度（"如果阈值是 0.05 而不是 0.10？"）做成六层入口（决定 / 数据 / CLI / dashboard / doctor / forest 图），终端一行：`index-inclusion-verdict-summary --sensitivity`。完整说明见 [docs/sensitivity_workflow.md](docs/sensitivity_workflow.md)。
+The cross-market-asymmetry (CMA) pipeline emits a verdict per hypothesis on the real sample (`index-inclusion-verdict-summary` prints the same table). Verdict column is kept in the project's original notation; the right column is the plain-English reading.
 
-## GitHub 首页先看什么
+| #  | Mechanism hypothesis | 裁决 | Reading (headline stat, n) |
+|----|----------------------|------|-----------------------------|
+| H1 | Information leakage / pre-run-up | 证据不足 | inconclusive — permutation `p = 0.97` (n=455) |
+| H2 | Passive-fund AUM gap (demand curve) | 证据不足 | inconclusive — US AUM ratio **13.5×**, but effective CAR shows no decay (combined n=18) |
+| H3 | Retail vs institutional structure | 支持 | nominally supported, but **n = 4, ~zero power** → appendix only |
+| H4 | Short-sale constraints | 证据不足 | inconclusive — regression `p = 0.60` (n=455) |
+| H5 | Price-limit (涨跌停) rules | 证据不足 | inconclusive — limit-coef `p = 0.43` (n=1096) |
+| H6 | Index-weight predictability | 证据不足 | inconclusive — heavy−light spread −0.016 (n=87) |
+| H7 | Sector-structure differences | 支持 | supported — US sector spread 5.97, interaction `p = 0.095` |
 
-第一次点进这个仓库，建议按这 4 步看：
+*(`证据不足` = insufficient evidence; `支持` = supported.)* Source of truth: [results/real_tables/cma_hypothesis_verdicts.csv](results/real_tables/cma_hypothesis_verdicts.csv). A `--sensitivity` flag re-runs every verdict across significance thresholds (0.05 → 0.20) with Bonferroni/BH correction; details in [docs/sensitivity_workflow.md](docs/sensitivity_workflow.md).
 
-1. 看下面的"界面预览"，知道项目最终交付长什么样。
-2. 看 [docs/research_delivery_package.md](docs/research_delivery_package.md)，理解当前论文 / 答辩主线、正文证据和附录边界。
-3. 看"快速开始"，在本地拉起 dashboard。
-4. 看 [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)，理解 16 篇文献如何映射到当前项目。
-5. 如果要继续维护 dashboard 主干，再看 [docs/dashboard_architecture.md](docs/dashboard_architecture.md)。
+> Two findings (H5 price-limits, H2 demand) flipped from "supported" to "inconclusive" once I replaced free Yahoo data with licensed Tushare A-share data. I left the reversal in the record rather than quietly keeping the more flattering numbers.
 
-## 界面预览
+---
+
+## Robustness — what makes the announcement effect believable
+
+The descriptive claim ("announce-window strong, effective-window null") is backed by four independent checks, all generated by the pipeline into `results/real_tables/robustness_*.csv` and `results/real_figures/parallel_trends_aar_*.png`:
+
+| Check | What it shows | US announce `[-1,+1]` | Effective windows |
+|---|---|---|---|
+| Daily AAR parallel trends | treated vs matched control overlap pre-event, diverge only in the window | clean pre-trend, day-0 jump | — |
+| Pseudo-event-date placebo | real CAR sits in the tail of a placebo distribution | `p = 0.005` | `p > 0.29` |
+| Permutation test (sign-flip, 5,000) | empirical significance under H₀ | `p = 0.0002` | `p > 0.27` |
+| Event-clustered SE (CRV1, by date) | inference robust to same-day correlation | `p = 0.0003` | not significant |
+
+All three significance tests agree, and the effective-window null holds under every one — the cross-market "anticipated, mostly-gone" story, not a causal index-demand effect.
+
+---
+
+## Interface preview
+
+The whole project is navigable through one local Flask dashboard (`http://localhost:5001`) — literature, sample, figures and verdicts in a single workflow.
 
 <table>
   <tr>
     <td align="center" width="50%">
       <img src="docs/screenshots/readme-dashboard-overview.png" alt="Dashboard research overview" width="100%">
-      <br><strong>研究首页总览</strong><br>
-      <sub>16 篇文献、真实样本、识别设计与核心结果入口</sub>
+      <br><strong>Research overview</strong><br>
+      <sub>16 papers, real sample, identification design and core results in one entry point</sub>
     </td>
-    <td align="center" width="50%">
-      <img src="docs/screenshots/readme-paper-brief.png" alt="Paper brief page preview" width="100%">
-      <br><strong>单篇文献速读</strong><br>
-      <sub>把文献定位、核心贡献和识别挑战放进同一阅读页</sub>
-    </td>
-  </tr>
-  <tr>
     <td align="center" width="50%">
       <img src="docs/screenshots/cma-evidence-tiers.png" alt="CMA evidence tiers and H7 interaction detail" width="100%">
-      <br><strong>CMA 证据层级与 H7 行业交互</strong><br>
-      <sub>七个假说的支持强度、稳健性与行业交互一屏核对</sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="docs/screenshots/readme-mobile-overview.png" alt="Dashboard mobile preview" width="58%">
-      <br><strong>移动端阅读</strong><br>
-      <sub>核心研究摘要在窄屏下保持可读</sub>
+      <br><strong>CMA evidence tiers & H7 interaction</strong><br>
+      <sub>support strength, robustness and sector interaction for all 7 hypotheses on one screen</sub>
     </td>
   </tr>
 </table>
 
 <details>
-<summary>查看完整长截图 / Full-page screenshots</summary>
+<summary>More screenshots (full-page)</summary>
 
-- [首页完整长截图](docs/screenshots/dashboard-home.png)
-- [单篇文献完整长截图](docs/screenshots/paper-brief.png)
-- [移动端完整长截图](docs/screenshots/dashboard-mobile.png)
+- [Home, full page](docs/screenshots/dashboard-home.png)
+- [Single-paper reader](docs/screenshots/paper-brief.png)
+- [Mobile view](docs/screenshots/dashboard-mobile.png)
 
 </details>
 
-仓库没有公开在线 demo，推荐直接在本地运行并打开 `http://localhost:5001`。
+There is no public hosted demo — run it locally (below).
 
-## 快速开始
+---
 
-### 1. 安装
-
-```bash
-# 锁定版本（推荐：使用 uv.lock）
-make sync
-
-# 或传统方式
-python3 -m pip install -e ".[dev]"
-```
-
-### 2. 启动 dashboard
+## Run it
 
 ```bash
-index-inclusion-dashboard
+make sync                      # install pinned deps from uv.lock (reproducible)
+index-inclusion-dashboard      # then open http://localhost:5001
+
+make rebuild                   # re-run the full offline pipeline (events → CMA → figures → report)
+make verdicts                  # print the 7-hypothesis verdict table in the terminal
+make ci                        # lint + type-check + coverage gate + project health checks
 ```
 
-然后打开 <http://localhost:5001>。
+Dashboard modes: `/` (overview), `/?mode=brief` (3-min read), `/?mode=full` (everything), `/paper/<id>` (single-paper reader + source PDF).
 
-### 3. 先看哪些页面
+---
 
-- `/`：一页式总展板（默认 `展示版`）
-- `/?mode=brief`：3 分钟汇报
-- `/?mode=full`：完整材料
-- `/paper/<paper_id>`：单篇文献速读页 + 原文 PDF
+## How it's built (the engineering)
 
-### 4. 常用验证
+The research is ~11k lines; the rest is the infrastructure that makes it reproducible and auditable end-to-end — built to the standard I'd want a research codebase held to.
 
-```bash
-make quality
-make ci      # CI 等价非浏览器门禁，包含 coverage gate
-make smoke   # 浏览器 smoke test，需要 Playwright + Chromium
-```
+- **Deterministic, offline pipeline.** `index-inclusion-rebuild-all` recomputes every result from `data/` in ~3 min with no network calls; the frozen baseline reproduces bit-for-bit (a `pap-diff` drift audit proves it).
+- **Automated quality gates.** A custom `doctor` framework runs 30 health checks (artifact freshness, schema contracts, chart registry, cross-document consistency) and a `paper-integrity` gate cross-checks that the README/paper numbers actually match the committed CSVs. `make ci` is green.
+- **Tested.** ~1,190 unit + integration tests (event study, matching + covariate balance, robustness, pipeline `main()` integration, dashboard rendering), lint (`ruff`) and `mypy` clean.
+- **Honest seeds & snapshots.** All randomness is seeded; verdict baselines are snapshotted so any drift in conclusions is visible over time.
 
-## 维护与扩展前先看什么
+### Methods stack
 
-如果你已经准备继续维护或扩展这个项目：
+Event study (market-adjusted + market-model AR, Patell Z, BMP t) · propensity-style matched controls with Stuart-2010 SMD balance · long-window retention · pseudo-event placebos · sign-flip permutation tests · event-clustered (CRV1) SE · post-hoc power analysis (MDE) · Bonferroni/BH multiple-testing correction.
 
-1. [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)：16 篇文献如何统一映射到当前项目。
-2. [docs/research_delivery_package.md](docs/research_delivery_package.md)：论文 / 答辩交付边界。
-3. [docs/dashboard_architecture.md](docs/dashboard_architecture.md)：dashboard 主干。
-4. [docs/cli_reference.md](docs/cli_reference.md)：43 个 console scripts 的完整说明。
-5. 启动界面：`index-inclusion-dashboard` → 打开 <http://localhost:5001>。
+---
 
-## 项目结构
+## Repo map
 
 ```text
-config/markets.yml
-data/                  raw/ + processed/
-docs/                  literature, dashboard architecture, CLI reference, sensitivity, hs300 rdd
-results/               event_study/, regressions/, figures/, tables/, real_*/, literature/
 src/index_inclusion_research/
-  analysis/            事件研究、回归、RDD、CMA
-  loaders/             数据读写
-  pipeline/            样本构建、匹配（含 covariate balance）
-  web/templates/+static/
-  literature.py / literature_catalog.py / paths.py
-tests/                 1100+ 个单元测试 + 浏览器 smoke
+  analysis/          event study, regressions, RDD, cross-market asymmetry, robustness, power
+  pipeline/          sample construction, matching (+ covariate balance)
+  outputs/           figure & table builders
+  dashboard/ web/    Flask app + templates/static (the interactive front-end)
+  doctor/            project-health check framework
+data/                raw/ + processed/
+results/             event_study/, regressions/, figures/, tables/, real_*/, literature/
+docs/                literature maps, methodology, limitations, identification roadmap (some in Chinese)
+tests/               ~1,190 unit + integration tests
 ```
 
-`paths.py` 提供 `paths.project_root()` 与 `paths.results_dir()` 等工具，所有模块都用它读项目根。设置 `INDEX_INCLUSION_ROOT` 环境变量可以覆盖默认根（容器化或并行测试时有用）。
+Deeper write-ups (several in Chinese): [research delivery package](docs/research_delivery_package.md) · [paper outline](docs/paper_outline.md) · [limitations](docs/limitations.md) · [identification roadmap](docs/identification_roadmap.md) · [CLI reference (43 commands)](docs/cli_reference.md).
 
-## 16 篇文献驱动的三条主线
+---
 
-### 1. 短期价格压力与效应减弱
+## About this project
 
-回答："指数纳入后的上涨是不是主要来自短期交易冲击？" 主要依赖 `CAR[-1,+1]` / `CAR[-3,+3]` / `CAR[-5,+5]`、公告日 / 生效日平均异常收益路径、成交量与换手率短期变化。研究主线入口：`index-inclusion-price-pressure`。
-
-### 2. 需求曲线与长期保留
-
-回答："价格上涨会不会只部分回吐？" 主要依赖长窗口 `CAR[0,+20]` / `CAR[0,+60]` / `CAR[0,+120]`、retention ratio、short-window vs long-window 对比。研究主线入口：`index-inclusion-demand-curve`。
-
-### 3. 制度识别与中国市场证据
-
-回答："指数效应的格局会不会因制度背景而不同？" 主要依赖中国样本事件研究、匹配对照组（横截面水平差，**非 DiD**）。注意：HS300 RDD 工具链（详见 [docs/hs300_rdd_workflow.md](docs/hs300_rdd_workflow.md)）保留用于复现，但该设计在数学上**不构成 RDD**、不作识别证据（见下文"数据与方法限制"）。研究主线入口：`index-inclusion-identification`。
-
-## 文献相关文件
-
-- [docs/index_effect_literature_map.md](docs/index_effect_literature_map.md)：16 篇文献的立场分类
-- [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)：文献 → 三条主线的映射
-- [docs/literature_review_author_year_cn.md](docs/literature_review_author_year_cn.md)：作者（年份）版中文文献综述
-- [docs/literature_deep_analysis_cn.md](docs/literature_deep_analysis_cn.md)：每篇论文的深度分析
-- [docs/literature_five_camps_framework_cn.md](docs/literature_five_camps_framework_cn.md)：五大阵营与会议表达框架
-- [src/index_inclusion_research/literature_catalog/](src/index_inclusion_research/literature_catalog/)：项目内的结构化文献目录与项目映射
-
-## 数据输入契约
-
-`events.csv` 必需列：`market`、`index_name`、`ticker`、`announce_date`、`effective_date`；可选：`event_type`、`source`、`sector`、`note`。
-
-`prices.csv` 必需列：`market`、`ticker`、`date`、`close`、`ret`、`volume`、`turnover`、`mkt_cap`；可选：`sector`。
-
-`benchmarks.csv` 必需列：`market`、`date`、`benchmark_ret`。
-
-## 命令行入口
-
-完整 CLI 参考见 [docs/cli_reference.md](docs/cli_reference.md)。常用速查：
-
-```bash
-make rebuild        # 10 步全流水线刷新
-make verdicts       # 终端速览 7 条假说裁决
-make doctor         # 项目健康检查
-make paper          # 论文 / 汇报产出聚合到 ./paper/（tables / figures / RDD / narrative）
-make sync           # 用 uv.lock 装锁定依赖
-
-index-inclusion-dashboard                            # 启 dashboard
-index-inclusion-cma --threshold 0.05                 # 重新生成 verdict
-index-inclusion-verdict-summary --sensitivity        # 阈值 sweep + Bonferroni/BH
-index-inclusion-verdict-summary --vs-pap             # 当前 vs 最新裁决基线快照 diff
-index-inclusion-verdict-summary --compare-with ...   # 任意时点 diff（详见 docs/verdict_iteration.md）
-index-inclusion-paper-bundle --force                 # 论文产出聚合（同 make paper）
-index-inclusion-paper-audit                          # 论文主张 ↔ 证据产物审计
-index-inclusion-tex-export --force                   # 导出 Overleaf/XeLaTeX 论文源文件
-index-inclusion-refresh-real-evidence                # 真实数据 + evidence manifest 一次刷
-index-inclusion-doctor --fail-on-warn                # 严格门禁（warn 也阻断）
-```
-
-按用途分组（共 43 个 console scripts）：
-
-- 数据流水线：`build-event-sample` / `build-price-panel` / `match-controls` / `match-robustness` / `run-event-study` / `run-regressions`
-- 样本数据：`generate-sample-data` / `download-real-data`
-- 报表与图表：`make-figures-tables` / `generate-research-report` / `paper-bundle` / `paper-audit` / `build-hs300-rdd-forest` / `build-cma-figures`（`--which {forest,sensitivity,ar,heatmap,all}`，四张 CMA 稳健性图统一入口）/ `verdict-timeline` / `literature-timeline`
-- Dashboard 与三条主线：`dashboard` / `price-pressure` / `demand-curve` / `identification`
-- HS300 RDD 工具链：`hs300-rdd` / `prepare-hs300-rdd` / `reconstruct-hs300-rdd` / `plan-hs300-rdd-l3` / `collect-hs300-rdd-l3`
-- 跨市场不对称 + 假说证据：`cma` / `prepare-passive-aum` / `download-passive-aum-cn` / `download-cn-passive-aum-proxy` / `compute-h6-weight-change` / `refresh-real-evidence` / `power-analysis`（H3/H6 后验功效）
-- 总入口：`rebuild-all` / `verdict-summary` / `doctor` / `export-public-summary` / `paper-skeleton`（自动生成 `paper/skeleton.md`）/ `methodology-summary`（自动生成 `paper/methodology_summary.md` 方法论摘要卡）/ `paper-integrity`（跨文档一致性发布门禁）/ `tex-export`（从 Markdown 论文骨架导出 `paper/manuscript.tex` + `references.bib`）/ `enrich-bib`（CrossRef 自动补全 `references.bib` 的 journal / volume / pages / DOI）/ `add-paper`（交互式新增文献并同步 catalog + BibTeX + 下游工件）/ `verdict-timeline`（从 git log 重建 H1-H7 裁决演进 swimlane 图）/ `literature-timeline`（按发表年×研究主线渲染 16 篇文献年表，颜色=立场、大小=链入度）
-
-`match-controls` 现在会同时输出 covariate balance 表（`match_balance.csv`，Stuart 2010 SMD）；`doctor` 的 `matched_sample_balance` 检查在 |SMD|≥0.25 时变 warn。`compute_pre_runup_bootstrap_test` 默认按 `announce_date` 做 block bootstrap，`cluster_method` 列记录采样方式。
-
-## 开发与验证
-
-继续开发先装上开发依赖：
-
-```bash
-make sync
-make pre-commit-install   # 一次性，装 git hooks（ruff + mypy + 文件守护）
-```
-
-日常回归：
-
-```bash
-make quality       # lint + typecheck + test + doctor-strict
-make ci            # lint + typecheck + coverage-gate + doctor-strict
-make lint
-make typecheck
-make test
-make coverage-gate
-make doctor-strict
-make pre-commit-run       # 在工作树上手动跑所有 pre-commit hooks
-```
-
-mypy 已清空整文件 `ignore_errors` baseline(详见 [docs/mypy_rollout.md](docs/mypy_rollout.md))，仅剩约 134 处行级 `# type: ignore`(pandas stub 死结，非逻辑 bug)，由 `warn_unused_ignores` 持续守护并推动逐步清理。
-
-浏览器 smoke test 默认不在本地 `pytest` 自动跑：
-
-```bash
-make smoke
-make paper-audit
-```
-
-GitHub Actions 通过 `astral-sh/setup-uv` + `uv sync --extra dev`（按 `uv.lock`）安装依赖，分两步：
-
-- `make lint` + `make typecheck` + `make coverage-gate` + `index-inclusion-doctor --format json --fail-on-warn`
-- 安装 Chromium 后跑 dashboard 浏览器 smoke test
-
-如果你准备改 dashboard 主干，先看 [docs/dashboard_architecture.md](docs/dashboard_architecture.md)。
-
-## 哪些文件是"核心文件"
-
-时间不多就优先看这几项：
-
-- [README.md](README.md)
-- [docs/literature_to_project_guide.md](docs/literature_to_project_guide.md)
-- [docs/research_delivery_package.md](docs/research_delivery_package.md)
-- [docs/dashboard_architecture.md](docs/dashboard_architecture.md)
-- [docs/cli_reference.md](docs/cli_reference.md)
-- [src/index_inclusion_research/literature_dashboard.py](src/index_inclusion_research/literature_dashboard.py)
-- [src/index_inclusion_research/literature_catalog/](src/index_inclusion_research/literature_catalog/)
-- [results/real_tables/research_summary.md](results/real_tables/research_summary.md)
-
-## 哪些文件主要是生成产物
-
-下面这些目录里的多数文件都可以重新生成：
-
-- `data/processed/`、`results/event_study/`、`results/regressions/`、`results/figures/`、`results/tables/`、`results/literature/`
-
-平时真正需要维护的"源文件"主要是 `src/index_inclusion_research/`、`docs/`、`config/markets.yml`。
-
-## 数据与方法限制
-
-完整限制清单见 [docs/limitations.md](docs/limitations.md)。关键提醒：
-
-- `mkt_cap` / `turnover` 来自 Yahoo `sharesOutstanding` 近似，不是交易所历史口径。
-  若设置 `TUSHARE_TOKEN` 并用 `index-inclusion-download-real-data --cn-price-source tushare`，
-  A 股侧可改用 Tushare 的日线 + `daily_basic` 市值 / 换手率口径刷新。
-- HS300 RDD 在数学上**不构成 RDD**，是一次"尝试过但识别失败"的设计，**不作识别证据、不进主表**：官方只发布"调入/备选名单"（排名序），数据里的 `running_variable` 是按序号铺出的等距数列（299.85…300.28，间隔 0.01），与处理变量 100% 共线、断点两侧零重叠，识别假设根本无从陈述；McCrary p≈0.44 是等距构造的假象。这不是"样本不够"——扩样本也救不回（见 [docs/hs300_rdd_l3_collection_audit.md](docs/hs300_rdd_l3_collection_audit.md) 与 [docs/identification_roadmap.md](docs/identification_roadmap.md)）。
-- 7 条 CMA 假说为 post-hoc、探索性形成（在观察到 announce-vs-effective / CN-vs-US 不对称结果之后），本项目无预分析计划。判据、阈值与样本边界记录在 [docs/analysis_parameters.md](docs/analysis_parameters.md)（透明性文档，非 pre-analysis plan）；裁决基线快照（`snapshots/pre-registration-*.csv`）配合 `index-inclusion-verdict-summary --vs-pap` 用于跨时间观察 verdict 稳定性，dashboard hero 的状态 pill 也会标 verdict 相对基线快照是否变化。
-- 假说证据强度分层：`core`（H1/H2/H5/H7）vs `supplementary`（H3/H4/H6），见 `cma_hypothesis_verdicts.csv` 的 `evidence_tier` 列。H2 由 `EVIDENCE_TIER_PROMOTION_FLOOR` 数据驱动升级——补入 CN ETF TNA proxy 后合并 n=18 跨过 15 阈值。
-- H7 现在同时有描述性 sector spread 与 `cma_h7_sector_interaction.csv` 的 sector×phase/treatment 回归；H2 在 2026 年补入 CN ETF TNA proxy（`data/raw/cn_passive_aum_proxy.csv`）后，evidence manifest 中由 `warn` 升级为 `pass`，dashboard 卡片同步更新（详见 [data/raw/README.md](data/raw/README.md) 的 proxy 说明）。
-- 事件研究除简单 t 外提供 Patell Z 与 BMP t（`results/real_event_study/patell_bmp_summary.csv`）。
-- HS300 RDD 全套稳健性面板（main `car_m1_p1` τ=2.96%, p=0.095, n=148 / donut / placebo±0.05 / polynomial，见 `results/literature/hs300_rdd/rdd_robustness.csv` 与首页 forest plot）仅作**诚实展示效应脆弱 + 断点是构造假象**之用：main 仅边际（连 0.05 都没过）、donut 失去显著、二阶多项式 τ 翻负（p=0.939）、placebo +0.05 反而接近显著（警告信号）。它不作识别结论；论文如实报告全套面板，但把 RDD 定位为附录里的失败识别尝试。
-
-## 论文写作建议
-
-论文模板见 [docs/paper_outline.md](docs/paper_outline.md)。最推荐的写法：
-
-1. 文献综述按 `反方 / 中性 / 正方` 展开
-2. 实证设计按三条研究主线展开
-3. 结果部分按 `短期冲击 → 长期保留 → 中国市场识别扩展` 展开
-4. 主表只引用 `evidence_tier=core` 的假说，supplementary 走附录
-
-## 测试
-
-```bash
-make quality
-make ci
-make test
-```
-
-当前包含：事件研究 + 机制汇总测试、RDD 测试、文献目录与主线映射测试、报表与页面测试、流水线 main() 集成测试、covariate balance + 多重检验校正测试。
-
-## 备注
-
-如果你接下来继续做清理，最值得保持稳定的是：
-
-- `src/index_inclusion_research/literature_catalog.py`
-- `src/index_inclusion_research/literature_dashboard.py`
-- `docs/literature_to_project_guide.md`
-
-这三处定义了整个项目的统一主线。
+A solo build that takes an established question in the index-inclusion literature and implements it end-to-end — data, event study, matched-control design, robustness, and an interactive research front-end — with the goal of getting the *process* right (reproducibility, honest inference, clean code) rather than forcing a headline result. Licensed MIT.
