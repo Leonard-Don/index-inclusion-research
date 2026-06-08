@@ -152,6 +152,62 @@ def _maybe_build_literature_timeline(
         return
 
 
+def _maybe_build_robustness_event_study(
+    *,
+    matched_panel: pd.DataFrame,
+    event_level: pd.DataFrame,
+    tables_dir: Path | None,
+    figures_dir: Path | None,
+) -> None:
+    """Refresh the descriptive event-study robustness artifacts.
+
+    Produces the parallel-trends AAR path (table + figure), the
+    pseudo-event-date placebo distribution, the main-CAR permutation test
+    and the event-clustered SE table. Mirrors the other ``_maybe_*``
+    helpers: each block is guarded on the columns it needs so the figures
+    pipeline skips cleanly on profiles that lack the matched daily panel or
+    the event-level metrics (e.g. the demo profile or a corrupt install).
+    All outputs use the ``robustness_*`` / ``parallel_trends_*`` prefixes,
+    so nothing existing is overwritten; randomness is seeded inside the
+    analysis functions for reproducibility.
+    """
+    if tables_dir is None:
+        tables_dir = ROOT / "results" / "real_tables"
+    if figures_dir is None:
+        figures_dir = ROOT / "results" / "figures"
+    try:
+        from index_inclusion_research.analysis import (
+            compute_event_clustered_car_se,
+            compute_main_car_permutation_test,
+            compute_parallel_trends_aar,
+            compute_placebo_car_distribution,
+            export_event_clustered_car_se,
+            export_main_car_permutation_test,
+            export_parallel_trends_aar,
+            export_placebo_car_distribution,
+        )
+        from index_inclusion_research.outputs import build_parallel_trends_plot
+
+        daily_cols = {"ar", "relative_day", "treatment_group", "event_phase", "event_id"}
+        if not matched_panel.empty and daily_cols.issubset(matched_panel.columns):
+            aar = compute_parallel_trends_aar(matched_panel)
+            export_parallel_trends_aar(aar, output_dir=tables_dir)
+            build_parallel_trends_plot(aar, figures_dir)
+            placebo = compute_placebo_car_distribution(
+                matched_panel, [(-1, 1), (-3, 3), (-5, 5)]
+            )
+            export_placebo_car_distribution(placebo, output_dir=tables_dir)
+
+        if not event_level.empty and "treatment_group" in event_level.columns:
+            permutation = compute_main_car_permutation_test(event_level)
+            export_main_car_permutation_test(permutation, output_dir=tables_dir)
+            clustered = compute_event_clustered_car_se(event_level)
+            export_event_clustered_car_se(clustered, output_dir=tables_dir)
+    except (ValueError, OSError, KeyError, ImportError) as exc:
+        logger.warning("robustness event-study artifacts skipped: %s", exc)
+        return
+
+
 def _maybe_build_cma_verdicts_forest(
     *,
     tables_dir: Path | None,
@@ -500,6 +556,19 @@ def main(argv: list[str] | None = None) -> None:
     # the figures pipeline — the renderer tolerates a missing centrality
     # CSV with uniform marker sizes.
     _maybe_build_literature_timeline()
+
+    # Descriptive event-study robustness artifacts (parallel-trends AAR,
+    # pseudo-event-date placebo, main-CAR permutation test, event-clustered
+    # SE). Additive and seeded; guarded so non-real profiles skip cleanly.
+    event_level_metrics = _read_csv_if_exists(
+        Path(args.event_summary).parent / "event_level_metrics.csv"
+    )
+    _maybe_build_robustness_event_study(
+        matched_panel=matched_panel,
+        event_level=event_level_metrics,
+        tables_dir=Path(args.tables_dir) if args.tables_dir else None,
+        figures_dir=Path(args.figures_dir) if args.figures_dir else None,
+    )
 
     frames = {}
     long_event_level = pd.DataFrame()

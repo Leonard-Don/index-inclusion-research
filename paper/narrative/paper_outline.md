@@ -87,15 +87,16 @@ $$CAR_i = \alpha + \beta \cdot Inclusion_i + \gamma_1 Size_i + \gamma_2 PreRetur
 在补上新的平行趋势 / 安慰剂证据之前，不得把 $\beta$ 解读为因果效应。机制回归分别以换手率变化、成交量变化
 为因变量（探索性）。Bootstrap 用按公告日分块的 block bootstrap（5000 次迭代）。
 
-### 3.5 稳健性设计（占位，见"稳健性"一节）
+### 3.5 描述性稳健性（已由稳健性流水线产出）
 
-为约束描述性结论的稳健性，论文"稳健性"一节将报告（具体数值由稳健性流水线产出后填入，此处不预填）：
+为约束"公告窗强、生效窗弱"这一**描述性事实**的稳健性，`index-inclusion-make-figures-tables` 流水线产出下列证据（产物：`results/real_tables/robustness_*.csv`、`results/real_figures/parallel_trends_aar_*.png`）。所有检验在匹配子样本上、以事件窗内具备有效异常收益的事件计算；它们用于增强描述性结论，**不**把它升级为因果识别。
 
-- 逐日 AAR 平行性图（处理组 vs 匹配对照组在事件窗内的逐日平均异常收益路径对照）；
-- 伪事件日 placebo（在非事件日重做同一事件研究，检查是否出现假阳性公告窗反应）；
-- 事件级置换检验（在 H₀ 下按 `announce_date` 聚类重排，给出经验 p）。
+- **逐日 AAR 平行性图**：处理组 vs 匹配对照组在事前窗 [-20,-2] 的逐日平均异常收益高度重合，事件窗才分叉（`parallel_trends_aar_{cn,us}_{announce,effective}.png`）。
+- **伪事件日 placebo**（200 次非事件日重抽）：US 公告窗 [-1,+1] 经验 p=0.005、CN p=0.080；**所有生效窗 p>0.29**（`robustness_placebo_car.csv`）。
+- **事件级置换检验**（sign-flip，5000 次）：US 公告窗 p=0.0002、CN p=0.028；**所有生效窗 p>0.27**（`robustness_car_permutation.csv`）。
+- **事件聚类标准误**（按 `event_date` 聚类，CRV1）：聚类 SE 一致地宽于 iid（从不收窄），US 公告窗 p=0.0003 仍稳健显著（`robustness_car_clustered_se.csv`）。
 
-这些证据用于增强"公告窗强、生效窗弱"这一**描述性事实**的稳健性，**不**把它升级为因果识别。
+三种检验互相印证同一格局：公告窗（尤其美国）效应稳健、生效窗在所有口径下均为零。
 
 ## 四、实证结果写法
 

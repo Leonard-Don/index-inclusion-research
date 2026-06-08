@@ -1,7 +1,7 @@
 {
   "bundle_label": "index-inclusion-paper-bundle",
   "manifest_schema_version": 1,
-  "artifact_count": 185,
+  "artifact_count": 189,
   "regenerated": {
     "hs300_rdd_forest": "ok",
     "cma_verdicts_forest": "ok",
@@ -291,6 +291,34 @@
     },
     {
       "section": "figures",
+      "source": "results/real_figures/parallel_trends_aar_cn_announce.png",
+      "target": "figures/parallel_trends_aar_cn_announce.png",
+      "sha256": "f7b5a1c502fbfe6f57a0003cbcfe1455b0b6b043da8a1a7de7237de102387e53",
+      "size_bytes": 401899
+    },
+    {
+      "section": "figures",
+      "source": "results/real_figures/parallel_trends_aar_cn_effective.png",
+      "target": "figures/parallel_trends_aar_cn_effective.png",
+      "sha256": "cf91285e488e2778985620d93462882da1e31e387480729812bfb4e0806d9304",
+      "size_bytes": 404269
+    },
+    {
+      "section": "figures",
+      "source": "results/real_figures/parallel_trends_aar_us_announce.png",
+      "target": "figures/parallel_trends_aar_us_announce.png",
+      "sha256": "c47d43ebfe8cf1afe9d7e2ac7821cbb55a71260cd0c9f8180537372417ff2c9b",
+      "size_bytes": 341690
+    },
+    {
+      "section": "figures",
+      "source": "results/real_figures/parallel_trends_aar_us_effective.png",
+      "target": "figures/parallel_trends_aar_us_effective.png",
+      "sha256": "f4cdc1cdc7ac6dbf24de97c3ba2baab2537ac1887d862b547ee67bc51ca12dfc",
+      "size_bytes": 377319
+    },
+    {
+      "section": "figures",
       "source": "results/real_figures/price_pressure_time_series.png",
       "target": "figures/price_pressure_time_series.png",
       "sha256": "782737052bd7cee60bc1200ad0a52504a99030df499ae5e233b06288072b6c2e",
@@ -335,8 +363,8 @@
       "section": "figures",
       "source": "results/literature/citation_network.png",
       "target": "figures/citation_network.png",
-      "sha256": "af553fa2c3b490b1f13c7b2e0d0017351f026cec2a4cec96e817e947697ccdde",
-      "size_bytes": 80938
+      "sha256": "0edcdd07ad5269d5f93cf2b4caa8caa1691f8bcefb54b1ced216a1f65cc2d78d",
+      "size_bytes": 81192
     },
     {
       "section": "figures",
@@ -349,49 +377,49 @@
       "section": "figures",
       "source": "results/real_figures/hs300_rdd_robustness_forest.pdf",
       "target": "figures/hs300_rdd_robustness_forest.pdf",
-      "sha256": "ab65fee8751a11c06d4e1685f482a1f646dc863e44046d878ce725d5c72ca004",
+      "sha256": "cacd64206288f285e8839933fc3bf6692f864a59d357e3ed0a046f8e8380e965",
       "size_bytes": 74771
     },
     {
       "section": "figures",
       "source": "results/real_figures/cma_verdicts_forest.pdf",
       "target": "figures/cma_verdicts_forest.pdf",
-      "sha256": "c505255f4af354f8039ff34dc16c7994e09af4fc1648941ed7b73a26e1640969",
+      "sha256": "f9ea76f2317d79901882d8a8b09c25ed9712e4243e4cd2010e47585fe94ac826",
       "size_bytes": 138847
     },
     {
       "section": "figures",
       "source": "results/real_figures/cma_verdicts_sensitivity.pdf",
       "target": "figures/cma_verdicts_sensitivity.pdf",
-      "sha256": "e34a5d2463ede283a3637ff026a6832aac9ca4e321b5dcd1458a72da5561bbb8",
+      "sha256": "e06bf0b32a7528ed9c9565c80a861c12dbc4dc45c914a81c575bea59f61db43e",
       "size_bytes": 139677
     },
     {
       "section": "figures",
       "source": "results/real_figures/cma_verdicts_ar_engine.pdf",
       "target": "figures/cma_verdicts_ar_engine.pdf",
-      "sha256": "51ace2f4aef3c39b77d97abfc7f73f8cbbda1195652133acccf383fda9107339",
+      "sha256": "6ab5842e5b379a59966a30444d717441fbb9ada28297d79615d1e473524115a6",
       "size_bytes": 154022
     },
     {
       "section": "figures",
       "source": "results/real_figures/cma_verdicts_2d_robustness.pdf",
       "target": "figures/cma_verdicts_2d_robustness.pdf",
-      "sha256": "7dc9d69e81cc149c53e8afd80c571d519d9c24468779c429fa4120a6a84d9af5",
+      "sha256": "7c1183062df69573e7978131154c92700e291367bab477edd047b7af535e41e4",
       "size_bytes": 152631
     },
     {
       "section": "figures",
       "source": "results/real_figures/verdict_timeline.pdf",
       "target": "figures/verdict_timeline.pdf",
-      "sha256": "a92f14e66d8642c7fe469988585a029b3543526932b3dc2b90be56eecadd0b41",
+      "sha256": "7fee5fc85204a14746a214cae21009a1aca798a984d2117dab22b06300772bae",
       "size_bytes": 56003
     },
     {
       "section": "figures",
       "source": "results/literature/literature_timeline.pdf",
       "target": "figures/literature_timeline.pdf",
-      "sha256": "d0eecb9d47513352b39c4276229d207962b12a2ad2ff5e901f2baf4de589098b",
+      "sha256": "8e295a1876a25db29cf4f3aea8bcbee64186fd4e7852e92155ad6417d80ee8c9",
       "size_bytes": 83988
     },
     {
@@ -503,8 +531,8 @@
       "section": "narrative",
       "source": "docs/paper_outline.md",
       "target": "narrative/paper_outline.md",
-      "sha256": "8f80ad615afe65a3df73b9ce017b274e54f550447bef27ff8521760d0a1c9b92",
-      "size_bytes": 13311
+      "sha256": "f6e4f8509259383d34fbedcbd60bc839e54c3d707785f55d22baf08ced42e767",
+      "size_bytes": 13986
     },
     {
       "section": "narrative",
@@ -517,8 +545,8 @@
       "section": "narrative",
       "source": "docs/research_delivery_package.md",
       "target": "narrative/research_delivery_package.md",
-      "sha256": "9c2ca52f2ca7faa045bb363c70ccf2579ae8623188f7463d8044450699536409",
-      "size_bytes": 22595
+      "sha256": "6ade98ec845643e36df8ce2f2baf3e62b69a695d73ca356a9044e5d0db9f098a",
+      "size_bytes": 22978
     },
     {
       "section": "narrative",

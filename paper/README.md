@@ -48,6 +48,10 @@
 - `figures/main_regression_coefficients.png`
 - `figures/match_diagnostics_overview.png`
 - `figures/mechanism_regression_coefficients.png`
+- `figures/parallel_trends_aar_cn_announce.png`
+- `figures/parallel_trends_aar_cn_effective.png`
+- `figures/parallel_trends_aar_us_announce.png`
+- `figures/parallel_trends_aar_us_effective.png`
 - `figures/price_pressure_time_series.png`
 - `figures/sample_car_heatmap.png`
 - `figures/sample_event_timeline.png`
