@@ -120,7 +120,7 @@ Dashboard modes: `/` (overview), `/?mode=brief` (3-min read), `/?mode=full` (eve
 
 The research is ~11k lines; the rest is the infrastructure that makes it reproducible and auditable end-to-end — built to the standard I'd want a research codebase held to.
 
-- **Deterministic, offline pipeline.** `index-inclusion-rebuild-all` recomputes every result from `data/` in ~3 min with no network calls; the frozen baseline reproduces bit-for-bit (a `pap-diff` drift audit proves it).
+- **Deterministic, offline pipeline.** `index-inclusion-rebuild-all` recomputes every result from `data/` in ~3 min with no network calls; the frozen verdict baseline reproduces unchanged on re-run — a `pap-diff` drift audit confirms all 7 hypotheses stay put.
 - **Automated quality gates.** A custom `doctor` framework runs 30 health checks (artifact freshness, schema contracts, chart registry, cross-document consistency) and a `paper-integrity` gate cross-checks that the README/paper numbers actually match the committed CSVs. `make ci` is green.
 - **Tested.** ~1,190 unit + integration tests (event study, matching + covariate balance, robustness, pipeline `main()` integration, dashboard rendering), lint (`ruff`) and `mypy` clean.
 - **Honest seeds & snapshots.** All randomness is seeded; verdict baselines are snapshotted so any drift in conclusions is visible over time.
