@@ -62,6 +62,7 @@ from .literature_timeline import (
 from .literature_timeline import (
     summarize_for_public_summary as summarize_literature_timeline_for_public_summary,
 )
+from .parallel_trends import build_parallel_trends_plot
 from .reports import (
     build_asymmetry_summary,
     build_data_source_table,
@@ -126,6 +127,7 @@ __all__ = [
     "build_event_counts_by_year_table",
     "build_hs300_rdd_forest_plot",
     "build_identification_scope_table",
+    "build_parallel_trends_plot",
     "build_robustness_event_study_summary",
     "build_robustness_regression_summary",
     "build_robustness_retention_summary",

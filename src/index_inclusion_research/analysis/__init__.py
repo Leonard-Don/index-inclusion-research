@@ -42,6 +42,16 @@ from .rdd import (
     run_rdd_suite,
 )
 from .regressions import build_regression_dataset, run_regressions
+from .robustness_event_study import (
+    compute_event_clustered_car_se,
+    compute_main_car_permutation_test,
+    compute_parallel_trends_aar,
+    compute_placebo_car_distribution,
+    export_event_clustered_car_se,
+    export_main_car_permutation_test,
+    export_parallel_trends_aar,
+    export_placebo_car_distribution,
+)
 
 __all__ = [
     "AcrossEnginePowerComparison",
@@ -55,6 +65,7 @@ __all__ = [
     "bootstrap_test_power",
     "build_regression_dataset",
     "compare_h1_h2_across_engines",
+    "compute_event_clustered_car_se",
     "compute_event_level_metrics",
     "compute_event_study",
     "compute_h1_power_per_engine",
@@ -63,9 +74,16 @@ __all__ = [
     "compute_h4_power",
     "compute_h5_power",
     "compute_h6_power",
+    "compute_main_car_permutation_test",
+    "compute_parallel_trends_aar",
     "compute_patell_bmp_summary",
+    "compute_placebo_car_distribution",
     "diagnose_engine_flip",
     "exact_binomial_power",
+    "export_event_clustered_car_se",
+    "export_main_car_permutation_test",
+    "export_parallel_trends_aar",
+    "export_placebo_car_distribution",
     "filter_nonoverlap_event_windows",
     "fit_donut_rdd",
     "fit_local_linear_rdd",
