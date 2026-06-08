@@ -19,7 +19,7 @@ lint: ## Run ruff linter
 typecheck: ## Run mypy on the package source
 	python3 -m mypy src/index_inclusion_research
 
-test: ## Run unit tests (excludes browser smoke)
+test: ## Run unit tests
 	pytest -q
 
 quality: lint typecheck test doctor-strict ## Run the local pre-commit quality gate
@@ -31,10 +31,6 @@ coverage-gate: ## Run tests with the CI coverage threshold
 	pytest -q --cov=index_inclusion_research --cov-report=term-missing --cov-report=xml:coverage.xml --cov-fail-under=70
 
 ci: lint typecheck coverage-gate doctor-strict ## Run the CI-equivalent non-browser quality gate
-
-smoke: ## Run dashboard browser smoke tests (requires Playwright + Chromium)
-	python3 -m playwright install chromium
-	RUN_BROWSER_SMOKE=1 pytest -q -m browser_smoke tests/test_dashboard_browser_smoke.py
 
 serve: ## Start the dashboard on localhost:5001
 	index-inclusion-dashboard

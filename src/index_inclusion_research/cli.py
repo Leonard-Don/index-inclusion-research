@@ -136,26 +136,8 @@ def run_build_hs300_rdd_forest_main() -> int | None:
     return _run_package_main("index_inclusion_research.build_hs300_rdd_forest")
 
 
-def run_build_cma_verdicts_forest_main() -> int | None:
-    return _run_package_main("index_inclusion_research.build_cma_verdicts_forest")
-
-
-def run_build_cma_sensitivity_forest_main() -> int | None:
-    return _run_package_main(
-        "index_inclusion_research.build_cma_sensitivity_forest"
-    )
-
-
-def run_build_cma_ar_engine_forest_main() -> int | None:
-    return _run_package_main(
-        "index_inclusion_research.build_cma_ar_engine_forest"
-    )
-
-
-def run_build_cma_2d_robustness_heatmap_main() -> int | None:
-    return _run_package_main(
-        "index_inclusion_research.build_cma_2d_robustness_heatmap"
-    )
+def run_build_cma_figures_main() -> int | None:
+    return _run_package_main("index_inclusion_research.build_cma_figures")
 
 
 def run_export_public_summary_main() -> int | None:
@@ -164,10 +146,6 @@ def run_export_public_summary_main() -> int | None:
 
 def run_paper_skeleton_main() -> int | None:
     return _run_package_main("index_inclusion_research.paper_skeleton")
-
-
-def run_citation_graph_main() -> int | None:
-    return _run_package_main("index_inclusion_research.citation_graph")
 
 
 def run_verdict_timeline_main() -> int | None:
@@ -191,12 +169,6 @@ def run_paper_integrity_main() -> int | None:
 def run_tex_export_main() -> int | None:
     return _run_package_main(
         "index_inclusion_research.tex_export"
-    )
-
-
-def run_submission_ready_main() -> int | None:
-    return _run_package_main(
-        "index_inclusion_research.submission_ready"
     )
 
 

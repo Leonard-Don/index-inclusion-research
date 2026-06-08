@@ -44,7 +44,7 @@ def check_citation_graph_artifact(
 
     Mirrors :func:`check_hs300_rdd_forest_artifact` and the CMA forest checks:
     the PNG / PDF twins must both exist and have an mtime ≥ the centrality
-    CSV they accompany. Re-run ``index-inclusion-citation-graph`` to refresh
+    CSV they accompany. Re-run ``python3 -m index_inclusion_research.citation_graph`` to refresh
     all three artifacts together (idempotent — overwrites in place).
     """
     return _forest_artifact_status(
@@ -53,7 +53,7 @@ def check_citation_graph_artifact(
         pdf_path=pdf_path,
         input_csv_path=centrality_csv_path,
         fix_command=(
-            "Run `index-inclusion-citation-graph` to refresh the citation "
+            "Run `python3 -m index_inclusion_research.citation_graph` to refresh the citation "
             "network figure (PNG + PDF) and centrality CSV together."
         ),
         input_label="citation_centrality.csv",
@@ -245,7 +245,7 @@ def check_cma_verdicts_forest_artifact(
         input_csv_path=verdicts_csv_path,
         fix_command=(
             "Run `make figures-tables` (or "
-            "`index-inclusion-build-cma-verdicts-forest`) to refresh the figure."
+            "`index-inclusion-build-cma-figures --which forest`) to refresh the figure."
         ),
         input_label="cma_hypothesis_verdicts.csv",
     )
@@ -268,7 +268,7 @@ def check_cma_ar_engine_forest_artifact(
     isn't blocked.
     """
     fix_command = (
-        "Run `index-inclusion-build-cma-ar-engine-forest` to refresh "
+        "Run `index-inclusion-build-cma-figures --which ar` to refresh "
         "the AR-engine-sweep figure."
     )
     name = "cma_ar_engine_forest_artifact"
@@ -358,7 +358,7 @@ def check_cma_2d_robustness_heatmap_artifact(
     fail so a fresh checkout isn't blocked.
     """
     fix_command = (
-        "Run `index-inclusion-build-cma-2d-robustness-heatmap` to refresh "
+        "Run `index-inclusion-build-cma-figures --which heatmap` to refresh "
         "the 2D (threshold × engine) heatmap."
     )
     name = "cma_2d_robustness_heatmap_artifact"
@@ -458,7 +458,7 @@ def check_cma_sensitivity_forest_artifact(
        follow. Fix is the same CLI.
     """
     fix_command = (
-        "Run `index-inclusion-build-cma-sensitivity-forest` to refresh "
+        "Run `index-inclusion-build-cma-figures --which sensitivity` to refresh "
         "the threshold-sweep figure."
     )
     name = "cma_sensitivity_forest_artifact"

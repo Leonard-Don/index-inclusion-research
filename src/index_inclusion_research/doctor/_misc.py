@@ -170,7 +170,7 @@ def check_heuristic_citation_centrality_schema(
             name=name,
             status="fail",
             message=f"heuristic literature centrality CSV is unreadable: {exc}",
-            fix="Regenerate with `index-inclusion-citation-graph`.",
+            fix="Regenerate with `python3 -m index_inclusion_research.citation_graph`.",
         )
 
     columns = set(df.columns)
@@ -184,7 +184,7 @@ def check_heuristic_citation_centrality_schema(
                 f"{legacy_columns}."
             ),
             fix=(
-                "Regenerate with `index-inclusion-citation-graph`; heuristic links "
+                "Regenerate with `python3 -m index_inclusion_research.citation_graph`; heuristic links "
                 "must use top_linked_by/top_links_to and must not be represented as "
                 "verified citations."
             ),
@@ -206,7 +206,7 @@ def check_heuristic_citation_centrality_schema(
             name=name,
             status="fail",
             message=f"{_relative_label(csv_path)} is missing heuristic column(s): {missing}.",
-            fix="Regenerate with `index-inclusion-citation-graph`.",
+            fix="Regenerate with `python3 -m index_inclusion_research.citation_graph`.",
             details=tuple(missing),
         )
 

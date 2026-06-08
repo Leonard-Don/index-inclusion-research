@@ -868,7 +868,7 @@ def add_paper(
             "run `index-inclusion-paper-skeleton --force && "
             "index-inclusion-methodology-summary && "
             "index-inclusion-export-public-summary && "
-            "index-inclusion-citation-graph` to catch up.",
+            "python3 -m index_inclusion_research.citation_graph` to catch up.",
         )
         if run_integrity:
             report.paper_integrity_exit_code = _run_paper_integrity()

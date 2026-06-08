@@ -1,6 +1,6 @@
 """Heuristic literature-link network analyzer for the 16-paper library.
 
-The 39th console script (``index-inclusion-citation-graph``) maps a
+The heuristic literature-link module (``python3 -m index_inclusion_research.citation_graph``) maps a
 within-library **heuristic** relationship graph, computes centrality, and
 renders a publication-grade figure plus a structured CSV that the paper's
 literature-review section (§References) can lean on. The edges are not
@@ -747,7 +747,7 @@ def summarize_for_paper_skeleton(
 
 
 def main(argv: list[str] | None = None) -> int:
-    """``index-inclusion-citation-graph`` entry point.
+    """``python3 -m index_inclusion_research.citation_graph`` entry point.
 
     Reads ``PAPER_LIBRARY``, computes centrality, renders the figure
     twin (PNG + PDF) and the centrality CSV. Idempotent — re-running
@@ -756,7 +756,7 @@ def main(argv: list[str] | None = None) -> int:
     import argparse
 
     parser = argparse.ArgumentParser(
-        prog="index-inclusion-citation-graph",
+        prog="python3 -m index_inclusion_research.citation_graph",
         description=(
             "Analyze the 16-paper heuristic literature-link network: "
             "compute centrality, render a force-directed PNG + PDF figure, "
