@@ -21,8 +21,10 @@ import pytest
 from index_inclusion_research.outputs.verdict_timeline import (
     DEFAULT_MAX_HISTORY,
     EXPECTED_HIDS,
+    PAP_BASELINE_DATE,
     build_verdict_timeline_from_git,
     count_verdict_changes,
+    default_pap_baseline_date,
     render_verdict_timeline_plot,
     summarize_for_public_summary,
     total_verdict_changes,
@@ -376,3 +378,18 @@ def test_default_max_history_constant() -> None:
         DEFAULT_MAX_HISTORY = 50
     """).strip()
     assert f"DEFAULT_MAX_HISTORY = {DEFAULT_MAX_HISTORY}" == sentinel
+
+
+def test_default_pap_baseline_date_resolves_latest_snapshot(tmp_path: Path) -> None:
+    """The baseline marker tracks the CURRENT (latest) snapshot, not a hardcoded date."""
+    snaps = tmp_path / "snapshots"
+    snaps.mkdir()
+    for date in ("2026-05-03", "2026-05-16", "2026-05-31"):
+        (snaps / f"pre-registration-{date}.csv").write_text("x\n", encoding="utf-8")
+
+    assert default_pap_baseline_date(tmp_path) == "2026-05-31"
+
+
+def test_default_pap_baseline_date_falls_back_without_snapshots(tmp_path: Path) -> None:
+    """With no snapshots/ on disk, fall back to the module constant."""
+    assert default_pap_baseline_date(tmp_path) == PAP_BASELINE_DATE

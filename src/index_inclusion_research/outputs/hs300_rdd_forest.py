@@ -1,17 +1,27 @@
-"""Publication-quality forest plot of the HS300 RDD robustness panel.
+"""Forest plot of the HS300 RDD robustness panel (a FAILED identification).
 
-The HS300 RDD `car_m1_p1` main result (τ=3.92%, p=0.048, n=120) is
-reported alongside donut / placebo±0.05 / polynomial specifications in
-``results/literature/hs300_rdd/rdd_robustness.csv``. The audit
-(``docs/limitations.md``) flags that the paper must report the full
-panel rather than only the significant main spec, so this forest plot is
-the user-facing artifact that makes the panel transparent.
+The HS300 RDD ``car_m1_p1`` main result is reported alongside donut /
+placebo±0.05 / polynomial specifications in
+``results/literature/hs300_rdd/rdd_robustness.csv`` (all numbers are read
+live from that CSV — none are hardcoded here). The audit
+(``docs/limitations.md`` / ``docs/identification_roadmap.md``) flags that
+the paper must report the full panel rather than only the main spec, so
+this forest plot is the user-facing artifact that makes the panel
+transparent.
 
-The figure is intentionally self-contained: a single call to
+**This is NOT a valid RDD** and the figure says so. The running variable is
+a rank ordinal perfectly collinear with treatment (zero overlap at the
+cutoff), so τ is a descriptive boundary-rank mean difference, not an
+identified causal effect, and the ±1.96·SE whiskers are descriptive error
+bars, not an identifying confidence interval. The plot carries an explicit
+non-identification disclaimer (:data:`_NON_IDENTIFICATION_NOTE`) so a reader
+skimming the figure standalone cannot mistake it for causal evidence.
+
+The figure is self-contained: a single call to
 :func:`build_hs300_rdd_forest_plot` reads the robustness CSV and writes
-PNG (and optionally PDF) outputs with significance-coded markers, 95% CI
-whiskers, per-row n/p annotations, and provenance footer (source CSV,
-generation date, sample period).
+PNG (and optionally PDF) outputs with significance-coded markers, ±1.96·SE
+descriptive whiskers, per-row n/p annotations, the disclaimer, and a
+provenance footer (source CSV, generation date, sample period).
 """
 
 from __future__ import annotations
@@ -56,6 +66,21 @@ _SIG_LEVELS: tuple[tuple[str, float, str, str], ...] = (
 # don't have to cross-reference the limitations doc when reading the
 # figure standalone (e.g. as a slide).
 _SAMPLE_PERIOD_LABEL = "样本区间：2020-11 — 2025-11 (HS300 L3 候选 11 批次)"
+
+# x-axis label. τ is framed as a DESCRIPTIVE boundary-rank mean difference,
+# explicitly NOT a causal/identified treatment effect (route B de-RDD-ification).
+_X_AXIS_LABEL = "τ（断点两侧 CAR[-1,+1] 均值差；描述性、非因果）"
+
+# Non-identification disclaimer drawn prominently on the figure. The running
+# variable is a rank ordinal perfectly collinear with treatment (zero overlap
+# at the cutoff), so this panel is a descriptive boundary-rank contrast, NOT a
+# valid RDD; τ is not a causal effect and the whiskers are ±1.96·SE descriptive
+# error bars, not an identifying CI. See docs/identification_roadmap.md.
+_NON_IDENTIFICATION_NOTE = (
+    "⚠ 非识别：running variable 为排名序数，与处理完全共线（断点处零重叠）。"
+    "此图为边界排名描述性对照，非有效 RDD；τ 不可解释为因果处理效应，"
+    "误差棒为 ±1.96·SE（非识别性置信区间）。详见 docs/identification_roadmap.md。"
+)
 
 
 def _classify_significance(p_value: float) -> tuple[str, str]:
@@ -196,8 +221,9 @@ def build_hs300_rdd_forest_plot(
     ses = panel["std_error"].astype(float).fillna(0.0).to_numpy()
     p_values = panel["p_value"].astype(float).to_numpy()
 
-    # Per-row significance color drives both the marker fill and the CI
-    # whisker — single coding channel keeps the legend simple.
+    # Per-row significance color drives both the marker fill and the
+    # ±1.96·SE descriptive whisker (NOT an identifying CI — see
+    # _NON_IDENTIFICATION_NOTE) — single coding channel keeps the legend simple.
     colors = [_classify_significance(p)[0] for p in p_values]
     legend_labels = [_classify_significance(p)[1] for p in p_values]
 
@@ -233,7 +259,7 @@ def build_hs300_rdd_forest_plot(
         ax.set_yticklabels(panel["_spec_label"].tolist(), fontsize=11)
         ax.invert_yaxis()  # main spec at top
 
-        ax.set_xlabel("τ (RDD 处理效应，CAR[-1,+1])", fontsize=11)
+        ax.set_xlabel(_X_AXIS_LABEL, fontsize=11)
         ax.set_title(title, fontsize=15, pad=14, fontweight="bold")
 
         ax.grid(axis="x", alpha=0.22, linestyle=":")
@@ -297,10 +323,23 @@ def build_hs300_rdd_forest_plot(
         source_label = robust_path.name
         fig.text(
             0.01,
-            0.965,
+            0.975,
             _SAMPLE_PERIOD_LABEL,
             fontsize=10,
             color="#30424f",
+        )
+        # Prominent non-identification disclaimer so the figure cannot be
+        # read as causal RDD evidence when viewed standalone.
+        fig.text(
+            0.5,
+            0.93,
+            _NON_IDENTIFICATION_NOTE,
+            fontsize=8.5,
+            color="#b3261e",
+            ha="center",
+            va="top",
+            wrap=True,
+            bbox={"boxstyle": "round,pad=0.4", "facecolor": "#fdecea", "edgecolor": "#b3261e", "linewidth": 0.8},
         )
         fig.text(
             0.01,
@@ -316,7 +355,7 @@ def build_hs300_rdd_forest_plot(
                 message=r"Glyph .* missing from font\(s\) .+",
                 category=UserWarning,
             )
-            fig.tight_layout(rect=(0.0, 0.04, 1.0, 0.94))
+            fig.tight_layout(rect=(0.0, 0.04, 1.0, 0.88))
             fig.savefig(png_path, dpi=220)
             if pdf_path is not None:
                 fig.savefig(pdf_path)

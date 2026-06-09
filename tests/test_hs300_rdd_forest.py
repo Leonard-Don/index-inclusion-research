@@ -210,6 +210,26 @@ def test_classify_significance_bands() -> None:
     assert color_nan == color_ns  # NaN falls into the NS band
 
 
+def test_forest_plot_carries_non_identification_disclaimer() -> None:
+    """Route B: the RDD forest must visibly disclaim that it is NOT a valid
+    identification — the running variable is a rank ordinal perfectly collinear
+    with treatment — so a reader cannot mistake τ or the ±1.96·SE whiskers for
+    causal RDD evidence.
+    """
+    from index_inclusion_research.outputs.hs300_rdd_forest import (
+        _NON_IDENTIFICATION_NOTE,
+        _X_AXIS_LABEL,
+    )
+
+    # The disclaimer names the core defect and refuses the causal reading.
+    assert "共线" in _NON_IDENTIFICATION_NOTE
+    assert "非识别" in _NON_IDENTIFICATION_NOTE
+    # The x-axis presents τ as a descriptive mean difference, not a clean
+    # causal/treatment effect.
+    assert "均值差" in _X_AXIS_LABEL
+    assert "非因果" in _X_AXIS_LABEL
+
+
 def test_real_robustness_csv_renders_when_present(tmp_path: Path) -> None:
     """If the project's canonical robustness CSV exists, the plot must
     render it without raising. Skipped on fresh checkouts where the

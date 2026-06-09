@@ -969,6 +969,9 @@
     </div>
     <div class="status-pill">{{ panel.title }}</div>
   </div>
+  {% if panel.identification_warning %}
+  <div class="status-identification-warning" role="note">⚠ {{ panel.identification_warning }}</div>
+  {% endif %}
   <div class="status-panel-head">
     <div class="status-kicker">{{ panel.kicker }}</div>
     <h4 class="status-title">{{ panel.title }}</h4>

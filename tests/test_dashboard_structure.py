@@ -190,7 +190,10 @@ def test_home_dashboard_renders_single_frontend_sections() -> None:
     assert "状态总览" in html
     assert "最近结果概览" in html
     assert "更新明细" in html
-    assert "识别层级" in html
+    # Route B: the RDD ladder is labelled DATA PROVENANCE, not identification
+    # strength, and carries a non-identification disclaimer.
+    assert "数据来源层级" in html
+    assert "未通过识别" in html
     assert "状态一致性" in html
     assert "结果状态已同步" in html
     assert dashboard.runtime.load_rdd_status()["evidence_status"] in html

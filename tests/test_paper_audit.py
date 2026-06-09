@@ -397,7 +397,41 @@ def test_pap_limitations_audit_fails_when_pre_registration_snapshot_missing(tmp_
     result = paper_audit.audit_pap_limitations(tmp_path, require_bundle=False)
 
     assert result.status == "fail"
-    assert any("pre-registration-2026-05-03.csv" in detail for detail in result.details)
+    # Decoupled from any specific date: the audit fails when NO baseline snapshot
+    # exists, reported via the generic pre-registration-*.csv marker.
+    assert any("pre-registration-" in detail for detail in result.details)
+
+
+def test_cma_core_audit_tolerates_rebaselined_snapshot(tmp_path: Path) -> None:
+    """Re-baselining to a newer pre-registration snapshot must not fail the audit.
+
+    The baseline is resolved dynamically (latest ``pre-registration-*.csv``,
+    mirroring ``pap_diff.resolve_default_baseline`` /
+    ``dashboard.loaders.load_pap_summary``), so a hardcoded, now-superseded
+    snapshot date must not be a required artifact.
+    """
+    _seed_audit_project(tmp_path)
+    (tmp_path / "snapshots" / "pre-registration-2026-05-03.csv").rename(
+        tmp_path / "snapshots" / "pre-registration-2026-05-31.csv"
+    )
+
+    result = paper_audit.audit_cma_core(tmp_path, require_bundle=False)
+
+    assert result.status != "fail"
+
+
+def test_paper_bundle_required_paths_track_current_baseline(tmp_path: Path) -> None:
+    """The bundle must require the CURRENT baseline snapshot, not a hardcoded date."""
+    _seed_audit_project(tmp_path)
+    (tmp_path / "paper" / "data" / "pre-registration-2026-05-03.csv").rename(
+        tmp_path / "paper" / "data" / "pre-registration-2026-05-31.csv"
+    )
+
+    required = paper_audit._paper_bundle_required_paths(tmp_path)
+    names = [p.name for p in required]
+
+    assert "pre-registration-2026-05-31.csv" in names
+    assert "pre-registration-2026-05-03.csv" not in names
 
 
 def test_rdd_appendix_audit_warns_when_preliminary_wording_dropped(tmp_path: Path) -> None:

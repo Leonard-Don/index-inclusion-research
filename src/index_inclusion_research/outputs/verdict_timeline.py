@@ -3,13 +3,14 @@
 The 40th console script (``index-inclusion-verdict-timeline``) walks the
 git history of ``results/real_tables/cma_hypothesis_verdicts.csv`` and
 renders a horizontal-swimlane figure showing how each of H1..H7's
-verdict has evolved across commits, with the 2026-05-16 PAP baseline
-marked as a vertical reference line.
+verdict has evolved across commits, with the current PAP baseline
+(resolved dynamically from the latest ``snapshots/pre-registration-*.csv``
+via :func:`default_pap_baseline_date`) marked as a vertical reference line.
 
 Why this complements the PAP deviation auditor
 ----------------------------------------------
 The PAP deviation auditor (commit ``48a22f0``) compares the *current*
-verdict CSV against the frozen 2026-05-03 PAP snapshot and emits a
+verdict CSV against the latest frozen PAP snapshot and emits a
 single deviation report. That answers "where have we ended up vs. the
 pre-registration?" but not "how did we get here?". The verdict timeline
 fills the second question by walking ``git log --follow`` on the
@@ -66,10 +67,28 @@ logger = logging.getLogger(__name__)
 DEFAULT_TARGET_CSV = "results/real_tables/cma_hypothesis_verdicts.csv"
 DEFAULT_MAX_HISTORY = 50
 
-# Frozen 2026-05-16 baseline — when the PAP discipline locked the
-# methodology. The timeline figure highlights this date so reviewers
-# can read "before vs. after PAP freeze" at a glance.
+# Last-resort fallback baseline date, used only when no
+# snapshots/pre-registration-*.csv exists on disk. Normal runs resolve the
+# CURRENT baseline dynamically via default_pap_baseline_date() so the marker
+# tracks the live re-baselined snapshot rather than a hardcoded freeze date.
 PAP_BASELINE_DATE = "2026-05-16"
+
+
+def default_pap_baseline_date(root: Path) -> str:
+    """ISO date of the CURRENT PAP baseline snapshot under ``root/snapshots``.
+
+    Resolves the latest ``pre-registration-YYYY-MM-DD.csv`` (lexicographic sort
+    = date order, mirroring ``pap_diff.resolve_default_baseline`` and
+    ``dashboard.loaders.load_pap_summary``) and returns its ``YYYY-MM-DD``
+    stamp. Falls back to :data:`PAP_BASELINE_DATE` when no snapshot exists, so a
+    fresh checkout still renders the vertical baseline marker.
+    """
+    snap_dir = Path(root) / "snapshots"
+    if snap_dir.is_dir():
+        snapshots = sorted(snap_dir.glob("pre-registration-*.csv"))
+        if snapshots:
+            return snapshots[-1].stem.removeprefix("pre-registration-")
+    return PAP_BASELINE_DATE
 
 # Hypothesis ordering — keep H1..H7 across every renderer so swimlanes
 # match the rest of the project's figures.
@@ -836,10 +855,11 @@ def main(argv: Iterable[str] | None = None) -> int:
     )
     parser.add_argument(
         "--pap-baseline-date",
-        default=PAP_BASELINE_DATE,
+        default="",
         help=(
-            "ISO date for the vertical PAP baseline marker. "
-            f"Default: {PAP_BASELINE_DATE}."
+            "ISO date for the vertical PAP baseline marker. Default: the "
+            "latest snapshots/pre-registration-*.csv under the repo root "
+            f"(fallback {PAP_BASELINE_DATE} when none exists)."
         ),
     )
     args = parser.parse_args(list(argv) if argv is not None else None)
@@ -872,7 +892,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         timeline_df,
         output_png_path=png_path,
         output_pdf_path=pdf_path,
-        pap_baseline_date=args.pap_baseline_date,
+        pap_baseline_date=args.pap_baseline_date or default_pap_baseline_date(repo_root),
     )
     logger.info("verdict timeline PNG written: %s", written)
     if pdf_path is not None:

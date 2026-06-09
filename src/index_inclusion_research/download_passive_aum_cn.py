@@ -14,11 +14,13 @@ year-end (12-31) row per calendar year.
 
 Output rows are appended (idempotent) to ``data/raw/passive_aum.csv``
 in the existing ``market, year, aum_trillion`` schema. CN values are
-**trillions of RMB**, not USD. ``_h2`` consumes US data only for
-verdict computation; the CN rows lift evidence coverage from ``warn``
-to ``pass`` and unblock the H2 evidence manifest, but absolute
-RMB-vs-USD comparison is not meaningful — see ``docs/limitations.md``
-and the ``H2_passive_aum`` row in
+**trillions of RMB**, US rows are **trillions of USD**. ``_h2`` only ever
+compares AUM *within* a single market — the direction of that market's own
+last-vs-first AUM, plus a US-only headline ratio — so the mixed currency is
+harmless to the verdict and no code compares CN-vs-US AUM *levels*. The CN
+rows lift H2 evidence coverage from ``warn`` to ``pass`` and unblock the H2
+evidence manifest; an absolute RMB-vs-USD level comparison would not be
+meaningful — see ``docs/limitations.md`` and the ``H2_passive_aum`` row in
 ``results/real_tables/cma_evidence_manifest.csv``.
 
 Caveats (also flagged in stdout output):

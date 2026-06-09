@@ -124,6 +124,7 @@ class StatusPanel(TypedDict, total=False):
     signal_label: str
     signal_value: str
     signal_copy: str
+    identification_warning: str
 
 
 class SnapshotMeta(TypedDict):

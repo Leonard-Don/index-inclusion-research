@@ -105,6 +105,23 @@ def _fail_missing(
     )
 
 
+def _current_baseline_snapshot(directory: Path) -> Path:
+    """Path to the CURRENT PAP baseline snapshot under ``directory``.
+
+    Resolves the latest ``pre-registration-YYYY-MM-DD.csv`` (lexicographic sort
+    = date order, mirroring ``pap_diff.resolve_default_baseline`` and
+    ``dashboard.loaders.load_pap_summary``) so the audit tracks the live verdict
+    baseline instead of a hardcoded, now-superseded snapshot date. When no
+    snapshot exists, returns a non-existent ``pre-registration-*.csv`` marker so
+    ``_fail_missing`` reports the absence with a clear name.
+    """
+    if directory.is_dir():
+        snapshots = sorted(directory.glob("pre-registration-*.csv"))
+        if snapshots:
+            return snapshots[-1]
+    return directory / "pre-registration-*.csv"
+
+
 def _format_pct(value: Any) -> str:
     return f"{float(value) * 100:+.2f}%"
 
@@ -259,7 +276,7 @@ def _paper_bundle_required_paths(root: Path) -> tuple[Path, ...]:
         root / "paper" / "narrative" / "limitations.md",
         root / "paper" / "narrative" / "verdict_iteration.md",
         root / "paper" / "narrative" / "hs300_rdd_l3_collection_audit.md",
-        root / "paper" / "data" / "pre-registration-2026-05-03.csv",
+        _current_baseline_snapshot(root / "paper" / "data"),
     )
 
 
@@ -450,7 +467,7 @@ def audit_cma_core(root: Path = ROOT, *, require_bundle: bool = True) -> AuditRe
         root / "results" / "real_tables" / "cma_hypothesis_verdicts.tex",
         root / "docs" / "analysis_parameters.md",
         root / "docs" / "paper_outline_verdicts.md",
-        root / "snapshots" / "pre-registration-2026-05-03.csv",
+        _current_baseline_snapshot(root / "snapshots"),
     )
     if require_bundle:
         required = (
@@ -733,7 +750,7 @@ def audit_pap_limitations(root: Path = ROOT, *, require_bundle: bool = True) -> 
         root / "docs" / "analysis_parameters.md",
         root / "docs" / "limitations.md",
         root / "docs" / "verdict_iteration.md",
-        root / "snapshots" / "pre-registration-2026-05-03.csv",
+        _current_baseline_snapshot(root / "snapshots"),
     )
     if require_bundle:
         required = (

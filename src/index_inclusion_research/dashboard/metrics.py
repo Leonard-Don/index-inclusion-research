@@ -444,6 +444,18 @@ def _contract_consistency_copy(contract_check: RddContractCheck | None) -> str:
     )
 
 
+# Route B (de-RDD-ification): the L0–L3 ladder encodes DATA PROVENANCE
+# (demo → public reconstruction → official), NOT identification strength. Even
+# at L3 (official candidate data) the design is not a valid RDD — the running
+# variable is a rank ordinal perfectly collinear with treatment. This banner is
+# attached to the panel in every mode so the UI cannot overstate rigor.
+_RDD_NON_IDENTIFICATION_WARNING = (
+    "此设计未通过识别：running variable 为排名序数、与处理完全共线（断点处零重叠），"
+    "L0–L3 仅表示数据来源等级，不代表识别强度；RDD 结果按描述性边界对照呈现，"
+    "τ 不可作因果/识别证据。详见 docs/identification_roadmap.md。"
+)
+
+
 def build_identification_status_panel(
     rdd_status: RddStatus,
     *,
@@ -458,7 +470,7 @@ def build_identification_status_panel(
             f"其中 {rdd_status['crossing_batches']} 个批次已经覆盖断点两侧。"
         )
     elif mode == "real":
-        sample_overview = "正式候选样本文件已通过校验；当前中国主线可以把事件研究、匹配回归与 RDD 并列纳入正式证据链。"
+        sample_overview = "正式候选样本文件已通过校验；正式结果以事件研究与匹配回归为主，RDD 仅作描述性边界对照（未通过识别）。"
     else:
         sample_overview = "尚未读到通过校验的候选样本文件；当前中国主线的正式结果仍以事件研究与匹配回归为主。"
     if rdd_status.get("validation_error"):
@@ -498,9 +510,14 @@ def build_identification_status_panel(
         tone = "official"
         signal_value = f"{tier} · 正式边界样本"
         signal_copy = (
-            "正式候选样本已经通过校验，这里的 RDD 可以按官方口径直接纳入主结论。"
+            "正式候选样本已通过校验，但 L3 只代表数据来源为官方口径；"
+            "该设计仍未通过识别（running variable 与处理共线），按描述性边界对照呈现，不作主结论的因果证据。"
         )
-        panel_copy = f"{status_message} 当前这版 RDD 已进入正式证据链，可与事件研究和匹配回归并列作为更强识别证据。"
+        panel_copy = (
+            f"{status_message} 当前这版 RDD 使用官方候选数据进入正式证据链的“数据来源”层（L3），"
+            "但 running variable 与处理共线、设计未通过识别，仅作描述性边界对照，"
+            "不能与事件研究/匹配回归并列为识别证据。"
+        )
         entry_condition = "已满足：正式候选样本文件已通过字段与日期校验。"
     elif mode == "reconstructed":
         tone = "reconstructed"
@@ -539,9 +556,10 @@ def build_identification_status_panel(
         "kicker": "证据等级",
         "title": str(rdd_status["evidence_status"]),
         "tone": tone,
-        "signal_label": "识别层级",
+        "signal_label": "数据来源层级",
         "signal_value": signal_value,
         "signal_copy": signal_copy,
+        "identification_warning": _RDD_NON_IDENTIFICATION_WARNING,
         "copy": panel_copy,
         "meta": [
             {"label": "样本来源", "value": source_meta},

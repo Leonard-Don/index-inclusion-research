@@ -168,6 +168,38 @@ def test_identification_status_panel_handles_missing_and_real_modes() -> None:
     assert "已满足" in real_panel["meta"][5]["value"]
 
 
+def test_identification_panel_disclaims_identification_for_all_modes() -> None:
+    """Route B: the L0–L3 ladder is DATA PROVENANCE, not identification strength.
+
+    Every mode — including 'real' (L3 means official *data*, not a valid RDD) —
+    must carry a non-identification disclaimer, and the strongest mode must not
+    advertise the RDD as stronger identification evidence.
+    """
+    for mode, evidence_status in (
+        ("real", "正式边界样本"),
+        ("reconstructed", "公开重建样本"),
+        ("demo", "方法展示"),
+        ("missing", "待补正式样本"),
+    ):
+        panel = dashboard_metrics.build_identification_status_panel(
+            {"mode": mode, "evidence_status": evidence_status, "message": "msg"}
+        )
+        assert panel is not None
+        # Ladder reframed away from "identification strength".
+        assert panel["signal_label"] == "数据来源层级"
+        # Non-identification disclaimer present in every mode.
+        assert "未通过识别" in panel["identification_warning"]
+        assert "共线" in panel["identification_warning"]
+
+    real_panel = dashboard_metrics.build_identification_status_panel(
+        {"mode": "real", "evidence_status": "正式边界样本", "message": "msg"}
+    )
+    # L3 must NOT be sold as stronger identification / a main-conclusion causal source.
+    assert "更强识别证据" not in real_panel["copy"]
+    assert "更强识别证据" not in real_panel["signal_copy"]
+    assert "直接纳入主结论" not in real_panel["signal_copy"]
+
+
 def test_identification_status_panel_includes_candidate_audit_copy_when_available() -> None:
     panel = dashboard_metrics.build_identification_status_panel(
         {
