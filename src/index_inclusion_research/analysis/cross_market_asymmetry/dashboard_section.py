@@ -269,7 +269,7 @@ def _build_robustness_figures(figures_dir: Path, mode: str) -> list[dict[str, ob
         return []
     entries: list[dict[str, object]] = []
     for name in ROBUSTNESS_FIGURES:
-        path = figures_dir / name
+        path = _resolve_robustness_figure_path(figures_dir, name)
         if not path.exists():
             continue
         label = ROBUSTNESS_FIGURE_LABELS.get(name, name)
@@ -285,6 +285,13 @@ def _build_robustness_figures(figures_dir: Path, mode: str) -> list[dict[str, ob
             }
         )
     return entries
+
+
+def _resolve_robustness_figure_path(figures_dir: Path, name: str) -> Path:
+    primary_path = figures_dir / name
+    if primary_path.exists() or figures_dir.name != "real_figures":
+        return primary_path
+    return figures_dir.parent / "figures" / name
 
 
 def _nested_verdict(row: Mapping[str, object], key: str) -> str:
