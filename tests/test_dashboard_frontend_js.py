@@ -15,7 +15,6 @@ def test_dashboard_frontend_node_module_tests_pass() -> None:
         [
             "node",
             "--test",
-            "--experimental-default-type=module",
             "tests/js/dashboard_frontend.test.mjs",
         ],
         cwd=ROOT,
