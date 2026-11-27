@@ -357,7 +357,7 @@ def run_cma_pipeline(
     # the tex / paper-verdict-section twins — so every artifact carries the
     # capped confidence consistently. The verdict word itself is unchanged.
     # Local import keeps the power-analysis dependency off the module import
-    # graph. See docs/superpowers/specs/2026-05-31-tier-b-statistical-fixes-design.md.
+    # graph. See docs/tier_b_statistical_fixes.md.
     from index_inclusion_research.power_analysis import (
         apply_power_aware_confidence,
         build_power_report_rows,
