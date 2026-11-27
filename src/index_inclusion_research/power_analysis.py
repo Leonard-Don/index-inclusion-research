@@ -644,8 +644,8 @@ def build_power_report_rows(
 # Post-hoc power below this floor caps a hypothesis's reported confidence to
 # "低" and annotates its verdict as underpowered. The verdict word is never
 # changed — an underpowered "支持" stays "支持" but can no longer be presented
-# at high confidence. See docs/superpowers/specs/2026-05-31-tier-b-statistical-
-# fixes-design.md. Threshold chosen by the author (0.5).
+# at high confidence. See docs/tier_b_statistical_fixes.md. Threshold chosen
+# by the author (0.5).
 POWER_CONFIDENCE_FLOOR = 0.5
 _UNDERPOWERED_MARK = "功效不足"
 
